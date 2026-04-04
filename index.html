@@ -10,8 +10,9 @@
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html { scroll-behavior: smooth; }
 body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; }
-nav { position: fixed; top: 0; left: 0; right: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; padding: 16px 40px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05); }
-.nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--text-main); text-decoration: none; }
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; padding: 10px 40px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+.nav-logo { display: flex; align-items: center; text-decoration: none; }
+.logo-img { height: 50px; width: auto; border-radius: 5px; }
 .nav-links { display: flex; gap: 20px; align-items: center; }
 .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
 section { padding: 100px 40px 20px; max-width: 1100px; margin: 0 auto; }
@@ -38,7 +39,9 @@ footer { padding: 60px 40px; background: #070b14; border-top: 1px solid rgba(255
 <body>
 
 <nav>
-    <a href="#" class="nav-logo">SACCB 🏸</a>
+    <a href="#" class="nav-logo">
+        <img src="https://i.ibb.co/3ykXWvN/IMG-7071.jpg" alt="Logo SACCB" class="logo-img">
+    </a>
     <div class="nav-links">
         <a href="#presentation">L'Asso</a>
         <a href="#tournois">Tournois</a>
