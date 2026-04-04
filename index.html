@@ -239,7 +239,7 @@
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
                 <p><strong>Adulte :</strong> 50€ / an</p>
-                <p><strong>Étudiant / Jeune :</strong> 25€ / an</p>
+                <p><strong>Étudiant :</strong> 25€ / an</p>
                 <p style="font-size: 12px; margin-top: 15px; color: var(--text-muted);">* Inscription valable pour la saison complète.</p>
             </div>
         </div>
@@ -248,7 +248,7 @@
     <section id="tournois">
         <h2>Tournois à venir</h2>
         <div id="tournois-list">
-            <p style="text-align: center; color: var(--text-muted);">Recherche de tournois...</p>
+            <p style="text-align: center; color: var(--text-muted);">Chargement...</p>
         </div>
     </section>
 
@@ -266,7 +266,7 @@
                     <input type="tel" id="m-tel" placeholder="Numéro de téléphone" required>
                     <select id="m-type">
                         <option value="Adulte">Adulte (50€)</option>
-                        <option value="Etudiant">Étudiant / Jeune (25€)</option>
+                        <option value="Etudiant">Étudiant (25€)</option>
                     </select>
                     <button type="submit" class="btn">Valider mon inscription</button>
                 </form>
@@ -345,15 +345,13 @@
 
         async function loadData() {
             try {
-                const r = await fetch(DB_URL);
+                const r = await fetch(DB_URL + "?nocache=" + Date.now());
                 if (r.ok) {
                     const data = await r.json();
                     if (data && typeof data === 'object') {
                         db = data;
                         updateUI();
                         if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
-                    } else {
-                        await saveData();
                     }
                 }
             } catch (e) {
@@ -408,25 +406,25 @@
         function checkAdmin() { if (document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; renderAdmin(); } else alert("Refusé"); }
 
         function renderAdmin() {
-            document.getElementById('list-t-config').innerHTML = db.config_tournois.map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots || '∞'}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
-            document.getElementById('list-t-inscrits').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.p1}</td><td>${i.p2}</td><td>${i.tel}</td><td><button onclick="togT(${i.id})" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delInscT(${i.id})">❌</button></td></tr>`).join('');
-            document.getElementById('list-membres').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM(${m.id})" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM(${m.id})">❌</button></td></tr>`).join('');
+            document.getElementById('list-t-config').innerHTML = (db.config_tournois || []).map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots || '∞'}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
+            document.getElementById('list-t-inscrits').innerHTML = (db.inscrits_tournoi || []).map(i => `<tr><td>${i.tournoiName}</td><td>${i.p1}</td><td>${i.p2}</td><td>${i.tel}</td><td><button onclick="togT(${i.id})" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delInscT(${i.id})">❌</button></td></tr>`).join('');
+            document.getElementById('list-membres').innerHTML = (db.membres || []).map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM(${m.id})" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM(${m.id})">❌</button></td></tr>`).join('');
         }
 
         async function addT() { 
             const n = document.getElementById('new-t-name').value, d = document.getElementById('new-t-date').value, s = document.getElementById('new-t-slots').value; 
-            if (n && d) { db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); await saveData(); location.reload(); }
+            if (n && d) { db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); await saveData(); updateUI(); renderAdmin(); }
         }
-        async function regT(e, tid, tname) { e.preventDefault(); const f = e.target; db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); await saveData(); location.reload(); }
-        document.getElementById('main-adh').onsubmit = async (e) => { e.preventDefault(); db.membres.push({ id: Date.now(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); localStorage.setItem('saccb_signed', 'true'); await saveData(); location.reload(); };
+        async function regT(e, tid, tname) { e.preventDefault(); const f = e.target; db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); await saveData(); updateUI(); }
+        document.getElementById('main-adh').onsubmit = async (e) => { e.preventDefault(); db.membres.push({ id: Date.now(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); localStorage.setItem('saccb_signed', 'true'); await saveData(); updateUI(); };
         async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); x.ok=!x.ok; await saveData(); renderAdmin(); }
         async function togM(id) { const x = db.membres.find(m=>m.id===id); x.ok=!x.ok; await saveData(); renderAdmin(); }
-        async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); location.reload(); }}
+        async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); updateUI(); renderAdmin(); }}
         async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); await saveData(); renderAdmin(); updateUI(); }}
         async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); renderAdmin(); updateUI(); }}
 
         loadData();
-        setInterval(loadData, 10000); 
+        setInterval(loadData, 5000); 
     </script>
 </body>
 </html>
