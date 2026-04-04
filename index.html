@@ -119,6 +119,7 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
             <button onclick="location.reload()" class="btn" style="background:#475569; width:auto;">Fermer</button>
         </div>
     </div>
+
     <div class="admin-box">
         <h3 style="font-family:'Bebas Neue'; color:var(--primary); margin-bottom:10px;">🏆 NOUVEAU TOURNOI</h3>
         <div class="grid-2" style="grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
@@ -128,6 +129,11 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
         </div>
         <button onclick="addTournoiConfig()" class="btn" style="background:var(--accent)">Publier</button>
     </div>
+
+    <div style="margin-bottom:25px;">
+         <button onclick="resetSaison()" class="btn" style="background:var(--danger); width:auto; font-size:11px;">🔄 NOUVELLE SAISON</button>
+    </div>
+
     <div class="accordion-item">
         <div class="accordion-header" onclick="toggleAcc('acc-t')">INSCRIPTIONS TOURNOIS <span id="t-count"></span> <span>▼</span></div>
         <div id="acc-t" class="accordion-content"><table id="body-tournoi"><thead><tr><th>Tournoi</th><th>Binôme</th><th>Pointage</th><th>X</th></tr></thead><tbody></tbody></table></div>
@@ -153,6 +159,8 @@ function save() { localStorage.setItem('saccb_vBeton_v2', JSON.stringify(db)); }
 function updateUI() {
     const yearTxt = `${db.startYear}-${db.startYear + 1}`;
     document.querySelectorAll('.current-year-txt').forEach(el => el.innerText = yearTxt);
+    if(document.getElementById('admin-year-txt')) document.getElementById('admin-year-txt').innerText = yearTxt;
+
     const tList = document.getElementById('tournois-list');
     if(db.config_tournois.length > 0) {
         tList.innerHTML = db.config_tournois.map(t => {
@@ -164,6 +172,7 @@ function updateUI() {
         }).join('');
     } else { tList.innerHTML = `<p style="color:var(--text-muted)">Aucun tournoi.</p>`; }
     document.getElementById('quota-msg').innerText = `Places club restantes : ${CLUB_MAX - db.membres.length}`;
+    if(db.signed) { document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block'; }
 }
 
 async function inscrireTournoi(e, tId, tName) {
@@ -198,6 +207,8 @@ function addTournoiConfig() {
     const s = parseInt(document.getElementById('new-t-slots').value);
     if(n && d && s) { db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s }); save(); location.reload(); }
 }
+
+function resetSaison() { if(confirm("Lancer la saison suivante ?")) { db.backup = { membres: [...db.membres], inscrits_tournoi: [...(db.inscrits_tournoi||[])], startYear: db.startYear }; db.membres=[]; db.inscrits_tournoi=[]; db.config_tournois=[]; db.signed=false; db.startYear++; save(); location.reload(); }}
 function exportDB() { const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db)); const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", `saccb_backup.json`); dl.click(); }
 function toggleAcc(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
 function togM(id) { let x = db.membres.find(m=>m.id===id); x.ok=!x.ok; save(); renderAdmin(); }
