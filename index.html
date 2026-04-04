@@ -13,8 +13,7 @@
 html { scroll-behavior: smooth; }
 body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; }
 nav { position: fixed; top: 0; left: 0; right: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; padding: 10px 40px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05); }
-.nav-logo { display: flex; align-items: center; text-decoration: none; }
-.logo-img { height: 50px; width: auto; border-radius: 5px; }
+.nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
 .nav-links { display: flex; gap: 20px; align-items: center; }
 .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
 section { padding: 100px 40px 20px; max-width: 1100px; margin: 0 auto; }
@@ -41,9 +40,7 @@ footer { padding: 60px 40px; background: #070b14; border-top: 1px solid rgba(255
 <body>
 
 <nav>
-    <a href="#" class="nav-logo">
-        <img src="https://i.ibb.co/3ykXWvN/IMG-7071.jpg" alt="Logo SACCB" class="logo-img">
-    </a>
+    <a href="#" class="nav-logo">SACCB</a>
     <div class="nav-links">
         <a href="#presentation">L'Asso</a>
         <a href="#tournois">Tournois</a>
@@ -205,7 +202,6 @@ function updateUI() {
             const complet = !isIllimite && reste <= 0;
             
             const txtQuota = isIllimite ? "Places : Illimitées" : `Places restantes : ${reste} / ${t.slots}`;
-            
             const listeInscrits = parts.length > 0 ? `<div class="list-inscrits-ui"><p style="font-size:12px; color:var(--primary); font-weight:bold; text-transform:uppercase; margin-bottom:5px;">Binômes inscrits :</p><ul style="list-style:none; font-size:14px; color:var(--text-main);">${parts.map(p => `<li>🏸 ${p.p1} / ${p.p2}</li>`).join('')}</ul></div>` : '';
             
             return `<div class="card" style="border-left: 8px solid ${complet ? 'var(--danger)' : 'var(--accent)'};">
@@ -246,7 +242,6 @@ function renderAdmin() {
     document.getElementById('t-count').innerText = `(${it.length})`;
     document.getElementById('a-count').innerText = `(${db.membres.length})`;
     
-    // Rendu de la table de CONFIGURATION des tournois (pour modifier)
     document.querySelector('#table-config-tournois tbody').innerHTML = db.config_tournois.map(t => `
         <tr>
             <td><input type="text" value="${t.name}" onchange="editTConfig('${t.id}', 'name', this.value)" style="margin:0; padding:5px;"></td>
