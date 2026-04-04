@@ -311,8 +311,12 @@
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
             <h2 style="margin:0;">ESPACE GESTION</h2>
-            <button onclick="location.reload()" class="btn" style="width:auto; background:#475569;">Quitter</button>
+            <div>
+                <button onclick="saveData(true)" class="btn" style="width:auto; background:var(--accent); margin-right:10px;">💾 SAUVEGARDER</button>
+                <button onclick="location.reload()" class="btn" style="width:auto; background:#475569;">Quitter</button>
+            </div>
         </div>
+
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-create')">🏆 CRÉER UN TOURNOI <span>▼</span></div>
             <div id="sec-create" class="admin-content">
@@ -334,6 +338,14 @@
             <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
             <div id="sec-membres" class="admin-content"><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-membres"></tbody></table></div>
         </div>
+
+        <div class="admin-section" style="border: 1px solid var(--danger);">
+            <div class="admin-header" style="color:var(--danger)" onclick="toggleSec('sec-danger')">⚠️ MAINTENANCE / CHANGEMENT SAISON <span>▼</span></div>
+            <div id="sec-danger" class="admin-content">
+                <p style="margin-bottom:15px; font-size:14px;">Cette action supprimera tous les adhérents et les tournois pour commencer une nouvelle année.</p>
+                <button onclick="resetSeason()" class="btn" style="background:var(--danger)">Réinitialiser pour la Nouvelle Saison</button>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -349,9 +361,9 @@
                 if (r.ok) {
                     const data = await r.json();
                     if (data && typeof data === 'object') {
-                        db.membres = data.membres || [];
-                        db.inscrits_tournoi = data.inscrits_tournoi || [];
-                        db.config_tournois = data.config_tournois || [];
+                        db.membres = data.membres || db.membres || [];
+                        db.inscrits_tournoi = data.inscrits_tournoi || db.inscrits_tournoi || [];
+                        db.config_tournois = data.config_tournois || db.config_tournois || [];
                     }
                 }
             } catch (e) {
@@ -367,22 +379,34 @@
             if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
 
-        async function saveData() {
+        async function saveData(manual = false) {
             localStorage.setItem('saccb_backup', JSON.stringify(db));
             try {
-                await fetch(DB_URL, {
+                const r = await fetch(DB_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(db)
                 });
-            } catch (e) { console.error("Sync failed"); }
+                if(manual && r.ok) alert("Sauvegarde réussie sur le serveur !");
+            } catch (e) { 
+                console.error("Sync failed"); 
+                if(manual) alert("Erreur de connexion au serveur. Sauvegarde locale uniquement.");
+            }
+        }
+
+        async function resetSeason() {
+            if(confirm("ATTENTION : Voulez-vous vraiment supprimer TOUTES les données (Membres et Tournois) pour changer de saison ?")) {
+                db = { membres: [], inscrits_tournoi: [], config_tournois: [] };
+                await saveData();
+                location.reload();
+            }
         }
 
         function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
 
         function updateUI() {
             const container = document.getElementById('tournois-list');
-            if (db.config_tournois.length === 0) {
+            if (!db.config_tournois || db.config_tournois.length === 0) {
                 container.innerHTML = '<div class="card" style="text-align:center;">Aucun tournoi prévu.</div>';
             } else {
                 container.innerHTML = db.config_tournois.map(t => {
@@ -394,7 +418,7 @@
                         <div class="tournoi-header"><h3 class="tournoi-title">${t.name}</h3><span class="tournoi-date">${t.date}</span></div>
                         <span class="slots-badge">Places restantes : ${reste}</span>
                         <div style="margin:20px 0; background:rgba(0,0,0,0.2); padding:15px; border-radius:10px;">
-                            <strong>INSCRITS :</strong><br>${inscrits.length > 0 ? inscrits.map(i => `🏸 ${i.p1} & ${i.p2}`).join('<br>') : 'Aucun binôme'}
+                            <strong>INSCRITS :</strong><br>${inscrits.length > 0 ? inscrits.map(i => `滩 ${i.p1} & ${i.p2}`).join('<br>') : 'Aucun binôme'}
                         </div>
                         ${!complet ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div>
@@ -421,31 +445,36 @@
         async function addT() { 
             const n = document.getElementById('new-t-name').value, d = document.getElementById('new-t-date').value, s = document.getElementById('new-t-slots').value; 
             if (n && d) { 
+                if (!db.config_tournois) db.config_tournois = [];
                 db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); 
+                updateUI(); 
+                renderAdmin();
                 await saveData(); 
                 document.getElementById('new-t-name').value = '';
                 document.getElementById('new-t-date').value = '';
                 document.getElementById('new-t-slots').value = '';
-                updateUI(); 
-                renderAdmin(); 
             }
         }
         async function regT(e, tid, tname) { 
             e.preventDefault(); const f = e.target; 
+            if (!db.inscrits_tournoi) db.inscrits_tournoi = [];
             db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); 
-            await saveData(); updateUI(); 
+            updateUI();
+            await saveData(); 
         }
         document.getElementById('main-adh').onsubmit = async (e) => { 
             e.preventDefault(); 
+            if (!db.membres) db.membres = [];
             db.membres.push({ id: Date.now(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
             localStorage.setItem('saccb_signed', 'true'); 
-            await saveData(); updateUI(); 
+            updateUI();
+            await saveData(); 
         };
-        async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; await saveData(); renderAdmin(); } }
-        async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; await saveData(); renderAdmin(); } }
-        async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); updateUI(); renderAdmin(); }}
-        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); await saveData(); renderAdmin(); updateUI(); }}
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); renderAdmin(); updateUI(); }}
+        async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; renderAdmin(); await saveData(); } }
+        async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; renderAdmin(); await saveData(); } }
+        async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); updateUI(); renderAdmin(); await saveData(); }}
+        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); renderAdmin(); updateUI(); await saveData(); }}
+        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); renderAdmin(); updateUI(); await saveData(); }}
 
         loadData();
         setInterval(loadData, 5000); 
