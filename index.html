@@ -18,192 +18,47 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
-        body { 
-            background: var(--bg-dark); 
-            color: var(--text-main); 
-            font-family: 'Outfit', sans-serif; 
-            line-height: 1.6; 
-            overflow-x: hidden; 
-        }
+        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; overflow-x: hidden; }
 
-        /* NAVIGATION */
+        /* --- TON DESIGN COMPLET --- */
         nav {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 30px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 30px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .nav-logo {
-            font-family: 'Bebas Neue';
-            font-size: 32px;
-            color: var(--primary);
-            text-decoration: none;
-            letter-spacing: 2px;
-        }
+        .nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
         .nav-links { display: flex; gap: 25px; align-items: center; }
-        .nav-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: 0.3s;
-        }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
         .nav-links a:hover { color: var(--primary); }
 
-        /* SECTIONS */
-        section {
-            padding: 120px 20px 60px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-        h2 {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 48px;
-            margin-bottom: 30px;
-            color: var(--primary);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+        section { padding: 120px 20px 60px; max-width: 1100px; margin: 0 auto; }
+        h2 { font-family: 'Bebas Neue', sans-serif; font-size: 48px; margin-bottom: 30px; color: var(--primary); letter-spacing: 1px; text-transform: uppercase; }
 
-        /* CARTES */
-        .card {
-            background: var(--bg-card);
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-        }
-        .grid-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; }
+        .grid-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 40px; }
 
-        /* TOURNOIS */
-        .tournoi-card {
-            background: var(--bg-card);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border-left: 8px solid var(--accent);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .tournoi-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .tournoi-title {
-            font-family: 'Bebas Neue';
-            font-size: 32px;
-            color: var(--text-main);
-        }
-        .tournoi-date {
-            background: var(--primary);
-            padding: 5px 15px;
-            border-radius: 50px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .slots-badge {
-            color: var(--accent);
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 15px;
-            display: block;
-        }
+        .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .tournoi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .tournoi-title { font-family: 'Bebas Neue'; font-size: 32px; color: var(--text-main); }
+        .tournoi-date { background: var(--primary); padding: 5px 15px; border-radius: 50px; font-size: 14px; font-weight: bold; }
+        .slots-badge { color: var(--accent); font-weight: bold; font-size: 18px; margin-bottom: 15px; display: block; }
 
-        /* FORMULAIRES */
-        input, select {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: var(--bg-dark);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 10px;
-            font-size: 16px;
-        }
-        .btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 16px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 16px;
-            width: 100%;
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
+        input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; font-size: 16px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 16px; width: 100%; transition: 0.3s; text-transform: uppercase; }
         .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
         .btn-tournoi { background: var(--accent); margin-top: 10px; }
 
-        /* FOOTER */
-        footer {
-            background: #070b14;
-            padding: 80px 20px;
-            text-align: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        .contact-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            max-width: 900px;
-            margin: 40px auto;
-        }
+        footer { background: #070b14; padding: 80px 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; max-width: 900px; margin: 40px auto; }
 
-        /* ADMIN */
-        .admin-panel {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            z-index: 2000;
-            overflow-y: auto;
-            padding: 30px;
-        }
-        .admin-section {
-            background: var(--bg-card);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .admin-header {
-            padding: 20px;
-            background: rgba(59, 130, 246, 0.1);
-            cursor: pointer;
-            font-family: 'Bebas Neue';
-            font-size: 24px;
-            display: flex;
-            justify-content: space-between;
-        }
+        .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
+        .admin-section { background: var(--bg-card); border-radius: 15px; margin-bottom: 25px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .admin-header { padding: 20px; background: rgba(59, 130, 246, 0.1); cursor: pointer; font-family: 'Bebas Neue'; font-size: 24px; display: flex; justify-content: space-between; }
         .admin-content { display: none; padding: 25px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
         th { color: var(--primary); text-transform: uppercase; }
-
-        @media (max-width: 768px) {
-            .nav-links a:not(.admin-btn) { display: none; }
-            h2 { font-size: 36px; }
-            section { padding-top: 100px; }
-        }
     </style>
 </head>
 <body>
@@ -228,19 +83,18 @@
         </div>
     </section>
 
-    <section id="horaires" style="padding-top: 40px;">
+    <section id="horaires">
         <div class="grid-info">
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--primary); margin-bottom: 20px;">🕒 Horaires</h3>
-                <p><strong>Lundi :</strong> 18h30 jusqu'à la fermeture</p>
-                <p><strong>Jeudi :</strong> 18h30 jusqu'à la fermeture</p>
-                <p><strong>Samedi :</strong> 17h30 jusqu'à la fermeture</p>
+                <p><strong>Lundi :</strong> 18h30 - Fermeture</p>
+                <p><strong>Jeudi :</strong> 18h30 - Fermeture</p>
+                <p><strong>Samedi :</strong> 17h30 - Fermeture</p>
             </div>
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
                 <p><strong>Adulte :</strong> 50€ / an</p>
                 <p><strong>Étudiant :</strong> 25€ / an</p>
-                <p style="font-size: 12px; margin-top: 15px; color: var(--text-muted);">* Inscription valable pour la saison complète.</p>
             </div>
         </div>
     </section>
@@ -248,12 +102,12 @@
     <section id="tournois">
         <h2>Tournois à venir</h2>
         <div id="tournois-list">
-            <p style="text-align: center; color: var(--text-muted);">Chargement...</p>
+            <p style="text-align: center; color: var(--text-muted);">Chargement des tournois...</p>
         </div>
     </section>
 
     <section id="inscription">
-        <h2 id="txt-inscr">Inscription 2026-2027</h2>
+        <h2>Inscription 2026-2027</h2>
         <div class="card">
             <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:20px; font-size: 18px;"></p>
             <div id="form-container">
@@ -293,7 +147,7 @@
                 <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
             </div>
         </div>
-        <p id="copyright" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
+        <p style="margin-top: 50px; color: var(--text-muted); font-size: 14px;">© 2026 SACCB — Sainte-Adresse Certifié Club Badminton</p>
     </footer>
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center; padding:20px;">
@@ -308,40 +162,37 @@
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
             <h2 style="margin:0;">ESPACE GESTION</h2>
-            <div style="display:flex; gap:10px;">
-                <button onclick="exportBackup()" class="btn" style="width:auto; background:var(--accent);">📥 EXPORTER (PC)</button>
-                <button onclick="location.reload()" class="btn" style="width:auto; background:#475569;">Quitter</button>
-            </div>
+            <button onclick="location.reload()" class="btn" style="width:auto; background:#475569;">Quitter</button>
         </div>
 
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-create')">🏆 CRÉER UN TOURNOI <span>▼</span></div>
             <div id="sec-create" class="admin-content">
-                <input type="text" id="new-t-name" placeholder="Nom">
-                <input type="text" id="new-t-date" placeholder="Date">
-                <input type="number" id="new-t-slots" placeholder="Places">
-                <button onclick="addT()" class="btn" style="background:var(--accent)">Publier</button>
+                <input type="text" id="adm-t-name" placeholder="Nom du tournoi">
+                <input type="text" id="adm-t-date" placeholder="Date">
+                <input type="number" id="adm-t-slots" placeholder="Nombre de places">
+                <button onclick="addT()" class="btn" style="background:var(--accent)">Publier le tournoi</button>
             </div>
         </div>
+
         <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-tournois')">⚙️ CONFIGURATION <span>▼</span></div>
-            <div id="sec-tournois" class="admin-content"><table><thead><tr><th>Nom</th><th>Date</th><th>Places</th><th>X</th></tr></thead><tbody id="list-t-config"></tbody></table></div>
-        </div>
-        <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-inscrits')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
-            <div id="sec-inscrits" class="admin-content"><table><thead><tr><th>Tournoi</th><th>Joueurs</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table></div>
-        </div>
-        <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
-            <div id="sec-membres" class="admin-content"><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-membres"></tbody></table></div>
+            <div class="admin-header" onclick="toggleSec('sec-tournois')">⚙️ CONFIGURATION TOURNOIS <span>▼</span></div>
+            <div id="sec-tournois" class="admin-content">
+                <table><thead><tr><th>Nom</th><th>Date</th><th>Places</th><th>X</th></tr></thead><tbody id="list-t-config"></tbody></table>
+            </div>
         </div>
 
-        <div class="admin-section" style="border: 1px solid var(--danger);">
-            <div class="admin-header" style="color:var(--danger)" onclick="toggleSec('sec-danger')">⚠️ MAINTENANCE SAISON <span>▼</span></div>
-            <div id="sec-danger" class="admin-content">
-                <p style="margin-bottom:15px;">Action : Fait +1 sur les années et vide les listes.</p>
-                <button onclick="resetSeason()" class="btn" style="background:var(--danger)">Changer de Saison (+1 an)</button>
-                <div id="undo-zone" style="display:none; margin-top:15px;"><button onclick="undoSeason()" class="btn" style="background:#475569;">↩️ ANNULER LE CHANGEMENT</button></div>
+        <div class="admin-section">
+            <div class="admin-header" onclick="toggleSec('sec-inscrits')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
+            <div id="sec-inscrits" class="admin-content">
+                <table><thead><tr><th>Tournoi</th><th>Joueurs</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
+            <div id="sec-membres" class="admin-content">
+                <table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-membres"></tbody></table>
             </div>
         </div>
     </div>
@@ -351,17 +202,16 @@
         const CLUB_MAX = 65;
         const DB_URL = "https://api.jsonstorage.net/v1/json/887754d2-777e-405a-8b17-739343362143";
 
-        let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2026, y2: 2027 };
-        let lastState = null;
+        let db = { membres: [], inscrits_tournoi: [], config_tournois: [] };
 
         async function loadData() {
             try {
                 const r = await fetch(DB_URL + "?nocache=" + Date.now());
                 if (r.ok) {
                     const data = await r.json();
-                    if (data && data.y1) db = data;
+                    if (data) db = data;
                 }
-            } catch (e) { console.error("Load Error"); }
+            } catch (e) { console.error("Erreur de chargement"); }
             updateUI();
         }
 
@@ -372,99 +222,77 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(db)
                 });
-            } catch (e) { console.error("Save Error"); }
+            } catch (e) { console.error("Erreur de sauvegarde"); }
             updateUI();
         }
 
         function updateUI() {
-            // DATE DYNAMIQUE ACCUEIL
-            const titreInscr = document.getElementById('txt-inscr');
-            const copyAnnee = document.getElementById('copyright');
-            if(titreInscr) titreInscr.innerText = "Inscription " + db.y1 + "-" + db.y2;
-            if(copyAnnee) copyAnnee.innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
-            
-            // TOURNOIS ACCUEIL
+            // ACCUEIL TOURNOIS
             const container = document.getElementById('tournois-list');
             if (!db.config_tournois || db.config_tournois.length === 0) {
                 container.innerHTML = '<div class="card" style="text-align:center;">Aucun tournoi prévu.</div>';
             } else {
                 container.innerHTML = db.config_tournois.map(t => {
                     const inscrits = (db.inscrits_tournoi || []).filter(i => i.tournoiId === t.id);
-                    const reste = t.slots ? (t.slots - inscrits.length) : '∞';
-                    const complet = t.slots && (t.slots - inscrits.length) <= 0;
+                    const reste = t.slots - inscrits.length;
                     return `
-                    <div class="tournoi-card" style="border-left-color: ${complet ? 'var(--danger)' : 'var(--accent)'}">
+                    <div class="tournoi-card">
                         <div class="tournoi-header"><h3 class="tournoi-title">${t.name}</h3><span class="tournoi-date">${t.date}</span></div>
-                        <span class="slots-badge">Places : ${reste}</span>
-                        ${!complet ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
-                            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div>
-                            <input type="tel" name="tel" placeholder="Tél" required><button type="submit" class="btn btn-tournoi">S'inscrire</button>
+                        <span class="slots-badge">Places restantes : ${reste > 0 ? reste : 'COMPLET'}</span>
+                        ${reste > 0 ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
+                            <input type="text" name="players" placeholder="Joueur 1 & Joueur 2" required>
+                            <input type="tel" name="tel" placeholder="Téléphone de contact" required>
+                            <button type="submit" class="btn btn-tournoi">S'inscrire</button>
                         </form>` : '<h3 style="color:var(--danger); text-align:center;">COMPLET</h3>'}
                     </div>`;
                 }).join('');
             }
+
             document.getElementById('quota-msg').innerText = `Places club restantes : ${CLUB_MAX - (db.membres ? db.membres.length : 0)}`;
             if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
 
         function renderAdmin() {
-            document.getElementById('list-t-config').innerHTML = (db.config_tournois || []).map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots || '∞'}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
-            document.getElementById('list-t-inscrits').innerHTML = (db.inscrits_tournoi || []).map(i => `<tr><td>${i.tournoiName}</td><td>${i.p1} & ${i.p2}</td><td>${i.tel}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delInscT('${i.id}')">❌</button></td></tr>`).join('');
+            document.getElementById('list-t-config').innerHTML = (db.config_tournois || []).map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
+            document.getElementById('list-t-inscrits').innerHTML = (db.inscrits_tournoi || []).map(i => `<tr><td>${i.tournoiName}</td><td>${i.players}</td><td>${i.tel}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delInscT('${i.id}')">❌</button></td></tr>`).join('');
             document.getElementById('list-membres').innerHTML = (db.membres || []).map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')">❌</button></td></tr>`).join('');
         }
 
-        async function regT(e, tid, tname) { 
-            e.preventDefault(); const f = e.target; 
-            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); 
-            await saveData(); alert("Binôme inscrit !");
-        }
-
-        async function addT() { 
-            const n = document.getElementById('new-t-name').value, d = document.getElementById('new-t-date').value, s = document.getElementById('new-t-slots').value; 
-            if (n && d) { 
-                db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); 
+        async function addT() {
+            const n = document.getElementById('adm-t-name').value;
+            const d = document.getElementById('adm-t-date').value;
+            const s = document.getElementById('adm-t-slots').value;
+            if (n && d) {
+                if(!db.config_tournois) db.config_tournois = [];
+                db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: parseInt(s) || 0 });
                 await saveData();
-                document.getElementById('new-t-name').value = ''; document.getElementById('new-t-date').value = ''; document.getElementById('new-t-slots').value = '';
+                document.getElementById('adm-t-name').value = ''; document.getElementById('adm-t-date').value = ''; document.getElementById('adm-t-slots').value = '';
+                alert("Tournoi créé !");
             }
         }
 
-        async function resetSeason() {
-            if(confirm("Confirmer le changement de saison ?")) {
-                lastState = JSON.parse(JSON.stringify(db));
-                db.membres = []; db.inscrits_tournoi = []; db.config_tournois = [];
-                db.y1++; db.y2++;
-                document.getElementById('undo-zone').style.display = 'block';
-                await saveData();
-            }
+        async function regT(e, tid, tname) {
+            e.preventDefault();
+            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tid, tournoiName: tname, players: e.target.players.value, tel: e.target.tel.value, ok: false });
+            await saveData();
+            alert("Inscription réussie !");
         }
 
-        async function undoSeason() {
-            if(lastState) {
-                db = JSON.parse(JSON.stringify(lastState)); lastState = null;
-                document.getElementById('undo-zone').style.display = 'none';
-                await saveData();
-            }
-        }
-
-        function checkAdmin() { if (document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; updateUI(); } else alert("Refusé"); }
+        // ADMIN TOOLS
+        function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; updateUI(); } }
         function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
+        async function delTConf(id) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); }
+        async function delInscT(id) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); await saveData(); }
+        async function delM(id) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); }
         async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; await saveData(); } }
         async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; await saveData(); } }
-        async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); }}
-        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); await saveData(); }}
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); }}
 
-        document.getElementById('main-adh').onsubmit = async (e) => { 
-            e.preventDefault(); 
-            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
+        document.getElementById('main-adh').onsubmit = async (e) => {
+            e.preventDefault();
+            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false });
             document.getElementById('form-container').style.display = 'none'; document.getElementById('msg-deja').style.display = 'block';
-            await saveData(); 
+            await saveData();
         };
-
-        function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
-            const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "SACCB_SAVE.json"); dl.click(); dl.remove();
-        }
 
         loadData();
     </script>
