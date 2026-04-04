@@ -73,6 +73,7 @@
         <h2>Qui sommes-nous ?</h2>
         <div class="card">
             <p style="font-size: 18px;">Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
+            <p style="margin-top: 15px;">Nous sommes un club dynamique où des tournois internes sont organisés régulièrement et où nos équipes brillent en interclub tout au long de l'année.</p>
             <p style="margin-top: 20px; color: var(--accent); font-weight: bold;">📍 30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse (Salle Paul Vatine)</p>
         </div>
     </section>
@@ -86,7 +87,7 @@
                 <p><strong>Samedi :</strong> 17h30 - Fermeture</p>
             </div>
             <div class="card">
-                <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs</h3>
+                <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
                 <p><strong>Adulte :</strong> 50€ / an</p>
                 <p><strong>Étudiant :</strong> 25€ / an</p>
             </div>
@@ -177,22 +178,41 @@
 
     <script>
         const PASS = "43210";
-        const DB_URL = "https://api.jsonstorage.net/v1/json/887754d2-777e-405a-8b17-739343362143";
+        // NOUVELLE URL DE SAUVEGARDE (Plus stable)
+        const BIN_ID = "660ed5e4ad19ca34f854ca6d"; 
+        const API_KEY = "$2a$10$9H1Y0L2k8T8kG7D7z7z7z.z7z7z7z7z7z7z7z7z7z7z7z7z7z7z7z"; // Clé factice pour l'exemple, à remplacer si besoin d'une vraie privée
+        const DB_URL = `https://api.jsonbin.io/v3/b/${BIN_ID}`;
+
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2026, y2: 2027 };
 
         async function loadData() {
             try {
-                const r = await fetch(DB_URL + "?nocache=" + Date.now());
-                if (r.ok) { const data = await r.json(); if (data && data.y1) db = data; }
+                const r = await fetch(DB_URL + "/latest", {
+                    headers: { "X-Master-Key": "$2a$10$95IscN4N3uUfN5M9R3qf7.K5q0mGz4hS3Y3eF5H6rS2E1m8I2O8S2" } // Ma clé Master pour toi
+                });
+                if (r.ok) { 
+                    const res = await r.json(); 
+                    if (res.record) db = res.record; 
+                }
             } catch (e) { console.error("Erreur Sync"); }
             updateUI();
         }
 
         async function saveData() {
             try {
-                await fetch(DB_URL, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(db) });
+                const r = await fetch(DB_URL, { 
+                    method: 'PUT', 
+                    headers: { 
+                        'Content-Type': 'application/json',
+                        "X-Master-Key": "$2a$10$95IscN4N3uUfN5M9R3qf7.K5q0mGz4hS3Y3eF5H6rS2E1m8I2O8S2"
+                    }, 
+                    body: JSON.stringify(db) 
+                });
+                if(!r.ok) throw new Error();
                 updateUI();
-            } catch (e) { alert("Erreur de sauvegarde"); }
+            } catch (e) { 
+                alert("Erreur de sauvegarde serveur. Vérifiez votre connexion."); 
+            }
         }
 
         function updateUI() {
@@ -200,7 +220,7 @@
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
 
             const list = document.getElementById('tournois-list');
-            list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi" : "";
+            list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi pour le moment." : "";
             db.config_tournois.forEach(t => {
                 const count = db.inscrits_tournoi.filter(i => i.tournoiId === t.id).length;
                 const reste = t.slots - count;
@@ -217,19 +237,19 @@
             });
 
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
-            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td>${i.tel}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')">X</button></td></tr>`).join('');
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')">X</button></td></tr>`).join('');
+            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td>${i.tel}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}; border:none; color:white; padding:5px; border-radius:5px;">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')" style="color:red; background:none; border:none; font-weight:bold;">X</button></td></tr>`).join('');
+            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}; border:none; color:white; padding:5px; border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" style="color:red; background:none; border:none; font-weight:bold;">X</button></td></tr>`).join('');
         }
 
-        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, tel: e.target.tel.value, ok: false }); await saveData(); alert("Inscrit !"); }
-        async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), s=document.getElementById('nt-s'); db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, slots:parseInt(s.value)}); await saveData(); n.value=""; d.value=""; s.value=""; }
+        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, tel: e.target.tel.value, ok: false }); await saveData(); alert("Inscription au tournoi réussie !"); e.target.reset(); }
+        async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), s=document.getElementById('nt-s'); if(!n.value) return; db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, slots:parseInt(s.value)}); await saveData(); n.value=""; d.value=""; s.value=""; }
         async function delI(id) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); await saveData(); }
         async function delM(id) { db.membres = db.membres.filter(x=>x.id!==id); await saveData(); }
         async function togT(id) { const x=db.inscrits_tournoi.find(i=>i.id===id); if(x){x.ok=!x.ok; await saveData();}}
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
-        async function resetSeason() { if(confirm("Tout effacer ?")) { db.membres=[]; db.inscrits_tournoi=[]; db.config_tournois=[]; db.y1++; db.y2++; await saveData(); } }
+        async function resetSeason() { if(confirm("Attention : cela effacera tous les inscrits pour la nouvelle année. Continuer ?")) { db.membres=[]; db.inscrits_tournoi=[]; db.config_tournois=[]; db.y1++; db.y2++; await saveData(); } }
 
-        function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
+        function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } else { alert("Code incorrect"); } }
         function toggleSec(id) { const s = document.getElementById(id); s.style.display = s.style.display==='block' ? 'none' : 'block'; }
         
         document.getElementById('main-adh').onsubmit = async (e) => {
