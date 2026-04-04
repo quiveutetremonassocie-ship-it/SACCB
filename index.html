@@ -60,7 +60,12 @@ th, td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-al
     <h2>Qui sommes-nous ?</h2>
     <div class="card" style="border-left: 5px solid var(--primary);">
         <p>Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
-        <p style="margin-top:10px;">Nous sommes un club dynamique où des <strong>tournois internes sont organisés régulièrement</strong> et où nos équipes brillent en <strong>interclub tout au long de l'année</strong>.</p>
+        <p style="margin-top:15px; font-weight:bold; color:var(--primary);">🕒 NOS CRÉNEAUX :</p>
+        <p>Lundi : 18h00 - 20h00<br>Mercredi : 20h00 - 22h00<br>Vendredi : 18h00 - 20h30</p>
+        
+        <p style="margin-top:15px; font-weight:bold; color:var(--accent);">💰 TARIFS ANNUELS :</p>
+        <p>Adulte : 50€<br>Étudiant / Jeune : 25€</p>
+
         <div style="margin-top:20px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
             <p style="color:var(--accent); font-weight:600;">📍 Où nous trouver :</p>
             <p style="color:var(--text-muted);">30bis Rue Georges Boissaye du Bocage<br>76310 Sainte-Adresse (Salle Paul Vatine)</p>
@@ -123,7 +128,7 @@ th, td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-al
 
 <div id="admin-panel" class="admin-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="margin:0; font-size:28px;">BUREAU - MODE SYNC</h2>
+        <h2 style="margin:0; font-size:28px;">ESPACE BUREAU</h2>
         <button onclick="location.reload()" class="btn" style="width:auto; padding:8px 20px; background:#475569;">Fermer</button>
     </div>
     <div class="admin-section">
@@ -136,7 +141,7 @@ th, td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-al
         </div>
     </div>
     <div class="admin-section">
-        <div class="admin-header" onclick="toggleSec('sec-tournois')">⚙️ CONFIGURATION <span>▼</span></div>
+        <div class="admin-header" onclick="toggleSec('sec-tournois')">⚙️ CONFIGURATION TOURNOIS <span>▼</span></div>
         <div id="sec-tournois" class="admin-content"><table><thead><tr><th>Nom</th><th>Date</th><th>Places</th><th>X</th></tr></thead><tbody id="list-t-config"></tbody></table></div>
     </div>
     <div class="admin-section">
@@ -152,36 +157,34 @@ th, td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-al
 <script>
 const PASS = "43210"; 
 const CLUB_MAX = 70;
-const SYNC_ID = "saccb_76310_data"; // Ton identifiant unique de base de données
+const SYNC_URL = "https://jsonblob.com/api/jsonBlob/1357410052924104704"; // Serveur de secours plus stable
 let db = {"membres":[],"inscrits_tournoi":[],"config_tournois":[],"signed":false,"startYear":2026};
 
-// --- FONCTIONS DE SYNCHRONISATION EN LIGNE ---
+// --- SYNC ---
 async function syncLoad() {
     try {
-        const response = await fetch(`https://api.keyvalue.xyz/${SYNC_ID}/db`);
-        if (response.ok) {
-            const remoteDb = await response.json();
-            db = remoteDb;
-            // On garde quand même la trace locale de l'inscription pour cet appareil
-            const localSigned = localStorage.getItem('saccb_signed');
-            if(localSigned === 'true') db.signed = true;
+        const r = await fetch(SYNC_URL);
+        if (r.ok) {
+            const data = await r.json();
+            db = data;
+            if(localStorage.getItem('saccb_signed') === 'true') db.signed = true;
             updateUI();
             if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
-    } catch (e) { console.log("Mode hors-ligne"); }
+    } catch (e) { console.log("Offline"); }
 }
 
 async function syncSave() {
-    localStorage.setItem('saccb_vBeton_vSync', JSON.stringify(db));
+    localStorage.setItem('saccb_vBeton_final', JSON.stringify(db));
     if(db.signed) localStorage.setItem('saccb_signed', 'true');
     try {
-        await fetch(`https://api.keyvalue.xyz/${SYNC_ID}/db`, {
-            method: 'POST',
+        await fetch(SYNC_URL, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(db)
         });
-    } catch (e) { console.error("Erreur sync"); }
+    } catch (e) { console.error("Sync error"); }
 }
-// --------------------------------------------
 
 function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display==='block')?'none':'block'; }
 
@@ -217,12 +220,11 @@ function renderAdmin() {
     document.getElementById('list-membres').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM(${m.id})" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM(${m.id})">❌</button></td></tr>`).join('');
 }
 
-// Actions synchronisées
 async function addT() { 
     const n=document.getElementById('new-t-name').value, d=document.getElementById('new-t-date').value, s=document.getElementById('new-t-slots').value; 
     if(n&&d){ db.config_tournois.push({id:Date.now().toString(), name:n, date:d, slots:s?parseInt(s):0}); await syncSave(); location.reload(); }
 }
-async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois=db.config_tournois.filter(x=>x.id!==id); await syncSave(); renderAdmin(); updateUI(); }}
+async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois=db.config_tournois.filter(x=>x.id!==id); await syncSave(); location.reload(); }}
 async function regT(e,id,name) { e.preventDefault(); const f=e.target; db.inscrits_tournoi.push({id:Date.now(), tournoiId:id, tournoiName:name, p1:f.p1.value, p2:f.p2.value, tel:f.tel.value, ok:false}); await syncSave(); location.reload(); }
 document.getElementById('main-adh').onsubmit = async (e) => { 
     e.preventDefault(); 
@@ -234,10 +236,9 @@ async function togM(id) { const x=db.membres.find(m=>m.id===id); x.ok=!x.ok; awa
 async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi=db.inscrits_tournoi.filter(i=>i.id!==id); await syncSave(); renderAdmin(); }}
 async function delM(id) { if(confirm("Supprimer ?")) { db.membres=db.membres.filter(m=>m.id!==id); await syncSave(); renderAdmin(); }}
 
-// Chargement initial
+// Start
 syncLoad();
-// Rafraîchir toutes les 30 secondes pour voir les nouveaux inscrits automatiquement
-setInterval(syncLoad, 30000);
+setInterval(syncLoad, 20000); // Check toutes les 20s
 </script>
 </body>
 </html>
