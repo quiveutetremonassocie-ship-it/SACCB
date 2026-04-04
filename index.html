@@ -232,15 +232,15 @@
         <div class="grid-info">
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--primary); margin-bottom: 20px;">🕒 Horaires</h3>
-                <p><strong>Lundi :</strong> 18h00 - 20h00</p>
-                <p><strong>Mercredi :</strong> 20h00 - 22h00</p>
-                <p><strong>Vendredi :</strong> 18h00 - 20h30</p>
+                <p><strong>Lundi :</strong> 18h30 - Fermeture</p>
+                <p><strong>Jeudi :</strong> 18h30 - Fermeture</p>
+                <p><strong>Samedi :</strong> 17h30 - Fermeture</p>
             </div>
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
                 <p><strong>Adulte :</strong> 50€ / an</p>
                 <p><strong>Étudiant / Jeune :</strong> 25€ / an</p>
-                <p style="font-size: 12px; margin-top: 15px; color: var(--text-muted);">* Plumes non fournies. Inscription valable pour la saison complète.</p>
+                <p style="font-size: 12px; margin-top: 15px; color: var(--text-muted);">* Inscription valable pour la saison complète.</p>
             </div>
         </div>
     </section>
@@ -248,7 +248,7 @@
     <section id="tournois">
         <h2>Tournois à venir</h2>
         <div id="tournois-list">
-            <p style="text-align: center; color: var(--text-muted);">Mise à jour des tournois...</p>
+            <p style="text-align: center; color: var(--text-muted);">Recherche de tournois...</p>
         </div>
     </section>
 
@@ -339,7 +339,6 @@
     <script>
         const PASS = "43210";
         const CLUB_MAX = 70;
-        // Utilisation d'une API simple sans blocage CORS
         const DB_URL = "https://api.jsonstorage.net/v1/json/887754d2-777e-405a-8b17-739343362143";
 
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [] };
@@ -348,14 +347,18 @@
             try {
                 const r = await fetch(DB_URL);
                 if (r.ok) {
-                    db = await r.json();
-                    updateUI();
-                    if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
+                    const data = await r.json();
+                    if (data && typeof data === 'object') {
+                        db = data;
+                        updateUI();
+                        if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
+                    } else {
+                        await saveData();
+                    }
                 }
             } catch (e) {
                 const local = localStorage.getItem('saccb_backup');
-                if (local) db = JSON.parse(local);
-                updateUI();
+                if (local) { db = JSON.parse(local); updateUI(); }
             }
         }
 
@@ -391,7 +394,7 @@
                         ${!complet ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div>
                             <input type="tel" name="tel" placeholder="Téléphone" required><button type="submit" class="btn btn-tournoi">S'inscrire</button>
-                        </form>` : '<h3 style="color:var(--danger); text-align:center;">COMPLET</h3>'}
+                        </form>` : '<h3 style="color:var(--danger); text-align:center;">TOURNOI COMPLET</h3>'}
                     </div>`;
                 }).join('');
             }
@@ -423,7 +426,7 @@
         async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); renderAdmin(); updateUI(); }}
 
         loadData();
-        setInterval(loadData, 10000); // Rafraîchir toutes les 10s
+        setInterval(loadData, 10000); 
     </script>
 </body>
 </html>
