@@ -232,9 +232,9 @@
         <div class="grid-info">
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--primary); margin-bottom: 20px;">🕒 Horaires</h3>
-                <p><strong>Lundi :</strong> 18h30 - Fermeture</p>
-                <p><strong>Jeudi :</strong> 18h30 - Fermeture</p>
-                <p><strong>Samedi :</strong> 17h30 - Fermeture</p>
+                <p><strong>Lundi :</strong> 18h30 jusqu'à la fermeture</p>
+                <p><strong>Jeudi :</strong> 18h30 jusqu'à la fermeture</p>
+                <p><strong>Samedi :</strong> 17h30 jusqu'à la fermeture</p>
             </div>
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
@@ -345,19 +345,20 @@
 
         async function loadData() {
             try {
-                const r = await fetch(DB_URL + "?nocache=" + Date.now());
+                const r = await fetch(DB_URL);
                 if (r.ok) {
                     const data = await r.json();
-                    if (data && typeof data === 'object') {
+                    if (data && typeof data === 'object' && Array.isArray(data.config_tournois)) {
                         db = data;
-                        updateUI();
-                        if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
                     }
                 }
             } catch (e) {
                 const local = localStorage.getItem('saccb_backup');
-                if (local) { db = JSON.parse(local); updateUI(); }
+                if (local) { db = JSON.parse(local); }
             }
+            // Forcer la mise à jour de l'interface même si la base de données ne répond pas, pour enlever le "Chargement..."
+            updateUI();
+            if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
 
         async function saveData() {
@@ -396,7 +397,7 @@
                     </div>`;
                 }).join('');
             }
-            document.getElementById('quota-msg').innerText = `Places club : ${CLUB_MAX - db.membres.length}`;
+            document.getElementById('quota-msg').innerText = `Places club : ${CLUB_MAX - (db.membres ? db.membres.length : 0)}`;
             if (localStorage.getItem('saccb_signed') === 'true') {
                 document.getElementById('form-container').style.display = 'none';
                 document.getElementById('msg-deja').style.display = 'block';
@@ -413,12 +414,27 @@
 
         async function addT() { 
             const n = document.getElementById('new-t-name').value, d = document.getElementById('new-t-date').value, s = document.getElementById('new-t-slots').value; 
-            if (n && d) { db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); await saveData(); updateUI(); renderAdmin(); }
+            if (n && d) { 
+                if (!db.config_tournois) db.config_tournois = [];
+                db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); 
+                await saveData(); updateUI(); renderAdmin(); 
+            }
         }
-        async function regT(e, tid, tname) { e.preventDefault(); const f = e.target; db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); await saveData(); updateUI(); }
-        document.getElementById('main-adh').onsubmit = async (e) => { e.preventDefault(); db.membres.push({ id: Date.now(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); localStorage.setItem('saccb_signed', 'true'); await saveData(); updateUI(); };
-        async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); x.ok=!x.ok; await saveData(); renderAdmin(); }
-        async function togM(id) { const x = db.membres.find(m=>m.id===id); x.ok=!x.ok; await saveData(); renderAdmin(); }
+        async function regT(e, tid, tname) { 
+            e.preventDefault(); const f = e.target; 
+            if (!db.inscrits_tournoi) db.inscrits_tournoi = [];
+            db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); 
+            await saveData(); updateUI(); 
+        }
+        document.getElementById('main-adh').onsubmit = async (e) => { 
+            e.preventDefault(); 
+            if (!db.membres) db.membres = [];
+            db.membres.push({ id: Date.now(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
+            localStorage.setItem('saccb_signed', 'true'); 
+            await saveData(); updateUI(); 
+        };
+        async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; await saveData(); renderAdmin(); } }
+        async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; await saveData(); renderAdmin(); } }
         async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); updateUI(); renderAdmin(); }}
         async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); await saveData(); renderAdmin(); updateUI(); }}
         async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); renderAdmin(); updateUI(); }}
