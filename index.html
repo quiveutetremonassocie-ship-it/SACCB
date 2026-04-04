@@ -53,7 +53,15 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
 
 <section id="presentation">
     <h2>Qui sommes-nous ?</h2>
-    <p>Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et une gestion en béton.</p>
+    <div class="card" style="border-left: 5px solid var(--primary);">
+        <p>Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
+        <p style="margin-top:10px;">Nous sommes un club dynamique où des <strong>tournois internes sont organisés régulièrement</strong> et où nos équipes brillent en <strong>interclub tout au long de l'année</strong>.</p>
+        
+        <div style="margin-top:20px; padding-top:15px; border-top:1px solid rgba(255,255,255,0.1);">
+            <p style="color:var(--accent); font-weight:600;">📍 Où nous trouver :</p>
+            <p style="color:var(--text-muted);">30bis Rue Georges Boissaye du Bocage<br>76310 Sainte-Adresse (Salle Paul Vatine)</p>
+        </div>
+    </div>
 </section>
 
 <section id="tournois">
@@ -82,7 +90,7 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
     <div class="card" style="border-top: 4px solid var(--primary);">
         <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:15px;"></p>
         <div id="form-container">
-            <p style="margin-bottom:15px; font-size:14px; color:var(--text-muted)">Remplissez ce formulaire pour réserver votre place. Le règlement se fera ultérieurement auprès du club.</p>
+            <p style="margin-bottom:15px; font-size:14px; color:var(--text-muted)">Réservez votre place dès maintenant. Le règlement se fera ultérieurement auprès du club.</p>
             <form id="main-adh">
                 <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
                 <input type="email" id="m-email" placeholder="Email" required>
