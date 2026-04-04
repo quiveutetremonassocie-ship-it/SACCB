@@ -345,18 +345,26 @@
 
         async function loadData() {
             try {
-                const r = await fetch(DB_URL);
+                // Le ?nocache évite de recharger l'ancienne version vide
+                const r = await fetch(DB_URL + "?nocache=" + Date.now());
                 if (r.ok) {
                     const data = await r.json();
-                    if (data && typeof data === 'object' && Array.isArray(data.config_tournois)) {
-                        db = data;
+                    if (data && typeof data === 'object') {
+                        // On sécurise pour être certain que les tableaux existent toujours
+                        db.membres = data.membres || [];
+                        db.inscrits_tournoi = data.inscrits_tournoi || [];
+                        db.config_tournois = data.config_tournois || [];
                     }
                 }
             } catch (e) {
                 const local = localStorage.getItem('saccb_backup');
-                if (local) { db = JSON.parse(local); }
+                if (local) { 
+                    const parsed = JSON.parse(local);
+                    db.membres = parsed.membres || [];
+                    db.inscrits_tournoi = parsed.inscrits_tournoi || [];
+                    db.config_tournois = parsed.config_tournois || [];
+                }
             }
-            // Forcer la mise à jour de l'interface même si la base de données ne répond pas, pour enlever le "Chargement..."
             updateUI();
             if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
@@ -376,7 +384,7 @@
 
         function updateUI() {
             const container = document.getElementById('tournois-list');
-            if (!db.config_tournois || db.config_tournois.length === 0) {
+            if (db.config_tournois.length === 0) {
                 container.innerHTML = '<div class="card" style="text-align:center;">Aucun tournoi prévu.</div>';
             } else {
                 container.innerHTML = db.config_tournois.map(t => {
@@ -397,7 +405,7 @@
                     </div>`;
                 }).join('');
             }
-            document.getElementById('quota-msg').innerText = `Places club : ${CLUB_MAX - (db.membres ? db.membres.length : 0)}`;
+            document.getElementById('quota-msg').innerText = `Places club : ${CLUB_MAX - db.membres.length}`;
             if (localStorage.getItem('saccb_signed') === 'true') {
                 document.getElementById('form-container').style.display = 'none';
                 document.getElementById('msg-deja').style.display = 'block';
@@ -407,40 +415,26 @@
         function checkAdmin() { if (document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; renderAdmin(); } else alert("Refusé"); }
 
         function renderAdmin() {
-            document.getElementById('list-t-config').innerHTML = (db.config_tournois || []).map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots || '∞'}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
-            document.getElementById('list-t-inscrits').innerHTML = (db.inscrits_tournoi || []).map(i => `<tr><td>${i.tournoiName}</td><td>${i.p1}</td><td>${i.p2}</td><td>${i.tel}</td><td><button onclick="togT(${i.id})" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delInscT(${i.id})">❌</button></td></tr>`).join('');
-            document.getElementById('list-membres').innerHTML = (db.membres || []).map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM(${m.id})" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM(${m.id})">❌</button></td></tr>`).join('');
+            document.getElementById('list-t-config').innerHTML = db.config_tournois.map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots || '∞'}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
+            document.getElementById('list-t-inscrits').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.p1}</td><td>${i.p2}</td><td>${i.tel}</td><td><button onclick="togT(${i.id})" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delInscT(${i.id})">❌</button></td></tr>`).join('');
+            document.getElementById('list-membres').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM(${m.id})" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM(${m.id})">❌</button></td></tr>`).join('');
         }
 
         async function addT() { 
             const n = document.getElementById('new-t-name').value, d = document.getElementById('new-t-date').value, s = document.getElementById('new-t-slots').value; 
             if (n && d) { 
-                if (!db.config_tournois) db.config_tournois = [];
                 db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); 
-                await saveData(); updateUI(); renderAdmin(); 
+                await saveData(); 
+                
+                // On vide les champs pour confirmer la création
+                document.getElementById('new-t-name').value = '';
+                document.getElementById('new-t-date').value = '';
+                document.getElementById('new-t-slots').value = '';
+                
+                updateUI(); 
+                renderAdmin(); 
             }
         }
         async function regT(e, tid, tname) { 
             e.preventDefault(); const f = e.target; 
-            if (!db.inscrits_tournoi) db.inscrits_tournoi = [];
-            db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); 
-            await saveData(); updateUI(); 
-        }
-        document.getElementById('main-adh').onsubmit = async (e) => { 
-            e.preventDefault(); 
-            if (!db.membres) db.membres = [];
-            db.membres.push({ id: Date.now(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
-            localStorage.setItem('saccb_signed', 'true'); 
-            await saveData(); updateUI(); 
-        };
-        async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; await saveData(); renderAdmin(); } }
-        async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; await saveData(); renderAdmin(); } }
-        async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); updateUI(); renderAdmin(); }}
-        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); await saveData(); renderAdmin(); updateUI(); }}
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); await saveData(); renderAdmin(); updateUI(); }}
-
-        loadData();
-        setInterval(loadData, 5000); 
-    </script>
-</body>
-</html>
+            db.inscrits_tournoi.push({ id: Date.now(), tournoi
