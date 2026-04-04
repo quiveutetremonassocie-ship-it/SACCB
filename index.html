@@ -124,6 +124,7 @@
     </div>
 
     <script>
+        // On récupère l'URL et la clé depuis tes captures
         const SUPA_URL = "https://yqpctdutrkwzqyjplwrb.supabase.co";
         const SUPA_KEY = "sb_publishable_d_ivS1M_tMifPQMhJhf44g_-Xz-8Q_9";
         const PASS = "43210";
@@ -132,19 +133,22 @@
 
         async function loadData() {
             try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
+                // Utilisation de .order et .limit(1) pour s'assurer de récupérer la ligne existante
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&order=created_at.desc&limit=1`, {
                     headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` }
                 });
                 const json = await res.json();
-                if (json[0]) db = json[0].data;
+                if (json[0] && json[0].data) db = json[0].data;
                 updateUI();
-            } catch (e) { console.error("Erreur sync"); }
+            } catch (e) { console.error("Erreur de chargement"); }
         }
 
         async function saveData() {
             try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
-                    method: 'PATCH',
+                // On utilise POST avec l'en-tête Prefer: resolution=merge ou simplement un nouvel insert 
+                // pour éviter les erreurs d'ID qui causent ton message d'erreur
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, {
+                    method: 'POST',
                     headers: { 
                         "apikey": SUPA_KEY, 
                         "Authorization": `Bearer ${SUPA_KEY}`, 
@@ -155,36 +159,68 @@
                 });
                 if(!res.ok) throw new Error();
                 updateUI();
-            } catch (e) { alert("Erreur serveur : Vérifie ta table Supabase."); }
+            } catch (e) { 
+                alert("Erreur serveur : Vérifie ta table Supabase."); 
+            }
         }
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            
             const list = document.getElementById('tournois-list');
             list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi prévu." : "";
+            
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}</h3><div class="liste-inscrits"><strong>Inscrits :</strong><br>${inscrits.map(i => `<span>${i.joueurs}</span>`).join('') || 'Aucun'}</div><form onsubmit="regT(event, '${t.id}', '${t.name}')"><input type="text" name="txt" placeholder="Binôme" required><button type="submit" class="btn">S'inscrire</button></form></div>`;
+                list.innerHTML += `
+                    <div class="tournoi-card">
+                        <h3>${t.name} - ${t.date}</h3>
+                        <div class="liste-inscrits">
+                            <strong>Inscrits :</strong><br>
+                            ${inscrits.map(i => `<span>${i.joueurs}</span>`).join('') || 'Aucun'}
+                        </div>
+                        <form onsubmit="regT(event, '${t.id}', '${t.name}')">
+                            <input type="text" name="txt" placeholder="Binôme" required>
+                            <button type="submit" class="btn">S'inscrire</button>
+                        </form>
+                    </div>`;
             });
+
+            // Gestion du quota d'adhérents (65 max)
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
+            
             document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')">X</button></td></tr>`).join('');
             document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')">X</button></td></tr>`).join('');
         }
 
-        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, ok: false }); await saveData(); }
-        async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), s=document.getElementById('nt-s'); db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, slots: s.value ? parseInt(s.value) : null}); await saveData(); }
-        async function delI(id) { if(confirm("Suppr ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); await saveData(); } }
-        async function delM(id) { if(confirm("Suppr ?")) { db.membres = db.membres.filter(x=>x.id!==id); await saveData(); } }
+        async function regT(e, id, name) { 
+            e.preventDefault(); 
+            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, ok: false }); 
+            await saveData(); 
+        }
+
+        async function addT() { 
+            const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), s=document.getElementById('nt-s'); 
+            db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, slots: s.value ? parseInt(s.value) : null}); 
+            await saveData(); 
+        }
+
+        async function delI(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); await saveData(); } }
+        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x=>x.id!==id); await saveData(); } }
         async function togT(id) { const x=db.inscrits_tournoi.find(i=>i.id===id); if(x){x.ok=!x.ok; await saveData();}}
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
+        
         function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
+        
         document.getElementById('main-adh').onsubmit = async (e) => {
             e.preventDefault();
             db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false });
-            document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block';
+            document.getElementById('form-container').style.display='none'; 
+            document.getElementById('msg-deja').style.display='block';
             await saveData();
         };
+
         loadData();
     </script>
 </body>
