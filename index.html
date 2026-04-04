@@ -311,8 +311,8 @@
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:30px;">
             <h2 style="margin:0;">ESPACE GESTION</h2>
-            <div>
-                <button onclick="saveData(true)" class="btn" style="width:auto; background:var(--accent); margin-right:10px;">💾 SAUVEGARDER</button>
+            <div style="display:flex; gap:10px;">
+                <button onclick="exportBackup()" class="btn" style="width:auto; background:var(--accent);">📥 EXPORTER SAUVEGARDE (PC)</button>
                 <button onclick="location.reload()" class="btn" style="width:auto; background:#475569;">Quitter</button>
             </div>
         </div>
@@ -340,7 +340,7 @@
         </div>
 
         <div class="admin-section" style="border: 1px solid var(--danger);">
-            <div class="admin-header" style="color:var(--danger)" onclick="toggleSec('sec-danger')">⚠️ MAINTENANCE / CHANGEMENT SAISON <span>▼</span></div>
+            <div class="admin-header" style="color:var(--danger)" onclick="toggleSec('sec-danger')">⚠️ CHANGEMENT SAISON <span>▼</span></div>
             <div id="sec-danger" class="admin-content">
                 <p style="margin-bottom:15px; font-size:14px;">Cette action supprimera tous les adhérents et les tournois pour commencer une nouvelle année.</p>
                 <button onclick="resetSeason()" class="btn" style="background:var(--danger)">Réinitialiser pour la Nouvelle Saison</button>
@@ -379,23 +379,30 @@
             if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
 
-        async function saveData(manual = false) {
+        async function saveData() {
             localStorage.setItem('saccb_backup', JSON.stringify(db));
             try {
-                const r = await fetch(DB_URL, {
+                await fetch(DB_URL, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(db)
                 });
-                if(manual && r.ok) alert("Sauvegarde réussie sur le serveur !");
-            } catch (e) { 
-                console.error("Sync failed"); 
-                if(manual) alert("Erreur de connexion au serveur. Sauvegarde locale uniquement.");
-            }
+            } catch (e) { console.error("Sync failed"); }
+        }
+
+        function exportBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const downloadAnchorNode = document.createElement('a');
+            downloadAnchorNode.setAttribute("href", dataStr);
+            const date = new Date().toLocaleDateString().replace(/\//g, '-');
+            downloadAnchorNode.setAttribute("download", "SAUVEGARDE_SACCB_" + date + ".json");
+            document.body.appendChild(downloadAnchorNode);
+            downloadAnchorNode.click();
+            downloadAnchorNode.remove();
         }
 
         async function resetSeason() {
-            if(confirm("ATTENTION : Voulez-vous vraiment supprimer TOUTES les données (Membres et Tournois) pour changer de saison ?")) {
+            if(confirm("Confirmer la remise à zéro pour la nouvelle saison ?")) {
                 db = { membres: [], inscrits_tournoi: [], config_tournois: [] };
                 await saveData();
                 location.reload();
@@ -418,7 +425,7 @@
                         <div class="tournoi-header"><h3 class="tournoi-title">${t.name}</h3><span class="tournoi-date">${t.date}</span></div>
                         <span class="slots-badge">Places restantes : ${reste}</span>
                         <div style="margin:20px 0; background:rgba(0,0,0,0.2); padding:15px; border-radius:10px;">
-                            <strong>INSCRITS :</strong><br>${inscrits.length > 0 ? inscrits.map(i => `滩 ${i.p1} & ${i.p2}`).join('<br>') : 'Aucun binôme'}
+                            <strong>INSCRITS :</strong><br>${inscrits.length > 0 ? inscrits.map(i => `🏸 ${i.p1} & ${i.p2}`).join('<br>') : 'Aucun binôme'}
                         </div>
                         ${!complet ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
                             <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div>
