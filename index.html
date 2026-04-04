@@ -49,11 +49,11 @@
         .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; max-width: 900px; margin: 40px auto; }
 
         .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
-        .admin-section { background: var(--bg-card); border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); }
+        .admin-section { background: var(--bg-card); border-radius: 15px; margin-bottom: 25px; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; }
         .admin-header { padding: 20px; background: rgba(59, 130, 246, 0.1); cursor: pointer; font-family: 'Bebas Neue'; font-size: 24px; display: flex; justify-content: space-between; }
-        .admin-content { display: none; padding: 25px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .admin-content { display: none; padding: 25px; overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; min-width: 600px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
     </style>
 </head>
 <body>
@@ -87,7 +87,7 @@
                 <p><strong>Samedi :</strong> 17h30 - Fermeture</p>
             </div>
             <div class="card">
-                <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs</h3>
+                <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
                 <p><strong>Adulte :</strong> 50€ / an</p>
                 <p><strong>Étudiant :</strong> 25€ / an</p>
             </div>
@@ -117,17 +117,22 @@
     </section>
 
     <footer>
+        <h2 style="color: white; margin-bottom: 20px; font-family: 'Bebas Neue'; font-size: 40px;">Contactez-nous</h2>
         <div class="contact-grid">
             <div class="card">
-                <p style="color: var(--primary); font-weight: bold;">PRÉSIDENT</p>
-                <p>Hernan Camara - 07 77 06 18 75</p>
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT</p>
+                <p style="font-size: 20px;">Hernan Camara</p>
+                <p>07 77 06 18 75</p>
+                <p style="font-size: 14px; color: var(--text-muted);">hernancm68@hotmail.com</p>
             </div>
             <div class="card">
-                <p style="color: var(--primary); font-weight: bold;">PRÉSIDENT ADJOINT</p>
-                <p>Demare Matthieu - 06 52 48 62 28</p>
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT ADJOINT</p>
+                <p style="font-size: 20px;">Demare Matthieu</p>
+                <p>06 52 48 62 28</p>
+                <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
             </div>
         </div>
-        <p id="copy-annee" style="color: var(--text-muted); font-size: 14px;"></p>
+        <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
     </footer>
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
@@ -139,12 +144,12 @@
 
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
-            <h2>GESTION SACCB</h2>
+            <h2>ESPACE GESTION</h2>
             <button onclick="location.reload()" class="btn" style="width:auto;">Fermer</button>
         </div>
 
         <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-1')">🏆 CRÉER TOURNOI <span>▼</span></div>
+            <div class="admin-header" onclick="toggleSec('sec-1')">🏆 CRÉER UN TOURNOI <span>▼</span></div>
             <div id="sec-1" class="admin-content">
                 <input type="text" id="nt-n" placeholder="Nom">
                 <input type="text" id="nt-d" placeholder="Date">
@@ -154,18 +159,22 @@
         </div>
 
         <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-2')">📋 LISTES <span>▼</span></div>
-            <div id="sec-2" class="admin-content">
-                <h4 style="margin-bottom:10px">Inscrits Tournois</h4>
-                <table id="table-inscrits"><thead><tr><th>Tournoi</th><th>Joueurs</th><th>Action</th></tr></thead><tbody id="adm-i-list"></tbody></table>
-                <h4 style="margin-top:20px; margin-bottom:10px">Adhérents Club</h4>
-                <table id="table-membres"><thead><tr><th>Nom</th><th>Email</th><th>Action</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+            <div class="admin-header" onclick="toggleSec('sec-tournois')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
+            <div id="sec-tournois" class="admin-content">
+                <table><thead><tr><th>Tournoi</th><th>Joueurs</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="adm-i-list"></tbody></table>
+            </div>
+        </div>
+
+        <div class="admin-section">
+            <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
+            <div id="sec-membres" class="admin-content">
+                <table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Payé</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table>
             </div>
         </div>
 
         <div class="admin-section" style="border: 2px solid var(--danger);">
-            <div class="admin-header" onclick="toggleSec('sec-3')" style="color:var(--danger)">⚠️ SAISON SUIVANTE <span>▼</span></div>
-            <div id="sec-3" class="admin-content">
+            <div class="admin-header" onclick="toggleSec('sec-reset')" style="color:var(--danger)">⚠️ SAISON SUIVANTE <span>▼</span></div>
+            <div id="sec-reset" class="admin-content">
                 <button onclick="resetSeason()" class="btn" style="background:var(--danger)">PASSER À L'ANNÉE SUIVANTE</button>
             </div>
         </div>
@@ -173,7 +182,6 @@
 
     <script>
         const PASS = "43210";
-        // Chargement initial depuis LocalStorage ou objet par défaut
         let db = JSON.parse(localStorage.getItem('saccb_db')) || { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2026, y2: 2027 };
 
         function saveData() {
@@ -183,7 +191,7 @@
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription " + db.y1 + "-" + db.y2;
-            document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse Certifié Club Badminton";
 
             const list = document.getElementById('tournois-list');
             list.innerHTML = "";
@@ -196,6 +204,7 @@
                         <p>Places restantes : ${reste}</p>
                         ${reste > 0 ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
                             <input type="text" name="txt" placeholder="Binôme (J1 & J2)" required>
+                            <input type="tel" name="tel" placeholder="Téléphone" required>
                             <button type="submit" class="btn btn-tournoi">S'inscrire</button>
                         </form>` : '<h3 style="color:var(--danger)">COMPLET</h3>'}
                     </div>`;
@@ -203,57 +212,37 @@
 
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
 
-            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td><button onclick="delI('${i.id}')">X</button></td></tr>`).join('');
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td><button onclick="delM('${m.id}')">X</button></td></tr>`).join('');
+            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td>${i.tel}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')">X</button></td></tr>`).join('');
+            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')">X</button></td></tr>`).join('');
         }
 
         function regT(e, id, name) { 
             e.preventDefault(); 
-            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value }); 
-            saveData(); 
-            alert("Inscrit !"); 
+            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, tel: e.target.tel.value, ok: false }); 
+            saveData(); alert("Inscrit !"); 
         }
 
         function addT() { 
             const n = document.getElementById('nt-n'), d = document.getElementById('nt-d'), s = document.getElementById('nt-s'); 
             db.config_tournois.push({ id: Date.now().toString(), name: n.value, date: d.value, slots: parseInt(s.value) }); 
-            saveData(); 
-            n.value=""; d.value=""; s.value=""; 
+            saveData(); n.value=""; d.value=""; s.value=""; 
         }
 
-        function resetSeason() { 
-            if(confirm("Passer à l'année suivante ?")) { 
-                db.membres=[]; db.inscrits_tournoi=[]; db.config_tournois=[]; db.y1++; db.y2++; 
-                saveData(); 
-                location.reload(); 
-            } 
-        }
-
+        function resetSeason() { if(confirm("Passer à l'année suivante ?")) { db.membres=[]; db.inscrits_tournoi=[]; db.config_tournois=[]; db.y1++; db.y2++; saveData(); location.reload(); } }
         function delI(id) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); saveData(); }
         function delM(id) { db.membres = db.membres.filter(x=>x.id!==id); saveData(); }
+        function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; saveData(); } }
+        function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; saveData(); } }
         
-        function checkAdmin() { 
-            if(document.getElementById('pass').value === PASS) { 
-                document.getElementById('login-modal').style.display='none'; 
-                document.getElementById('admin-panel').style.display='block'; 
-                updateUI(); 
-            } 
-        }
-
-        function toggleSec(id) { 
-            const s = document.getElementById(id); 
-            s.style.display = s.style.display==='block' ? 'none' : 'block'; 
-        }
+        function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; updateUI(); } }
+        function toggleSec(id) { const s = document.getElementById(id); s.style.display = s.style.display==='block' ? 'none' : 'block'; }
         
         document.getElementById('main-adh').onsubmit = (e) => { 
             e.preventDefault(); 
-            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value }); 
-            document.getElementById('form-container').style.display='none'; 
-            document.getElementById('msg-deja').style.display='block'; 
-            saveData(); 
+            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
+            document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block'; saveData(); 
         };
 
-        // Lancement au chargement
         updateUI();
     </script>
 </body>
