@@ -69,14 +69,15 @@
             </div>
             <div class="card">
                 <h3 style="font-family: 'Bebas Neue'; font-size: 30px; color: var(--accent); margin-bottom: 20px;">💰 Tarifs Annuels</h3>
-                <p><strong>Adulte :</strong> 50€ / an | <strong>Étudiant :</strong> 25€ / an</p>
+                <p><strong>Adulte :</strong> 50€ / an</p>
+                <p><strong>Étudiant :</strong> 25€ / an</p>
             </div>
         </div>
     </section>
 
     <section id="tournois">
         <h2>Tournois à venir</h2>
-        <div id="tournois-list">Chargement des tournois...</div>
+        <div id="tournois-list">Chargement...</div>
     </section>
 
     <section id="inscription">
@@ -100,15 +101,19 @@
         <h2 style="color: white; margin-bottom: 20px; font-family: 'Bebas Neue'; font-size: 40px;">Contactez-nous</h2>
         <div class="contact-grid">
             <div class="card">
-                <p style="color: var(--primary); font-weight: bold;">PRÉSIDENT : Hernan Camara</p>
-                <p>07 77 06 18 75 | <span style="font-size: 12px;">hernancm68@hotmail.com</span></p>
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT</p>
+                <p style="font-size: 20px;">Hernan Camara</p>
+                <p>07 77 06 18 75</p>
+                <p style="font-size: 14px; color: var(--text-muted);">hernancm68@hotmail.com</p>
             </div>
             <div class="card">
-                <p style="color: var(--primary); font-weight: bold;">ADJOINT : Demare Matthieu</p>
-                <p>06 52 48 62 28 | <span style="font-size: 12px;">demare.matthieu@outlook.fr</span></p>
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT ADJOINT</p>
+                <p style="font-size: 20px;">Demare Matthieu</p>
+                <p>06 52 48 62 28</p>
+                <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
             </div>
         </div>
-        <p id="copy-annee"></p>
+        <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
     </footer>
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
@@ -116,123 +121,87 @@
     </div>
 
     <div id="admin-panel" class="admin-panel">
-        <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>GESTION</h2><button onclick="location.reload()" class="btn" style="width:auto;">Quitter</button></div>
+        <div style="display:flex; justify-content:space-between; margin-bottom:30px;"><h2>GESTION SACCB</h2><button onclick="location.reload()" class="btn" style="width:auto;">Fermer</button></div>
         <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-1')">🏆 CRÉER TOURNOI (Laisser places vide pour illimité) <span>▼</span></div>
+            <div class="admin-header" onclick="toggleSec('sec-1')">🏆 CRÉER TOURNOI <span>▼</span></div>
             <div id="sec-1" class="admin-content">
-                <input type="text" id="nt-n" placeholder="Nom du tournoi">
+                <input type="text" id="nt-n" placeholder="Nom">
                 <input type="text" id="nt-d" placeholder="Date">
-                <input type="number" id="nt-s" placeholder="Nombre max d'équipes (facultatif)">
-                <button onclick="addT()" class="btn">Publier le tournoi</button>
+                <input type="number" id="nt-s" placeholder="Places (vide = illimité)">
+                <button onclick="addT()" class="btn">Publier</button>
             </div>
         </div>
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-2')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
             <div id="sec-2" class="admin-content">
-                <table><thead><tr><th>Tournoi</th><th>Binôme</th><th>Payé</th><th>Action</th></tr></thead><tbody id="adm-i-list"></tbody></table>
+                <table><thead><tr><th>Tournoi</th><th>Binôme</th><th>Payé</th><th>X</th></tr></thead><tbody id="adm-i-list"></tbody></table>
             </div>
         </div>
         <div class="admin-section">
-            <div class="admin-header" onclick="toggleSec('sec-3')">👥 ADHÉRENTS CLUB <span>▼</span></div>
+            <div class="admin-header" onclick="toggleSec('sec-3')">👥 MEMBRES CLUB <span>▼</span></div>
             <div id="sec-3" class="admin-content">
-                <table><thead><tr><th>Nom</th><th>Email</th><th>Payé</th><th>Action</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+                <table><thead><tr><th>Nom</th><th>Email</th><th>Payé</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table>
             </div>
         </div>
     </div>
 
     <script>
-        // --- CONFIGURATION SUPABASE (A REMPLIR) ---
-        const SUPA_URL = "TON_URL_SUPABASE"; 
-        const SUPA_KEY = "TA_CLE_ANON_SUPABASE";
+        const SUPA_URL = "https://yqpctdutrkwzqyjp lwrb.supabase.co"; 
+        const SUPA_KEY = "sb_publishable_d_ivS1M_tMifPQMhJhf44g_-Xz-8Q_9";
         const PASS = "43210";
 
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2026, y2: 2027 };
 
         async function loadData() {
             try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data`, {
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
                     headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` }
                 });
                 const json = await res.json();
                 if (json[0]) db = json[0].data;
-            } catch (e) { console.error("Erreur serveur"); }
+                else await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { method: 'POST', headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ id: 1, data: db }) });
+            } catch (e) { console.error("Sync Error"); }
             updateUI();
         }
 
         async function saveData() {
             try {
-                await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
-                    method: 'PATCH',
-                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" },
-                    body: JSON.stringify({ data: db })
-                });
+                await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { method: 'PATCH', headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ data: db }) });
                 updateUI();
-            } catch (e) { alert("Erreur de sauvegarde"); }
+            } catch (e) { alert("Erreur serveur"); }
         }
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
-            
             const list = document.getElementById('tournois-list');
             list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi prévu." : "";
-            
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
                 const count = inscrits.length;
                 const limitStr = t.slots ? `Places restantes : ${t.slots - count}` : "Places illimitées";
                 const isFull = t.slots && (t.slots - count <= 0);
-
-                list.innerHTML += `
-                    <div class="tournoi-card">
-                        <div class="tournoi-header">
-                            <span class="tournoi-title">${t.name}</span>
-                            <span class="tournoi-date">${t.date}</span>
-                        </div>
-                        <p style="color:var(--accent); font-weight:bold;">${limitStr}</p>
-                        
-                        <div class="liste-inscrits">
-                            <strong>Binômes déjà inscrits :</strong><br>
-                            ${count > 0 ? inscrits.map(i => `<span>${i.joueurs}</span>`).join('') : 'Aucun pour le moment'}
-                        </div>
-
-                        ${!isFull ? `
-                            <form onsubmit="regT(event, '${t.id}', '${t.name}')">
-                                <input type="text" name="txt" placeholder="Binôme (ex: Jean & Marc)" required>
-                                <input type="tel" name="tel" placeholder="Téléphone" required>
-                                <button type="submit" class="btn btn-tournoi">S'inscrire</button>
-                            </form>` : '<h3 style="color:var(--danger)">TOURNOI COMPLET</h3>'}
-                    </div>`;
+                list.innerHTML += `<div class="tournoi-card"><div class="tournoi-header"><span class="tournoi-title">${t.name}</span><span class="tournoi-date">${t.date}</span></div><p style="color:var(--accent); font-weight:bold;">${limitStr}</p><div class="liste-inscrits"><strong>Inscrits :</strong><br>${count > 0 ? inscrits.map(i => `<span>${i.joueurs}</span>`).join('') : 'Aucun'}</div>${!isFull ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><input type="text" name="txt" placeholder="Binôme (J1 & J2)" required><input type="tel" name="tel" placeholder="Tél" required><button type="submit" class="btn btn-tournoi">S'inscrire</button></form>` : '<h3 style="color:var(--danger)">COMPLET</h3>'}</div>`;
             });
-
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
-            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')">Suppr</button></td></tr>`).join('');
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')">Suppr</button></td></tr>`).join('');
+            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')">X</button></td></tr>`).join('');
+            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')">X</button></td></tr>`).join('');
         }
 
-        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, tel: e.target.tel.value, ok: false }); await saveData(); alert("Inscription réussie !"); }
-        async function addT() { 
-            const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), s=document.getElementById('nt-s'); 
-            if(!n.value) return; 
-            db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, slots: s.value ? parseInt(s.value) : null}); 
-            await saveData(); n.value=""; d.value=""; s.value=""; 
-        }
-        async function delI(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); await saveData(); } }
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x=>x.id!==id); await saveData(); } }
+        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, tel: e.target.tel.value, ok: false }); await saveData(); alert("Inscrit !"); }
+        async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), s=document.getElementById('nt-s'); if(!n.value) return; db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, slots: s.value ? parseInt(s.value) : null}); await saveData(); n.value=""; d.value=""; s.value=""; }
+        async function delI(id) { if(confirm("Suppr ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); await saveData(); } }
+        async function delM(id) { if(confirm("Suppr ?")) { db.membres = db.membres.filter(x=>x.id!==id); await saveData(); } }
         async function togT(id) { const x=db.inscrits_tournoi.find(i=>i.id===id); if(x){x.ok=!x.ok; await saveData();}}
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
-
         function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
         function toggleSec(id) { const s = document.getElementById(id); s.style.display = s.style.display==='block' ? 'none' : 'block'; }
-        
         document.getElementById('main-adh').onsubmit = async (e) => {
             e.preventDefault();
-            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false });
-            document.getElementById('form-container').style.display='none';
-            document.getElementById('msg-deja').style.display='block';
+            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, ok: false });
+            document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block';
             await saveData();
         };
-
         loadData();
     </script>
 </body>
