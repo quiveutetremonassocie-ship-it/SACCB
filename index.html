@@ -18,48 +18,192 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
-        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; overflow-x: hidden; }
+        body { 
+            background: var(--bg-dark); 
+            color: var(--text-main); 
+            font-family: 'Outfit', sans-serif; 
+            line-height: 1.6; 
+            overflow-x: hidden; 
+        }
 
+        /* NAVIGATION */
         nav {
-            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
-            display: flex; align-items: center; justify-content: space-between;
-            padding: 15px 30px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 1000;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 15px 30px;
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
+        .nav-logo {
+            font-family: 'Bebas Neue';
+            font-size: 32px;
+            color: var(--primary);
+            text-decoration: none;
+            letter-spacing: 2px;
+        }
         .nav-links { display: flex; gap: 25px; align-items: center; }
-        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
+        .nav-links a {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 13px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            transition: 0.3s;
+        }
         .nav-links a:hover { color: var(--primary); }
 
-        section { padding: 120px 20px 60px; max-width: 1100px; margin: 0 auto; }
-        h2 { font-family: 'Bebas Neue', sans-serif; font-size: 48px; margin-bottom: 30px; color: var(--primary); letter-spacing: 1px; text-transform: uppercase; }
+        /* SECTIONS */
+        section {
+            padding: 120px 20px 60px;
+            max-width: 1100px;
+            margin: 0 auto;
+        }
+        h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 48px;
+            margin-bottom: 30px;
+            color: var(--primary);
+            letter-spacing: 1px;
+            text-transform: uppercase;
+        }
 
-        .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; }
-        .grid-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 40px; }
+        /* CARTES */
+        .card {
+            background: var(--bg-card);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
+            margin-bottom: 30px;
+        }
+        .grid-info {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 25px;
+            margin-bottom: 40px;
+        }
 
-        .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
-        .tournoi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        .tournoi-title { font-family: 'Bebas Neue'; font-size: 32px; color: var(--text-main); }
-        .tournoi-date { background: var(--primary); padding: 5px 15px; border-radius: 50px; font-size: 14px; font-weight: bold; }
-        .slots-badge { color: var(--accent); font-weight: bold; font-size: 18px; margin-bottom: 15px; display: block; }
+        /* TOURNOIS */
+        .tournoi-card {
+            background: var(--bg-card);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            border-left: 8px solid var(--accent);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
+        }
+        .tournoi-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .tournoi-title {
+            font-family: 'Bebas Neue';
+            font-size: 32px;
+            color: var(--text-main);
+        }
+        .tournoi-date {
+            background: var(--primary);
+            padding: 5px 15px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        .slots-badge {
+            color: var(--accent);
+            font-weight: bold;
+            font-size: 18px;
+            margin-bottom: 15px;
+            display: block;
+        }
 
-        input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; font-size: 16px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 16px; width: 100%; transition: 0.3s; text-transform: uppercase; }
+        /* FORMULAIRES */
+        input, select {
+            width: 100%;
+            padding: 15px;
+            margin-bottom: 15px;
+            background: var(--bg-dark);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 10px;
+            font-size: 16px;
+        }
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 16px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 16px;
+            width: 100%;
+            transition: 0.3s;
+            text-transform: uppercase;
+        }
         .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
         .btn-tournoi { background: var(--accent); margin-top: 10px; }
 
-        footer { background: #070b14; padding: 80px 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
-        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; max-width: 900px; margin: 40px auto; }
+        /* FOOTER */
+        footer {
+            background: #070b14;
+            padding: 80px 20px;
+            text-align: center;
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .contact-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 30px;
+            max-width: 900px;
+            margin: 40px auto;
+        }
 
-        .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
-        .admin-section { background: var(--bg-card); border-radius: 15px; margin-bottom: 25px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
-        .admin-header { padding: 20px; background: rgba(59, 130, 246, 0.1); cursor: pointer; font-family: 'Bebas Neue'; font-size: 24px; display: flex; justify-content: space-between; }
+        /* ADMIN */
+        .admin-panel {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: var(--bg-dark);
+            z-index: 2000;
+            overflow-y: auto;
+            padding: 30px;
+        }
+        .admin-section {
+            background: var(--bg-card);
+            border-radius: 15px;
+            margin-bottom: 25px;
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        .admin-header {
+            padding: 20px;
+            background: rgba(59, 130, 246, 0.1);
+            cursor: pointer;
+            font-family: 'Bebas Neue';
+            font-size: 24px;
+            display: flex;
+            justify-content: space-between;
+        }
         .admin-content { display: none; padding: 25px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
         th { color: var(--primary); text-transform: uppercase; }
 
-        @media (max-width: 768px) { .nav-links a:not(.admin-btn) { display: none; } h2 { font-size: 36px; } section { padding-top: 100px; } }
+        @media (max-width: 768px) {
+            .nav-links a:not(.admin-btn) { display: none; }
+            h2 { font-size: 36px; }
+            section { padding-top: 100px; }
+        }
     </style>
 </head>
 <body>
@@ -103,7 +247,9 @@
 
     <section id="tournois">
         <h2>Tournois à venir</h2>
-        <div id="tournois-list"></div>
+        <div id="tournois-list">
+            <p style="text-align: center; color: var(--text-muted);">Chargement...</p>
+        </div>
     </section>
 
     <section id="inscription">
@@ -235,6 +381,7 @@
         }
 
         function updateUI() {
+            // MISE A JOUR DES DATES DYNAMIQUES
             document.getElementById('txt-inscr').innerText = `Inscription ${db.y1}-${db.y2}`;
             document.getElementById('copyright').innerText = `© ${db.y1} SACCB — Sainte-Adresse Certifié Club Badminton`;
             
@@ -320,8 +467,8 @@
         async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; renderAdmin(); await saveData(); } }
         async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; renderAdmin(); await saveData(); } }
         async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); updateUI(); renderAdmin(); await saveData(); }}
-        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); updateUI(); renderAdmin(); await saveData(); }}
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); updateUI(); renderAdmin(); await saveData(); }}
+        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); renderAdmin(); updateUI(); await saveData(); }}
+        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); renderAdmin(); updateUI(); await saveData(); }}
 
         loadData();
     </script>
