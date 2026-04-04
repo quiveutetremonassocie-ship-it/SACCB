@@ -18,185 +18,48 @@
 
         * { box-sizing: border-box; margin: 0; padding: 0; }
         html { scroll-behavior: smooth; }
-        body { 
-            background: var(--bg-dark); 
-            color: var(--text-main); 
-            font-family: 'Outfit', sans-serif; 
-            line-height: 1.6; 
-            overflow-x: hidden; 
-        }
+        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; overflow-x: hidden; }
 
         nav {
-            position: fixed;
-            top: 0; left: 0; right: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 30px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
+            position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 15px 30px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px);
             border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .nav-logo {
-            font-family: 'Bebas Neue';
-            font-size: 32px;
-            color: var(--primary);
-            text-decoration: none;
-            letter-spacing: 2px;
-        }
+        .nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
         .nav-links { display: flex; gap: 25px; align-items: center; }
-        .nav-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            transition: 0.3s;
-        }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; letter-spacing: 1px; transition: 0.3s; }
         .nav-links a:hover { color: var(--primary); }
 
-        section {
-            padding: 120px 20px 60px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-        h2 {
-            font-family: 'Bebas Neue', sans-serif;
-            font-size: 48px;
-            margin-bottom: 30px;
-            color: var(--primary);
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
+        section { padding: 120px 20px 60px; max-width: 1100px; margin: 0 auto; }
+        h2 { font-family: 'Bebas Neue', sans-serif; font-size: 48px; margin-bottom: 30px; color: var(--primary); letter-spacing: 1px; text-transform: uppercase; }
 
-        .card {
-            background: var(--bg-card);
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            box-shadow: 0 10px 30px rgba(0,0,0,0.2);
-            margin-bottom: 30px;
-        }
-        .grid-info {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 25px;
-            margin-bottom: 40px;
-        }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; }
+        .grid-info { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; margin-bottom: 40px; }
 
-        .tournoi-card {
-            background: var(--bg-card);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border-left: 8px solid var(--accent);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.3);
-        }
-        .tournoi-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-            flex-wrap: wrap;
-            gap: 10px;
-        }
-        .tournoi-title {
-            font-family: 'Bebas Neue';
-            font-size: 32px;
-            color: var(--text-main);
-        }
-        .tournoi-date {
-            background: var(--primary);
-            padding: 5px 15px;
-            border-radius: 50px;
-            font-size: 14px;
-            font-weight: bold;
-        }
-        .slots-badge {
-            color: var(--accent);
-            font-weight: bold;
-            font-size: 18px;
-            margin-bottom: 15px;
-            display: block;
-        }
+        .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); box-shadow: 0 10px 25px rgba(0,0,0,0.3); }
+        .tournoi-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .tournoi-title { font-family: 'Bebas Neue'; font-size: 32px; color: var(--text-main); }
+        .tournoi-date { background: var(--primary); padding: 5px 15px; border-radius: 50px; font-size: 14px; font-weight: bold; }
+        .slots-badge { color: var(--accent); font-weight: bold; font-size: 18px; margin-bottom: 15px; display: block; }
 
-        input, select {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: var(--bg-dark);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 10px;
-            font-size: 16px;
-        }
-        .btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 16px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            font-size: 16px;
-            width: 100%;
-            transition: 0.3s;
-            text-transform: uppercase;
-        }
+        input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; font-size: 16px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; font-size: 16px; width: 100%; transition: 0.3s; text-transform: uppercase; }
         .btn:hover { filter: brightness(1.2); transform: translateY(-2px); }
         .btn-tournoi { background: var(--accent); margin-top: 10px; }
 
-        footer {
-            background: #070b14;
-            padding: 80px 20px;
-            text-align: center;
-            border-top: 1px solid rgba(255,255,255,0.1);
-        }
-        .contact-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 30px;
-            max-width: 900px;
-            margin: 40px auto;
-        }
+        footer { background: #070b14; padding: 80px 20px; text-align: center; border-top: 1px solid rgba(255,255,255,0.1); }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; max-width: 900px; margin: 40px auto; }
 
-        .admin-panel {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            z-index: 2000;
-            overflow-y: auto;
-            padding: 30px;
-        }
-        .admin-section {
-            background: var(--bg-card);
-            border-radius: 15px;
-            margin-bottom: 25px;
-            overflow: hidden;
-            border: 1px solid rgba(255,255,255,0.1);
-        }
-        .admin-header {
-            padding: 20px;
-            background: rgba(59, 130, 246, 0.1);
-            cursor: pointer;
-            font-family: 'Bebas Neue';
-            font-size: 24px;
-            display: flex;
-            justify-content: space-between;
-        }
+        .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
+        .admin-section { background: var(--bg-card); border-radius: 15px; margin-bottom: 25px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
+        .admin-header { padding: 20px; background: rgba(59, 130, 246, 0.1); cursor: pointer; font-family: 'Bebas Neue'; font-size: 24px; display: flex; justify-content: space-between; }
         .admin-content { display: none; padding: 25px; overflow-x: auto; }
         table { width: 100%; border-collapse: collapse; min-width: 800px; }
         th, td { padding: 15px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
         th { color: var(--primary); text-transform: uppercase; }
 
-        @media (max-width: 768px) {
-            .nav-links a:not(.admin-btn) { display: none; }
-            h2 { font-size: 36px; }
-            section { padding-top: 100px; }
-        }
+        @media (max-width: 768px) { .nav-links a:not(.admin-btn) { display: none; } h2 { font-size: 36px; } section { padding-top: 100px; } }
     </style>
 </head>
 <body>
@@ -240,16 +103,13 @@
 
     <section id="tournois">
         <h2>Tournois à venir</h2>
-        <div id="tournois-list">
-            <p style="text-align: center; color: var(--text-muted);">Chargement...</p>
-        </div>
+        <div id="tournois-list"></div>
     </section>
 
     <section id="inscription">
         <h2 id="txt-inscr">Inscription 2026-2027</h2>
         <div class="card">
             <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:20px; font-size: 18px;"></p>
-            
             <div id="form-container">
                 <form id="main-adh">
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 15px;">
@@ -264,11 +124,9 @@
                     <button type="submit" class="btn">Valider mon inscription</button>
                 </form>
             </div>
-
             <div id="msg-deja" style="display:none; text-align:center; padding:40px;">
                 <div style="font-size: 50px; margin-bottom: 20px;">✅</div>
                 <h3 style="color: var(--accent); font-size: 24px;">VOTRE INSCRIPTION EST ENREGISTRÉE !</h3>
-                <p style="margin-top: 10px; color: var(--text-muted);">Nous vous contacterons prochainement pour finaliser votre dossier.</p>
             </div>
         </div>
     </section>
@@ -289,7 +147,7 @@
                 <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
             </div>
         </div>
-        <p id="copyright" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;">© 2026 SACCB — Sainte-Adresse Certifié Club Badminton</p>
+        <p id="copyright" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
     </footer>
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center; padding:20px;">
@@ -325,7 +183,7 @@
         </div>
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-inscrits')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
-            <div id="sec-inscrits" class="admin-content"><table><thead><tr><th>Tournoi</th><th>J1</th><th>J2</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table></div>
+            <div id="sec-inscrits" class="admin-content"><table><thead><tr><th>Tournoi</th><th>Joueurs</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table></div>
         </div>
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
@@ -333,9 +191,9 @@
         </div>
 
         <div class="admin-section" style="border: 1px solid var(--danger);">
-            <div class="admin-header" style="color:var(--danger)" onclick="toggleSec('sec-danger')">⚠️ CHANGEMENT SAISON <span>▼</span></div>
+            <div class="admin-header" style="color:var(--danger)" onclick="toggleSec('sec-danger')">⚠️ MAINTENANCE SAISON <span>▼</span></div>
             <div id="sec-danger" class="admin-content">
-                <p style="margin-bottom:15px;">Action : Supprime tout et fait +1 an sur les dates.</p>
+                <p style="margin-bottom:15px;">Action : Fait +1 sur les années et vide les listes.</p>
                 <button onclick="resetSeason()" class="btn" style="background:var(--danger)">Changer de Saison (+1 an)</button>
                 <div id="undo-zone" style="display:none; margin-top:15px;"><button onclick="undoSeason()" class="btn" style="background:#475569;">↩️ ANNULER LE CHANGEMENT</button></div>
             </div>
@@ -373,7 +231,7 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(db)
                 });
-            } catch (e) { console.error("Sync failed"); }
+            } catch (e) { console.error("Save Error"); }
         }
 
         function updateUI() {
@@ -404,13 +262,10 @@
         }
 
         async function resetSeason() {
-            if(confirm("Confirmer le changement d'année ? (+1 an et suppression des données)")) {
+            if(confirm("Confirmer le changement de saison ?")) {
                 lastState = JSON.parse(JSON.stringify(db));
-                db.membres = [];
-                db.inscrits_tournoi = [];
-                db.config_tournois = [];
-                db.y1 += 1;
-                db.y2 += 1;
+                db.membres = []; db.inscrits_tournoi = []; db.config_tournois = [];
+                db.y1 += 1; db.y2 += 1;
                 document.getElementById('undo-zone').style.display = 'block';
                 updateUI(); renderAdmin(); await saveData();
             }
@@ -418,23 +273,11 @@
 
         async function undoSeason() {
             if(lastState) {
-                db = JSON.parse(JSON.stringify(lastState));
-                lastState = null;
+                db = JSON.parse(JSON.stringify(lastState)); lastState = null;
                 document.getElementById('undo-zone').style.display = 'none';
                 updateUI(); renderAdmin(); await saveData();
-                alert("Annulé !");
             }
         }
-
-        function exportBackup() {
-            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
-            const dl = document.createElement('a');
-            dl.setAttribute("href", dataStr); dl.setAttribute("download", "SACCB_SAVE.json");
-            dl.click(); dl.remove();
-        }
-
-        function checkAdmin() { if (document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; renderAdmin(); } else alert("Refusé"); }
-        function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
 
         function renderAdmin() {
             document.getElementById('list-t-config').innerHTML = (db.config_tournois || []).map(t => `<tr><td>${t.name}</td><td>${t.date}</td><td>${t.slots || '∞'}</td><td><button onclick="delTConf('${t.id}')">❌</button></td></tr>`).join('');
@@ -447,16 +290,18 @@
             if (n && d) { 
                 if(!db.config_tournois) db.config_tournois = [];
                 db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s ? parseInt(s) : 0 }); 
-                updateUI(); renderAdmin(); await saveData(); 
+                updateUI(); renderAdmin(); await saveData();
                 document.getElementById('new-t-name').value = ''; document.getElementById('new-t-date').value = ''; document.getElementById('new-t-slots').value = '';
             }
         }
+
         async function regT(e, tid, tname) { 
             e.preventDefault(); const f = e.target; 
             if(!db.inscrits_tournoi) db.inscrits_tournoi = [];
             db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); 
             updateUI(); renderAdmin(); await saveData(); 
         }
+
         document.getElementById('main-adh').onsubmit = async (e) => { 
             e.preventDefault(); 
             if(!db.membres) db.membres = [];
@@ -464,11 +309,19 @@
             document.getElementById('form-container').style.display = 'none'; document.getElementById('msg-deja').style.display = 'block';
             updateUI(); renderAdmin(); await saveData(); 
         };
+
+        function exportBackup() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db, null, 2));
+            const dl = document.createElement('a'); dl.setAttribute("href", dataStr); dl.setAttribute("download", "SACCB_SAVE.json"); dl.click(); dl.remove();
+        }
+
+        function checkAdmin() { if (document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display = 'none'; document.getElementById('admin-panel').style.display = 'block'; renderAdmin(); } else alert("Refusé"); }
+        function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
         async function togT(id) { const x = db.inscrits_tournoi.find(i=>i.id===id); if(x){ x.ok=!x.ok; renderAdmin(); await saveData(); } }
         async function togM(id) { const x = db.membres.find(m=>m.id===id); if(x){ x.ok=!x.ok; renderAdmin(); await saveData(); } }
         async function delTConf(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); updateUI(); renderAdmin(); await saveData(); }}
-        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); renderAdmin(); updateUI(); await saveData(); }}
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); renderAdmin(); updateUI(); await saveData(); }}
+        async function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i=>i.id!==id); updateUI(); renderAdmin(); await saveData(); }}
+        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(m=>m.id!==id); updateUI(); renderAdmin(); await saveData(); }}
 
         loadData();
     </script>
