@@ -20,7 +20,6 @@
         html { scroll-behavior: smooth; }
         body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; overflow-x: hidden; }
 
-        /* --- TON DESIGN COMPLET --- */
         nav {
             position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
             display: flex; align-items: center; justify-content: space-between;
@@ -102,7 +101,7 @@
     <section id="tournois">
         <h2>Tournois à venir</h2>
         <div id="tournois-list">
-            <p style="text-align: center; color: var(--text-muted);">Chargement des tournois...</p>
+            <p style="text-align: center; color: var(--text-muted);">Chargement...</p>
         </div>
     </section>
 
@@ -211,7 +210,7 @@
                     const data = await r.json();
                     if (data) db = data;
                 }
-            } catch (e) { console.error("Erreur de chargement"); }
+            } catch (e) { console.error("Err Load"); }
             updateUI();
         }
 
@@ -222,32 +221,32 @@
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(db)
                 });
-            } catch (e) { console.error("Erreur de sauvegarde"); }
+            } catch (e) { console.error("Err Save"); }
             updateUI();
         }
 
         function updateUI() {
-            // ACCUEIL TOURNOIS
             const container = document.getElementById('tournois-list');
             if (!db.config_tournois || db.config_tournois.length === 0) {
                 container.innerHTML = '<div class="card" style="text-align:center;">Aucun tournoi prévu.</div>';
             } else {
                 container.innerHTML = db.config_tournois.map(t => {
-                    const inscrits = (db.inscrits_tournoi || []).filter(i => i.tournoiId === t.id);
-                    const reste = t.slots - inscrits.length;
+                    const ins = (db.inscrits_tournoi || []).filter(i => i.tournoiId === t.id);
+                    const slots = parseInt(t.slots) || 0;
+                    const reste = slots - ins.length;
+                    
                     return `
                     <div class="tournoi-card">
                         <div class="tournoi-header"><h3 class="tournoi-title">${t.name}</h3><span class="tournoi-date">${t.date}</span></div>
-                        <span class="slots-badge">Places restantes : ${reste > 0 ? reste : 'COMPLET'}</span>
-                        ${reste > 0 ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
+                        <span class="slots-badge">Places restantes : ${slots > 0 ? reste : 'Libre'}</span>
+                        ${(slots === 0 || reste > 0) ? `<form onsubmit="regT(event, '${t.id}', '${t.name}')">
                             <input type="text" name="players" placeholder="Joueur 1 & Joueur 2" required>
-                            <input type="tel" name="tel" placeholder="Téléphone de contact" required>
+                            <input type="tel" name="tel" placeholder="Téléphone" required>
                             <button type="submit" class="btn btn-tournoi">S'inscrire</button>
                         </form>` : '<h3 style="color:var(--danger); text-align:center;">COMPLET</h3>'}
                     </div>`;
                 }).join('');
             }
-
             document.getElementById('quota-msg').innerText = `Places club restantes : ${CLUB_MAX - (db.membres ? db.membres.length : 0)}`;
             if(document.getElementById('admin-panel').style.display === 'block') renderAdmin();
         }
@@ -264,21 +263,24 @@
             const s = document.getElementById('adm-t-slots').value;
             if (n && d) {
                 if(!db.config_tournois) db.config_tournois = [];
-                db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: parseInt(s) || 0 });
+                db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, slots: s || 0 });
+                updateUI(); // AFFICHE IMMEDIATEMENT
                 await saveData();
-                document.getElementById('adm-t-name').value = ''; document.getElementById('adm-t-date').value = ''; document.getElementById('adm-t-slots').value = '';
-                alert("Tournoi créé !");
+                document.getElementById('adm-t-name').value = ''; 
+                document.getElementById('adm-t-date').value = ''; 
+                document.getElementById('adm-t-slots').value = '';
+                alert("Tournoi publié !");
             }
         }
 
         async function regT(e, tid, tname) {
             e.preventDefault();
             db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tid, tournoiName: tname, players: e.target.players.value, tel: e.target.tel.value, ok: false });
+            updateUI();
             await saveData();
             alert("Inscription réussie !");
         }
 
-        // ADMIN TOOLS
         function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; updateUI(); } }
         function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
         async function delTConf(id) { db.config_tournois = db.config_tournois.filter(x=>x.id!==id); await saveData(); }
