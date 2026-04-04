@@ -329,7 +329,7 @@
         </div>
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-inscrits')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
-            <div id="sec-inscrits" class="admin-content"><table><thead><tr><th>Tournoi</th><th>Joueurs</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table></div>
+            <div id="sec-inscrits" class="admin-content"><table><thead><tr><th>Tournoi</th><th>J1</th><th>J2</th><th>Tel</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table></div>
         </div>
         <div class="admin-section">
             <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
@@ -381,9 +381,11 @@
         }
 
         function updateUI() {
-            // MISE A JOUR DES DATES DYNAMIQUES
-            document.getElementById('txt-inscr').innerText = `Inscription ${db.y1}-${db.y2}`;
-            document.getElementById('copyright').innerText = `© ${db.y1} SACCB — Sainte-Adresse Certifié Club Badminton`;
+            // MISE A JOUR DES DATES DYNAMIQUES SUR L'ACCUEIL
+            const titreInscr = document.getElementById('txt-inscr');
+            const copyAnnee = document.getElementById('copyright');
+            if(titreInscr) titreInscr.innerText = "Inscription " + db.y1 + "-" + db.y2;
+            if(copyAnnee) copyAnnee.innerText = "© " + db.y1 + " SACCB — Sainte-Adresse Certifié Club Badminton";
             
             const container = document.getElementById('tournois-list');
             if (!db.config_tournois || db.config_tournois.length === 0) {
@@ -412,7 +414,8 @@
             if(confirm("Confirmer le changement de saison ?")) {
                 lastState = JSON.parse(JSON.stringify(db));
                 db.membres = []; db.inscrits_tournoi = []; db.config_tournois = [];
-                db.y1 += 1; db.y2 += 1;
+                db.y1 = parseInt(db.y1) + 1; 
+                db.y2 = parseInt(db.y2) + 1;
                 document.getElementById('undo-zone').style.display = 'block';
                 updateUI(); renderAdmin(); await saveData();
             }
@@ -447,6 +450,7 @@
             if(!db.inscrits_tournoi) db.inscrits_tournoi = [];
             db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tid, tournoiName: tname, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false }); 
             updateUI(); renderAdmin(); await saveData(); 
+            alert("Inscription enregistrée !");
         }
 
         document.getElementById('main-adh').onsubmit = async (e) => { 
