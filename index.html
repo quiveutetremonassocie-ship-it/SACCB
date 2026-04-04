@@ -70,8 +70,7 @@ th, td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-al
 
 <section id="tournois">
     <h2>Tournois</h2>
-    <div id="tournois-list">
-        </div>
+    <div id="tournois-list"></div>
 </section>
 
 <section id="inscription">
@@ -128,31 +127,25 @@ th, td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); text-al
         <button onclick="location.reload()" class="btn" style="width:auto; padding:8px 20px; background:#475569;">Fermer</button>
     </div>
     <div class="admin-section">
-        <div class="admin-header" onclick="toggleSec('sec-create')">🏆 CRÉER UN NOUVEAU TOURNOI <span>▼</span></div>
+        <div class="admin-header" onclick="toggleSec('sec-create')">🏆 CRÉER UN TOURNOI <span>▼</span></div>
         <div id="sec-create" class="admin-content">
-            <input type="text" id="new-t-name" placeholder="Nom du tournoi">
+            <input type="text" id="new-t-name" placeholder="Nom">
             <input type="text" id="new-t-date" placeholder="Date">
-            <input type="number" id="new-t-slots" placeholder="Places (vide = illimité)">
+            <input type="number" id="new-t-slots" placeholder="Places">
             <button onclick="addT()" class="btn" style="background:var(--accent)">Publier</button>
         </div>
     </div>
     <div class="admin-section">
-        <div class="admin-header" onclick="toggleSec('sec-tournois')">⚙️ CONFIGURATION DES TOURNOIS <span>▼</span></div>
-        <div id="sec-tournois" class="admin-content">
-            <table><thead><tr><th>Nom</th><th>Date</th><th>Places</th><th>X</th></tr></thead><tbody id="list-t-config"></tbody></table>
-        </div>
+        <div class="admin-header" onclick="toggleSec('sec-tournois')">⚙️ CONFIGURATION <span>▼</span></div>
+        <div id="sec-tournois" class="admin-content"><table id="list-t-config-table"><thead><tr><th>Nom</th><th>Date</th><th>Places</th><th>X</th></tr></thead><tbody id="list-t-config"></tbody></table></div>
     </div>
     <div class="admin-section">
         <div class="admin-header" onclick="toggleSec('sec-inscrits')">🏸 INSCRITS TOURNOIS <span>▼</span></div>
-        <div id="sec-inscrits" class="admin-content">
-            <table><thead><tr><th>Tournoi</th><th>Joueur 1</th><th>Joueur 2</th><th>Téléphone</th><th>Paiement</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table>
-        </div>
+        <div id="sec-inscrits" class="admin-content"><table><thead><tr><th>Tournoi</th><th>Joueur 1</th><th>Joueur 2</th><th>Téléphone</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-t-inscrits"></tbody></table></div>
     </div>
     <div class="admin-section">
         <div class="admin-header" onclick="toggleSec('sec-membres')">👥 ADHÉRENTS CLUB <span>▼</span></div>
-        <div id="sec-membres" class="admin-content">
-            <table><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Type</th><th>Paiement</th><th>X</th></tr></thead><tbody id="list-membres"></tbody></table>
-        </div>
+        <div id="sec-membres" class="admin-content"><table><thead><tr><th>Nom</th><th>Email</th><th>Téléphone</th><th>Type</th><th>Payé</th><th>X</th></tr></thead><tbody id="list-membres"></tbody></table></div>
     </div>
 </div>
 
@@ -161,11 +154,9 @@ const PASS = "43210";
 const CLUB_MAX = 70;
 let db = {"membres":[],"inscrits_tournoi":[],"config_tournois":[],"signed":false,"startYear":2026};
 
-// Chargement IMMÉDIAT
-const local = localStorage.getItem('saccb_vBeton_v2');
-if(local) {
-    try { db = JSON.parse(local); } catch(e) { console.error("Erreur JSON"); }
-}
+// On charge les données dès le début
+const data = localStorage.getItem('saccb_vBeton_v2');
+if(data) db = JSON.parse(data);
 
 function save() { localStorage.setItem('saccb_vBeton_v2', JSON.stringify(db)); }
 function toggleSec(id) { const el = document.getElementById(id); el.style.display = (el.style.display==='block')?'none':'block'; }
@@ -174,38 +165,29 @@ function updateUI() {
     document.querySelectorAll('.current-year-txt').forEach(el => el.innerText = `${db.startYear}-${db.startYear + 1}`);
     
     const container = document.getElementById('tournois-list');
-    // Sécurité : Vérifier si db.config_tournois existe et n'est pas vide
+    // On force l'affichage même si db est vide au départ
     if(db.config_tournois && db.config_tournois.length > 0) {
         container.innerHTML = db.config_tournois.map(t => {
-            const parts = db.inscrits_tournoi ? db.inscrits_tournoi.filter(i => i.tournoiId === t.id) : [];
+            const parts = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
             const isIllimite = !t.slots || t.slots === 0;
             const reste = isIllimite ? 'Illimité' : (t.slots - parts.length);
             const complet = !isIllimite && reste <= 0;
             return `
             <div class="tournoi-card" style="border-left-color:${complet?'var(--danger)':'var(--accent)'}">
                 <h3 style="font-family:'Bebas Neue'; font-size:28px;">${t.date} — ${t.name}</h3>
-                <p style="color:var(--accent); font-weight:bold;">Places restantes : ${reste}</p>
+                <p style="color:var(--accent); font-weight:bold;">Places : ${reste}</p>
                 <div style="margin:15px 0; font-size:14px; background:rgba(0,0,0,0.2); padding:15px; border-radius:10px;">
-                    <strong style="color:var(--primary)">BINÔMES INSCRITS :</strong><br>
-                    ${parts.length>0 ? parts.map(p=>`🏸 ${p.p1} / ${p.p2}`).join('<br>') : 'Aucun inscrit'}
+                    <strong>Binômes :</strong><br>${parts.length>0 ? parts.map(p=>`🏸 ${p.p1}/${p.p2}`).join('<br>') : 'Aucun inscrit'}
                 </div>
-                ${!complet ? `
-                <form onsubmit="regT(event,'${t.id}','${t.name}')">
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Nom 1" required><input type="text" name="p2" placeholder="Nom 2" required></div>
-                    <input type="tel" name="tel" placeholder="Téléphone contact" required>
-                    <button type="submit" class="btn" style="background:var(--accent)">S'inscrire</button>
-                </form>` : '<p style="color:var(--danger); font-weight:bold;">COMPLET</p>'}
+                ${!complet ? `<form onsubmit="regT(event,'${t.id}','${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><input type="tel" name="tel" placeholder="Téléphone" required><button type="submit" class="btn" style="background:var(--accent)">S'inscrire</button></form>` : '<p style="color:var(--danger); font-weight:bold;">COMPLET</p>'}
             </div>`;
         }).join('');
     } else {
         container.innerHTML = "<div class='card' style='text-align:center;'>Aucun tournoi n'est prévu pour le moment.</div>";
     }
 
-    document.getElementById('quota-msg').innerText = `Places club restantes : ${CLUB_MAX - (db.membres ? db.membres.length : 0)}`;
-    if(db.signed) {
-        document.getElementById('form-container').style.display = 'none';
-        document.getElementById('msg-deja').style.display = 'block';
-    }
+    document.getElementById('quota-msg').innerText = `Places club : ${CLUB_MAX - db.membres.length}`;
+    if(db.signed) { document.getElementById('form-container').style.display = 'none'; document.getElementById('msg-deja').style.display = 'block'; }
 }
 
 function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('admin-panel').style.display='block'; renderAdmin(); } else alert("Refusé"); }
@@ -225,8 +207,7 @@ function togM(id) { const x=db.membres.find(m=>m.id===id); x.ok=!x.ok; save(); r
 function delInscT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi=db.inscrits_tournoi.filter(i=>i.id!==id); save(); renderAdmin(); }}
 function delM(id) { if(confirm("Supprimer ?")) { db.membres=db.membres.filter(m=>m.id!==id); save(); renderAdmin(); }}
 
-// Lancement au démarrage
-window.onload = updateUI;
+updateUI();
 </script>
 </body>
 </html>
