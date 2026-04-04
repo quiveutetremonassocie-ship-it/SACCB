@@ -1,0 +1,295 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SACCB — Club de Badminton</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+<style>
+:root { --bg-dark: #0f172a; --bg-card: #1e293b; --primary: #3b82f6; --accent: #10b981; --text-main: #f8fafc; --text-muted: #94a3b8; --danger: #ef4444; --warning: #f59e0b; }
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; }
+nav { position: fixed; top: 0; left: 0; right: 0; z-index: 500; display: flex; align-items: center; justify-content: space-between; padding: 16px 40px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(12px); border-bottom: 1px solid rgba(255,255,255,0.05); }
+.nav-logo { font-family: 'Bebas Neue', sans-serif; font-size: 28px; color: var(--text-main); text-decoration: none; }
+.nav-links { display: flex; gap: 20px; align-items: center; }
+.nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+section { padding: 100px 40px 20px; max-width: 1100px; margin: 0 auto; }
+h2 { font-family: 'Bebas Neue', sans-serif; font-size: 45px; margin-bottom: 25px; color: var(--primary); letter-spacing: 1px; }
+.grid-2 { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px; }
+.card { background: var(--bg-card); padding: 30px; border-radius: 15px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 20px; position: relative; }
+.highlight-card { border: 2px solid var(--primary); background: linear-gradient(145deg, #1e293b, #111b2d); text-align: center; }
+.highlight-card h3 { font-family: 'Bebas Neue'; font-size: 30px; color: var(--text-main); margin-bottom: 10px; }
+.highlight-card p { font-size: 26px; font-weight: 700; color: var(--accent); }
+.btn { background: var(--primary); color: white; border: none; padding: 14px 20px; border-radius: 8px; cursor: pointer; font-weight: 600; width: 100%; transition: 0.3s; }
+.btn:disabled { background: #475569; cursor: not-allowed; }
+input, select { width: 100%; padding: 14px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid #334155; color: white; border-radius: 8px; }
+.admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 1000; overflow-y: auto; padding: 40px; }
+.accordion-item { background: var(--bg-card); border-radius: 12px; margin-bottom: 20px; border: 1px solid var(--primary); }
+.accordion-header { padding: 25px; background: rgba(59, 130, 246, 0.15); cursor: pointer; font-family: 'Bebas Neue'; font-size: 28px; display: flex; justify-content: space-between; align-items: center; }
+.accordion-content { display: none; padding: 20px; overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; min-width: 600px; margin-bottom: 20px; }
+th { background: #0f172a; padding: 12px; text-align: left; font-family: 'Bebas Neue'; color: var(--primary); border-bottom: 2px solid var(--primary); }
+td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 14px; }
+.sub-title { font-family: 'Bebas Neue'; font-size: 22px; color: var(--accent); margin: 15px 0 10px 0; border-bottom: 1px solid var(--accent); display: inline-block; }
+.status-btn { padding: 6px 12px; border-radius: 6px; border: none; font-weight: bold; cursor: pointer; }
+@media (max-width: 768px) { .nav-links { display: none; } }
+</style>
+</head>
+<body>
+
+<nav>
+    <a href="#" class="nav-logo">SACCB 🏸</a>
+    <div class="nav-links">
+        <a href="#presentation">L'Asso</a>
+        <a href="#tournois">Tournois</a>
+        <a href="#creneaux">Créneaux</a>
+        <a href="#tarifs">Tarifs</a>
+        <a href="#inscription">Adhésion</a>
+        <button onclick="document.getElementById('login-modal').style.display='flex'" style="background:var(--primary); border:none; color:white; padding:8px 18px; border-radius:5px; cursor:pointer; font-weight:bold; margin-left:15px;">BUREAU</button>
+    </div>
+</nav>
+
+<section id="presentation">
+    <h2>Qui sommes-nous ?</h2>
+    <p>Le <strong>SACCB</strong> est un club de badminton dynamique. Vos données sont désormais sauvegardées en temps réel sur notre serveur sécurisé.</p>
+</section>
+
+<section id="tournois">
+    <h2>Tournois</h2>
+    <div class="card" style="border-left: 8px solid var(--accent);">
+        <h3 style="font-family:'Bebas Neue'; font-size:28px;">31 Mai <span class="current-year-txt">2026</span> - Sainte-Adresse</h3>
+        <p><strong>RDV 08h30</strong> | Organisation : BSA</p>
+        <div style="margin-top:20px; background:rgba(0,0,0,0.3); padding:20px; border-radius:12px;">
+            <form id="tournoi-bsa">
+                <div class="grid-2" style="grid-template-columns: 1fr 1fr; gap:10px;">
+                    <input type="text" id="p1" placeholder="Prénom Joueur 1" required>
+                    <input type="text" id="p2" placeholder="Prénom Joueur 2" required>
+                </div>
+                <input type="tel" id="t-tel" placeholder="Téléphone de contact" required>
+                <button type="submit" id="btn-t" class="btn" style="background:var(--accent)">Inscrire le binôme</button>
+            </form>
+        </div>
+    </div>
+</section>
+
+<section id="creneaux">
+    <h2>Nos Créneaux</h2>
+    <div class="grid-2">
+        <div class="card highlight-card"><h3>Lundi & Jeudi</h3><p>18h30 — Fermeture</p></div>
+        <div class="card highlight-card"><h3>Samedi</h3><p>17h30 — Fermeture</p></div>
+    </div>
+</section>
+
+<section id="tarifs">
+    <h2>Tarifs Saison <span class="current-year-txt">2026</span></h2>
+    <div class="grid-2">
+        <div class="card highlight-card" style="border-color:var(--accent);"><h3>Adulte</h3><p>50 €</p></div>
+        <div class="card highlight-card" style="border-color:var(--accent);"><h3>Étudiant</h3><p>25 €</p></div>
+    </div>
+</section>
+
+<section id="inscription">
+    <h2>Adhésion <span class="current-year-txt">2026</span></h2>
+    <div class="card" style="border-top: 4px solid var(--primary);">
+        <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:15px;"></p>
+        <div id="form-container">
+            <form id="main-adh">
+                <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
+                <input type="email" id="m-email" placeholder="Email" required>
+                <input type="tel" id="m-tel" placeholder="Téléphone" required>
+                <select id="m-type">
+                    <option value="Adulte">Adulte (50€)</option>
+                    <option value="Etudiant">Étudiant (25€)</option>
+                </select>
+                <button type="submit" id="btn-m" class="btn">S'inscrire</button>
+            </form>
+        </div>
+        <div id="msg-deja" style="display:none; text-align:center; padding:20px; color:var(--accent); font-weight:bold;">✅ INSCRIPTION ENREGISTRÉE ET SAUVEGARDÉE SUR GOOGLE SHEETS.</div>
+        <div id="msg-complet" style="display:none; text-align:center; padding:20px; color:var(--danger); font-weight:bold;">❌ CLUB COMPLET.</div>
+    </div>
+</section>
+
+<section id="contact">
+    <h2>Contact</h2>
+    <div class="grid-2">
+        <div class="card">
+            <h4>Hernan Camara</h4>
+            <p style="color:var(--primary); font-weight:600;">Président</p>
+            <p>07 77 06 18 75<br>hernancm68@hotmail.com</p>
+        </div>
+        <div class="card">
+            <h4>Matthieu Demare</h4>
+            <p style="color:var(--primary); font-weight:600;">Président Adjoint</p>
+            <p>06 52 48 62 28<br>demare.matthieu@outlook.fr</p>
+        </div>
+    </div>
+</section>
+
+<div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:600; align-items:center; justify-content:center;">
+    <div class="card" style="width:340px; text-align:center;">
+        <h3>Bureau</h3>
+        <input type="password" id="pass" placeholder="Mot de passe">
+        <button onclick="checkAdmin()" class="btn">Connexion</button>
+    </div>
+</div>
+
+<div id="admin-panel" class="admin-panel">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--primary); padding-bottom:15px;">
+        <h2 style="margin-bottom:0;">BUREAU <span id="admin-year">2026</span></h2>
+        <div style="display:flex; gap:8px;">
+            <button onclick="exportDB()" class="btn" style="background:#1e40af; width:auto; font-size:11px;">💾 EXPORT MANUEL</button>
+            <button onclick="location.reload()" class="btn" style="background:#475569; width:auto;">Fermer</button>
+        </div>
+    </div>
+    
+    <div style="margin-bottom:25px;">
+         <button id="btn-undo" onclick="undoReset()" class="btn" style="background:var(--warning); width:auto; font-size:11px; display:none;">🔙 ANNULER LE RESET</button>
+         <button onclick="resetSaison()" class="btn" style="background:var(--danger); width:auto; font-size:11px;">🔄 NOUVELLE SAISON</button>
+    </div>
+
+    <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAcc('acc-t')">TOURNOIS <span id="t-count"></span> <span>▼</span></div>
+        <div id="acc-t" class="accordion-content">
+            <table id="body-tournoi"><thead><tr><th>Binôme</th><th>Tel</th><th>Pointage</th><th>X</th></tr></thead><tbody></tbody></table>
+        </div>
+    </div>
+
+    <div class="accordion-item">
+        <div class="accordion-header" onclick="toggleAcc('acc-a')">ADHÉRENTS <span id="a-count"></span> <span>▼</span></div>
+        <div id="acc-a" class="accordion-content">
+            <div class="sub-title">🔴 À VALIDER</div>
+            <table id="table-non-pointes"><thead><tr><th>Nom</th><th>Email/Tel</th><th>Type</th><th>Action</th><th>X</th></tr></thead><tbody></tbody></table>
+            <div class="sub-title">🟢 CONFIRMÉS</div>
+            <table id="table-pointes"><thead><tr><th>Nom</th><th>Email/Tel</th><th>Type</th><th>Action</th><th>X</th></tr></thead><tbody></tbody></table>
+        </div>
+    </div>
+</div>
+
+<script>
+// TON URL GOOGLE SHEETS EN BÉTON
+const GOOGLE_URL = "https://script.google.com/macros/s/AKfycbw482Tm6s_PLwfyM1PV2b-XRR1yee-EI8pmkjnPyupMlS314h9Q5vOJ935I9_k00BoK/exec";
+const PASS = "1234";
+const MAX = 70;
+
+let db = JSON.parse(localStorage.getItem('saccb_vBeton_v1')) || { membres: [], tournoi: [], signed: false, year: 2026, backup: null };
+
+function save() { localStorage.setItem('saccb_vBeton_v1', JSON.stringify(db)); }
+
+function updateUI() {
+    document.querySelectorAll('.current-year-txt').forEach(el => el.innerText = db.year);
+    document.getElementById('admin-year').innerText = db.year;
+    const c = db.membres.length;
+    document.getElementById('quota-msg').innerText = `Places restantes : ${MAX - c}`;
+    if(db.signed) { document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block'; }
+    else if(c >= MAX) { document.getElementById('form-container').style.display='none'; document.getElementById('msg-complet').style.display='block'; }
+    document.getElementById('btn-undo').style.display = db.backup ? 'inline-block' : 'none';
+}
+updateUI();
+
+// INSCRIPTION EN BÉTON (Locale + Google)
+document.getElementById('main-adh').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-m');
+    btn.disabled = true;
+    btn.innerText = "Synchronisation...";
+
+    const data = {
+        nom: document.getElementById('m-nom').value,
+        email: document.getElementById('m-email').value,
+        tel: document.getElementById('m-tel').value,
+        type: document.getElementById('m-type').value,
+        source: "Adhésion"
+    };
+
+    // 1. Sauvegarde Locale
+    db.membres.push({ id: Date.now(), ...data, ok: false });
+    db.signed = true;
+    save();
+
+    // 2. Envoi Google Sheets
+    try {
+        await fetch(GOOGLE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+        alert("GÉNIAL ! Inscription enregistrée localement ET sur Google Sheets.");
+    } catch(err) {
+        alert("Sauvegardé localement, mais échec de la synchro Google (Vérifie ta connexion).");
+    }
+    location.reload();
+};
+
+// INSCRIPTION TOURNOI (Locale + Google)
+document.getElementById('tournoi-bsa').onsubmit = async (e) => {
+    e.preventDefault();
+    const btn = document.getElementById('btn-t');
+    btn.disabled = true;
+    btn.innerText = "Envoi...";
+
+    const data = {
+        nom: document.getElementById('p1').value + " / " + document.getElementById('p2').value,
+        email: "Tournoi BSA",
+        tel: document.getElementById('t-tel').value,
+        type: "Binôme",
+        source: "Tournoi"
+    };
+
+    db.tournoi.push({ id: Date.now(), p1: document.getElementById('p1').value, p2: document.getElementById('p2').value, tel: data.tel, ok: false });
+    save();
+
+    try {
+        await fetch(GOOGLE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
+        alert("Binôme inscrit et synchronisé !");
+    } catch(err) {
+        alert("Binôme inscrit (localement uniquement).");
+    }
+    btn.disabled = false; btn.innerText = "Inscrire le binôme"; e.target.reset();
+};
+
+function toggleAcc(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
+function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('admin-panel').style.display='block'; render(); } else alert("Faux"); }
+
+function render() {
+    document.getElementById('t-count').innerText = `(${db.tournoi.length})`;
+    document.getElementById('a-count').innerText = `(${db.membres.length}/${MAX})`;
+    
+    let tHtml = "<thead><tr><th>Binôme</th><th>Tel</th><th>Pointage</th><th>X</th></tr></thead><tbody>";
+    db.tournoi.forEach(t => {
+        tHtml += `<tr><td>${t.p1} / ${t.p2}</td><td>${t.tel}</td>
+        <td><button class="status-btn" onclick="togT(${t.id})" style="background:${t.ok?'#10b981':'#475569'}; color:white;">${t.ok?'OK':'À POINTER'}</button></td>
+        <td><button onclick="delT(${t.id})" style="color:var(--danger); background:none; border:none;">X</button></td></tr>`;
+    });
+    document.getElementById('body-tournoi').innerHTML = tHtml + "</tbody>";
+    
+    const row = m => `<tr><td><b>${m.nom}</b></td><td>${m.email}<br>${m.tel}</td><td>${m.type}</td>
+        <td><button class="status-btn" onclick="togM(${m.id})" style="background:${m.ok?'#10b981':'#475569'}; color:white;">${m.ok?'VALIDÉ':'VALIDER'}</button></td>
+        <td><button onclick="delM(${m.id})" style="color:var(--danger); background:none; border:none;">X</button></td></tr>`;
+    
+    document.querySelector('#table-non-pointes tbody').innerHTML = db.membres.filter(m => !m.ok).map(row).join('');
+    document.querySelector('#table-pointes tbody').innerHTML = db.membres.filter(m => m.ok).map(row).join('');
+}
+
+function togM(id) { let m = db.membres.find(x=>x.id===id); m.ok = !m.ok; save(); render(); }
+function togT(id) { let t = db.tournoi.find(x=>x.id===id); t.ok = !t.ok; save(); render(); }
+function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x=>x.id!==id); save(); render(); } }
+function delT(id) { if(confirm("Supprimer ?")) { db.tournoi = db.tournoi.filter(x=>x.id!==id); save(); render(); } }
+
+function resetSaison() {
+    if(confirm("Lancer la saison " + (db.year + 1) + " ?")) {
+        db.backup = { membres: [...db.membres], tournoi: [...db.tournoi], year: db.year };
+        db.membres = []; db.tournoi = []; db.signed = false; db.year++; save(); location.reload();
+    }
+}
+function undoReset() {
+    if(db.backup && confirm("Restaurer la saison " + db.backup.year + " ?")) {
+        db.membres = db.backup.membres; db.tournoi = db.backup.tournoi; db.year = db.backup.year; db.backup = null; save(); location.reload();
+    }
+}
+function exportDB() {
+    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
+    const dl = document.createElement('a');
+    dl.setAttribute("href", dataStr);
+    dl.setAttribute("download", "saccb_sauvegarde_" + db.year + ".json");
+    dl.click();
+}
+</script>
+</body>
+</html>
