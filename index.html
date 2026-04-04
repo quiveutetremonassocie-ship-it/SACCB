@@ -53,7 +53,7 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
 
 <section id="presentation">
     <h2>Qui sommes-nous ?</h2>
-    <p>Le <strong>SACCB</strong> est un club de badminton dynamique. Vos données sont désormais sauvegardées en temps réel sur notre serveur sécurisé.</p>
+    <p>Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et une gestion en béton.</p>
 </section>
 
 <section id="tournois">
@@ -72,7 +72,7 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
 </section>
 
 <section id="tarifs">
-    <h2>Tarifs Saison <span class="current-year-txt">2026</span></h2>
+    <h2>Tarifs Saison <span class="current-year-txt"></span></h2>
     <div class="grid-2">
         <div class="card highlight-card" style="border-color:var(--accent);"><h3>Adulte</h3><p>50 €</p></div>
         <div class="card highlight-card" style="border-color:var(--accent);"><h3>Étudiant</h3><p>25 €</p></div>
@@ -80,7 +80,7 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
 </section>
 
 <section id="inscription">
-    <h2>Adhésion <span class="current-year-txt">2026</span></h2>
+    <h2>Adhésion <span class="current-year-txt"></span></h2>
     <div class="card" style="border-top: 4px solid var(--primary);">
         <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:15px;"></p>
         <div id="form-container">
@@ -127,7 +127,7 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
 
 <div id="admin-panel" class="admin-panel">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--primary); padding-bottom:15px;">
-        <h2 style="margin-bottom:0;">BUREAU <span id="admin-year">2026</span></h2>
+        <h2 style="margin-bottom:0;">BUREAU <span id="admin-year-txt"></span></h2>
         <div style="display:flex; gap:8px;">
             <button onclick="exportDB()" class="btn" style="background:#1e40af; width:auto; font-size:11px;">💾 EXPORT MANUEL</button>
             <button onclick="location.reload()" class="btn" style="background:#475569; width:auto;">Fermer</button>
@@ -135,12 +135,13 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
     </div>
     
     <div class="admin-box">
-        <h3 style="font-family:'Bebas Neue'; color:var(--primary); margin-bottom:10px;">🏆 GESTION DES TOURNOIS</h3>
-        <div style="display:flex; gap:10px; margin-bottom:10px;">
-            <input type="text" id="new-t-name" placeholder="Nom du tournoi (ex: BSA Sainte-Adresse)" style="margin-bottom:0">
+        <h3 style="font-family:'Bebas Neue'; color:var(--primary); margin-bottom:10px;">🏆 AJOUTER UN TOURNOI</h3>
+        <div class="grid-2" style="grid-template-columns: 1fr 1fr; gap:10px; margin-bottom:10px;">
+            <input type="text" id="new-t-name" placeholder="Nom du tournoi" style="margin-bottom:0">
             <input type="text" id="new-t-date" placeholder="Date (ex: 31 Mai)" style="margin-bottom:0">
+            <input type="number" id="new-t-slots" placeholder="Nombre de places (ex: 16)" style="margin-bottom:0">
         </div>
-        <button onclick="addTournoiConfig()" class="btn" style="background:var(--accent)">Ajouter ce tournoi au site</button>
+        <button onclick="addTournoiConfig()" class="btn" style="background:var(--accent)">Mettre en ligne ce tournoi</button>
     </div>
 
     <div style="margin-bottom:25px;">
@@ -167,35 +168,45 @@ td { padding: 12px; border-bottom: 1px solid rgba(255,255,255,0.05); font-size: 
 </div>
 
 <script>
-// CONFIGURATION
 const GOOGLE_URL = "https://script.google.com/macros/s/AKfycbw482Tm6s_PLwfyM1PV2b-XRR1yee-EI8pmkjnPyupMlS314h9Q5vOJ935I9_k00BoK/exec";
-const PASS = "43210"; // TON NOUVEAU MOT DE PASSE ICI
-const MAX = 70;
+const PASS = "43210"; 
+const CLUB_MAX = 70;
 
-// BASE DE DONNÉES LOCALE
-let db = JSON.parse(localStorage.getItem('saccb_vBeton_v1')) || { 
+let db = JSON.parse(localStorage.getItem('saccb_vBeton_v2')) || { 
     membres: [], 
     inscrits_tournoi: [], 
-    config_tournois: [], // Pour stocker la liste des tournois créés
+    config_tournois: [], 
     signed: false, 
-    year: 2026, 
+    startYear: 2026, 
     backup: null 
 };
 
-function save() { localStorage.setItem('saccb_vBeton_v1', JSON.stringify(db)); }
+function save() { localStorage.setItem('saccb_vBeton_v2', JSON.stringify(db)); }
+
+function getYearTxt() { return `${db.startYear}-${db.startYear + 1}`; }
 
 function updateUI() {
-    document.querySelectorAll('.current-year-txt').forEach(el => el.innerText = db.year);
-    document.getElementById('admin-year').innerText = db.year;
+    const yearTxt = getYearTxt();
+    document.querySelectorAll('.current-year-txt').forEach(el => el.innerText = yearTxt);
+    if(document.getElementById('admin-year-txt')) document.getElementById('admin-year-txt').innerText = yearTxt;
     
-    // Affichage des tournois sur la page d'accueil
     const tList = document.getElementById('tournois-list');
     if(db.config_tournois && db.config_tournois.length > 0) {
-        tList.innerHTML = db.config_tournois.map(t => `
-            <div class="card" style="border-left: 8px solid var(--accent);">
+        tList.innerHTML = db.config_tournois.map(t => {
+            const count = (db.inscrits_tournoi || []).filter(i => i.tournoiId === t.id).length;
+            const reste = t.slots - count;
+            const complet = reste <= 0;
+
+            return `
+            <div class="card" style="border-left: 8px solid ${complet ? 'var(--danger)' : 'var(--accent)'};">
                 <h3 style="font-family:'Bebas Neue'; font-size:28px;">${t.date} — ${t.name}</h3>
+                <p style="color:${complet ? 'var(--danger)' : 'var(--accent)'}; font-weight:bold;">
+                    ${complet ? 'COMPLET' : `Places disponibles : ${reste} / ${t.slots}`}
+                </p>
+                
+                ${!complet ? `
                 <div style="margin-top:20px; background:rgba(0,0,0,0.3); padding:20px; border-radius:12px;">
-                    <form onsubmit="inscrireTournoi(event, '${t.name}')">
+                    <form onsubmit="inscrireTournoi(event, '${t.id}', '${t.name}')">
                         <div class="grid-2" style="grid-template-columns: 1fr 1fr; gap:10px;">
                             <input type="text" name="p1" placeholder="Prénom Joueur 1" required>
                             <input type="text" name="p2" placeholder="Prénom Joueur 2" required>
@@ -203,106 +214,91 @@ function updateUI() {
                         <input type="tel" name="tel" placeholder="Téléphone de contact" required>
                         <button type="submit" class="btn" style="background:var(--accent)">Inscrire le binôme</button>
                     </form>
-                </div>
+                </div>` : ''}
+                
                 ${document.getElementById('admin-panel').style.display === 'block' ? `<button onclick="delTournoiConfig('${t.id}')" style="margin-top:10px; background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px;">[Supprimer ce tournoi du site]</button>` : ''}
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
     } else {
         tList.innerHTML = `<p style="color:var(--text-muted)">Aucun tournoi prévu pour le moment. Revenez bientôt !</p>`;
     }
 
     const c = db.membres.length;
-    document.getElementById('quota-msg').innerText = `Places restantes : ${MAX - c}`;
+    document.getElementById('quota-msg').innerText = `Places club restantes : ${CLUB_MAX - c}`;
     if(db.signed) { document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block'; }
-    else if(c >= MAX) { document.getElementById('form-container').style.display='none'; document.getElementById('msg-complet').style.display='block'; }
+    else if(c >= CLUB_MAX) { document.getElementById('form-container').style.display='none'; document.getElementById('msg-complet').style.display='block'; }
     document.getElementById('btn-undo').style.display = db.backup ? 'inline-block' : 'none';
 }
 
-// GESTION ADMIN TOURNOIS
 function addTournoiConfig() {
     const name = document.getElementById('new-t-name').value;
     const date = document.getElementById('new-t-date').value;
-    if(!name || !date) return alert("Remplis le nom et la date !");
+    const slots = parseInt(document.getElementById('new-t-slots').value);
+    if(!name || !date || !slots) return alert("Remplis tout ! (Nom, Date et Places)");
     
     if(!db.config_tournois) db.config_tournois = [];
-    db.config_tournois.push({ id: Date.now().toString(), name, date });
+    db.config_tournois.push({ id: Date.now().toString(), name, date, slots });
     save();
-    alert("Tournoi ajouté sur le site !");
     location.reload();
 }
 
 function delTournoiConfig(id) {
-    if(confirm("Supprimer ce tournoi ? (Cela n'efface pas les inscrits déjà enregistrés)")) {
+    if(confirm("Supprimer ce tournoi ?")) {
         db.config_tournois = db.config_tournois.filter(t => t.id !== id);
         save();
         location.reload();
     }
 }
 
-// INSCRIPTIONS
 document.getElementById('main-adh').onsubmit = async (e) => {
     e.preventDefault();
-    const btn = document.getElementById('btn-m');
-    btn.disabled = true; btn.innerText = "Synchronisation...";
+    const btn = document.getElementById('btn-m'); btn.disabled = true;
     const data = {
         nom: document.getElementById('m-nom').value,
         email: document.getElementById('m-email').value,
         tel: document.getElementById('m-tel').value,
         type: document.getElementById('m-type').value,
-        source: "Adhésion"
+        source: "Adhésion " + getYearTxt()
     };
     db.membres.push({ id: Date.now(), ...data, ok: false });
     db.signed = true; save();
-    try {
-        await fetch(GOOGLE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
-        alert("Inscription enregistrée !");
-    } catch(err) { alert("Sauvegardé localement (échec Google)."); }
+    try { await fetch(GOOGLE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) }); } catch(err) {}
     location.reload();
 };
 
-async function inscrireTournoi(e, tournoiName) {
+async function inscrireTournoi(e, tId, tName) {
     e.preventDefault();
     const f = e.target;
-    const btn = f.querySelector('button');
-    btn.disabled = true; btn.innerText = "Envoi...";
+    const btn = f.querySelector('button'); btn.disabled = true;
     const data = {
         nom: f.p1.value + " / " + f.p2.value,
-        email: "Tournoi: " + tournoiName,
+        email: "Tournoi: " + tName,
         tel: f.tel.value,
         type: "Binôme",
         source: "Tournoi"
     };
     if(!db.inscrits_tournoi) db.inscrits_tournoi = [];
-    db.inscrits_tournoi.push({ id: Date.now(), tournoi: tournoiName, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false });
+    db.inscrits_tournoi.push({ id: Date.now(), tournoiId: tId, tournoiName: tName, p1: f.p1.value, p2: f.p2.value, tel: f.tel.value, ok: false });
     save();
-    try {
-        await fetch(GOOGLE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) });
-        alert("Binôme inscrit !");
-    } catch(err) { alert("Inscrit localement."); }
+    try { await fetch(GOOGLE_URL, { method: 'POST', mode: 'no-cors', body: JSON.stringify(data) }); } catch(err) {}
     location.reload();
 }
 
-// ADMIN PANEL
 function toggleAcc(id) { const el = document.getElementById(id); el.style.display = (el.style.display === 'block') ? 'none' : 'block'; }
-function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('admin-panel').style.display='block'; render(); updateUI(); } else alert("Mot de passe incorrect"); }
+function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('admin-panel').style.display='block'; render(); updateUI(); } else alert("Faux"); }
 
 function render() {
     const it = db.inscrits_tournoi || [];
     document.getElementById('t-count').innerText = `(${it.length})`;
-    document.getElementById('a-count').innerText = `(${db.membres.length}/${MAX})`;
-    
-    let tHtml = "";
-    it.forEach(t => {
-        tHtml += `<tr><td><small>${t.tournoi}</small></td><td>${t.p1} / ${t.p2}</td><td>${t.tel}</td>
+    document.getElementById('a-count').innerText = `(${db.membres.length}/${CLUB_MAX})`;
+    document.querySelector('#body-tournoi tbody').innerHTML = it.map(t => `
+        <tr><td><small>${t.tournoiName}</small></td><td>${t.p1} / ${t.p2}</td><td>${t.tel}</td>
         <td><button class="status-btn" onclick="togT(${t.id})" style="background:${t.ok?'#10b981':'#475569'}; color:white;">${t.ok?'OK':'À POINTER'}</button></td>
-        <td><button onclick="delT(${t.id})" style="color:var(--danger); background:none; border:none;">X</button></td></tr>`;
-    });
-    document.querySelector('#body-tournoi tbody').innerHTML = tHtml;
+        <td><button onclick="delT(${t.id})" style="color:var(--danger); background:none; border:none;">X</button></td></tr>`).join('');
     
     const row = m => `<tr><td><b>${m.nom}</b></td><td>${m.email}<br>${m.tel}</td><td>${m.type}</td>
         <td><button class="status-btn" onclick="togM(${m.id})" style="background:${m.ok?'#10b981':'#475569'}; color:white;">${m.ok?'VALIDÉ':'VALIDER'}</button></td>
         <td><button onclick="delM(${m.id})" style="color:var(--danger); background:none; border:none;">X</button></td></tr>`;
-    
     document.querySelector('#table-non-pointes tbody').innerHTML = db.membres.filter(m => !m.ok).map(row).join('');
     document.querySelector('#table-pointes tbody').innerHTML = db.membres.filter(m => m.ok).map(row).join('');
 }
@@ -313,24 +309,22 @@ function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(
 function delT(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); save(); render(); } }
 
 function resetSaison() {
-    if(confirm("Lancer la saison " + (db.year + 1) + " ? (Cela videra les listes)")) {
-        db.backup = { membres: [...db.membres], inscrits_tournoi: [...(db.inscrits_tournoi||[])], year: db.year };
-        db.membres = []; db.inscrits_tournoi = []; db.config_tournois = []; db.signed = false; db.year++; save(); location.reload();
+    const nextSaison = `${db.startYear + 1}-${db.startYear + 2}`;
+    if(confirm("Lancer la saison " + nextSaison + " ?")) {
+        db.backup = { membres: [...db.membres], inscrits_tournoi: [...(db.inscrits_tournoi||[])], startYear: db.startYear };
+        db.membres = []; db.inscrits_tournoi = []; db.config_tournois = []; db.signed = false; db.startYear++; save(); location.reload();
     }
 }
 function undoReset() {
-    if(db.backup && confirm("Restaurer la saison " + db.backup.year + " ?")) {
-        db.membres = db.backup.membres; db.inscrits_tournoi = db.backup.inscrits_tournoi; db.year = db.backup.year; db.backup = null; save(); location.reload();
+    if(db.backup && confirm("Restaurer ?")) {
+        db.membres = db.backup.membres; db.inscrits_tournoi = db.backup.inscrits_tournoi; db.startYear = db.backup.startYear; db.backup = null; save(); location.reload();
     }
 }
 function exportDB() {
     const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(db));
     const dl = document.createElement('a');
-    dl.setAttribute("href", dataStr);
-    dl.setAttribute("download", "saccb_sauvegarde_" + db.year + ".json");
-    dl.click();
+    dl.setAttribute("href", dataStr); dl.setAttribute("download", `saccb_backup_${getYearTxt()}.json`); dl.click();
 }
-
 updateUI();
 </script>
 </body>
