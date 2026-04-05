@@ -1,495 +1,475 @@
 <!DOCTYPE html>
 <html lang="fr">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SACCB - Club de Badminton</title>
-    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    <style>
-        :root { --bg-dark: #0f172a; --bg-card: #1e293b; --primary: #3b82f6; --accent: #10b981; --text-main: #f8fafc; --text-muted: #94a3b8; --danger: #ef4444; }
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; scroll-behavior: smooth; }
-        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 15px 30px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
-        .nav-links { display: flex; gap: 20px; align-items: center; }
-        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
-        section { padding: 120px 20px 60px; max-width: 1100px; margin: 0 auto; }
-        h2 { font-family: 'Bebas Neue'; font-size: 48px; margin-bottom: 30px; color: var(--primary); text-transform: uppercase; }
-        .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
-        .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); }
-        .liste-inscrits { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 15px; }
-        .liste-inscrits span { display: block; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
-        .liste-inscrits span:last-child { border-bottom: none; }
-        input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; }
-        .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; text-transform: uppercase; }
-        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; }
-        .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
-        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
-        .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .btn-edit { background: var(--primary); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
-        .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
-        .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
-        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
-        .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
-        #recu-modal, #emargement-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
-        .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 800px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow-y: auto; max-height: 90vh; }
-        @media print { body * { visibility: hidden; } #recu-modal, #recu-modal *, #emargement-modal, #emargement-modal * { visibility: visible; } #recu-modal, #emargement-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; } .no-print { display: none; } }
-        .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
-        .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
-        
-        /* Style du Badge Membre */
-        .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        .badge-header { font-family: 'Bebas Neue'; font-size: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; padding-bottom: 5px; }
-        .badge-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
-        .badge-info { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
-        .badge-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
-        .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
-        .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SACCB - Club de Badminton</title>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <style>
+        :root { --bg-dark: #0f172a; --bg-card: #1e293b; --primary: #3b82f6; --accent: #10b981; --text-main: #f8fafc; --text-muted: #94a3b8; --danger: #ef4444; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; scroll-behavior: smooth; }
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 15px 30px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        section { padding: 120px 20px 60px; max-width: 1100px; margin: 0 auto; }
+        h2 { font-family: 'Bebas Neue'; font-size: 48px; margin-bottom: 30px; color: var(--primary); text-transform: uppercase; }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
+        .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); }
+        .liste-inscrits { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 15px; }
+        .liste-inscrits span { display: block; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .liste-inscrits span:last-child { border-bottom: none; }
+        input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; text-transform: uppercase; }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; }
+        .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
+        .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-edit { background: var(--primary); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
+        .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
+        .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
+        #recu-modal, #emargement-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
+        .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 800px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow-y: auto; max-height: 90vh; }
+        @media print { body * { visibility: hidden; } #recu-modal, #recu-modal *, #emargement-modal, #emargement-modal * { visibility: visible; } #recu-modal, #emargement-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; } .no-print { display: none; } }
+        .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
+        .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
+        
+        /* Style du Badge Membre */
+        .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .badge-header { font-family: 'Bebas Neue'; font-size: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; padding-bottom: 5px; }
+        .badge-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
+        .badge-info { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .badge-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
+        .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
 
-        /* Styles additionnels Compta */
-        .compta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
-        .compta-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
-    </style>
+        /* Styles additionnels Compta */
+        .compta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .compta-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+    </style>
 </head>
 <body>
 
-    <nav>
-        <a href="#" class="nav-logo">SACCB</a>
-        <div class="nav-links">
-            <a href="#presentation">L'Asso</a>
-            <a href="#tournois">Tournois</a>
-            <a href="#inscription">Adhésion</a>
-            <button onclick="document.getElementById('login-modal').style.display='flex'" class="btn" style="width:auto; padding:10px 20px;">ADMIN</button>
-        </div>
-    </nav>
+    <nav>
+        <a href="#" class="nav-logo">SACCB</a>
+        <div class="nav-links">
+            <a href="#presentation">L'Asso</a>
+            <a href="#tournois">Tournois</a>
+           <a href="#inscription">Adhésion</a>
+            <button onclick="document.getElementById('login-modal').style.display='flex'" class="btn" style="width:auto; padding:10px 20px;">ADMIN</button>
+        </div>
+    </nav>
 
-    <section id="presentation">
-        <h2>Qui sommes-nous ?</h2>
-        <div class="card">
-            <p style="font-size: 18px;">Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
-            <p style="margin-top: 20px; color: var(--accent); font-weight: bold;">📍 Salle Paul Vatine, 30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse</p>
-        </div>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
-            <div class="card">
-                <h3 style="color: var(--primary); font-family: 'Bebas Neue'; font-size: 30px;">🕒 Horaires</h3>
-                <p>Lundi & Jeudi : 18h30 - Fermeture</p>
-                <p>Samedi : 17h30 - Fermeture</p>
-            </div>
-            <div class="card">
-                <h3 style="color: var(--accent); font-family: 'Bebas Neue'; font-size: 30px;">💰 Tarifs Annuels</h3>
-                <p>Adulte : 50€ / an</p>
-                <p>Étudiant : 25€ / an</p>
-            </div>
-        </div>
-    </section>
+    <section id="presentation">
+        <h2>Qui sommes-nous ?</h2>
+        <div class="card">
+            <p style="font-size: 18px;">Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
+            <p style="margin-top: 20px; color: var(--accent); font-weight: bold;">📍 Salle Paul Vatine, 30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse</p>
+        </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+            <div class="card">
+                <h3 style="color: var(--primary); font-family: 'Bebas Neue'; font-size: 30px;">🕒 Horaires</h3>
+                <p>Lundi & Jeudi : 18h30 - Fermeture</p>
+                <p>Samedi : 17h30 - Fermeture</p>
+            </div>
+            <div class="card">
+                <h3 style="color: var(--accent); font-family: 'Bebas Neue'; font-size: 30px;">💰 Tarifs Annuels</h3>
+                <p>Adulte : 50€ / an</p>
+                <p>Étudiant : 25€ / an</p>
+            </div>
+        </div>
+    </section>
 
-    <section id="tournois">
-        <h2>Tournois à venir</h2>
-        <div id="tournois-list">Chargement...</div>
-    </section>
+    <section id="tournois">
+        <h2>Tournois à venir</h2>
+        <div id="tournois-list">Chargement...</div>
+    </section>
 
-    <section id="inscription">
-        <h2 id="titre-saison">Inscription Saison</h2>
-        <div class="card">
-            <p id="quota-msg" style="color:var(--accent); font-weight:bold;">Places restantes au club : 65</p>
-            <div class="progress-container"><div id="quota-bar" class="progress-bar"></div></div>
-            
-            <div id="form-container" style="margin-top: 30px;">
-                <form id="main-adh">
-                    <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
-                    <input type="email" id="m-email" placeholder="Email" required>
-                    <input type="tel" id="m-tel" placeholder="Téléphone" required>
-                    <select id="m-type"><option value="Adulte">Adulte (50€)</option><option value="Etudiant">Étudiant (25€)</option></select>
-                    <button type="submit" class="btn">Valider mon inscription</button>
-                </form>
-            </div>
-            <div id="msg-ferme" style="display:none; text-align:center; padding: 20px;">
-                <h3 style="color:var(--danger)">🚫 INSCRIPTIONS CLOSES</h3>
-                <p>La période d'inscription est terminée ou le club est complet. À bientôt !</p>
-            </div>
-            <div id="msg-deja" style="display:none; text-align:center;">
-                <h3>✅ INSCRIPTION ENREGISTRÉE !</h3>
-                <div class="badge-card">
-                    <div class="badge-deco"></div>
-                    <div class="badge-header">MEMBRE OFFICIEL SACCB</div>
-                    <div class="badge-name" id="b-res-nom">Prénom Nom</div>
-                    <div class="badge-info" id="b-res-saison">Saison 2024-2025</div>
-                    <div class="badge-footer">
-                        <div class="badge-info" id="b-res-type">ADULTE</div>
-                        <div class="badge-logo">ST-ADRESSE</div>
-                    </div>
-                </div>
-                <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">Prenez une capture d'écran de votre badge !</p>
-            </div>
-        </div>
-    </section>
+    <section id="inscription">
+        <h2 id="titre-saison">Inscription Saison</h2>
+        <div class="card">
+            <p id="quota-msg" style="color:var(--accent); font-weight:bold;">Places restantes au club : 65</p>
+            <div class="progress-container"><div id="quota-bar" class="progress-bar"></div></div>
+            
+            <div id="form-container" style="margin-top: 30px;">
+                <form id="main-adh">
+                    <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
+                    <input type="email" id="m-email" placeholder="Email" required>
+                    <input type="tel" id="m-tel" placeholder="Téléphone" required>
+                    <select id="m-type"><option value="Adulte">Adulte (50€)</option><option value="Etudiant">Étudiant (25€)</option></select>
+                    <button type="submit" class="btn">Valider mon inscription</button>
+                </form>
+            </div>
+            <div id="msg-ferme" style="display:none; text-align:center; padding: 20px;">
+                <h3 style="color:var(--danger)">🚫 INSCRIPTIONS CLOSES</h3>
+                <p>La période d'inscription est terminée ou le club est complet. À bientôt !</p>
+            </div>
+            <div id="msg-deja" style="display:none; text-align:center;">
+                <h3>✅ INSCRIPTION ENREGISTRÉE !</h3>
+                <div class="badge-card">
+                    <div class="badge-deco"></div>
+                    <div class="badge-header">MEMBRE OFFICIEL SACCB</div>
+                    <div class="badge-name" id="b-res-nom">Prénom Nom</div>
+                    <div class="badge-info" id="b-res-saison">Saison 2024-2025</div>
+                    <div class="badge-footer">
+                        <div class="badge-info" id="b-res-type">ADULTE</div>
+                        <div class="badge-logo">ST-ADRESSE</div>
+                    </div>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">Prenez une capture d'écran de votre badge !</p>
+            </div>
+        </div>
+    </section>
 
-    <footer style="padding: 80px 20px; background: #070b14; text-align: center;">
-        <h2 style="color: white; font-family: 'Bebas Neue';">Contactez-nous</h2>
-        <div class="contact-grid">
-            <div class="card">
-                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT</p>
-                <p style="font-size: 20px;">Hernan Camara</p>
-                <p>07 77 06 18 75</p>
-                <p style="font-size: 14px; color: var(--text-muted);">hernancm68@hotmail.com</p>
-            </div>
-            <div class="card">
-                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT ADJOINT</p>
-                <p style="font-size: 20px;">Matthieu Demare</p>
-                <p>06 52 48 62 28</p>
-                <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
-            </div>
-        </div>
-        <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
-    </footer>
+    <footer style="padding: 80px 20px; background: #070b14; text-align: center;">
+        <h2 style="color: white; font-family: 'Bebas Neue';">Contactez-nous</h2>
+        <div class="contact-grid">
+            <div class="card">
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT</p>
+                <p style="font-size: 20px;">Hernan Camara</p>
+                <p>07 77 06 18 75</p>
+                <p style="font-size: 14px; color: var(--text-muted);">hernancm68@hotmail.com</p>
+            </div>
+            <div class="card">
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT ADJOINT</p>
+                <p style="font-size: 20px;">Matthieu Demare</p>
+                <p>06 52 48 62 28</p>
+                <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
+            </div>
+        </div>
+        <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
+    </footer>
 
-    <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
-        <div class="card" style="max-width:300px; text-align:center;">
-            <input type="email" id="admin-user" placeholder="Email Admin">
-            <input type="password" id="pass" placeholder="Code Admin">
-            <button onclick="checkAdmin()" class="btn" style="margin-bottom:10px;">Entrer</button>
-            <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444;">RETOUR</button>
-        </div>
-    </div>
+    <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
+        <div class="card" style="max-width:300px; text-align:center;">
+            <input type="email" id="admin-user" placeholder="Email Admin">
+            <input type="password" id="pass" placeholder="Code Admin">
+            <button onclick="checkAdmin()" class="btn" style="margin-bottom:10px;">Entrer</button>
+            <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444;">RETOUR</button>
+        </div>
+    </div>
 
-    <div id="admin-panel" class="admin-panel">
-        <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
-            <h2>GESTION SACCB</h2>
-            <button onclick="document.getElementById('admin-panel').style.display='none'" class="btn" style="width:auto; background:var(--danger);">Fermer</button>
-        </div>
-        
-        <div class="card" style="border: 2px solid var(--primary);">
-            <h3>💰 Comptabilité & Trésorerie</h3>
-            <div class="compta-grid">
-                <div class="compta-box">
-                    <p style="font-size: 11px; color: var(--text-muted);">ADHÉSIONS REÇUES</p>
-                    <p id="total-percu-compta" style="font-size: 24px; font-weight: bold; color: var(--accent);">0€</p>
-                </div>
-                <div class="compta-box">
-                    <p style="font-size: 11px; color: var(--text-muted);">SOLDE TOTAL (RESTANT)</p>
-                    <p id="solde-final" style="font-size: 24px; font-weight: bold; color: var(--primary);">0€</p>
-                </div>
-            </div>
+    <div id="admin-panel" class="admin-panel">
+        <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
+            <h2>GESTION SACCB</h2>
+            <button onclick="document.getElementById('admin-panel').style.display='none'" class="btn" style="width:auto; background:var(--danger);">Fermer</button>
+        </div>
+        
+        <div class="card" style="border: 2px solid var(--primary);">
+            <h3>💰 Comptabilité & Trésorerie</h3>
+            <div class="compta-grid">
+                <div class="compta-box">
+                    <p style="font-size: 11px; color: var(--text-muted);">ADHÉSIONS REÇUES</p>
+                    <p id="total-percu-compta" style="font-size: 24px; font-weight: bold; color: var(--accent);">0€</p>
+                </div>
+                <div class="compta-box">
+                    <p style="font-size: 11px; color: var(--text-muted);">SOLDE ACTUEL (RESTANT)</p>
+                    <p id="solde-final" style="font-size: 24px; font-weight: bold; color: var(--primary);">0€</p>
+                </div>
+            </div>
+                        <div style="padding: 10px; background: rgba(255,255,255,0.05); border-radius: 10px; margin-bottom: 15px; display: flex; align-items: center; gap: 10px;">
+                <label style="font-size: 13px; color: var(--text-muted);">Argent année dernière :</label>
+                <input type="number" id="f-report" value="0" oninput="updateUI()" style="margin:0; width: 100px; padding: 5px;">
+            </div>
+            <div style="padding: 15px; background: rgba(0,0,0,0.1); border-radius: 10px; margin-bottom: 15px;">
+                <h4 style="margin-bottom:10px;">Ajouter une dépense / facture</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="f-desc" placeholder="Désignation (ex: Volants)" style="margin:0;">
+                    <input type="number" id="f-montant" placeholder="Montant €" style="margin:0; width: 130px;">
+                    <button onclick="addFacture()" class="btn" style="width:auto;">Ajouter</button>
+                </div>
+            </div>
+            <div style="max-height: 200px; overflow-y: auto;">
+                <table>
+                    <thead><tr><th>Date</th><th>Description</th><th>Montant</th><th>Action</th></tr></thead>
+                    <tbody id="fact-list"></tbody>
+                </table>
+            </div>
+        </div>
 
-            <div style="padding: 15px; background: rgba(59, 130, 246, 0.1); border-radius: 10px; margin-bottom: 15px; border: 1px dashed var(--primary);">
-                <p style="font-size: 12px; margin-bottom: 5px; color: var(--text-muted);">ARGENT RESTANT ANNÉE DERNIÈRE (REPORT)</p>
-                <div style="display: flex; gap: 10px; align-items: center;">
-                    <input type="number" id="solde-report" placeholder="Ex: 500" style="margin:0; flex-grow:1;">
-                    <button onclick="saveReport()" class="btn" style="width:auto; padding: 12px 20px;">Enregistrer</button>
-                </div>
-            </div>
+        <div class="card" style="border:1px solid var(--accent);">
+            <h3>📅 Paramètres de la Saison</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <input type="number" id="y1-input" placeholder="Ex: 2024">
+                <input type="number" id="y2-input" placeholder="Ex: 2025">
+            </div>
+            <button id="toggle-insc-btn" onclick="toggleInscriptions()" class="btn" style="background:var(--primary); margin-bottom:10px;">Chargement...</button>
+            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour dates</button>
+            <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
+        </div>
 
-            <div style="padding: 15px; background: rgba(0,0,0,0.1); border-radius: 10px; margin-bottom: 15px;">
-                <h4 style="margin-bottom:10px;">Ajouter une dépense / facture</h4>
-                <div style="display: flex; gap: 10px;">
-                    <input type="text" id="f-desc" placeholder="Désignation (ex: Volants)" style="margin:0;">
-                    <input type="number" id="f-montant" placeholder="Montant €" style="margin:0; width: 130px;">
-                    <button onclick="addFacture()" class="btn" style="width:auto;">Ajouter</button>
-                </div>
-            </div>
-            <div style="max-height: 200px; overflow-y: auto;">
-                <table>
-                    <thead><tr><th>Date</th><th>Description</th><th>Montant</th><th>Action</th></tr></thead>
-                    <tbody id="fact-list"></tbody>
-                </table>
-            </div>
-        </div>
+        <div class="card" style="border:1px solid var(--primary); text-align: center;">
+            <h3>💰 Stats Adhésions</h3>
+            <p id="total-recolte" style="font-size: 32px; font-weight: bold; color: var(--accent); margin: 10px 0;">0€</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                <div class="stat-badge">Adultes payés<span id="stat-adultes">0 / 0</span></div>
+                <div class="stat-badge">Étudiants payés<span id="stat-etudiants">0 / 0</span></div>
+            </div>
+            <p id="reste-a-percevoir" style="font-size: 13px; color: var(--text-muted); margin-top: 15px;">Reste à percevoir : 0€</p>
+        </div>
 
-        <div class="card" style="border:1px solid var(--accent);">
-            <h3>📅 Paramètres de la Saison</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <input type="number" id="y1-input" placeholder="Ex: 2024">
-                <input type="number" id="y2-input" placeholder="Ex: 2025">
-            </div>
-            <button id="toggle-insc-btn" onclick="toggleInscriptions()" class="btn" style="background:var(--primary); margin-bottom:10px;">Chargement...</button>
-            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour dates</button>
-            <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
-        </div>
+        <div class="card" style="border:1px solid var(--primary);">
+            <h3>💾 Sauvegarde PC</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <button onclick="exportToCSV()" class="btn" style="background:#8b5cf6;">Exporter CSV</button>
+                <button onclick="genEmargement()" class="btn" style="background:#f59e0b;">📄 Liste Émargement</button>
+            </div>
+        </div>
+        
+        <div class="card">
+            <h3>Liste des Tournois</h3>
+            <div id="adm-t-list"></div>
+            <hr style="margin:20px 0; opacity:0.1;">
+            <h4>Nouveau Tournoi</h4>
+            <input type="text" id="nt-n" placeholder="Nom du tournoi">
+            <input type="text" id="nt-d" placeholder="Date">
+            <select id="nt-type">
+                <option value="">Type de double (Optionnel)</option>
+                <option value="Mixte">👫 Double Mixte</option>
+                <option value="Hommes">👬 Double Hommes</option>
+                <option value="Femmes">👭 Double Femmes</option>
+            </select>
+            <input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)">
+            <button onclick="addT()" class="btn">Publier</button>
+        </div>
+        
+        <div class="card">
+            <h3>Inscriptions Tournois (Groupées)</h3>
+            <div id="adm-i-list-container"></div>
+        </div>
 
-        <div class="card" style="border:1px solid var(--primary); text-align: center;">
-            <h3>💰 Stats Adhésions</h3>
-            <p id="total-recolte" style="font-size: 32px; font-weight: bold; color: var(--accent); margin: 10px 0;">0€</p>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
-                <div class="stat-badge">Adultes payés<span id="stat-adultes">0 / 0</span></div>
-                <div class="stat-badge">Étudiants payés<span id="stat-etudiants">0 / 0</span></div>
-            </div>
-            <p id="reste-a-percevoir" style="font-size: 13px; color: var(--text-muted); margin-top: 15px;">Reste à percevoir : 0€</p>
-        </div>
+        <div class="card">
+            <h3>Adhérents Club</h3>
+            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
+                <input type="text" id="m-search" class="search-admin" style="margin-bottom:0;" placeholder="🔍 Recherche..." oninput="updateUI()">
+                <button onclick="copyEmails()" class="btn" style="width:auto; white-space:nowrap; padding: 0 15px; font-size: 12px;">📧 Copier Emails</button>
+            </div>
+            <table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+        </div>
+    </div>
 
-        <div class="card" style="border:1px solid var(--primary);">
-            <h3>💾 Sauvegarde PC</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <button onclick="exportToCSV()" class="btn" style="background:#8b5cf6;">Exporter CSV</button>
-                <button onclick="genEmargement()" class="btn" style="background:#f59e0b;">📄 Liste Émargement</button>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h3>Liste des Tournois</h3>
-            <div id="adm-t-list"></div>
-            <hr style="margin:20px 0; opacity:0.1;">
-            <h4>Nouveau Tournoi</h4>
-            <input type="text" id="nt-n" placeholder="Nom du tournoi">
-            <input type="text" id="nt-d" placeholder="Date">
-            <select id="nt-type">
-                <option value="">Type de double (Optionnel)</option>
-                <option value="Mixte">👫 Double Mixte</option>
-                <option value="Hommes">👬 Double Hommes</option>
-                <option value="Femmes">👭 Double Femmes</option>
-            </select>
-            <input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)">
-            <button onclick="addT()" class="btn">Publier</button>
-        </div>
-        
-        <div class="card">
-            <h3>Inscriptions Tournois (Groupées)</h3>
-            <div id="adm-i-list-container"></div>
-        </div>
+    <div id="recu-modal">
+        <div class="recu-paper">
+            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
+                <h1 style="font-size:24px; color:#3b82f6;">SACCB - SAINTE ADRESSE</h1>
+                <p style="font-size:12px;">Club de Badminton - Salle Paul Vatine</p>
+            </div>
+            <h2 style="text-align:center; text-decoration:underline; margin-bottom:30px;">REÇU DE COTISATION</h2>
+            <p style="margin-bottom:15px;">Je soussigné, <strong>Hernan Camara</strong>, Président de l'association SACCB, certifie avoir reçu la somme de :</p>
+            <p style="font-size:24px; text-align:center; font-weight:bold; margin-bottom:30px;"><span id="recu-montant">0</span> €</p>
+            <p style="margin-bottom:10px;">De la part de : <strong id="recu-nom">...</strong></p>
+            <p style="margin-bottom:30px;">Au titre de la cotisation annuelle pour la saison <strong id="recu-saison">...</strong>.</p>
+            <div style="display:flex; justify-content:space-between; margin-top:50px;">
+                <p>Fait à Sainte-Adresse,<br>Le <span id="recu-date">...</span></p>
+                <div style="text-align:center;">
+                    <p>Signature (Président)</p>
+                    <div style="margin-top:10px; font-family:'Bebas Neue'; color:#3b82f6; border: 1px solid #3b82f6; padding: 5px;">SACCB ST-ADRESSE</div>
+                </div>
+            </div>
+            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
+                <button onclick="window.print()" class="btn">🖨️ Imprimer</button>
+                <button onclick="document.getElementById('recu-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
+            </div>
+        </div>
+    </div>
 
-        <div class="card">
-            <h3>Adhérents Club</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" id="m-search" class="search-admin" style="margin-bottom:0;" placeholder="🔍 Recherche..." oninput="updateUI()">
-                <button onclick="copyEmails()" class="btn" style="width:auto; white-space:nowrap; padding: 0 15px; font-size: 12px;">📧 Copier Emails</button>
-            </div>
-            <table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table>
-        </div>
-    </div>
+    <div id="emargement-modal">
+        <div class="recu-paper">
+            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
+                <h1 style="font-size:24px; color:#3b82f6;">SACCB - LISTE D'ÉMARGEMENT</h1>
+                <p style="font-size:12px;">Saison <span id="em-saison">...</span> - Salle Paul Vatine</p>
+            </div>
+            <table style="color: black; border: 1px solid black;">
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid black;">NOM / PRÉNOM</th>
+                        <th style="border: 1px solid black; width: 100px;">TYPE</th>
+                        <th style="border: 1px solid black; width: 150px;">SIGNATURE</th>
+                    </tr>
+                </thead>
+                <tbody id="em-body"></tbody>
+            </table>
+            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
+                <button onclick="window.print()" class="btn">🖨️ Imprimer la liste</button>
+                <button onclick="document.getElementById('emargement-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
+            </div>
+        </div>
+    </div>
 
-    <div id="recu-modal">
-        <div class="recu-paper">
-            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
-                <h1 style="font-size:24px; color:#3b82f6;">SACCB - SAINTE ADRESSE</h1>
-                <p style="font-size:12px;">Club de Badminton - Salle Paul Vatine</p>
-            </div>
-            <h2 style="text-align:center; text-decoration:underline; margin-bottom:30px;">REÇU DE COTISATION</h2>
-            <p style="margin-bottom:15px;">Je soussigné, <strong>Hernan Camara</strong>, Président de l'association SACCB, certifie avoir reçu la somme de :</p>
-            <p style="font-size:24px; text-align:center; font-weight:bold; margin-bottom:30px;"><span id="recu-montant">0</span> €</p>
-            <p style="margin-bottom:10px;">De la part de : <strong id="recu-nom">...</strong></p>
-            <p style="margin-bottom:30px;">Au titre de la cotisation annuelle pour la saison <strong id="recu-saison">...</strong>.</p>
-            <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                <p>Fait à Sainte-Adresse,<br>Le <span id="recu-date">...</span></p>
-                <div style="text-align:center;">
-                    <p>Signature (Président)</p>
-                    <div style="margin-top:10px; font-family:'Bebas Neue'; color:#3b82f6; border: 1px solid #3b82f6; padding: 5px;">SACCB ST-ADRESSE</div>
-                </div>
-            </div>
-            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
-                <button onclick="window.print()" class="btn">🖨️ Imprimer</button>
-                <button onclick="document.getElementById('recu-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
-            </div>
-        </div>
-    </div>
+    <div id="edit-mem-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
+        <div class="card" style="width:90%; max-width:400px;">
+            <h3>Modifier Adhérent</h3>
+            <input type="hidden" id="edit-m-id">
+            <input type="text" id="edit-m-nom" placeholder="Nom">
+            <input type="email" id="edit-m-email" placeholder="Email">
+            <input type="tel" id="edit-m-tel" placeholder="Tel">
+            <select id="edit-m-type"><option value="Adulte">Adulte</option><option value="Etudiant">Etudiant</option></select>
+            <button onclick="saveEditM()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
+            <button onclick="document.getElementById('edit-mem-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
+        </div>
+    </div>
 
-    <div id="emargement-modal">
-        <div class="recu-paper">
-            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
-                <h1 style="font-size:24px; color:#3b82f6;">SACCB - LISTE D'ÉMARGEMENT</h1>
-                <p style="font-size:12px;">Saison <span id="em-saison">...</span> - Salle Paul Vatine</p>
-            </div>
-            <table style="color: black; border: 1px solid black;">
-                <thead>
-                    <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid black;">NOM / PRÉNOM</th>
-                        <th style="border: 1px solid black; width: 100px;">TYPE</th>
-                        <th style="border: 1px solid black; width: 150px;">SIGNATURE</th>
-                    </tr>
-                </thead>
-                <tbody id="em-body"></tbody>
-            </table>
-            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
-                <button onclick="window.print()" class="btn">🖨️ Imprimer la liste</button>
-                <button onclick="document.getElementById('emargement-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
-            </div>
-        </div>
-    </div>
+    <div id="edit-bin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
+        <div class="card" style="width:90%; max-width:400px;">
+            <h3>Modifier Binôme</h3>
+            <input type="hidden" id="edit-b-id">
+            <input type="text" id="edit-b-joueurs" placeholder="Noms des joueurs">
+            <button onclick="saveEditB()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
+            <button onclick="document.getElementById('edit-bin-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
+        </div>
+    </div>
 
-    <div id="edit-mem-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
-        <div class="card" style="width:90%; max-width:400px;">
-            <h3>Modifier Adhérent</h3>
-            <input type="hidden" id="edit-m-id">
-            <input type="text" id="edit-m-nom" placeholder="Nom">
-            <input type="email" id="edit-m-email" placeholder="Email">
-            <input type="tel" id="edit-m-tel" placeholder="Tel">
-            <select id="edit-m-type"><option value="Adulte">Adulte</option><option value="Etudiant">Etudiant</option></select>
-            <button onclick="saveEditM()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
-            <button onclick="document.getElementById('edit-mem-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
-        </div>
-    </div>
+    <script>
+        const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
+        const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
+        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbzdHqIZYTGMagGlySoqBeVeFbl1Ve2Z4EXnbQ5K_U5aoZ-HgivyqUMq0O_d0dtFxOCv/exec";
 
-    <div id="edit-bin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
-        <div class="card" style="width:90%; max-width:400px;">
-            <h3>Modifier Binôme</h3>
-            <input type="hidden" id="edit-b-id">
-            <input type="text" id="edit-b-joueurs" placeholder="Noms des joueurs">
-            <button onclick="saveEditB()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
-            <button onclick="document.getElementById('edit-bin-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
-        </div>
-    </div>
+        function checkAdmin() {
+            const u = document.getElementById('admin-user').value.trim().toLowerCase();
+            const p = document.getElementById('pass').value.trim();
+            const admins = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
+            const code = "43210";
+            if (admins.includes(u) && p === code) {
+                document.getElementById('login-modal').style.display='none'; 
+                document.getElementById('admin-panel').style.display='block'; 
+            } else { alert("Identifiants incorrects"); }
+        }
 
-    <script>
-        const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
-        const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
-        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbzdHqIZYTGMagGlySoqBeVeFbl1Ve2Z4EXnbQ5K_U5aoZ-HgivyqUMq0O_d0dtFxOCv/exec";
+        let db = { membres: [], factures: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025, insc_open: true };
 
-        function checkAdmin() {
-            const u = document.getElementById('admin-user').value.trim().toLowerCase();
-            const p = document.getElementById('pass').value.trim();
-            const admins = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
-            const code = "43210";
-            if (admins.includes(u) && p === code) {
-                document.getElementById('login-modal').style.display='none'; 
-                document.getElementById('admin-panel').style.display='block'; 
-            } else { alert("Identifiants incorrects"); }
-        }
+        async function loadData() {
+            try {
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, { 
+                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } 
+                });
+                const json = await res.json();
+                if (json[0] && json[0].data) {
+                    db = json[0].data;
+                    if (db.insc_open === undefined) db.insc_open = true;
+                    if (!db.factures) db.factures = [];
+                    if(document.getElementById('y1-input')) document.getElementById('y1-input').value = db.y1;
+                    if(document.getElementById('y2-input')) document.getElementById('y2-input').value = db.y2;
+                }
+                updateUI();
+            } catch (e) { console.error("Erreur sync"); }
+        }
 
-        // AJOUT DE solde_report DANS L'OBJET DB
-        let db = { membres: [], factures: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025, insc_open: true, solde_report: 0 };
+        async function saveData() {
+            try {
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
+                    method: 'PATCH', 
+                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, 
+                    body: JSON.stringify({ data: db }) 
+                });
+                fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
+                if (res.ok) { updateUI(); } 
+                else {
+                    await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
+                        method: 'POST', 
+                        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, 
+                        body: JSON.stringify({ id: 1, data: db }) 
+                    });
+                    updateUI();
+                }
+            } catch (e) { alert("Erreur réseau."); }
+        }
 
-        async function loadData() {
-            try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, { 
-                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } 
-                });
-                const json = await res.json();
-                if (json[0] && json[0].data) {
-                    db = json[0].data;
-                    if (db.insc_open === undefined) db.insc_open = true;
-                    if (db.solde_report === undefined) db.solde_report = 0;
-                    if (!db.factures) db.factures = [];
-                    if(document.getElementById('y1-input')) document.getElementById('y1-input').value = db.y1;
-                    if(document.getElementById('y2-input')) document.getElementById('y2-input').value = db.y2;
-                    if(document.getElementById('solde-report')) document.getElementById('solde-report').value = db.solde_report;
-                }
-                updateUI();
-            } catch (e) { console.error("Erreur sync"); }
-        }
+        async function addFacture() {
+            const desc = document.getElementById('f-desc').value;
+            const mont = document.getElementById('f-montant').value;
+            if(!desc || !mont) return;
+            db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
+            document.getElementById('f-desc').value = ""; document.getElementById('f-montant').value = "";
+            await saveData();
+        }
 
-        async function saveData() {
-            try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
-                    method: 'PATCH', 
-                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, 
-                    body: JSON.stringify({ data: db }) 
-                });
-                fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
-                if (res.ok) { updateUI(); } 
-                else {
-                    await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
-                        method: 'POST', 
-                        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, 
-                        body: JSON.stringify({ id: 1, data: db }) 
-                    });
-                    updateUI();
-                }
-            } catch (e) { alert("Erreur réseau."); }
-        }
+        async function delFacture(id) {
+            db.factures = db.factures.filter(f => f.id !== id);
+            await saveData();
+        }
 
-        // FONCTION POUR ENREGISTRER LE REPORT
-        async function saveReport() {
-            const val = document.getElementById('solde-report').value;
-            db.solde_report = parseFloat(val) || 0;
-            await saveData();
-            alert("Report de l'année dernière enregistré !");
-        }
+        async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
+        async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ?")) { db.membres = []; await saveData(); } }
+        async function toggleInscriptions() { db.insc_open = !db.insc_open; await saveData(); }
 
-        async function addFacture() {
-            const desc = document.getElementById('f-desc').value;
-            const mont = document.getElementById('f-montant').value;
-            if(!desc || !mont) return;
-            db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
-            document.getElementById('f-desc').value = ""; document.getElementById('f-montant').value = "";
-            await saveData();
-        }
+        function updateUI() {
+            document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
+            document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            const formSect = document.getElementById('form-container');
+            const msgFerme = document.getElementById('msg-ferme');
+            if(db.insc_open) { formSect.style.display = 'block'; msgFerme.style.display = 'none'; }
+            else { formSect.style.display = 'none'; msgFerme.style.display = 'block'; }
+            const btnTog = document.getElementById('toggle-insc-btn');
+            if(btnTog) {
+                btnTog.innerText = db.insc_open ? "🔴 FERMER LES INSCRIPTIONS" : "🟢 OUVRIR LES INSCRIPTIONS";
+                btnTog.style.background = db.insc_open ? "var(--danger)" : "var(--accent)";
+            }
+            const count = db.membres.length;
+            const remaining = 65 - count;
+            document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
+            const percent = (count / 65) * 100;
+            document.getElementById('quota-bar').style.width = Math.min(percent, 100) + "%";
+            const list = document.getElementById('tournois-list');
+            const admTList = document.getElementById('adm-t-list');
+            list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
+            admTList.innerHTML = "";
+            if(db.config_tournois) {
+                db.config_tournois.forEach(t => {
+                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
+                    const isFull = t.quota && inscrits.length >= t.quota;
+                    const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
+                    list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${t.type ? ` (${t.type})`:''}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
+                    admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
+                });
+            }
+            const groupContainer = document.getElementById('adm-i-list-container');
+            groupContainer.innerHTML = "";
+            if(db.config_tournois) {
+                db.config_tournois.forEach(t => {
+                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
+                    if (inscrits.length > 0) {
+                        let html = `<div class="group-header">${t.name}</div><table>`;
+                        inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:110px;"><button onclick="openEditB('${i.id}')" class="btn-edit">✏️</button><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
+                        html += `</table><br>`;
+                        groupContainer.innerHTML += html;
+                    }
+                });
+            }
 
-        async function delFacture(id) {
-            db.factures = db.factures.filter(f => f.id !== id);
-            await saveData();
-        }
+            // --- CALCUL COMPTA ---
+            let totalRecolte = 0, reste = 0;
+            let aPayes = 0, aTotal = 0, ePayes = 0, eTotal = 0;
+            db.membres.forEach(m => {
+                const prix = (m.type === "Etudiant") ? 25 : 50;
+                if(m.type === "Adulte") aTotal++; else eTotal++;
+                if(m.ok) { totalRecolte += prix; if(m.type === "Adulte") aPayes++; else ePayes++; } 
+                else { reste += prix; }
+            });
+            
+            let totalDepenses = 0;
+            db.factures.forEach(f => totalDepenses += f.montant);
 
-        async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
-        async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ?")) { db.membres = []; await saveData(); } }
-        async function toggleInscriptions() { db.insc_open = !db.insc_open; await saveData(); }
+            // CALCUL DU SOLDE AVEC LE REPORT
+            let reportAnnee = parseFloat(document.getElementById('f-report')?.value) || 0;
 
-        function updateUI() {
-            document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
-            document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
-            const formSect = document.getElementById('form-container');
-            const msgFerme = document.getElementById('msg-ferme');
-            if(db.insc_open) { formSect.style.display = 'block'; msgFerme.style.display = 'none'; }
-            else { formSect.style.display = 'none'; msgFerme.style.display = 'block'; }
-            const btnTog = document.getElementById('toggle-insc-btn');
-            if(btnTog) {
-                btnTog.innerText = db.insc_open ? "🔴 FERMER LES INSCRIPTIONS" : "🟢 OUVRIR LES INSCRIPTIONS";
-                btnTog.style.background = db.insc_open ? "var(--danger)" : "var(--accent)";
-            }
-            const count = db.membres.length;
-            const remaining = 65 - count;
-            document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
-            const percent = (count / 65) * 100;
-            document.getElementById('quota-bar').style.width = Math.min(percent, 100) + "%";
-            const list = document.getElementById('tournois-list');
-            const admTList = document.getElementById('adm-t-list');
-            list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
-            admTList.innerHTML = "";
-            if(db.config_tournois) {
-                db.config_tournois.forEach(t => {
-                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                    const isFull = t.quota && inscrits.length >= t.quota;
-                    const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
-                    list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${t.type ? ` (${t.type})`:''}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
-                    admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
-                });
-            }
-            const groupContainer = document.getElementById('adm-i-list-container');
-            groupContainer.innerHTML = "";
-            if(db.config_tournois) {
-                db.config_tournois.forEach(t => {
-                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                    if (inscrits.length > 0) {
-                        let html = `<div class="group-header">${t.name}</div><table>`;
-                        inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:110px;"><button onclick="openEditB('${i.id}')" class="btn-edit">✏️</button><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
-                        html += `</table><br>`;
-                        groupContainer.innerHTML += html;
-                    }
-                });
-            }
-
-            // --- CALCUL COMPTA MIS À JOUR ---
-            let totalRecolte = 0, reste = 0;
-            let aPayes = 0, aTotal = 0, ePayes = 0, eTotal = 0;
-            db.membres.forEach(m => {
-                const prix = (m.type === "Etudiant") ? 25 : 50;
-                if(m.type === "Adulte") aTotal++; else eTotal++;
-                if(m.ok) { totalRecolte += prix; if(m.type === "Adulte") aPayes++; else ePayes++; } 
-                else { reste += prix; }
-            });
-            
-            let totalDepenses = 0;
-            db.factures.forEach(f => totalDepenses += f.montant);
-
-            // Calcul Final : (Adhésions payées + Argent reporté) - Dépenses
-            const soldeFinal = (totalRecolte + (db.solde_report || 0)) - totalDepenses;
-
-            document.getElementById('total-recolte').innerText = totalRecolte + "€";
-            document.getElementById('total-percu-compta').innerText = totalRecolte + "€";
-            document.getElementById('solde-final').innerText = soldeFinal + "€";
-            document.getElementById('fact-list').innerHTML = db.factures.map(f => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture('${f.id}')" class="btn-del">X</button></td></tr>`).reverse().join('');
-            
-            document.getElementById('stat-adultes').innerText = aPayes + " / " + aTotal;
-            document.getElementById('stat-etudiants').innerText = ePayes + " / " + eTotal;
-            document.getElementById('reste-a-percevoir').innerText = "Reste à percevoir : " + reste + "€";
-            
-            const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
-            renderMembres(searchVal);
-        }
-
-        // Reste du script... (fonctions regT, delI, delTournoi, renderMembres etc.)
-        // Je ne les réécris pas pour ne pas alourdir, mais elles doivent rester inchangées.
-        
-        loadData();
-    </script>
+            document.getElementById('total-recolte').innerText = totalRecolte + "€";
+            document.getElementById('total-percu-compta').innerText = totalRecolte + "€";
+            document.getElementById('solde-final').innerText = (totalRecolte + reportAnnee - totalDepenses) + "€";
+            document.getElementById('fact-list').innerHTML = db.factures.map(f => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture('${f.id}')" class="btn-del">X</button></td></tr>`).reverse().join('');
+            
+            document.getElementById('stat-adultes').innerText = aPayes + " / " + aTotal;
+            document.getElementById('stat-etudiants').innerText = ePayes + " / " + eTotal;
+            document.getElementById('reste-a-percevoir').innerText = "Reste à percevoir : " + reste + "€";
+            
+            const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
+            // (Fin de updateUI...)
+        }
+        // (Reste du script original...)
+    </script>
 </body>
 </html>
