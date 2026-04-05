@@ -33,9 +33,9 @@
         .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
         .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
-        #recu-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
-        .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 600px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; }
-        @media print { body * { visibility: hidden; } #recu-modal, #recu-modal * { visibility: visible; } #recu-modal { position: absolute; left: 0; top: 0; background: white; } .no-print { display: none; } }
+        #recu-modal, #emargement-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
+        .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 800px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow-y: auto; max-height: 90vh; }
+        @media print { body * { visibility: hidden; } #recu-modal, #recu-modal *, #emargement-modal, #emargement-modal * { visibility: visible; } #recu-modal, #emargement-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; } .no-print { display: none; } }
         .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
         .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
     </style>
@@ -155,7 +155,13 @@
             <p id="reste-a-percevoir" style="font-size: 13px; color: var(--text-muted); margin-top: 15px;">Reste à percevoir : 0€</p>
         </div>
 
-        <div class="card" style="border:1px solid var(--primary);"><h3>💾 Sauvegarde PC</h3><button onclick="exportToCSV()" class="btn" style="background:#8b5cf6; margin-top:10px;">Exporter les données (.csv)</button></div>
+        <div class="card" style="border:1px solid var(--primary);">
+            <h3>💾 Sauvegarde PC</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <button onclick="exportToCSV()" class="btn" style="background:#8b5cf6;">Exporter CSV</button>
+                <button onclick="genEmargement()" class="btn" style="background:#f59e0b;">📄 Liste Émargement</button>
+            </div>
+        </div>
         
         <div class="card">
             <h3>Liste des Tournois</h3>
@@ -210,6 +216,29 @@
             <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
                 <button onclick="window.print()" class="btn">🖨️ Imprimer</button>
                 <button onclick="document.getElementById('recu-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="emargement-modal">
+        <div class="recu-paper">
+            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
+                <h1 style="font-size:24px; color:#3b82f6;">SACCB - LISTE D'ÉMARGEMENT</h1>
+                <p style="font-size:12px;">Saison <span id="em-saison">...</span> - Salle Paul Vatine</p>
+            </div>
+            <table style="color: black; border: 1px solid black;">
+                <thead>
+                    <tr style="background: #f0f0f0;">
+                        <th style="border: 1px solid black;">NOM / PRÉNOM</th>
+                        <th style="border: 1px solid black; width: 100px;">TYPE</th>
+                        <th style="border: 1px solid black; width: 150px;">SIGNATURE</th>
+                    </tr>
+                </thead>
+                <tbody id="em-body"></tbody>
+            </table>
+            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
+                <button onclick="window.print()" class="btn">🖨️ Imprimer la liste</button>
+                <button onclick="document.getElementById('emargement-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
             </div>
         </div>
     </div>
@@ -365,6 +394,13 @@
             document.getElementById('recu-modal').style.display = 'flex';
         }
 
+        function genEmargement() {
+            document.getElementById('em-saison').innerText = db.y1 + " - " + db.y2;
+            const sorted = [...db.membres].sort((a, b) => a.nom.localeCompare(b.nom));
+            document.getElementById('em-body').innerHTML = sorted.map(m => `<tr><td style="border: 1px solid black; padding: 10px;">${m.nom.toUpperCase()}</td><td style="border: 1px solid black; padding: 10px;">${m.type}</td><td style="border: 1px solid black;"></td></tr>`).join('');
+            document.getElementById('emargement-modal').style.display = 'flex';
+        }
+
         function copyEmails() {
             const emails = db.membres.map(m => m.email).join('; ');
             navigator.clipboard.writeText(emails).then(() => alert("Tous les emails ont été copiés !"));
@@ -387,10 +423,7 @@
             db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
             document.getElementById('form-container').style.display='none'; 
             document.getElementById('msg-deja').style.display='block'; 
-            
-            // Pluie de confettis !
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#ffffff'] });
-            
             await saveData(); 
         };
         loadData();
