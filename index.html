@@ -122,11 +122,27 @@
                 <input type="number" id="y1-input" placeholder="Ex: 2024">
                 <input type="number" id="y2-input" placeholder="Ex: 2025">
             </div>
-            <button onclick="updateSeason()" class="btn" style="background:var(--accent);">Mettre à jour la saison</button>
+            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour la saison</button>
+            <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
         </div>
 
         <div class="card" style="border:1px solid var(--primary);"><h3>💾 Sauvegarde PC</h3><button onclick="exportToCSV()" class="btn" style="background:#8b5cf6; margin-top:10px;">Exporter les données (.csv)</button></div>
-        <div class="card"><h3>Liste des Tournois</h3><div id="adm-t-list"></div><hr style="margin:20px 0; opacity:0.1;"><h4>Nouveau Tournoi</h4><input type="text" id="nt-n" placeholder="Nom"><input type="text" id="nt-d" placeholder="Date"><input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)"><button onclick="addT()" class="btn">Publier</button></div>
+        <div class="card">
+            <h3>Liste des Tournois</h3>
+            <div id="adm-t-list"></div>
+            <hr style="margin:20px 0; opacity:0.1;">
+            <h4>Nouveau Tournoi</h4>
+            <input type="text" id="nt-n" placeholder="Nom du tournoi">
+            <input type="text" id="nt-d" placeholder="Date">
+            <select id="nt-type">
+                <option value="">Type de double (Optionnel)</option>
+                <option value="Mixte">👫 Double Mixte</option>
+                <option value="Hommes">👬 Double Hommes</option>
+                <option value="Femmes">👭 Double Femmes</option>
+            </select>
+            <input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)">
+            <button onclick="addT()" class="btn">Publier</button>
+        </div>
         <div class="card"><h3>Inscriptions Tournois</h3><table><thead><tr><th>Tournoi</th><th>Binôme</th><th>X</th></tr></thead><tbody id="adm-i-list"></tbody></table></div>
         <div class="card"><h3>Adhérents Club</h3><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table></div>
     </div>
@@ -155,12 +171,8 @@
             } catch (e) { alert("Erreur sauvegarde."); }
         }
 
-        async function updateSeason() {
-            db.y1 = document.getElementById('y1-input').value;
-            db.y2 = document.getElementById('y2-input').value;
-            await saveData();
-            alert("Saison mise à jour !");
-        }
+        async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
+        async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ? Cette action est irréversible.")) { db.membres = []; await saveData(); } }
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
@@ -173,9 +185,11 @@
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
                 const isFull = t.quota && inscrits.length >= t.quota;
+                const typeLabel = t.type ? ` <span style="font-size:14px; opacity:0.8;">(${t.type})</span>` : "";
                 const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
-                admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
+                
+                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${typeLabel}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
+                admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name} (${t.type || 'N/C'})</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
             });
 
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
@@ -184,7 +198,12 @@
         }
 
         async function regT(e, id, name) { e.preventDefault(); const binome = e.target.p1.value + " & " + e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: binome, ok: false }); await saveData(); e.target.reset(); }
-        async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'); if(!n.value) return; db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, quota: q.value ? parseInt(q.value) : null}); await saveData(); n.value=""; d.value=""; q.value=""; }
+        async function addT() { 
+            const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'), ty=document.getElementById('nt-type'); 
+            if(!n.value) return; 
+            db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, type: ty.value, quota: q.value ? parseInt(q.value) : null}); 
+            await saveData(); n.value=""; d.value=""; q.value=""; ty.value="";
+        }
         async function delTournoi(id) { if(confirm("Supprimer ce tournoi ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
         async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
         async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
