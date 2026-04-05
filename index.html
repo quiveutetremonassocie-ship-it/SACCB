@@ -28,16 +28,6 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
         .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
-        .btn-edit { background: var(--primary); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
-        .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
-        .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
-        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
-        .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
-        #recu-modal, #emargement-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
-        .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 800px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow-y: auto; max-height: 90vh; }
-        @media print { body * { visibility: hidden; } #recu-modal, #recu-modal *, #emargement-modal, #emargement-modal * { visibility: visible; } #recu-modal, #emargement-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; } .no-print { display: none; } }
-        .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
-        .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
         .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .badge-header { font-family: 'Bebas Neue'; font-size: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; padding-bottom: 5px; }
         .badge-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
@@ -46,15 +36,9 @@
         .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
         .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
 
-        .galerie-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 30px; }
-        .galerie-item { background: var(--bg-card); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.05); transition: transform 0.3s ease; }
-        .galerie-item:hover { transform: scale(1.02); border-color: var(--primary); }
-        .galerie-img { width: 100%; height: 200px; object-fit: cover; display: block; background: #2a3b55; }
-        .galerie-caption { padding: 15px; font-size: 14px; color: var(--text-muted); text-align: center; }
-
-        /* Style Nouveau : Compta */
-        .compta-header { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 15px; }
-        .solde-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
+        /* Style Compta */
+        .compta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .compta-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -125,25 +109,6 @@
                         <div class="badge-logo">ST-ADRESSE</div>
                     </div>
                 </div>
-                <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">Prenez une capture d'écran de votre badge !</p>
-            </div>
-        </div>
-    </section>
-
-    <section id="galerie">
-        <h2>Esprit Club</h2>
-        <div class="galerie-grid">
-            <div class="galerie-item">
-                <img src="https://i.postimg.cc/43DGzcZQ/unnamed.jpg" alt="SACCB Club" class="galerie-img">
-                <div class="galerie-caption">Bienvenue au SACCB - Sainte-Adresse</div>
-            </div>
-            <div class="galerie-item">
-                <img src="https://via.placeholder.com/400x300/2a3b55/ffffff?text=Tournoi+Amical" alt="Tournoi Amical" class="galerie-img">
-                <div class="galerie-caption">Sourires et compétition lors de notre dernier tournoi.</div>
-            </div>
-            <div class="galerie-item">
-                <img src="https://via.placeholder.com/400x300/2a3b55/ffffff?text=Jeunes+Talents" alt="Jeunes Talents" class="galerie-img">
-                <div class="galerie-caption">La relève du badminton s'entraîne dur.</div>
             </div>
         </div>
     </section>
@@ -155,13 +120,11 @@
                 <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT</p>
                 <p style="font-size: 20px;">Hernan Camara</p>
                 <p>07 77 06 18 75</p>
-                <p style="font-size: 14px; color: var(--text-muted);">hernancm68@hotmail.com</p>
             </div>
             <div class="card">
                 <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT ADJOINT</p>
                 <p style="font-size: 20px;">Matthieu Demare</p>
                 <p>06 52 48 62 28</p>
-                <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
             </div>
         </div>
         <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
@@ -169,7 +132,6 @@
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
         <div class="card" style="max-width:300px; text-align:center;">
-            <input type="email" id="admin-user" placeholder="Email Admin">
             <input type="password" id="pass" placeholder="Code Admin">
             <button onclick="checkAdmin()" class="btn" style="margin-bottom:10px;">Entrer</button>
             <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444;">RETOUR</button>
@@ -183,68 +145,41 @@
         </div>
 
         <div class="card" style="border: 2px solid var(--primary);">
-            <h3>💰 Trésorerie & Factures</h3>
-            <div class="compta-header">
-                <div class="solde-box">
-                    <p style="font-size: 11px; color: var(--text-muted);">ARGENT TOTAL REÇU</p>
+            <h3>💰 Trésorerie & Solde</h3>
+            <div class="compta-grid">
+                <div class="compta-box">
+                    <p style="font-size: 11px; color: var(--text-muted);">ADHÉSIONS REÇUES</p>
                     <p id="total-percu" style="font-size: 24px; font-weight: bold; color: var(--accent);">0€</p>
                 </div>
-                <div class="solde-box">
-                    <p style="font-size: 11px; color: var(--text-muted);">SOLDE RESTANT</p>
+                <div class="compta-box">
+                    <p style="font-size: 11px; color: var(--text-muted);">ARGENT RESTANT</p>
                     <p id="solde-restant" style="font-size: 24px; font-weight: bold; color: var(--primary);">0€</p>
                 </div>
             </div>
-
-            <div style="margin-top: 25px; padding: 15px; background: rgba(0,0,0,0.1); border-radius: 10px;">
-                <h4>Ajouter une dépense / facture</h4>
+            <div style="padding: 15px; background: rgba(0,0,0,0.1); border-radius: 10px; margin-bottom: 15px;">
+                <h4>Ajouter une facture / dépense</h4>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <input type="text" id="f-desc" placeholder="Description (ex: Volants, Goûter...)" style="margin:0;">
-                    <input type="number" id="f-montant" placeholder="Montant €" style="margin:0; width: 150px;">
-                    <button onclick="addFacture()" class="btn" style="width: auto;">Ajouter</button>
+                    <input type="text" id="f-desc" placeholder="Désignation..." style="margin:0;">
+                    <input type="number" id="f-montant" placeholder="Montant €" style="margin:0; width: 130px;">
+                    <button onclick="addFacture()" class="btn" style="width:auto;">Ajouter</button>
                 </div>
             </div>
-
-            <table style="margin-top: 15px;">
-                <thead><tr><th>Date</th><th>Description</th><th>Montant</th><th>Action</th></tr></thead>
-                <tbody id="fact-list"></tbody>
-            </table>
-        </div>
-        
-        <div class="card" style="border:1px solid var(--accent);">
-            <h3>📅 Paramètres de la Saison</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <input type="number" id="y1-input" placeholder="Ex: 2024">
-                <input type="number" id="y2-input" placeholder="Ex: 2025">
-            </div>
-            <button id="toggle-insc-btn" onclick="toggleInscriptions()" class="btn" style="background:var(--primary); margin-bottom:10px;">Chargement...</button>
-            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour dates</button>
-            <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
+            <table><thead><tr><th>Date</th><th>Description</th><th>Montant</th><th>Action</th></tr></thead><tbody id="fact-list"></tbody></table>
         </div>
 
-        <div class="card" style="border:1px solid var(--primary);">
-            <h3>💾 Sauvegarde PC</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
-                <button onclick="exportToCSV()" class="btn" style="background:#8b5cf6;">Exporter CSV</button>
-                <button onclick="genEmargement()" class="btn" style="background:#f59e0b;">📄 Liste Émargement</button>
-            </div>
-        </div>
-        
-        <div class="card">
-            <h3>Liste des Tournois</h3>
-            <div id="adm-t-list"></div>
-            <hr style="margin:20px 0; opacity:0.1;">
-            <h4>Nouveau Tournoi</h4>
-            <input type="text" id="nt-n" placeholder="Nom du tournoi">
-            <input type="text" id="nt-d" placeholder="Date">
-            <button onclick="addT()" class="btn">Publier</button>
-        </div>
-        
         <div class="card">
             <h3>Adhérents Club</h3>
-            <div style="display: flex; gap: 10px; margin-bottom: 10px;">
-                <input type="text" id="m-search" class="search-admin" style="margin-bottom:0;" placeholder="🔍 Recherche..." oninput="updateUI()">
-            </div>
-            <table><thead><tr><th>Nom</th><th>Email</th><th>Type</th><th>Paiement</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+            <input type="text" id="m-search" placeholder="🔍 Recherche..." oninput="updateUI()">
+            <table><thead><tr><th>Nom</th><th>Email</th><th>Type</th><th>Payé</th><th>Action</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+        </div>
+
+        <div class="card">
+            <h3>Tournois</h3>
+            <div id="adm-t-list"></div>
+            <hr style="margin: 15px 0; opacity: 0.1;">
+            <input type="text" id="nt-n" placeholder="Nom du tournoi">
+            <input type="text" id="nt-d" placeholder="Date">
+            <button onclick="addT()" class="btn">Créer Tournoi</button>
         </div>
     </div>
 
@@ -253,64 +188,52 @@
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
 
         function checkAdmin() {
-            const u = document.getElementById('admin-user').value.trim().toLowerCase();
-            const p = document.getElementById('pass').value.trim();
-            if (["hernancm68@hotmail.com", "gabin.binay@gmail.com"].includes(u) && p === "43210") {
+            if (document.getElementById('pass').value === "43210") {
                 document.getElementById('login-modal').style.display='none'; 
                 document.getElementById('admin-panel').style.display='block'; 
-            } else { alert("Identifiants incorrects"); }
+            } else { alert("Code incorrect"); }
         }
 
         let db = { membres: [], factures: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025, insc_open: true };
 
         async function loadData() {
-            try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } });
-                const json = await res.json();
-                if (json[0]?.data) {
-                    db = json[0].data;
-                    if (!db.factures) db.factures = []; // Init si vide
-                }
-                updateUI();
-            } catch (e) { console.error("Erreur sync"); }
+            const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } });
+            const json = await res.json();
+            if (json[0]?.data) {
+                db = json[0].data;
+                if(!db.factures) db.factures = [];
+            }
+            updateUI();
         }
 
         async function saveData() {
-            try {
-                await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
-                    method: 'PATCH', 
-                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, 
-                    body: JSON.stringify({ data: db }) 
-                });
-                updateUI();
-            } catch (e) { alert("Erreur réseau."); }
+            await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
+                method: 'PATCH', 
+                headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, 
+                body: JSON.stringify({ data: db }) 
+            });
+            updateUI();
         }
 
         function updateUI() {
-            document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
-            document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
-            
-            // Calcul Compta
+            // Compta
             let totalRecolte = 0;
             db.membres.forEach(m => { if(m.ok) totalRecolte += (m.type === "Etudiant") ? 25 : 50; });
-            document.getElementById('total-percu').innerText = totalRecolte + "€";
-
             let totalDepenses = 0;
             db.factures.forEach(f => totalDepenses += parseFloat(f.montant));
+            
+            document.getElementById('total-percu').innerText = totalRecolte + "€";
             document.getElementById('solde-restant').innerText = (totalRecolte - totalDepenses) + "€";
-
-            // Liste factures
             document.getElementById('fact-list').innerHTML = db.factures.map((f, i) => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture(${i})" class="btn-del">X</button></td></tr>`).join('');
 
-            // Adhérents
+            // Listes
             document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
             
-            // Tournois
             const list = document.getElementById('tournois-list');
             list.innerHTML = "";
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}</h3><div class="liste-inscrits"><strong>Binômes :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div><form onsubmit="regT(event, '${t.id}', '${t.name}')"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required><button type="submit" class="btn">S'inscrire</button></form></div>`;
+                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}</h3><div class="liste-inscrits">${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div><form onsubmit="regT(event, '${t.id}', '${t.name}')"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required><button type="submit" class="btn">S'inscrire</button></form></div>`;
             });
         }
 
@@ -330,9 +253,7 @@
 
         document.getElementById('main-adh').onsubmit = async (e) => { 
             e.preventDefault(); 
-            const nom = document.getElementById('m-nom').value;
-            db.membres.push({ id: Date.now().toString(), nom: nom, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
-            document.getElementById('b-res-nom').innerText = nom;
+            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
             document.getElementById('form-container').style.display='none'; 
             document.getElementById('msg-deja').style.display='block'; 
             confetti({ particleCount: 150, spread: 70 });
