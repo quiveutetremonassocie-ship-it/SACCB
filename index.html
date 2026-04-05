@@ -187,22 +187,18 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
+        // LIEN WEBHOOK RÉPARÉ ICI :
         const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLoQkZOQxP4/exec";
 
         function checkAdmin() {
             const u = document.getElementById('admin-user').value.trim().toLowerCase();
             const p = document.getElementById('pass').value.trim();
-            
-            // On utilise une comparaison directe simple pour être sûr que ça marche
             const admins = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
-            const code = "43210"; // Ton code d'origine
-            
+            const code = "43210";
             if (admins.includes(u) && p === code) {
                 document.getElementById('login-modal').style.display='none'; 
                 document.getElementById('admin-panel').style.display='block'; 
-            } else { 
-                alert("Identifiants incorrects"); 
-            }
+            } else { alert("Identifiants incorrects"); }
         }
 
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
@@ -229,6 +225,7 @@
                     headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, 
                     body: JSON.stringify({ data: db }) 
                 });
+                // Envoi vers Google Sheets
                 fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
                 if (res.ok) { updateUI(); } 
                 else {
