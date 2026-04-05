@@ -128,6 +128,12 @@
             <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
         </div>
 
+        <div class="card" style="border:1px solid var(--primary); text-align: center;">
+            <h3>💰 Trésorerie Adhésions</h3>
+            <p id="total-recolte" style="font-size: 32px; font-weight: bold; color: var(--accent); margin: 10px 0;">0€</p>
+            <p style="font-size: 12px; color: var(--text-muted);">(Basé sur les paiements validés "OUI")</p>
+        </div>
+
         <div class="card" style="border:1px solid var(--primary);"><h3>💾 Sauvegarde PC</h3><button onclick="exportToCSV()" class="btn" style="background:#8b5cf6; margin-top:10px;">Exporter les données (.csv)</button></div>
         <div class="card">
             <h3>Liste des Tournois</h3>
@@ -247,9 +253,16 @@
                 });
             }
 
-            // TRI PAR PAIEMENT : "NON" au-dessus, "OUI" en dessous
-            const sortedMembres = [...db.membres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
+            // Calcul trésorerie
+            let total = 0;
+            db.membres.forEach(m => {
+                if(m.ok) {
+                    total += (m.type === "Etudiant") ? 25 : 50;
+                }
+            });
+            document.getElementById('total-recolte').innerText = total + "€";
 
+            const sortedMembres = [...db.membres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
             document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
