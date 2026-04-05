@@ -24,9 +24,10 @@
         .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; text-transform: uppercase; }
         .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; }
         .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
-        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
         .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -143,7 +144,12 @@
             <input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)">
             <button onclick="addT()" class="btn">Publier</button>
         </div>
-        <div class="card"><h3>Inscriptions Tournois</h3><table><thead><tr><th>Tournoi</th><th>Binôme</th><th>X</th></tr></thead><tbody id="adm-i-list"></tbody></table></div>
+        
+        <div class="card">
+            <h3>Inscriptions Tournois (Groupées)</h3>
+            <div id="adm-i-list-container"></div>
+        </div>
+
         <div class="card"><h3>Adhérents Club</h3><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table></div>
     </div>
 
@@ -177,6 +183,8 @@
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            
+            // Accueil Tournois
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
             list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi prévu." : "";
@@ -192,8 +200,24 @@
                 admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name} (${t.type || 'N/C'})</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
             });
 
+            // Admin Inscriptions Groupées
+            const groupContainer = document.getElementById('adm-i-list-container');
+            groupContainer.innerHTML = "";
+            db.config_tournois.forEach(t => {
+                const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
+                if (inscrits.length > 0) {
+                    let html = `<div class="group-header">${t.name}</div><table>`;
+                    inscrits.forEach(i => {
+                        html += `<tr><td>${i.joueurs}</td><td style="width:50px;"><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`;
+                    });
+                    html += `</table><br>`;
+                    groupContainer.innerHTML += html;
+                }
+            });
+            if(groupContainer.innerHTML === "") groupContainer.innerHTML = "<p>Aucune inscription enregistrée.</p>";
+
+            // Admin Membres
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
-            document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`).join('');
             document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
