@@ -113,29 +113,6 @@
         </div>
     </div>
 
-    <div id="edit-mem-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
-        <div class="card" style="width:90%; max-width:400px;">
-            <h3>Modifier Adhérent</h3>
-            <input type="hidden" id="edit-m-id">
-            <input type="text" id="edit-m-nom" placeholder="Nom">
-            <input type="email" id="edit-m-email" placeholder="Email">
-            <input type="tel" id="edit-m-tel" placeholder="Tel">
-            <select id="edit-m-type"><option value="Adulte">Adulte</option><option value="Etudiant">Etudiant</option></select>
-            <button onclick="saveEditM()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
-            <button onclick="document.getElementById('edit-mem-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
-        </div>
-    </div>
-
-    <div id="edit-bin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
-        <div class="card" style="width:90%; max-width:400px;">
-            <h3>Modifier Binôme</h3>
-            <input type="hidden" id="edit-b-id">
-            <input type="text" id="edit-b-joueurs" placeholder="Noms des joueurs">
-            <button onclick="saveEditB()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
-            <button onclick="document.getElementById('edit-bin-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
-        </div>
-    </div>
-
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
             <h2>GESTION SACCB</h2>
@@ -184,12 +161,35 @@
         <div class="card"><h3>Adhérents Club</h3><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table></div>
     </div>
 
+    <div id="edit-mem-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
+        <div class="card" style="width:90%; max-width:400px;">
+            <h3>Modifier Adhérent</h3>
+            <input type="hidden" id="edit-m-id">
+            <input type="text" id="edit-m-nom" placeholder="Nom">
+            <input type="email" id="edit-m-email" placeholder="Email">
+            <input type="tel" id="edit-m-tel" placeholder="Tel">
+            <select id="edit-m-type"><option value="Adulte">Adulte</option><option value="Etudiant">Etudiant</option></select>
+            <button onclick="saveEditM()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
+            <button onclick="document.getElementById('edit-mem-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
+        </div>
+    </div>
+
+    <div id="edit-bin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
+        <div class="card" style="width:90%; max-width:400px;">
+            <h3>Modifier Binôme</h3>
+            <input type="hidden" id="edit-b-id">
+            <input type="text" id="edit-b-joueurs" placeholder="Noms des joueurs">
+            <button onclick="saveEditB()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
+            <button onclick="document.getElementById('edit-bin-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
+        </div>
+    </div>
+
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
-        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLo (REDACTED)";
+        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLoQkZOQxP4/exec";
         
-        // --- CODES SÉCURISÉS (HASH) Hernan & Gabin ---
+        // --- CODES SÉCURISÉS (HASH) ---
         const ADM_H = ["64049818824f115591c2b53f66874a72670be79124239851722883f3e10086c5", "4eb905952c938361b764268e3b3303668832a84a250325f492215c0e1898516e"];
         const P_H = "5798e9860b297b697669d51e73995874403164a66a1a4738586f1837549c4f4d";
 
@@ -199,7 +199,7 @@
         }
 
         async function checkAdmin() {
-            const u = document.getElementById('admin-user').value.trim().toLowerCase();
+            const u = document.getElementById('admin-user').value.toLowerCase().trim();
             const p = document.getElementById('pass').value.trim();
             const hu = await hash(u);
             const hp = await hash(p);
