@@ -47,6 +47,10 @@
         .badge-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
         .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
         .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
+
+        /* Styles additionnels Compta */
+        .compta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .compta-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
     </style>
 </head>
 <body>
@@ -156,6 +160,34 @@
             <button onclick="document.getElementById('admin-panel').style.display='none'" class="btn" style="width:auto; background:var(--danger);">Fermer</button>
         </div>
         
+        <div class="card" style="border: 2px solid var(--primary);">
+            <h3>💰 Comptabilité & Trésorerie</h3>
+            <div class="compta-grid">
+                <div class="compta-box">
+                    <p style="font-size: 11px; color: var(--text-muted);">ADHÉSIONS REÇUES</p>
+                    <p id="total-percu-compta" style="font-size: 24px; font-weight: bold; color: var(--accent);">0€</p>
+                </div>
+                <div class="compta-box">
+                    <p style="font-size: 11px; color: var(--text-muted);">SOLDE ACTUEL (RESTANT)</p>
+                    <p id="solde-final" style="font-size: 24px; font-weight: bold; color: var(--primary);">0€</p>
+                </div>
+            </div>
+            <div style="padding: 15px; background: rgba(0,0,0,0.1); border-radius: 10px; margin-bottom: 15px;">
+                <h4 style="margin-bottom:10px;">Ajouter une dépense / facture</h4>
+                <div style="display: flex; gap: 10px;">
+                    <input type="text" id="f-desc" placeholder="Désignation (ex: Volants)" style="margin:0;">
+                    <input type="number" id="f-montant" placeholder="Montant €" style="margin:0; width: 130px;">
+                    <button onclick="addFacture()" class="btn" style="width:auto;">Ajouter</button>
+                </div>
+            </div>
+            <div style="max-height: 200px; overflow-y: auto;">
+                <table>
+                    <thead><tr><th>Date</th><th>Description</th><th>Montant</th><th>Action</th></tr></thead>
+                    <tbody id="fact-list"></tbody>
+                </table>
+            </div>
+        </div>
+
         <div class="card" style="border:1px solid var(--accent);">
             <h3>📅 Paramètres de la Saison</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
@@ -168,7 +200,7 @@
         </div>
 
         <div class="card" style="border:1px solid var(--primary); text-align: center;">
-            <h3>💰 Trésorerie & Stats</h3>
+            <h3>💰 Stats Adhésions</h3>
             <p id="total-recolte" style="font-size: 32px; font-weight: bold; color: var(--accent); margin: 10px 0;">0€</p>
             <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
                 <div class="stat-badge">Adultes payés<span id="stat-adultes">0 / 0</span></div>
@@ -304,7 +336,7 @@
             } else { alert("Identifiants incorrects"); }
         }
 
-        let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025, insc_open: true };
+        let db = { membres: [], factures: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025, insc_open: true };
 
         async function loadData() {
             try {
@@ -315,6 +347,7 @@
                 if (json[0] && json[0].data) {
                     db = json[0].data;
                     if (db.insc_open === undefined) db.insc_open = true;
+                    if (!db.factures) db.factures = [];
                     if(document.getElementById('y1-input')) document.getElementById('y1-input').value = db.y1;
                     if(document.getElementById('y2-input')) document.getElementById('y2-input').value = db.y2;
                 }
@@ -340,6 +373,20 @@
                     updateUI();
                 }
             } catch (e) { alert("Erreur réseau."); }
+        }
+
+        async function addFacture() {
+            const desc = document.getElementById('f-desc').value;
+            const mont = document.getElementById('f-montant').value;
+            if(!desc || !mont) return;
+            db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
+            document.getElementById('f-desc').value = ""; document.getElementById('f-montant').value = "";
+            await saveData();
+        }
+
+        async function delFacture(id) {
+            db.factures = db.factures.filter(f => f.id !== id);
+            await saveData();
         }
 
         async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
@@ -389,6 +436,8 @@
                     }
                 });
             }
+
+            // --- CALCUL COMPTA ---
             let totalRecolte = 0, reste = 0;
             let aPayes = 0, aTotal = 0, ePayes = 0, eTotal = 0;
             db.membres.forEach(m => {
@@ -397,10 +446,19 @@
                 if(m.ok) { totalRecolte += prix; if(m.type === "Adulte") aPayes++; else ePayes++; } 
                 else { reste += prix; }
             });
+            
+            let totalDepenses = 0;
+            db.factures.forEach(f => totalDepenses += f.montant);
+
             document.getElementById('total-recolte').innerText = totalRecolte + "€";
+            document.getElementById('total-percu-compta').innerText = totalRecolte + "€";
+            document.getElementById('solde-final').innerText = (totalRecolte - totalDepenses) + "€";
+            document.getElementById('fact-list').innerHTML = db.factures.map(f => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture('${f.id}')" class="btn-del">X</button></td></tr>`).reverse().join('');
+            
             document.getElementById('stat-adultes').innerText = aPayes + " / " + aTotal;
             document.getElementById('stat-etudiants').innerText = ePayes + " / " + eTotal;
             document.getElementById('reste-a-percevoir').innerText = "Reste à percevoir : " + reste + "€";
+            
             const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
             const filteredMembres = db.membres.filter(m => m.nom.toLowerCase().includes(searchVal) || m.email.toLowerCase().includes(searchVal) || (m.tel && m.tel.includes(searchVal)));
             const sortedMembres = [...filteredMembres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
@@ -432,32 +490,30 @@
         async function saveEditM() { const id = document.getElementById('edit-m-id').value; const m = db.membres.find(x => x.id === id); if(m) { m.nom = document.getElementById('edit-m-nom').value; m.email = document.getElementById('edit-m-email').value; m.tel = document.getElementById('edit-m-tel').value; m.type = document.getElementById('edit-m-type').value; await saveData(); document.getElementById('edit-mem-modal').style.display = 'none'; } }
         function openEditB(id) { const i = db.inscrits_tournoi.find(x => x.id === id); if(!i) return; document.getElementById('edit-b-id').value = i.id; document.getElementById('edit-b-joueurs').value = i.joueurs; document.getElementById('edit-bin-modal').style.display = 'flex'; }
         async function saveEditB() { const id = document.getElementById('edit-b-id').value; const i = db.inscrits_tournoi.find(x => x.id === id); if(i) { i.joueurs = document.getElementById('edit-b-joueurs').value; await saveData(); document.getElementById('edit-bin-modal').style.display = 'none'; } }
-        async function regT(e, id, name) { e.preventDefault(); const binome = e.target.p1.value + " & " + e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: binome, ok: false }); await saveData(); e.target.reset(); }
-        async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'), ty=document.getElementById('nt-type'); if(!n.value) return; if(!db.config_tournois) db.config_tournois = []; db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, type: ty.value, quota: q.value ? parseInt(q.value) : null}); await saveData(); n.value=""; d.value=""; q.value=""; ty.value=""; }
-        async function delTournoi(id) { if(confirm("Supprimer ce tournoi ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
+        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
+        async function togM(id) { const m = db.membres.find(x => x.id === id); if(m) { m.ok = !m.ok; await saveData(); } }
+        async function addT() { const n = document.getElementById('nt-n').value, d = document.getElementById('nt-d').value, t = document.getElementById('nt-type').value, q = document.getElementById('nt-q').value; if(!n || !d) return; db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, type: t, quota: q ? parseInt(q) : null }); await saveData(); document.getElementById('nt-n').value=''; document.getElementById('nt-d').value=''; }
+        async function delTournoi(id) { if(confirm("Supprimer ce tournoi et ses inscrits ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
+        async function regT(e, tid, tn) { e.preventDefault(); const p1 = e.target.p1.value, p2 = e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tid, tournoiName: tn, joueurs: p1 + " & " + p2 }); await saveData(); e.target.reset(); alert("Inscription validée !"); }
         async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
-        async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
-        async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
-        function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
-        
-        document.getElementById('main-adh').onsubmit = async (e) => { 
-            e.preventDefault(); 
+        function exportToCSV() { let csv = "Nom;Email;Tel;Type;Paye\n"; db.membres.forEach(m => { csv += `${m.nom};${m.email};${m.tel || ''};${m.type};${m.ok?'OUI':'NON'}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `membres_saccb_${db.y1}.csv`; a.click(); }
+
+        document.getElementById('main-adh').onsubmit = async (e) => {
+            e.preventDefault();
             const nom = document.getElementById('m-nom').value;
+            const email = document.getElementById('m-email').value;
+            const tel = document.getElementById('m-tel').value;
             const type = document.getElementById('m-type').value;
-            
-            db.membres.push({ id: Date.now().toString(), nom: nom, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: type, ok: false }); 
-            
-            // Mise à jour visuelle du badge
+            db.membres.push({ id: Date.now().toString(), nom, email, tel, type, ok: false });
             document.getElementById('b-res-nom').innerText = nom;
-            document.getElementById('b-res-saison').innerText = "Saison " + db.y1 + "-" + db.y2;
             document.getElementById('b-res-type').innerText = type.toUpperCase();
-            
-            document.getElementById('form-container').style.display='none'; 
-            document.getElementById('msg-deja').style.display='block'; 
-            
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#ffffff'] });
-            await saveData(); 
+            document.getElementById('b-res-saison').innerText = "Saison " + db.y1 + "-" + db.y2;
+            document.getElementById('form-container').style.display = 'none';
+            document.getElementById('msg-deja').style.display = 'block';
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            await saveData();
         };
+
         loadData();
     </script>
 </body>
