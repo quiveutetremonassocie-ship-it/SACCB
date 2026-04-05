@@ -178,7 +178,7 @@
 
         async function saveData() {
             try {
-                // Utilisation de POST avec resolution=merge pour que Supabase accepte d'écraser la ligne id=1
+                // IMPORTANT : Utilise POST avec resolution=merge (UPSERT) pour forcer la mise à jour sur l'ID 1
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
                     method: 'POST', 
                     headers: { 
@@ -197,7 +197,7 @@
                     alert("Erreur technique. Actualisez la page.");
                 }
             } catch (e) { 
-                alert("Erreur de connexion réseau."); 
+                alert("Erreur de connexion."); 
             }
         }
 
