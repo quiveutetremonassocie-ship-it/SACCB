@@ -29,6 +29,13 @@
         .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
         .btn-edit { background: var(--primary); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
         .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
+        
+        /* Styles pour la barre de progression */
+        .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
+        .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
+        
+        /* Style pour la barre de recherche */
+        .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
     </style>
 </head>
 <body>
@@ -71,8 +78,9 @@
     <section id="inscription">
         <h2 id="titre-saison">Inscription Saison</h2>
         <div class="card">
-            <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:20px;">Places restantes au club : 65</p>
-            <div id="form-container">
+            <p id="quota-msg" style="color:var(--accent); font-weight:bold;">Places restantes au club : 65</p>
+            <div class="progress-container"><div id="quota-bar" class="progress-bar"></div></div>
+            <div id="form-container" style="margin-top: 30px;">
                 <form id="main-adh">
                     <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
                     <input type="email" id="m-email" placeholder="Email" required>
@@ -158,7 +166,11 @@
             <div id="adm-i-list-container"></div>
         </div>
 
-        <div class="card"><h3>Adhérents Club</h3><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table></div>
+        <div class="card">
+            <h3>Adhérents Club</h3>
+            <input type="text" id="m-search" class="search-admin" placeholder="🔍 Rechercher un nom, email ou tel..." oninput="updateUI()">
+            <table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+        </div>
     </div>
 
     <div id="edit-mem-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
@@ -187,7 +199,6 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
-        // LIEN MIS À JOUR ICI :
         const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbzdHqIZYTGMagGlySoqBeVeFbl1Ve2Z4EXnbQ5K_U5aoZ-HgivyqUMq0O_d0dtFxOCv/exec";
 
         function checkAdmin() {
@@ -244,7 +255,14 @@
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
-            document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
+            
+            // Mise à jour Quota et Barre de progression
+            const count = db.membres.length;
+            const remaining = 65 - count;
+            document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
+            const percent = (count / 65) * 100;
+            document.getElementById('quota-bar').style.width = Math.min(percent, 100) + "%";
+
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
             list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
@@ -274,7 +292,15 @@
             let total = 0;
             db.membres.forEach(m => { if(m.ok) { total += (m.type === "Etudiant") ? 25 : 50; } });
             document.getElementById('total-recolte').innerText = total + "€";
-            const sortedMembres = [...db.membres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
+            
+            // Logique de Tri et Recherche Admin
+            const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
+            const filteredMembres = db.membres.filter(m => 
+                m.nom.toLowerCase().includes(searchVal) || 
+                m.email.toLowerCase().includes(searchVal) || 
+                (m.tel && m.tel.includes(searchVal))
+            );
+            const sortedMembres = [...filteredMembres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
             document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="openEditM('${m.id}')" class="btn-edit">✏️</button><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
