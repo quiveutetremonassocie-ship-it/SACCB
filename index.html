@@ -163,20 +163,35 @@
 
         async function loadData() {
             try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&order=created_at.desc&limit=1`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } });
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&order=created_at.desc&limit=1`, { 
+                    headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } 
+                });
                 const json = await res.json();
-                if (json[0] && json[0].data) db = json[0].data;
-                document.getElementById('y1-input').value = db.y1;
-                document.getElementById('y2-input').value = db.y2;
-                updateUI();
-            } catch (e) { console.error("Erreur sync"); }
+                if (json[0] && json[0].data) {
+                    db = json[0].data;
+                    document.getElementById('y1-input').value = db.y1;
+                    document.getElementById('y2-input').value = db.y2;
+                    updateUI();
+                }
+            } catch (e) { console.error("Erreur sync au chargement"); }
         }
 
         async function saveData() {
             try {
-                await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { method: 'POST', headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ data: db }) });
+                // On utilise POST avec l'en-tête Resolution pour écraser la ligne existante
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
+                    method: 'POST', 
+                    headers: { 
+                        "apikey": SUPA_KEY, 
+                        "Authorization": `Bearer ${SUPA_KEY}`, 
+                        "Content-Type": "application/json", 
+                        "Prefer": "resolution=merge" 
+                    }, 
+                    body: JSON.stringify({ id: 1, data: db }) // ID fixé à 1 pour toujours écraser la même ligne
+                });
+                if(!res.ok) throw new Error();
                 updateUI();
-            } catch (e) { alert("Erreur sauvegarde."); }
+            } catch (e) { alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien activé les droits dans Supabase SQL Editor."); }
         }
 
         async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
