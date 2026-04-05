@@ -115,6 +115,16 @@
             <h2>GESTION SACCB</h2>
             <button onclick="document.getElementById('admin-panel').style.display='none'" class="btn" style="width:auto; background:var(--danger);">Fermer</button>
         </div>
+        
+        <div class="card" style="border:1px solid var(--accent);">
+            <h3>📅 Période de la Saison</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <input type="number" id="y1-input" placeholder="Ex: 2024">
+                <input type="number" id="y2-input" placeholder="Ex: 2025">
+            </div>
+            <button onclick="updateSeason()" class="btn" style="background:var(--accent);">Mettre à jour la saison</button>
+        </div>
+
         <div class="card" style="border:1px solid var(--primary);"><h3>💾 Sauvegarde PC</h3><button onclick="exportToCSV()" class="btn" style="background:#8b5cf6; margin-top:10px;">Exporter les données (.csv)</button></div>
         <div class="card"><h3>Liste des Tournois</h3><div id="adm-t-list"></div><hr style="margin:20px 0; opacity:0.1;"><h4>Nouveau Tournoi</h4><input type="text" id="nt-n" placeholder="Nom"><input type="text" id="nt-d" placeholder="Date"><input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)"><button onclick="addT()" class="btn">Publier</button></div>
         <div class="card"><h3>Inscriptions Tournois</h3><table><thead><tr><th>Tournoi</th><th>Binôme</th><th>X</th></tr></thead><tbody id="adm-i-list"></tbody></table></div>
@@ -125,13 +135,15 @@
         const SUPA_URL = "https://yqpctdutrkwzqyjplwrb.supabase.co";
         const SUPA_KEY = "sb_publishable_d_ivS1M_tMifPQMhJhf44g_-Xz-8Q_9";
         const PASS = "43210";
-        let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2026, y2: 2027 };
+        let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
 
         async function loadData() {
             try {
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&order=created_at.desc&limit=1`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } });
                 const json = await res.json();
                 if (json[0] && json[0].data) db = json[0].data;
+                document.getElementById('y1-input').value = db.y1;
+                document.getElementById('y2-input').value = db.y2;
                 updateUI();
             } catch (e) { console.error("Erreur sync"); }
         }
@@ -143,8 +155,15 @@
             } catch (e) { alert("Erreur sauvegarde."); }
         }
 
+        async function updateSeason() {
+            db.y1 = document.getElementById('y1-input').value;
+            db.y2 = document.getElementById('y2-input').value;
+            await saveData();
+            alert("Saison mise à jour !");
+        }
+
         function updateUI() {
-            document.getElementById('titre-saison').innerText = "Inscription " + db.y1 + "-" + db.y2;
+            document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
@@ -177,4 +196,3 @@
     </script>
 </body>
 </html>
-
