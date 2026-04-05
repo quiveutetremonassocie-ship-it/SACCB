@@ -187,10 +187,10 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
-        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLoQkZOQxP4/exec";
+        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLo (REDACTED)";
         
-        // --- CODES SÉCURISÉS (HASH) ---
-        const ADM_H = ["64049818824f115591c2b53f66874a72670be79124239851722883f3e10086c5", "4150824b5d272996d9333907a750109a909249767215320c99a888806540c495"];
+        // --- CODES SÉCURISÉS (HASH) Hernan & Gabin ---
+        const ADM_H = ["64049818824f115591c2b53f66874a72670be79124239851722883f3e10086c5", "4eb905952c938361b764268e3b3303668832a84a250325f492215c0e1898516e"];
         const P_H = "5798e9860b297b697669d51e73995874403164a66a1a4738586f1837549c4f4d";
 
         async function hash(s) {
@@ -199,8 +199,8 @@
         }
 
         async function checkAdmin() {
-            const u = document.getElementById('admin-user').value.toLowerCase();
-            const p = document.getElementById('pass').value;
+            const u = document.getElementById('admin-user').value.trim().toLowerCase();
+            const p = document.getElementById('pass').value.trim();
             const hu = await hash(u);
             const hp = await hash(p);
             if (ADM_H.includes(hu) && hp === P_H) {
