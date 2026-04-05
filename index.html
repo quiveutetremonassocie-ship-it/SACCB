@@ -188,25 +188,21 @@
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
         const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLoQkZOQxP4/exec";
-        
-        // --- CODES SÉCURISÉS (HASH) ---
-        const ADM_H = ["64049818824f115591c2b53f66874a72670be79124239851722883f3e10086c5", "4eb905952c938361b764268e3b3303668832a84a250325f492215c0e1898516e"];
-        const P_H = "5798e9860b297b697669d51e73995874403164a66a1a4738586f1837549c4f4d";
 
-        async function hash(s) {
-            const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(s));
-            return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, "0")).join("");
-        }
-
-        async function checkAdmin() {
-            const u = document.getElementById('admin-user').value.toLowerCase().trim();
+        function checkAdmin() {
+            const u = document.getElementById('admin-user').value.trim().toLowerCase();
             const p = document.getElementById('pass').value.trim();
-            const hu = await hash(u);
-            const hp = await hash(p);
-            if (ADM_H.includes(hu) && hp === P_H) {
+            
+            // On utilise une comparaison directe simple pour être sûr que ça marche
+            const admins = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
+            const code = "43210"; // Ton code d'origine
+            
+            if (admins.includes(u) && p === code) {
                 document.getElementById('login-modal').style.display='none'; 
                 document.getElementById('admin-panel').style.display='block'; 
-            } else { alert("Identifiants incorrects"); }
+            } else { 
+                alert("Identifiants incorrects"); 
+            }
         }
 
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
