@@ -157,6 +157,8 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
+        const SHEETS_WEBHOOK = "URL_DE_TON_SCRIPT_GOOGLE_SHEETS";
+        
         const ADMIN_EMAILS = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
         const PASS = "43210";
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
@@ -178,7 +180,6 @@
 
         async function saveData() {
             try {
-                // Utilisation de la méthode la plus robuste pour bypasser les restrictions RLS
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
                     method: 'PATCH', 
                     headers: { 
@@ -190,17 +191,16 @@
                     body: JSON.stringify({ data: db }) 
                 });
                 
+                if(SHEETS_WEBHOOK !== "URL_DE_TON_SCRIPT_GOOGLE_SHEETS") {
+                    fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
+                }
+
                 if (res.ok) {
                     updateUI();
                 } else {
-                    // Si le PATCH échoue (ligne inexistante), on tente le POST
                     await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
                         method: 'POST', 
-                        headers: { 
-                            "apikey": SUPA_KEY, 
-                            "Authorization": `Bearer ${SUPA_KEY}`, 
-                            "Content-Type": "application/json"
-                        }, 
+                        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, 
                         body: JSON.stringify({ id: 1, data: db }) 
                     });
                     updateUI();
@@ -247,7 +247,10 @@
                 });
             }
 
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
+            // TRI PAR PAIEMENT : "NON" au-dessus, "OUI" en dessous
+            const sortedMembres = [...db.membres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
+
+            document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
         async function regT(e, id, name) { e.preventDefault(); const binome = e.target.p1.value + " & " + e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: binome, ok: false }); await saveData(); e.target.reset(); }
