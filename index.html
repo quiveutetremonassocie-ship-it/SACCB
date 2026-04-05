@@ -87,7 +87,7 @@
                 <p>07 77 06 18 75</p>
             </div>
             <div class="card">
-                <p style="color: var(--primary); font-weight: bold;">PRÉSIDENT ADJOINT : Demare Matthieu</p>
+                <p style="color: var(--primary); font-weight: bold;">PRÉSIDENT ADJOINT : Matthieu Demare</p>
                 <p>06 52 48 62 28</p>
             </div>
         </div>
@@ -116,6 +116,7 @@
             <h4>Créer un nouveau tournoi</h4>
             <input type="text" id="nt-n" placeholder="Nom">
             <input type="text" id="nt-d" placeholder="Date">
+            <input type="number" id="nt-q" placeholder="Quota max de doubles (vide = illimité)">
             <button onclick="addT()" class="btn">Publier le tournoi</button>
         </div>
 
@@ -126,7 +127,7 @@
 
         <div class="card">
             <h3>Adhérents Club</h3>
-            <table><thead><tr><th>Nom</th><th>Email</th><th>Type</th><th>Paiement</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+            <table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table>
         </div>
     </div>
 
@@ -170,13 +171,28 @@
             
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}</h3><div class="liste-inscrits"><strong>Binômes :</strong><br>${inscrits.map(i => `<span>${i.joueurs}</span>`).join('') || 'Aucun'}</div><form onsubmit="regT(event, '${t.id}', '${t.name}')"><input type="text" name="txt" placeholder="Votre binôme" required><button type="submit" class="btn">S'inscrire</button></form></div>`;
-                admTList.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;"><span>${t.name}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
+                const isFull = t.quota && inscrits.length >= t.quota;
+                const quotaDisplay = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
+
+                list.innerHTML += `
+                    <div class="tournoi-card">
+                        <h3>${t.name} - ${t.date} ${quotaDisplay}</h3>
+                        <div class="liste-inscrits">
+                            <strong>Binômes :</strong><br>${inscrits.map(i => `<span>${i.joueurs}</span>`).join('') || 'Aucun'}
+                        </div>
+                        ${isFull ? '<h3 style="color:var(--danger); text-align:center;">COMPLET</h3>' : `
+                        <form onsubmit="regT(event, '${t.id}', '${t.name}')">
+                            <input type="text" name="txt" placeholder="Votre binôme" required>
+                            <button type="submit" class="btn">S'inscrire</button>
+                        </form>`}
+                    </div>`;
+                
+                admTList.innerHTML += `<div style="display:flex; justify-content:space-between; padding:10px; border-bottom:1px solid #444;"><span>${t.name} ${t.quota ? `(Max: ${t.quota})` : ''}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
             });
 
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
             document.getElementById('adm-i-list').innerHTML = db.inscrits_tournoi.map(i => `<tr><td>${i.tournoiName}</td><td>${i.joueurs}</td><td><button onclick="togT('${i.id}')" style="background:${i.ok?'var(--accent)':'#444'}; color:white; border:none; padding:5px; border-radius:5px;">${i.ok?'OUI':'NON'}</button></td><td><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`).join('');
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}; color:white; border:none; padding:5px; border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
+            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'}; color:white; border:none; padding:5px; border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
         async function delTournoi(id) { if(confirm("Supprimer ce tournoi et ses inscrits ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
@@ -186,17 +202,25 @@
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
 
         async function addT() { 
-            const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'); 
+            const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'); 
             if(!n.value) return;
-            db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value}); 
+            db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, quota: q.value ? parseInt(q.value) : null}); 
             await saveData(); 
-            n.value=""; d.value="";
+            n.value=""; d.value=""; q.value="";
         }
 
-        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, ok: false }); await saveData(); e.target.reset(); }
+        async function regT(e, id, name) { 
+            e.preventDefault(); 
+            const t = db.config_tournois.find(x => x.id === id);
+            const count = db.inscrits_tournoi.filter(i => i.tournoiId === id).length;
+            if(t.quota && count >= t.quota) return alert("Désolé, ce tournoi est complet !");
+            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.txt.value, ok: false }); 
+            await saveData(); 
+            e.target.reset(); 
+        }
 
         function exportToCSV() {
-            let csv = "--- ADHERENTS ---\nNom,Email,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome,Paye\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs},${i.ok?'OUI':'NON'}`).join("\n");
+            let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome,Paye\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs},${i.ok?'OUI':'NON'}`).join("\n");
             const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link);
         }
 
