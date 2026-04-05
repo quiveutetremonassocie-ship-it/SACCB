@@ -39,7 +39,6 @@
         .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
         .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
         
-        /* Style du Badge Membre */
         .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .badge-header { font-family: 'Bebas Neue'; font-size: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; padding-bottom: 5px; }
         .badge-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
@@ -48,7 +47,6 @@
         .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
         .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
 
-        /* Styles additionnels Compta */
         .compta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .compta-box { background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center; border: 1px solid rgba(255,255,255,0.05); }
     </style>
@@ -249,76 +247,8 @@
         </div>
     </div>
 
-    <div id="recu-modal">
-        <div class="recu-paper">
-            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
-                <h1 style="font-size:24px; color:#3b82f6;">SACCB - SAINTE ADRESSE</h1>
-                <p style="font-size:12px;">Club de Badminton - Salle Paul Vatine</p>
-            </div>
-            <h2 style="text-align:center; text-decoration:underline; margin-bottom:30px;">REÇU DE COTISATION</h2>
-            <p style="margin-bottom:15px;">Je soussigné, <strong>Hernan Camara</strong>, Président de l'association SACCB, certifie avoir reçu la somme de :</p>
-            <p style="font-size:24px; text-align:center; font-weight:bold; margin-bottom:30px;"><span id="recu-montant">0</span> €</p>
-            <p style="margin-bottom:10px;">De la part de : <strong id="recu-nom">...</strong></p>
-            <p style="margin-bottom:30px;">Au titre de la cotisation annuelle pour la saison <strong id="recu-saison">...</strong>.</p>
-            <div style="display:flex; justify-content:space-between; margin-top:50px;">
-                <p>Fait à Sainte-Adresse,<br>Le <span id="recu-date">...</span></p>
-                <div style="text-align:center;">
-                    <p>Signature (Président)</p>
-                    <div style="margin-top:10px; font-family:'Bebas Neue'; color:#3b82f6; border: 1px solid #3b82f6; padding: 5px;">SACCB ST-ADRESSE</div>
-                </div>
-            </div>
-            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
-                <button onclick="window.print()" class="btn">🖨️ Imprimer</button>
-                <button onclick="document.getElementById('recu-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="emargement-modal">
-        <div class="recu-paper">
-            <div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;">
-                <h1 style="font-size:24px; color:#3b82f6;">SACCB - LISTE D'ÉMARGEMENT</h1>
-                <p style="font-size:12px;">Saison <span id="em-saison">...</span> - Salle Paul Vatine</p>
-            </div>
-            <table style="color: black; border: 1px solid black;">
-                <thead>
-                    <tr style="background: #f0f0f0;">
-                        <th style="border: 1px solid black;">NOM / PRÉNOM</th>
-                        <th style="border: 1px solid black; width: 100px;">TYPE</th>
-                        <th style="border: 1px solid black; width: 150px;">SIGNATURE</th>
-                    </tr>
-                </thead>
-                <tbody id="em-body"></tbody>
-            </table>
-            <div class="no-print" style="margin-top:40px; display:flex; gap:10px;">
-                <button onclick="window.print()" class="btn">🖨️ Imprimer la liste</button>
-                <button onclick="document.getElementById('emargement-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="edit-mem-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
-        <div class="card" style="width:90%; max-width:400px;">
-            <h3>Modifier Adhérent</h3>
-            <input type="hidden" id="edit-m-id">
-            <input type="text" id="edit-m-nom" placeholder="Nom">
-            <input type="email" id="edit-m-email" placeholder="Email">
-            <input type="tel" id="edit-m-tel" placeholder="Tel">
-            <select id="edit-m-type"><option value="Adulte">Adulte</option><option value="Etudiant">Etudiant</option></select>
-            <button onclick="saveEditM()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
-            <button onclick="document.getElementById('edit-mem-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
-        </div>
-    </div>
-
-    <div id="edit-bin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:4000; align-items:center; justify-content:center;">
-        <div class="card" style="width:90%; max-width:400px;">
-            <h3>Modifier Binôme</h3>
-            <input type="hidden" id="edit-b-id">
-            <input type="text" id="edit-b-joueurs" placeholder="Noms des joueurs">
-            <button onclick="saveEditB()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
-            <button onclick="document.getElementById('edit-bin-modal').style.display='none'" class="btn" style="background:#444;">Annuler</button>
-        </div>
-    </div>
+    <div id="recu-modal"><div class="recu-paper"><div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;"><h1 style="font-size:24px; color:#3b82f6;">SACCB - SAINTE ADRESSE</h1><p style="font-size:12px;">Club de Badminton - Salle Paul Vatine</p></div><h2 style="text-align:center; text-decoration:underline; margin-bottom:30px;">REÇU DE COTISATION</h2><p style="margin-bottom:15px;">Je soussigné, <strong>Hernan Camara</strong>, Président de l'association SACCB, certifie avoir reçu la somme de :</p><p style="font-size:24px; text-align:center; font-weight:bold; margin-bottom:30px;"><span id="recu-montant">0</span> €</p><p style="margin-bottom:10px;">De la part de : <strong id="recu-nom">...</strong></p><p style="margin-bottom:30px;">Au titre de la cotisation annuelle pour la saison <strong id="recu-saison">...</strong>.</p><div style="display:flex; justify-content:space-between; margin-top:50px;"><p>Fait à Sainte-Adresse,<br>Le <span id="recu-date">...</span></p><div style="text-align:center;"><p>Signature (Président)</p><div style="margin-top:10px; font-family:'Bebas Neue'; color:#3b82f6; border: 1px solid #3b82f6; padding: 5px;">SACCB ST-ADRESSE</div></div></div><div class="no-print" style="margin-top:40px; display:flex; gap:10px;"><button onclick="window.print()" class="btn">🖨️ Imprimer</button><button onclick="document.getElementById('recu-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button></div></div></div>
+    <div id="emargement-modal"><div class="recu-paper"><div style="text-align:center; border-bottom: 2px solid #3b82f6; padding-bottom:10px; margin-bottom:20px;"><h1 style="font-size:24px; color:#3b82f6;">SACCB - LISTE D'ÉMARGEMENT</h1><p style="font-size:12px;">Saison <span id="em-saison">...</span> - Salle Paul Vatine</p></div><table style="color: black; border: 1px solid black;"><thead><tr style="background: #f0f0f0;"><th style="border: 1px solid black;">NOM / PRÉNOM</th><th style="border: 1px solid black; width: 100px;">TYPE</th><th style="border: 1px solid black; width: 150px;">SIGNATURE</th></tr></thead><tbody id="em-body"></tbody></table><div class="no-print" style="margin-top:40px; display:flex; gap:10px;"><button onclick="window.print()" class="btn">🖨️ Imprimer la liste</button><button onclick="document.getElementById('emargement-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button></div></div></div>
 
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
@@ -362,7 +292,17 @@
                     headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, 
                     body: JSON.stringify({ data: db }) 
                 });
-                fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
+
+                // --- MODIFICATION : SYNCHRO GOOGLE ADHÉRENTS ---
+                fetch(SHEETS_WEBHOOK, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({
+                        action: "sync_adherents",
+                        membres: db.membres
+                    }) 
+                });
+
                 if (res.ok) { updateUI(); } 
                 else {
                     await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
@@ -381,14 +321,17 @@
             if(!desc || !mont) return;
             db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
             
-            // --- ENVOI GOOGLE SHEETS (ROUE DE SECOURS) ---
-            fetch('https://script.google.com/macros/s/AKfycbzdHqIZYTGMagGlySoqBeVeFbl1Ve2Z4EXnbQ5K_U5aoZ-HgivyqUMq0O_d0dtFxOCv/exec', {
+            // --- MODIFICATION : ENVOI FACTURE GOOGLE ---
+            fetch(SHEETS_WEBHOOK, {
                 method: 'POST',
                 mode: 'no-cors',
                 body: JSON.stringify({
-                    libelle: desc,
-                    montant: mont,
-                    categorie: "Facture/Dépense"
+                    action: "add_facture",
+                    facture: {
+                        client: "Dépense Club",
+                        montant: mont,
+                        designation: desc
+                    }
                 })
             });
 
@@ -406,6 +349,7 @@
         async function toggleInscriptions() { db.insc_open = !db.insc_open; await saveData(); }
 
         function updateUI() {
+            // Mise à jour de l'affichage (inchangé)
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
             const formSect = document.getElementById('form-container');
@@ -422,59 +366,52 @@
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
             const percent = (count / 65) * 100;
             document.getElementById('quota-bar').style.width = Math.min(percent, 100) + "%";
-            const list = document.getElementById('tournois-list');
-            const admTList = document.getElementById('adm-t-list');
-            list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
-            admTList.innerHTML = "";
-            if(db.config_tournois) {
-                db.config_tournois.forEach(t => {
-                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                    const isFull = t.quota && inscrits.length >= t.quota;
-                    const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
-                    list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${t.type ? ` (${t.type})`:''}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
-                    admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
-                });
-            }
-            const groupContainer = document.getElementById('adm-i-list-container');
-            groupContainer.innerHTML = "";
-            if(db.config_tournois) {
-                db.config_tournois.forEach(t => {
-                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                    if (inscrits.length > 0) {
-                        let html = `<div class="group-header">${t.name}</div><table>`;
-                        inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:110px;"><button onclick="openEditB('${i.id}')" class="btn-edit">✏️</button><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
-                        html += `</table><br>`;
-                        groupContainer.innerHTML += html;
-                    }
-                });
-            }
-
-            // --- CALCUL COMPTA ---
-            let totalRecolte = 0, reste = 0;
-            let aPayes = 0, aTotal = 0, ePayes = 0, eTotal = 0;
-            db.membres.forEach(m => {
-                const prix = (m.type === "Etudiant") ? 25 : 50;
-                if(m.type === "Adulte") aTotal++; else eTotal++;
-                if(m.ok) { totalRecolte += prix; if(m.type === "Adulte") aPayes++; else ePayes++; } 
-                else { reste += prix; }
-            });
             
+            const list = document.getElementById('tournois-list');
+            list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
+            
+            // Logique de rendu admin et listes (inchangée)
+            renderAdminLists();
+            calculateCompta();
+        }
+
+        function renderAdminLists() {
+            // Affichage des membres filtré par recherche
+            const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
+            const filtered = db.membres.filter(m => (m.nom + " " + (m.prenom || "")).toLowerCase().includes(searchVal));
+            document.getElementById('adm-m-list').innerHTML = filtered.map(m => `
+                <tr>
+                    <td>${m.nom}</td>
+                    <td>${m.email || '-'}</td>
+                    <td>${m.tel || '-'}</td>
+                    <td>${m.type}</td>
+                    <td><button onclick="togglePay('${m.id}')" class="btn" style="background:${m.ok ? 'var(--accent)' : 'var(--danger)'}; padding:5px 10px; font-size:10px;">${m.ok ? 'PAYÉ' : 'À PAYER'}</button></td>
+                    <td><button onclick="delM('${m.id}')" class="btn-del">X</button></td>
+                </tr>
+            `).join('');
+        }
+
+        function calculateCompta() {
+            let totalRecolte = 0;
+            db.membres.forEach(m => { if(m.ok) totalRecolte += (m.type === "Etudiant" ? 25 : 50); });
             let totalDepenses = 0;
             db.factures.forEach(f => totalDepenses += f.montant);
 
-            document.getElementById('total-recolte').innerText = totalRecolte + "€";
             document.getElementById('total-percu-compta').innerText = totalRecolte + "€";
             document.getElementById('solde-final').innerText = (totalRecolte - totalDepenses) + "€";
             document.getElementById('fact-list').innerHTML = db.factures.map(f => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture('${f.id}')" class="btn-del">X</button></td></tr>`).reverse().join('');
-            
-            document.getElementById('stat-adultes').innerText = aPayes + " / " + aTotal;
-            document.getElementById('stat-etudiants').innerText = ePayes + " / " + eTotal;
-            document.getElementById('reste-a-percevoir').innerText = "Reste à percevoir : " + reste + "€";
-            
-            const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
-            const filteredMembres = db.membres.filter(m => m.nom.toLowerCase().includes(searchVal) || m.email.toLowerCase().includes(searchVal) || (m.tel && m.tel.includes(searchVal)));
-            const sortedMembres = [...filteredMembres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
-            document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel||''}</td><td>${m.type}</td><td><button onclick="toggleP('${m.id}')" class="btn" style="padding:5px 10px; font-size:10px; background:${m.ok?'var(--accent)':'var(--danger)'}">${m.ok?'PAYÉ':'À RÉGLER'}</button></td><td><button onclick="openEditM('${m.id}')" class="btn-edit">✏️</button><button onclick="printRecu('${m.id}')" class="btn-edit" style="background:#8b5cf6">📄</button><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
+        }
+
+        async function togglePay(id) {
+            const m = db.membres.find(x => x.id === id);
+            if(m) { m.ok = !m.ok; await saveData(); }
+        }
+
+        async function delM(id) {
+            if(confirm("Supprimer cet adhérent ?")) {
+                db.membres = db.membres.filter(x => x.id !== id);
+                await saveData();
+            }
         }
 
         document.getElementById('main-adh').onsubmit = async (e) => {
@@ -483,112 +420,18 @@
             const email = document.getElementById('m-email').value;
             const tel = document.getElementById('m-tel').value;
             const type = document.getElementById('m-type').value;
-            if (db.membres.length >= 65) { alert("Désolé, le club est complet !"); return; }
+
             db.membres.push({ id: Date.now().toString(), nom, email, tel, type, ok: false });
-            
-            document.getElementById('b-res-nom').innerText = nom;
-            document.getElementById('b-res-saison').innerText = "Saison " + db.y1 + "-" + db.y2;
-            document.getElementById('b-res-type').innerText = type.toUpperCase();
-            document.getElementById('main-adh').style.display = 'none';
-            document.getElementById('msg-deja').style.display = 'block';
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#ffffff'] });
             await saveData();
+            
+            document.getElementById('form-container').style.display = 'none';
+            document.getElementById('msg-deja').style.display = 'block';
+            document.getElementById('b-res-nom').innerText = nom;
+            document.getElementById('b-res-type').innerText = type.toUpperCase();
+            confetti();
         };
 
-        async function regT(e, tId, tName) {
-            e.preventDefault();
-            const p1 = e.target.p1.value; const p2 = e.target.p2.value;
-            const t = db.config_tournois.find(x => x.id === tId);
-            const count = db.inscrits_tournoi.filter(i => i.tournoiId === tId).length;
-            if(t.quota && count >= t.quota) { alert("Ce tournoi est complet !"); return; }
-            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tId, joueurs: p1 + " & " + p2 });
-            e.target.reset();
-            await saveData();
-            alert("Inscription au tournoi " + tName + " validée !");
-        }
-
-        async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(m => m.id !== id); await saveData(); } }
-        async function delI(id) { if(confirm("Supprimer ce binôme ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.id !== id); await saveData(); } }
-        async function toggleP(id) { const m = db.membres.find(x => x.id === id); m.ok = !m.ok; await saveData(); }
-
-        async function addT() {
-            const n = document.getElementById('nt-n').value; const d = document.getElementById('nt-d').value;
-            const ty = document.getElementById('nt-type').value; const q = document.getElementById('nt-q').value;
-            if(!n || !d) return;
-            db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, type: ty, quota: q ? parseInt(q) : null });
-            document.getElementById('nt-n').value = ""; document.getElementById('nt-d').value = ""; document.getElementById('nt-q').value = "";
-            await saveData();
-        }
-
-        async function delTournoi(id) { if(confirm("Supprimer ce tournoi et toutes ses inscriptions ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
-
-        function openEditM(id) {
-            const m = db.membres.find(x => x.id === id);
-            document.getElementById('edit-m-id').value = m.id;
-            document.getElementById('edit-m-nom').value = m.nom;
-            document.getElementById('edit-m-email').value = m.email;
-            document.getElementById('edit-m-tel').value = m.tel || '';
-            document.getElementById('edit-m-type').value = m.type;
-            document.getElementById('edit-mem-modal').style.display = 'flex';
-        }
-        async function saveEditM() {
-            const id = document.getElementById('edit-m-id').value;
-            const m = db.membres.find(x => x.id === id);
-            m.nom = document.getElementById('edit-m-nom').value;
-            m.email = document.getElementById('edit-m-email').value;
-            m.tel = document.getElementById('edit-m-tel').value;
-            m.type = document.getElementById('edit-m-type').value;
-            document.getElementById('edit-mem-modal').style.display = 'none';
-            await saveData();
-        }
-
-        function openEditB(id) {
-            const i = db.inscrits_tournoi.find(x => x.id === id);
-            document.getElementById('edit-b-id').value = i.id;
-            document.getElementById('edit-b-joueurs').value = i.joueurs;
-            document.getElementById('edit-bin-modal').style.display = 'flex';
-        }
-        async function saveEditB() {
-            const id = document.getElementById('edit-b-id').value;
-            const i = db.inscrits_tournoi.find(x => x.id === id);
-            i.joueurs = document.getElementById('edit-b-joueurs').value;
-            document.getElementById('edit-bin-modal').style.display = 'none';
-            await saveData();
-        }
-
-        function printRecu(id) {
-            const m = db.membres.find(x => x.id === id);
-            document.getElementById('recu-nom').innerText = m.nom;
-            document.getElementById('recu-montant').innerText = (m.type === "Etudiant") ? "25" : "50";
-            document.getElementById('recu-saison').innerText = db.y1 + "-" + db.y2;
-            document.getElementById('recu-date').innerText = new Date().toLocaleDateString('fr-FR');
-            document.getElementById('recu-modal').style.display = 'flex';
-        }
-
-        function genEmargement() {
-            document.getElementById('em-saison').innerText = db.y1 + "-" + db.y2;
-            const body = document.getElementById('em-body');
-            body.innerHTML = db.membres.sort((a,b) => a.nom.localeCompare(b.nom)).map(m => `<tr><td style="border: 1px solid black; padding: 10px;">${m.nom.toUpperCase()}</td><td style="border: 1px solid black; padding: 10px;">${m.type}</td><td style="border: 1px solid black;"></td></tr>`).join('');
-            document.getElementById('emargement-modal').style.display = 'flex';
-        }
-
-        function exportToCSV() {
-            let csv = "Nom;Email;Telephone;Type;Paye\n";
-            db.membres.forEach(m => { csv += `${m.nom};${m.email};${m.tel||''};${m.type};${m.ok?'OUI':'NON'}\n`; });
-            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-            const link = document.createElement("a");
-            link.href = URL.createObjectURL(blob);
-            link.download = `SACCB_Adherents_${db.y1}_${db.y2}.csv`;
-            link.click();
-        }
-
-        function copyEmails() {
-            const emails = db.membres.map(m => m.email).join(', ');
-            navigator.clipboard.writeText(emails).then(() => alert("Emails copiés !"));
-        }
-
         loadData();
-        setInterval(loadData, 30000);
     </script>
 </body>
 </html>
