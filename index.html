@@ -163,7 +163,8 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
-        const SHEETS_WEBHOOK = "URL_DE_TON_SCRIPT_GOOGLE_SHEETS";
+        // URL complète générée avec ton ID de déploiement
+        const SHEETS_WEBHOOK = "https://script.google.com/macros/s/AKfycbxMjbkUQ3wo8bHQyFNUzBkMcYMYY_cdAUR_QeDShkgkwZvSVTosb5B89vLoQkZOQxP4/exec";
         
         const ADMIN_EMAILS = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
         const PASS = "43210";
@@ -197,9 +198,8 @@
                     body: JSON.stringify({ data: db }) 
                 });
                 
-                if(SHEETS_WEBHOOK !== "URL_DE_TON_SCRIPT_GOOGLE_SHEETS") {
-                    fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
-                }
+                // Envoi vers Google Sheets
+                fetch(SHEETS_WEBHOOK, { method: 'POST', mode: 'no-cors', body: JSON.stringify(db) });
 
                 if (res.ok) {
                     updateUI();
@@ -262,6 +262,7 @@
             });
             document.getElementById('total-recolte').innerText = total + "€";
 
+            // Tri par paiement
             const sortedMembres = [...db.membres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
             document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
