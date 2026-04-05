@@ -184,6 +184,7 @@
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
             
+            // Accueil Tournois
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
             list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi prévu." : "";
@@ -199,19 +200,23 @@
                 admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name} (${t.type || 'N/C'})</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
             });
 
+            // Admin Inscriptions Groupées
             const groupContainer = document.getElementById('adm-i-list-container');
             groupContainer.innerHTML = "";
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
                 if (inscrits.length > 0) {
                     let html = `<div class="group-header">${t.name}</div><table>`;
-                    inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:50px;"><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
+                    inscrits.forEach(i => {
+                        html += `<tr><td>${i.joueurs}</td><td style="width:50px;"><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`;
+                    });
                     html += `</table><br>`;
                     groupContainer.innerHTML += html;
                 }
             });
             if(groupContainer.innerHTML === "") groupContainer.innerHTML = "<p>Aucune inscription enregistrée.</p>";
 
+            // Admin Membres
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
             document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
@@ -229,17 +234,7 @@
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
         function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
         function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
-        
-        document.getElementById('main-adh').onsubmit = async (e) => { 
-            e.preventDefault(); 
-            const email = document.getElementById('m-email').value.trim().toLowerCase();
-            const exists = db.membres.some(m => m.email.trim().toLowerCase() === email);
-            if (exists) { alert("⚠️ Cette adresse email est déjà utilisée pour une inscription cette saison."); return; }
-            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: email, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
-            document.getElementById('form-container').style.display='none'; 
-            document.getElementById('msg-deja').style.display='block'; 
-            await saveData(); 
-        };
+        document.getElementById('main-adh').onsubmit = async (e) => { e.preventDefault(); db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block'; await saveData(); };
         loadData();
     </script>
 </body>
