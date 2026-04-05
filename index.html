@@ -17,8 +17,9 @@
         h2 { font-family: 'Bebas Neue'; font-size: 48px; margin-bottom: 30px; color: var(--primary); text-transform: uppercase; }
         .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
         .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); }
-        .liste-inscrits { margin: 15px 0; padding: 10px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 14px; }
-        .liste-inscrits span { display: inline-block; background: #334155; padding: 2px 10px; margin: 3px; border-radius: 5px; }
+        .liste-inscrits { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 15px; }
+        .liste-inscrits span { display: block; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .liste-inscrits span:last-child { border-bottom: none; }
         input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; }
         .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; text-transform: uppercase; }
         .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; }
@@ -102,7 +103,11 @@
     </footer>
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
-        <div class="card" style="max-width:300px;"><input type="password" id="pass" placeholder="Code Admin"><button onclick="checkAdmin()" class="btn">Entrer</button></div>
+        <div class="card" style="max-width:300px; text-align:center;">
+            <input type="password" id="pass" placeholder="Code Admin">
+            <button onclick="checkAdmin()" class="btn" style="margin-bottom:10px;">Entrer</button>
+            <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444;">RETOUR</button>
+        </div>
     </div>
 
     <div id="admin-panel" class="admin-panel">
@@ -150,7 +155,7 @@
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
                 const isFull = t.quota && inscrits.length >= t.quota;
                 const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${qMsg}</h3><div class="liste-inscrits"><strong>Inscrits :</strong><br>${inscrits.map(i => `<span>${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
+                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
                 admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name}</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
             });
 
@@ -161,11 +166,9 @@
 
         async function regT(e, id, name) { e.preventDefault(); const binome = e.target.p1.value + " & " + e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: binome, ok: false }); await saveData(); e.target.reset(); }
         async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'); if(!n.value) return; db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, quota: q.value ? parseInt(q.value) : null}); await saveData(); n.value=""; d.value=""; q.value=""; }
-        
         async function delTournoi(id) { if(confirm("Supprimer ce tournoi ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
         async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
         async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
-        
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
         function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
         function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
