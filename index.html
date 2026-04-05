@@ -32,11 +32,11 @@
         .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
         .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
-
-        /* Styles pour le reçu */
         #recu-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
         .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 600px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; }
         @media print { body * { visibility: hidden; } #recu-modal, #recu-modal * { visibility: visible; } #recu-modal { position: absolute; left: 0; top: 0; background: white; } .no-print { display: none; } }
+        .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
+        .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -81,6 +81,7 @@
         <div class="card">
             <p id="quota-msg" style="color:var(--accent); font-weight:bold;">Places restantes au club : 65</p>
             <div class="progress-container"><div id="quota-bar" class="progress-bar"></div></div>
+            
             <div id="form-container" style="margin-top: 30px;">
                 <form id="main-adh">
                     <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
@@ -89,6 +90,10 @@
                     <select id="m-type"><option value="Adulte">Adulte (50€)</option><option value="Etudiant">Étudiant (25€)</option></select>
                     <button type="submit" class="btn">Valider mon inscription</button>
                 </form>
+            </div>
+            <div id="msg-ferme" style="display:none; text-align:center; padding: 20px;">
+                <h3 style="color:var(--danger)">🚫 INSCRIPTIONS CLOSES</h3>
+                <p>La période d'inscription est terminée ou le club est complet. À bientôt !</p>
             </div>
             <div id="msg-deja" style="display:none; text-align:center;"><h3>✅ INSCRIPTION ENREGISTRÉE !</h3></div>
         </div>
@@ -129,19 +134,24 @@
         </div>
         
         <div class="card" style="border:1px solid var(--accent);">
-            <h3>📅 Période de la Saison</h3>
+            <h3>📅 Paramètres de la Saison</h3>
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
                 <input type="number" id="y1-input" placeholder="Ex: 2024">
                 <input type="number" id="y2-input" placeholder="Ex: 2025">
             </div>
-            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour la saison</button>
+            <button id="toggle-insc-btn" onclick="toggleInscriptions()" class="btn" style="background:var(--primary); margin-bottom:10px;">Chargement...</button>
+            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour dates</button>
             <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
         </div>
 
         <div class="card" style="border:1px solid var(--primary); text-align: center;">
-            <h3>💰 Trésorerie Adhésions</h3>
+            <h3>💰 Trésorerie & Stats</h3>
             <p id="total-recolte" style="font-size: 32px; font-weight: bold; color: var(--accent); margin: 10px 0;">0€</p>
-            <p style="font-size: 12px; color: var(--text-muted);">(Basé sur les paiements validés "OUI")</p>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+                <div class="stat-badge">Adultes payés<span id="stat-adultes">0 / 0</span></div>
+                <div class="stat-badge">Étudiants payés<span id="stat-etudiants">0 / 0</span></div>
+            </div>
+            <p id="reste-a-percevoir" style="font-size: 13px; color: var(--text-muted); margin-top: 15px;">Reste à percevoir : 0€</p>
         </div>
 
         <div class="card" style="border:1px solid var(--primary);"><h3>💾 Sauvegarde PC</h3><button onclick="exportToCSV()" class="btn" style="background:#8b5cf6; margin-top:10px;">Exporter les données (.csv)</button></div>
@@ -242,7 +252,7 @@
             } else { alert("Identifiants incorrects"); }
         }
 
-        let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
+        let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025, insc_open: true };
 
         async function loadData() {
             try {
@@ -252,6 +262,7 @@
                 const json = await res.json();
                 if (json[0] && json[0].data) {
                     db = json[0].data;
+                    if (db.insc_open === undefined) db.insc_open = true;
                     if(document.getElementById('y1-input')) document.getElementById('y1-input').value = db.y1;
                     if(document.getElementById('y2-input')) document.getElementById('y2-input').value = db.y2;
                 }
@@ -281,10 +292,24 @@
 
         async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
         async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ?")) { db.membres = []; await saveData(); } }
+        async function toggleInscriptions() { db.insc_open = !db.insc_open; await saveData(); }
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            
+            // Gestion affichage formulaire selon état saison
+            const formSect = document.getElementById('form-container');
+            const msgFerme = document.getElementById('msg-ferme');
+            if(db.insc_open) { formSect.style.display = 'block'; msgFerme.style.display = 'none'; }
+            else { formSect.style.display = 'none'; msgFerme.style.display = 'block'; }
+            
+            const btnTog = document.getElementById('toggle-insc-btn');
+            if(btnTog) {
+                btnTog.innerText = db.insc_open ? "🔴 FERMER LES INSCRIPTIONS" : "🟢 OUVRIR LES INSCRIPTIONS";
+                btnTog.style.background = db.insc_open ? "var(--danger)" : "var(--accent)";
+            }
+
             const count = db.membres.length;
             const remaining = 65 - count;
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
@@ -317,9 +342,27 @@
                     }
                 });
             }
-            let total = 0;
-            db.membres.forEach(m => { if(m.ok) { total += (m.type === "Etudiant") ? 25 : 50; } });
-            document.getElementById('total-recolte').innerText = total + "€";
+            
+            // Stats Trésorerie Détaillées
+            let totalRecolte = 0, reste = 0;
+            let aPayes = 0, aTotal = 0, ePayes = 0, eTotal = 0;
+            
+            db.membres.forEach(m => {
+                const prix = (m.type === "Etudiant") ? 25 : 50;
+                if(m.type === "Adulte") aTotal++; else eTotal++;
+                if(m.ok) {
+                    totalRecolte += prix;
+                    if(m.type === "Adulte") aPayes++; else ePayes++;
+                } else {
+                    reste += prix;
+                }
+            });
+            
+            document.getElementById('total-recolte').innerText = totalRecolte + "€";
+            document.getElementById('stat-adultes').innerText = aPayes + " / " + aTotal;
+            document.getElementById('stat-etudiants').innerText = ePayes + " / " + eTotal;
+            document.getElementById('reste-a-percevoir').innerText = "Reste à percevoir : " + reste + "€";
+            
             const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
             const filteredMembres = db.membres.filter(m => m.nom.toLowerCase().includes(searchVal) || m.email.toLowerCase().includes(searchVal) || (m.tel && m.tel.includes(searchVal)));
             const sortedMembres = [...filteredMembres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
