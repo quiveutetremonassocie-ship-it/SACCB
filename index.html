@@ -178,7 +178,6 @@
 
         async function saveData() {
             try {
-                // IMPORTANT : Utilise POST avec resolution=merge (UPSERT) pour forcer la mise à jour sur l'ID 1
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
                     method: 'POST', 
                     headers: { 
@@ -192,17 +191,13 @@
                 if (res.ok) {
                     updateUI();
                 } else {
-                    const err = await res.text();
-                    console.error(err);
-                    alert("Erreur technique. Actualisez la page.");
+                    alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien lancé le code SQL dans Supabase.");
                 }
-            } catch (e) { 
-                alert("Erreur de connexion."); 
-            }
+            } catch (e) { alert("Erreur de connexion."); }
         }
 
         async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
-        async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ? Cette action est irréversible.")) { db.membres = []; await saveData(); } }
+        async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ?")) { db.membres = []; await saveData(); } }
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
@@ -262,9 +257,7 @@
             if(ADMIN_EMAILS.includes(user) && pass === PASS) { 
                 document.getElementById('login-modal').style.display='none'; 
                 document.getElementById('admin-panel').style.display='block'; 
-            } else {
-                alert("Identifiants incorrects");
-            }
+            } else { alert("Identifiants incorrects"); }
         }
 
         function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
