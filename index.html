@@ -20,26 +20,37 @@
         .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); }
         .liste-inscrits { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 15px; }
         .liste-inscrits span { display: block; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .liste-inscrits span:last-child { border-bottom: none; }
         input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; }
         .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; text-transform: uppercase; }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; }
         .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
         .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .btn-edit { background: var(--primary); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; margin-right: 5px; }
+        .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
         .progress-container { width: 100%; height: 12px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 10px; overflow: hidden; }
         .progress-bar { height: 100%; background: linear-gradient(90deg, var(--primary), var(--accent)); transition: width 0.5s ease; width: 0%; }
+        .search-admin { margin-bottom: 15px; border-color: var(--primary); border-width: 2px; }
         #recu-modal, #emargement-modal { display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:5000; align-items:center; justify-content:center; padding: 20px; }
         .recu-paper { background: white; color: black; padding: 40px; border-radius: 5px; width: 100%; max-width: 800px; font-family: 'Arial', sans-serif; box-shadow: 0 0 20px rgba(0,0,0,0.5); position: relative; overflow-y: auto; max-height: 90vh; }
-        .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; }
+        @media print { body * { visibility: hidden; } #recu-modal, #recu-modal *, #emargement-modal, #emargement-modal * { visibility: visible; } #recu-modal, #emargement-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; } .no-print { display: none; } }
+        .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
+        .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
+        .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
         .badge-header { font-family: 'Bebas Neue'; font-size: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; padding-bottom: 5px; }
         .badge-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
         .badge-info { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .badge-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
+        .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
 
-        /* Styles Actu */
+        /* Actu */
         .actu-single { max-width: 600px; margin: 0 auto; background: var(--bg-card); border-radius: 15px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); }
         .actu-img { width: 100%; height: auto; display: block; }
         .actu-caption { padding: 20px; font-size: 18px; text-align: center; font-weight: 500; }
-        
+
         /* Compta */
         .compta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; margin-top: 20px; }
         .solde-positif { color: var(--accent); font-size: 28px; font-weight: bold; }
@@ -51,7 +62,7 @@
     <nav>
         <a href="#" class="nav-logo">SACCB</a>
         <div class="nav-links">
-            <a href="#presentation">L'Asso</a>
+            <a href="#actu">Actu</a>
             <a href="#tournois">Tournois</a>
             <a href="#inscription">Adhésion</a>
             <button onclick="document.getElementById('login-modal').style.display='flex'" class="btn" style="width:auto; padding:10px 20px;">ADMIN</button>
@@ -72,6 +83,18 @@
             <p style="font-size: 18px;">Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
             <p style="margin-top: 20px; color: var(--accent); font-weight: bold;">📍 Salle Paul Vatine, 30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse</p>
         </div>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+            <div class="card">
+                <h3 style="color: var(--primary); font-family: 'Bebas Neue'; font-size: 30px;">🕒 Horaires</h3>
+                <p>Lundi & Jeudi : 18h30 - Fermeture</p>
+                <p>Samedi : 17h30 - Fermeture</p>
+            </div>
+            <div class="card">
+                <h3 style="color: var(--accent); font-family: 'Bebas Neue'; font-size: 30px;">💰 Tarifs Annuels</h3>
+                <p>Adulte : 50€ / an</p>
+                <p>Étudiant : 25€ / an</p>
+            </div>
+        </div>
     </section>
 
     <section id="tournois">
@@ -82,8 +105,9 @@
     <section id="inscription">
         <h2 id="titre-saison">Inscription Saison</h2>
         <div class="card">
-            <p id="quota-msg" style="color:var(--accent); font-weight:bold;">Places restantes : 65</p>
+            <p id="quota-msg" style="color:var(--accent); font-weight:bold;">Places restantes au club : 65</p>
             <div class="progress-container"><div id="quota-bar" class="progress-bar"></div></div>
+            
             <div id="form-container" style="margin-top: 30px;">
                 <form id="main-adh">
                     <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
@@ -93,16 +117,38 @@
                     <button type="submit" class="btn">Valider mon inscription</button>
                 </form>
             </div>
+            <div id="msg-ferme" style="display:none; text-align:center; padding: 20px;">
+                <h3 style="color:var(--danger)">🚫 INSCRIPTIONS CLOSES</h3>
+            </div>
             <div id="msg-deja" style="display:none; text-align:center;">
                 <h3>✅ INSCRIPTION ENREGISTRÉE !</h3>
                 <div class="badge-card">
-                    <div class="badge-header">MEMBRE SACCB</div>
+                    <div class="badge-deco"></div>
+                    <div class="badge-header">MEMBRE OFFICIEL SACCB</div>
                     <div class="badge-name" id="b-res-nom"></div>
-                    <div class="badge-info">SAISON EN COURS</div>
+                    <div class="badge-info" id="b-res-saison"></div>
+                    <div class="badge-footer">
+                        <div class="badge-info" id="b-res-type"></div>
+                        <div class="badge-logo">ST-ADRESSE</div>
+                    </div>
                 </div>
             </div>
         </div>
     </section>
+
+    <footer style="padding: 80px 20px; background: #070b14; text-align: center;">
+        <div class="contact-grid">
+            <div class="card">
+                <p style="color: var(--primary); font-weight: bold;">PRÉSIDENT : Hernan Camara</p>
+                <p>07 77 06 18 75 - hernancm68@hotmail.com</p>
+            </div>
+            <div class="card">
+                <p style="color: var(--primary); font-weight: bold;">ADJOINT : Matthieu Demare</p>
+                <p>06 52 48 62 28 - demare.matthieu@outlook.fr</p>
+            </div>
+        </div>
+        <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
+    </footer>
 
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
@@ -110,45 +156,74 @@
             <button onclick="document.getElementById('admin-panel').style.display='none'" class="btn" style="width:auto; background:var(--danger);">Fermer</button>
         </div>
 
-        <div class="card" style="border: 1px solid var(--primary);">
-            <h3>💰 Bilan Financier & Factures</h3>
+        <div class="card" style="border: 2px solid var(--primary);">
+            <h3>💰 BILAN FINANCIER & FACTURES</h3>
             <div class="compta-grid">
-                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;">
-                    <p style="font-size: 12px; color: var(--text-muted);">SOLDE DISPONIBLE</p>
+                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center;">
+                    <p style="font-size: 12px; color: var(--text-muted);">SOLDE CLUB</p>
                     <p id="compta-solde" class="solde-positif">0€</p>
                 </div>
-                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px;">
-                    <p style="font-size: 12px; color: var(--text-muted);">TOTAL DÉPENSES</p>
+                <div style="background: rgba(0,0,0,0.2); padding: 15px; border-radius: 10px; text-align: center;">
+                    <p style="font-size: 12px; color: var(--text-muted);">DÉPENSES TOTALES</p>
                     <p id="compta-depenses" style="color: var(--danger); font-size: 28px; font-weight: bold;">0€</p>
                 </div>
             </div>
-            <div style="margin-top: 20px;">
-                <h4>Ajouter une facture / dépense</h4>
+            <div style="margin-top: 20px; padding: 15px; background: rgba(255,255,255,0.03); border-radius: 10px;">
+                <h4>Ajouter une Facture</h4>
                 <div style="display: flex; gap: 10px; margin-top: 10px;">
-                    <input type="text" id="fact-desc" placeholder="Description (ex: Volants, Goûter...)" style="margin:0;">
-                    <input type="number" id="fact-montant" placeholder="Montant €" style="margin:0; width: 150px;">
-                    <button onclick="addFacture()" class="btn" style="width: auto;">Ajouter</button>
+                    <input type="text" id="fact-desc" placeholder="Désignation" style="margin:0;">
+                    <input type="number" id="fact-montant" placeholder="Montant €" style="margin:0; width:120px;">
+                    <button onclick="addFacture()" class="btn" style="width:auto;">Ajouter</button>
                 </div>
             </div>
-            <table style="margin-top: 20px;">
-                <thead><tr><th>Date</th><th>Description</th><th>Montant</th><th>Action</th></tr></thead>
-                <tbody id="fact-list"></tbody>
-            </table>
+            <table><thead><tr><th>Date</th><th>Désignation</th><th>Montant</th><th>Action</th></tr></thead><tbody id="fact-list"></tbody></table>
         </div>
 
         <div class="card">
-            <h3>Adhérents Club</h3>
-            <table><thead><tr><th>Nom</th><th>Type</th><th>Paiement</th><th>Action</th></tr></thead><tbody id="adm-m-list"></tbody></table>
+            <h3>⚙️ Saison & Inscriptions</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <input type="number" id="y1-input"><input type="number" id="y2-input">
+            </div>
+            <button id="toggle-insc-btn" onclick="toggleInscriptions()" class="btn" style="margin-bottom:10px;"></button>
+            <button onclick="updateSeason()" class="btn" style="background:var(--accent);">Mettre à jour dates</button>
+        </div>
+
+        <div class="card">
+            <h3>💾 Sauvegardes</h3>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
+                <button onclick="exportToCSV()" class="btn" style="background:#8b5cf6;">Exporter CSV</button>
+                <button onclick="genEmargement()" class="btn" style="background:#f59e0b;">📄 Liste Émargement</button>
+            </div>
+        </div>
+
+        <div class="card">
+            <h3>🏸 Inscriptions Tournois</h3>
+            <div id="adm-t-list"></div>
+            <hr style="margin:20px 0; opacity:0.1;">
+            <h4>Nouveau Tournoi</h4>
+            <input type="text" id="nt-n" placeholder="Nom">
+            <input type="text" id="nt-d" placeholder="Date">
+            <button onclick="addT()" class="btn">Publier</button>
+            <div id="adm-i-list-container" style="margin-top:20px;"></div>
+        </div>
+
+        <div class="card">
+            <h3>👥 Adhérents</h3>
+            <input type="text" id="m-search" class="search-admin" placeholder="🔍 Rechercher..." oninput="updateUI()">
+            <table><thead><tr><th>Nom</th><th>Email</th><th>Type</th><th>Payé</th><th>Actions</th></tr></thead><tbody id="adm-m-list"></tbody></table>
         </div>
     </div>
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
         <div class="card" style="max-width:300px; text-align:center;">
             <input type="email" id="admin-user" placeholder="Email Admin">
-            <input type="password" id="pass" placeholder="Code Admin">
+            <input type="password" id="pass" placeholder="Code">
             <button onclick="checkAdmin()" class="btn">Entrer</button>
         </div>
     </div>
+
+    <div id="recu-modal"><div class="recu-paper"><h2 style="text-align:center;">REÇU DE COTISATION</h2><p id="recu-content"></p><div id="recu-nom"></div><div id="recu-montant"></div><div id="recu-saison"></div><div id="recu-date"></div><button onclick="window.print()" class="btn">Imprimer</button><button onclick="document.getElementById('recu-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button></div></div>
+    <div id="emargement-modal"><div class="recu-paper"><h2>LISTE ÉMARGEMENT</h2><table border="1" style="width:100%; border-collapse:collapse;"><tbody id="em-body"></tbody></table><button onclick="window.print()" class="btn">Imprimer</button><button onclick="document.getElementById('emargement-modal').style.display='none'" class="btn" style="background:#444;">Fermer</button></div></div>
 
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
@@ -160,72 +235,90 @@
             try {
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } });
                 const json = await res.json();
-                if (json[0] && json[0].data) { 
-                    db = json[0].data; 
+                if (json[0]?.data) {
+                    db = json[0].data;
                     if(!db.factures) db.factures = [];
+                    document.getElementById('y1-input').value = db.y1;
+                    document.getElementById('y2-input').value = db.y2;
                 }
                 updateUI();
-            } catch (e) { console.error("Erreur sync"); }
+            } catch (e) { console.error("Sync error"); }
         }
 
         async function saveData() {
-            await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
-                method: 'PATCH', 
-                headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, 
-                body: JSON.stringify({ data: db }) 
-            });
+            await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { method: 'PATCH', headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json" }, body: JSON.stringify({ data: db }) });
             updateUI();
         }
 
         function updateUI() {
-            // Quota
+            document.getElementById('copy-annee').innerText = `© ${db.y1} SACCB — Sainte-Adresse`;
+            document.getElementById('titre-saison').innerText = `Inscription Saison ${db.y1}-${db.y2}`;
+            
+            const btnTog = document.getElementById('toggle-insc-btn');
+            btnTog.innerText = db.insc_open ? "🔴 FERMER INSCRIPTIONS" : "🟢 OUVRIR INSCRIPTIONS";
+            btnTog.style.background = db.insc_open ? "var(--danger)" : "var(--accent)";
+
             const count = db.membres.length;
             document.getElementById('quota-msg').innerText = "Places restantes : " + (65 - count);
-            document.getElementById('quota-bar').style.width = (count / 65 * 100) + "%";
-
-            // Liste Membres Admin
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};border:none;color:white;padding:5px;border-radius:5px;">${m.ok?'PAYÉ':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
+            document.getElementById('quota-bar').style.width = Math.min((count / 65) * 100, 100) + "%";
 
             // Compta
             let recettes = 0;
             db.membres.forEach(m => { if(m.ok) recettes += (m.type === "Etudiant" ? 25 : 50); });
-            let depenses = 0;
-            db.factures.forEach(f => depenses += parseFloat(f.montant));
-            
-            document.getElementById('compta-depenses').innerText = depenses + "€";
-            const solde = recettes - depenses;
+            let totalFact = 0;
+            db.factures.forEach(f => totalFact += parseFloat(f.montant));
+            document.getElementById('compta-depenses').innerText = totalFact + "€";
+            const solde = recettes - totalFact;
             const soldeEl = document.getElementById('compta-solde');
             soldeEl.innerText = solde + "€";
-            soldeEl.className = solde >= 0 ? 'solde-positif' : 'solde-negatif';
+            soldeEl.className = solde >= 0 ? "solde-positif" : "solde-negatif";
+            document.getElementById('fact-list').innerHTML = db.factures.map((f, i) => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture(${i})" class="btn-del">X</button></td></tr>`).join('');
 
-            document.getElementById('fact-list').innerHTML = db.factures.map((f, index) => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture(${index})" class="btn-del">X</button></td></tr>`).join('');
-            
+            // Membres Admin
+            const search = document.getElementById('m-search').value.toLowerCase();
+            document.getElementById('adm-m-list').innerHTML = db.membres.filter(m => m.nom.toLowerCase().includes(search)).map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};border:none;color:white;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button><button onclick="genRecu('${m.id}')" class="btn-edit" style="background:#8b5cf6">📜</button></td></tr>`).join('');
+
             // Tournois
-            const list = document.getElementById('tournois-list');
-            list.innerHTML = "";
+            const tList = document.getElementById('tournois-list');
+            tList.innerHTML = "";
             db.config_tournois.forEach(t => {
-                const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}</h3><div class="liste-inscrits">${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('')}</div></div>`;
+                const insc = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
+                tList.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}</h3><div class="liste-inscrits">${insc.map(i => `<span>✅ ${i.joueurs}</span>`).join('')}</div><form onsubmit="regT(event, '${t.id}', '${t.name}')"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required><button type="submit" class="btn">S'inscrire</button></form></div>`;
             });
         }
 
         async function addFacture() {
             const desc = document.getElementById('fact-desc').value;
-            const montant = document.getElementById('fact-montant').value;
-            if(!desc || !montant) return;
-            db.factures.push({ date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: montant });
-            document.getElementById('fact-desc').value = "";
-            document.getElementById('fact-montant').value = "";
+            const mont = document.getElementById('fact-montant').value;
+            if(!desc || !mont) return;
+            db.factures.push({ date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: mont });
+            document.getElementById('fact-desc').value = ""; document.getElementById('fact-montant').value = "";
             await saveData();
         }
+        async function delFacture(i) { db.factures.splice(i, 1); await saveData(); }
 
-        async function delFacture(index) {
-            db.factures.splice(index, 1);
-            await saveData();
+        async function regT(e, id, name) { e.preventDefault(); db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.p1.value + " & " + e.target.p2.value }); await saveData(); e.target.reset(); }
+        async function addT() { db.config_tournois.push({ id: Date.now().toString(), name: document.getElementById('nt-n').value, date: document.getElementById('nt-d').value }); await saveData(); }
+        async function togM(id) { const m=db.membres.find(x=>x.id===id); m.ok=!m.ok; await saveData(); }
+        async function delM(id) { if(confirm("Supprimer ?")) { db.membres=db.membres.filter(x=>x.id!==id); await saveData(); } }
+        async function toggleInscriptions() { db.insc_open=!db.insc_open; await saveData(); }
+        async function updateSeason() { db.y1=document.getElementById('y1-input').value; db.y2=document.getElementById('y2-input').value; await saveData(); }
+
+        function exportToCSV() {
+            let csv = "Nom,Email,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.type},${m.ok?'OUI':'NON'}`).join("\n");
+            const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB.csv"); link.click();
         }
 
-        async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
+        function genRecu(id) {
+            const m = db.membres.find(x => x.id === id);
+            document.getElementById('recu-content').innerText = `Reçu pour ${m.nom} (${m.type}) - ${m.type === "Etudiant" ? 25 : 50}€ payés le ${new Date().toLocaleDateString()}.`;
+            document.getElementById('recu-modal').style.display='flex';
+        }
+
+        function genEmargement() {
+            document.getElementById('em-body').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td style="width:150px;height:40px;"></td></tr>`).join('');
+            document.getElementById('emargement-modal').style.display='flex';
+        }
 
         function checkAdmin() {
             const u = document.getElementById('admin-user').value;
@@ -239,8 +332,11 @@
         document.getElementById('main-adh').onsubmit = async (e) => {
             e.preventDefault();
             const nom = document.getElementById('m-nom').value;
-            db.membres.push({ id: Date.now().toString(), nom: nom, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false });
+            const type = document.getElementById('m-type').value;
+            db.membres.push({ id: Date.now().toString(), nom: nom, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: type, ok: false });
             document.getElementById('b-res-nom').innerText = nom;
+            document.getElementById('b-res-saison').innerText = `Saison ${db.y1}-${db.y2}`;
+            document.getElementById('b-res-type').innerText = type.toUpperCase();
             document.getElementById('form-container').style.display='none';
             document.getElementById('msg-deja').style.display='block';
             confetti({ particleCount: 150, spread: 70 });
