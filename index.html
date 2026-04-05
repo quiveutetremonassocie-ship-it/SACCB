@@ -293,13 +293,23 @@
                     body: JSON.stringify({ data: db }) 
                 });
 
-                // --- MODIFICATION : SYNCHRO GOOGLE ADHÉRENTS ---
+                // --- SYNCHRO GOOGLE ADHÉRENTS ---
                 fetch(SHEETS_WEBHOOK, { 
                     method: 'POST', 
                     mode: 'no-cors', 
                     body: JSON.stringify({
                         action: "sync_adherents",
                         membres: db.membres
+                    }) 
+                });
+
+                // --- SYNCHRO GOOGLE FACTURES (Miroir) ---
+                fetch(SHEETS_WEBHOOK, { 
+                    method: 'POST', 
+                    mode: 'no-cors', 
+                    body: JSON.stringify({
+                        action: "sync_factures",
+                        factures: db.factures
                     }) 
                 });
 
@@ -321,20 +331,6 @@
             if(!desc || !mont) return;
             db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
             
-            // --- MODIFICATION : ENVOI FACTURE GOOGLE ---
-            fetch(SHEETS_WEBHOOK, {
-                method: 'POST',
-                mode: 'no-cors',
-                body: JSON.stringify({
-                    action: "add_facture",
-                    facture: {
-                        client: "Dépense Club",
-                        montant: mont,
-                        designation: desc
-                    }
-                })
-            });
-
             document.getElementById('f-desc').value = ""; document.getElementById('f-montant').value = "";
             await saveData();
         }
@@ -349,7 +345,6 @@
         async function toggleInscriptions() { db.insc_open = !db.insc_open; await saveData(); }
 
         function updateUI() {
-            // Mise à jour de l'affichage (inchangé)
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
             const formSect = document.getElementById('form-container');
@@ -370,13 +365,11 @@
             const list = document.getElementById('tournois-list');
             list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
             
-            // Logique de rendu admin et listes (inchangée)
             renderAdminLists();
             calculateCompta();
         }
 
         function renderAdminLists() {
-            // Affichage des membres filtré par recherche
             const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
             const filtered = db.membres.filter(m => (m.nom + " " + (m.prenom || "")).toLowerCase().includes(searchVal));
             document.getElementById('adm-m-list').innerHTML = filtered.map(m => `
