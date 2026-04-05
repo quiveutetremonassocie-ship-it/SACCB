@@ -189,13 +189,12 @@
                     body: JSON.stringify({ id: 1, data: db }) 
                 });
                 if (!res.ok) {
-                    const err = await res.json();
-                    alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien lancé le code SQL dans Supabase.");
+                    throw new Error();
                 } else {
                     updateUI();
                 }
             } catch (e) { 
-                alert("Erreur réseau. Vérifiez votre connexion."); 
+                alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien lancé le code SQL dans Supabase."); 
             }
         }
 
@@ -209,30 +208,34 @@
             
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
-            list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi prévu." : "";
+            list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
             admTList.innerHTML = "";
             
-            db.config_tournois.forEach(t => {
-                const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                const isFull = t.quota && inscrits.length >= t.quota;
-                const typeLabel = t.type ? ` <span style="font-size:14px; opacity:0.8;">(${t.type})</span>` : "";
-                const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
-                
-                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${typeLabel}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
-                admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name} (${t.type || 'N/C'})</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
-            });
+            if(db.config_tournois) {
+                db.config_tournois.forEach(t => {
+                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
+                    const isFull = t.quota && inscrits.length >= t.quota;
+                    const typeLabel = t.type ? ` <span style="font-size:14px; opacity:0.8;">(${t.type})</span>` : "";
+                    const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
+                    
+                    list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${typeLabel}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
+                    admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name} (${t.type || 'N/C'})</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
+                });
+            }
 
             const groupContainer = document.getElementById('adm-i-list-container');
             groupContainer.innerHTML = "";
-            db.config_tournois.forEach(t => {
-                const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                if (inscrits.length > 0) {
-                    let html = `<div class="group-header">${t.name}</div><table>`;
-                    inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:50px;"><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
-                    html += `</table><br>`;
-                    groupContainer.innerHTML += html;
-                }
-            });
+            if(db.config_tournois) {
+                db.config_tournois.forEach(t => {
+                    const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
+                    if (inscrits.length > 0) {
+                        let html = `<div class="group-header">${t.name}</div><table>`;
+                        inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:50px;"><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
+                        html += `</table><br>`;
+                        groupContainer.innerHTML += html;
+                    }
+                });
+            }
 
             document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
@@ -241,6 +244,7 @@
         async function addT() { 
             const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'), ty=document.getElementById('nt-type'); 
             if(!n.value) return; 
+            if(!db.config_tournois) db.config_tournois = [];
             db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, type: ty.value, quota: q.value ? parseInt(q.value) : null}); 
             await saveData(); n.value=""; d.value=""; q.value=""; ty.value="";
         }
