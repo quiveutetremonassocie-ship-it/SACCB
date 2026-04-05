@@ -156,7 +156,7 @@
 
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
-        const SUPA_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
+        const SUPA_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
         const ADMIN_EMAILS = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
         const PASS = "43210";
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
@@ -188,10 +188,14 @@
                     }, 
                     body: JSON.stringify({ id: 1, data: db }) 
                 });
-                if (!res.ok) throw new Error();
-                updateUI();
+                if (!res.ok) {
+                    const err = await res.json();
+                    alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien lancé le code SQL dans Supabase.");
+                } else {
+                    updateUI();
+                }
             } catch (e) { 
-                alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien activé les droits dans Supabase SQL Editor."); 
+                alert("Erreur réseau. Vérifiez votre connexion."); 
             }
         }
 
