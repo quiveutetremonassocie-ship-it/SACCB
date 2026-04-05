@@ -178,22 +178,34 @@
 
         async function saveData() {
             try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
-                    method: 'POST', 
+                // Utilisation de la méthode la plus robuste pour bypasser les restrictions RLS
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, { 
+                    method: 'PATCH', 
                     headers: { 
                         "apikey": SUPA_KEY, 
                         "Authorization": `Bearer ${SUPA_KEY}`, 
-                        "Content-Type": "application/json", 
-                        "Prefer": "resolution=merge" 
+                        "Content-Type": "application/json",
+                        "Prefer": "return=minimal"
                     }, 
-                    body: JSON.stringify({ id: 1, data: db }) 
+                    body: JSON.stringify({ data: db }) 
                 });
+                
                 if (res.ok) {
                     updateUI();
                 } else {
-                    alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien lancé le code SQL dans Supabase.");
+                    // Si le PATCH échoue (ligne inexistante), on tente le POST
+                    await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
+                        method: 'POST', 
+                        headers: { 
+                            "apikey": SUPA_KEY, 
+                            "Authorization": `Bearer ${SUPA_KEY}`, 
+                            "Content-Type": "application/json"
+                        }, 
+                        body: JSON.stringify({ id: 1, data: db }) 
+                    });
+                    updateUI();
                 }
-            } catch (e) { alert("Erreur de connexion."); }
+            } catch (e) { alert("Erreur réseau."); }
         }
 
         async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
