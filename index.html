@@ -38,6 +38,15 @@
         @media print { body * { visibility: hidden; } #recu-modal, #recu-modal *, #emargement-modal, #emargement-modal * { visibility: visible; } #recu-modal, #emargement-modal { position: absolute; left: 0; top: 0; background: white; width: 100%; } .no-print { display: none; } }
         .stat-badge { background: rgba(255,255,255,0.05); padding: 10px; border-radius: 10px; text-align: center; }
         .stat-badge span { display: block; font-size: 20px; font-weight: bold; color: var(--primary); }
+        
+        /* Style du Badge Membre */
+        .badge-card { background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border: 2px solid var(--primary); border-radius: 15px; padding: 20px; max-width: 350px; margin: 20px auto; position: relative; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        .badge-header { font-family: 'Bebas Neue'; font-size: 24px; color: var(--primary); border-bottom: 1px solid rgba(255,255,255,0.1); margin-bottom: 15px; padding-bottom: 5px; }
+        .badge-name { font-size: 22px; font-weight: 600; margin-bottom: 5px; text-transform: uppercase; }
+        .badge-info { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .badge-footer { margin-top: 20px; display: flex; justify-content: space-between; align-items: flex-end; }
+        .badge-logo { font-family: 'Bebas Neue'; font-size: 18px; opacity: 0.5; }
+        .badge-deco { position: absolute; top: -20px; right: -20px; width: 100px; height: 100px; background: var(--primary); opacity: 0.1; border-radius: 50%; }
     </style>
 </head>
 <body>
@@ -96,7 +105,20 @@
                 <h3 style="color:var(--danger)">🚫 INSCRIPTIONS CLOSES</h3>
                 <p>La période d'inscription est terminée ou le club est complet. À bientôt !</p>
             </div>
-            <div id="msg-deja" style="display:none; text-align:center;"><h3>✅ INSCRIPTION ENREGISTRÉE !</h3></div>
+            <div id="msg-deja" style="display:none; text-align:center;">
+                <h3>✅ INSCRIPTION ENREGISTRÉE !</h3>
+                <div class="badge-card">
+                    <div class="badge-deco"></div>
+                    <div class="badge-header">MEMBRE OFFICIEL SACCB</div>
+                    <div class="badge-name" id="b-res-nom">Prénom Nom</div>
+                    <div class="badge-info" id="b-res-saison">Saison 2024-2025</div>
+                    <div class="badge-footer">
+                        <div class="badge-info" id="b-res-type">ADULTE</div>
+                        <div class="badge-logo">ST-ADRESSE</div>
+                    </div>
+                </div>
+                <p style="font-size: 13px; color: var(--text-muted); margin-top: 10px;">Prenez une capture d'écran de votre badge !</p>
+            </div>
         </div>
     </section>
 
@@ -420,9 +442,19 @@
         
         document.getElementById('main-adh').onsubmit = async (e) => { 
             e.preventDefault(); 
-            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
+            const nom = document.getElementById('m-nom').value;
+            const type = document.getElementById('m-type').value;
+            
+            db.membres.push({ id: Date.now().toString(), nom: nom, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: type, ok: false }); 
+            
+            // Mise à jour visuelle du badge
+            document.getElementById('b-res-nom').innerText = nom;
+            document.getElementById('b-res-saison').innerText = "Saison " + db.y1 + "-" + db.y2;
+            document.getElementById('b-res-type').innerText = type.toUpperCase();
+            
             document.getElementById('form-container').style.display='none'; 
             document.getElementById('msg-deja').style.display='block'; 
+            
             confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#ffffff'] });
             await saveData(); 
         };
