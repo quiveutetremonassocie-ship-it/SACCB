@@ -70,7 +70,7 @@
     <section id="inscription">
         <h2 id="titre-saison">Inscription Saison</h2>
         <div class="card">
-            <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:20px;"></p>
+            <p id="quota-msg" style="color:var(--accent); font-weight:bold; margin-bottom:20px;">Places restantes au club : 65</p>
             <div id="form-container">
                 <form id="main-adh">
                     <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
@@ -163,7 +163,7 @@
 
         async function loadData() {
             try {
-                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&order=created_at.desc&limit=1`, { 
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, { 
                     headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } 
                 });
                 const json = await res.json();
@@ -171,14 +171,13 @@
                     db = json[0].data;
                     document.getElementById('y1-input').value = db.y1;
                     document.getElementById('y2-input').value = db.y2;
-                    updateUI();
                 }
-            } catch (e) { console.error("Erreur sync au chargement"); }
+                updateUI();
+            } catch (e) { console.error("Erreur sync"); }
         }
 
         async function saveData() {
             try {
-                // On utilise POST avec l'en-tête Resolution pour écraser la ligne existante
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
                     method: 'POST', 
                     headers: { 
@@ -187,11 +186,13 @@
                         "Content-Type": "application/json", 
                         "Prefer": "resolution=merge" 
                     }, 
-                    body: JSON.stringify({ id: 1, data: db }) // ID fixé à 1 pour toujours écraser la même ligne
+                    body: JSON.stringify({ id: 1, data: db }) 
                 });
-                if(!res.ok) throw new Error();
+                if (!res.ok) throw new Error();
                 updateUI();
-            } catch (e) { alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien activé les droits dans Supabase SQL Editor."); }
+            } catch (e) { 
+                alert("Erreur lors de l'enregistrement. Vérifiez que vous avez bien activé les droits dans Supabase SQL Editor."); 
+            }
         }
 
         async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
@@ -200,6 +201,7 @@
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
             
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
@@ -227,9 +229,7 @@
                     groupContainer.innerHTML += html;
                 }
             });
-            if(groupContainer.innerHTML === "") groupContainer.innerHTML = "<p>Aucune inscription enregistrée.</p>";
 
-            document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
             document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
