@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SACCB - Club de Badminton</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --bg-dark: #0f172a; --bg-card: #1e293b; --primary: #3b82f6; --accent: #10b981; --text-main: #f8fafc; --text-muted: #94a3b8; --danger: #ef4444; }
         * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -297,25 +298,20 @@
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
             document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
-            
-            // Gestion affichage formulaire selon état saison
             const formSect = document.getElementById('form-container');
             const msgFerme = document.getElementById('msg-ferme');
             if(db.insc_open) { formSect.style.display = 'block'; msgFerme.style.display = 'none'; }
             else { formSect.style.display = 'none'; msgFerme.style.display = 'block'; }
-            
             const btnTog = document.getElementById('toggle-insc-btn');
             if(btnTog) {
                 btnTog.innerText = db.insc_open ? "🔴 FERMER LES INSCRIPTIONS" : "🟢 OUVRIR LES INSCRIPTIONS";
                 btnTog.style.background = db.insc_open ? "var(--danger)" : "var(--accent)";
             }
-
             const count = db.membres.length;
             const remaining = 65 - count;
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
             const percent = (count / 65) * 100;
             document.getElementById('quota-bar').style.width = Math.min(percent, 100) + "%";
-
             const list = document.getElementById('tournois-list');
             const admTList = document.getElementById('adm-t-list');
             list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
@@ -342,27 +338,18 @@
                     }
                 });
             }
-            
-            // Stats Trésorerie Détaillées
             let totalRecolte = 0, reste = 0;
             let aPayes = 0, aTotal = 0, ePayes = 0, eTotal = 0;
-            
             db.membres.forEach(m => {
                 const prix = (m.type === "Etudiant") ? 25 : 50;
                 if(m.type === "Adulte") aTotal++; else eTotal++;
-                if(m.ok) {
-                    totalRecolte += prix;
-                    if(m.type === "Adulte") aPayes++; else ePayes++;
-                } else {
-                    reste += prix;
-                }
+                if(m.ok) { totalRecolte += prix; if(m.type === "Adulte") aPayes++; else ePayes++; } 
+                else { reste += prix; }
             });
-            
             document.getElementById('total-recolte').innerText = totalRecolte + "€";
             document.getElementById('stat-adultes').innerText = aPayes + " / " + aTotal;
             document.getElementById('stat-etudiants').innerText = ePayes + " / " + eTotal;
             document.getElementById('reste-a-percevoir').innerText = "Reste à percevoir : " + reste + "€";
-            
             const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
             const filteredMembres = db.membres.filter(m => m.nom.toLowerCase().includes(searchVal) || m.email.toLowerCase().includes(searchVal) || (m.tel && m.tel.includes(searchVal)));
             const sortedMembres = [...filteredMembres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
@@ -370,8 +357,7 @@
         }
 
         function genRecu(id) {
-            const m = db.membres.find(x => x.id === id);
-            if(!m) return;
+            const m = db.membres.find(x => x.id === id); if(!m) return;
             document.getElementById('recu-nom').innerText = m.nom;
             document.getElementById('recu-montant').innerText = (m.type === "Etudiant") ? "25" : "50";
             document.getElementById('recu-saison').innerText = db.y1 + " - " + db.y2;
@@ -395,7 +381,18 @@
         async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
         function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
-        document.getElementById('main-adh').onsubmit = async (e) => { e.preventDefault(); db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); document.getElementById('form-container').style.display='none'; document.getElementById('msg-deja').style.display='block'; await saveData(); };
+        
+        document.getElementById('main-adh').onsubmit = async (e) => { 
+            e.preventDefault(); 
+            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
+            document.getElementById('form-container').style.display='none'; 
+            document.getElementById('msg-deja').style.display='block'; 
+            
+            // Pluie de confettis !
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#ffffff'] });
+            
+            await saveData(); 
+        };
         loadData();
     </script>
 </body>
