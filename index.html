@@ -169,8 +169,8 @@
                 const json = await res.json();
                 if (json[0] && json[0].data) {
                     db = json[0].data;
-                    if (document.getElementById('y1-input')) document.getElementById('y1-input').value = db.y1;
-                    if (document.getElementById('y2-input')) document.getElementById('y2-input').value = db.y2;
+                    if(document.getElementById('y1-input')) document.getElementById('y1-input').value = db.y1;
+                    if(document.getElementById('y2-input')) document.getElementById('y2-input').value = db.y2;
                 }
                 updateUI();
             } catch (e) { console.error("Erreur sync"); }
@@ -178,6 +178,7 @@
 
         async function saveData() {
             try {
+                // Utilisation de POST avec resolution=merge pour que Supabase accepte d'écraser la ligne id=1
                 const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { 
                     method: 'POST', 
                     headers: { 
@@ -191,12 +192,12 @@
                 if (res.ok) {
                     updateUI();
                 } else {
-                    const errTxt = await res.text();
-                    console.error(errTxt);
-                    alert("Erreur Supabase. Vérifiez les droits SQL.");
+                    const err = await res.text();
+                    console.error(err);
+                    alert("Erreur technique. Actualisez la page.");
                 }
             } catch (e) { 
-                alert("Erreur de connexion."); 
+                alert("Erreur de connexion réseau."); 
             }
         }
 
