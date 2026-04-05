@@ -293,7 +293,7 @@
                     body: JSON.stringify({ data: db }) 
                 });
 
-                // --- SYNCHRO GOOGLE ADHÉRENTS ---
+                // --- SYNCHRO GOOGLE ADHÉRENTS (Total) ---
                 fetch(SHEETS_WEBHOOK, { 
                     method: 'POST', 
                     mode: 'no-cors', 
@@ -303,7 +303,7 @@
                     }) 
                 });
 
-                // --- SYNCHRO GOOGLE FACTURES (Miroir) ---
+                // --- SYNCHRO GOOGLE FACTURES (Total / Miroir) ---
                 fetch(SHEETS_WEBHOOK, { 
                     method: 'POST', 
                     mode: 'no-cors', 
@@ -330,7 +330,6 @@
             const mont = document.getElementById('f-montant').value;
             if(!desc || !mont) return;
             db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
-            
             document.getElementById('f-desc').value = ""; document.getElementById('f-montant').value = "";
             await saveData();
         }
@@ -361,17 +360,15 @@
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + remaining;
             const percent = (count / 65) * 100;
             document.getElementById('quota-bar').style.width = Math.min(percent, 100) + "%";
-            
-            const list = document.getElementById('tournois-list');
-            list.innerHTML = (db.config_tournois && db.config_tournois.length === 0) ? "Aucun tournoi prévu." : "";
-            
             renderAdminLists();
             calculateCompta();
         }
 
         function renderAdminLists() {
             const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
-            const filtered = db.membres.filter(m => (m.nom + " " + (m.prenom || "")).toLowerCase().includes(searchVal));
+            // AUCUN TRI (PAS DE REVERSE, PAS DE SORT)
+            const filtered = db.membres.filter(m => m.nom.toLowerCase().includes(searchVal));
+            
             document.getElementById('adm-m-list').innerHTML = filtered.map(m => `
                 <tr>
                     <td>${m.nom}</td>
@@ -379,7 +376,11 @@
                     <td>${m.tel || '-'}</td>
                     <td>${m.type}</td>
                     <td><button onclick="togglePay('${m.id}')" class="btn" style="background:${m.ok ? 'var(--accent)' : 'var(--danger)'}; padding:5px 10px; font-size:10px;">${m.ok ? 'PAYÉ' : 'À PAYER'}</button></td>
-                    <td><button onclick="delM('${m.id}')" class="btn-del">X</button></td>
+                    <td>
+                        <button onclick="editM('${m.id}')" class="btn-edit">✎</button>
+                        <button onclick="showRecu('${m.id}')" class="btn-edit" style="background:#f59e0b;">🧾</button>
+                        <button onclick="delM('${m.id}')" class="btn-del">X</button>
+                    </td>
                 </tr>
             `).join('');
         }
@@ -389,10 +390,28 @@
             db.membres.forEach(m => { if(m.ok) totalRecolte += (m.type === "Etudiant" ? 25 : 50); });
             let totalDepenses = 0;
             db.factures.forEach(f => totalDepenses += f.montant);
-
             document.getElementById('total-percu-compta').innerText = totalRecolte + "€";
             document.getElementById('solde-final').innerText = (totalRecolte - totalDepenses) + "€";
             document.getElementById('fact-list').innerHTML = db.factures.map(f => `<tr><td>${f.date}</td><td>${f.desc}</td><td>${f.montant}€</td><td><button onclick="delFacture('${f.id}')" class="btn-del">X</button></td></tr>`).reverse().join('');
+        }
+
+        function showRecu(id) {
+            const m = db.membres.find(x => x.id === id);
+            if(!m) return;
+            document.getElementById('recu-nom').innerText = m.nom;
+            document.getElementById('recu-montant').innerText = (m.type === "Etudiant" ? 25 : 50);
+            document.getElementById('recu-saison').innerText = db.y1 + "-" + db.y2;
+            document.getElementById('recu-date').innerText = new Date().toLocaleDateString();
+            document.getElementById('recu-modal').style.display = 'flex';
+        }
+
+        async function editM(id) {
+            const m = db.membres.find(x => x.id === id);
+            if(!m) return;
+            const n = prompt("Nouveau nom :", m.nom);
+            const e = prompt("Nouvel email :", m.email);
+            const t = prompt("Nouveau téléphone :", m.tel);
+            if(n) { m.nom = n; m.email = e; m.tel = t; await saveData(); }
         }
 
         async function togglePay(id) {
@@ -413,10 +432,8 @@
             const email = document.getElementById('m-email').value;
             const tel = document.getElementById('m-tel').value;
             const type = document.getElementById('m-type').value;
-
             db.membres.push({ id: Date.now().toString(), nom, email, tel, type, ok: false });
             await saveData();
-            
             document.getElementById('form-container').style.display = 'none';
             document.getElementById('msg-deja').style.display = 'block';
             document.getElementById('b-res-nom').innerText = nom;
