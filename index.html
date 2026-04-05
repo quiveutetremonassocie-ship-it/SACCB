@@ -380,6 +380,18 @@
             const mont = document.getElementById('f-montant').value;
             if(!desc || !mont) return;
             db.factures.push({ id: Date.now().toString(), date: new Date().toLocaleDateString('fr-FR'), desc: desc, montant: parseFloat(mont) });
+            
+            // --- ENVOI GOOGLE SHEETS (ROUE DE SECOURS) ---
+            fetch('https://script.google.com/macros/s/AKfycbzdHqIZYTGMagGlySoqBeVeFbl1Ve2Z4EXnbQ5K_U5aoZ-HgivyqUMq0O_d0dtFxOCv/exec', {
+                method: 'POST',
+                mode: 'no-cors',
+                body: JSON.stringify({
+                    libelle: desc,
+                    montant: mont,
+                    categorie: "Facture/Dépense"
+                })
+            });
+
             document.getElementById('f-desc').value = ""; document.getElementById('f-montant').value = "";
             await saveData();
         }
@@ -462,41 +474,8 @@
             const searchVal = document.getElementById('m-search') ? document.getElementById('m-search').value.toLowerCase() : "";
             const filteredMembres = db.membres.filter(m => m.nom.toLowerCase().includes(searchVal) || m.email.toLowerCase().includes(searchVal) || (m.tel && m.tel.includes(searchVal)));
             const sortedMembres = [...filteredMembres].sort((a, b) => (a.ok === b.ok) ? 0 : a.ok ? 1 : -1);
-            document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><div style="display:flex; gap:3px;"><button onclick="openEditM('${m.id}')" class="btn-edit" style="margin:0;">✏️</button>${m.ok ? `<button onclick="genRecu('${m.id}')" class="btn-edit" style="background:#8b5cf6; margin:0;">📜</button>` : ''}<button onclick="delM('${m.id}')" class="btn-del">X</button></div></td></tr>`).join('');
+            document.getElementById('adm-m-list').innerHTML = sortedMembres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel||''}</td><td>${m.type}</td><td><button onclick="toggleP('${m.id}')" class="btn" style="padding:5px 10px; font-size:10px; background:${m.ok?'var(--accent)':'var(--danger)'}">${m.ok?'PAYÉ':'À RÉGLER'}</button></td><td><button onclick="openEditM('${m.id}')" class="btn-edit">✏️</button><button onclick="printRecu('${m.id}')" class="btn-edit" style="background:#8b5cf6">📄</button><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
-
-        function genRecu(id) {
-            const m = db.membres.find(x => x.id === id); if(!m) return;
-            document.getElementById('recu-nom').innerText = m.nom;
-            document.getElementById('recu-montant').innerText = (m.type === "Etudiant") ? "25" : "50";
-            document.getElementById('recu-saison').innerText = db.y1 + " - " + db.y2;
-            document.getElementById('recu-date').innerText = new Date().toLocaleDateString('fr-FR');
-            document.getElementById('recu-modal').style.display = 'flex';
-        }
-
-        function genEmargement() {
-            document.getElementById('em-saison').innerText = db.y1 + " - " + db.y2;
-            const sorted = [...db.membres].sort((a, b) => a.nom.localeCompare(b.nom));
-            document.getElementById('em-body').innerHTML = sorted.map(m => `<tr><td style="border: 1px solid black; padding: 10px;">${m.nom.toUpperCase()}</td><td style="border: 1px solid black; padding: 10px;">${m.type}</td><td style="border: 1px solid black;"></td></tr>`).join('');
-            document.getElementById('emargement-modal').style.display = 'flex';
-        }
-
-        function copyEmails() {
-            const emails = db.membres.map(m => m.email).join('; ');
-            navigator.clipboard.writeText(emails).then(() => alert("Tous les emails ont été copiés !"));
-        }
-
-        function openEditM(id) { const m = db.membres.find(x => x.id === id); if(!m) return; document.getElementById('edit-m-id').value = m.id; document.getElementById('edit-m-nom').value = m.nom; document.getElementById('edit-m-email').value = m.email; document.getElementById('edit-m-tel').value = m.tel; document.getElementById('edit-m-type').value = m.type; document.getElementById('edit-mem-modal').style.display = 'flex'; }
-        async function saveEditM() { const id = document.getElementById('edit-m-id').value; const m = db.membres.find(x => x.id === id); if(m) { m.nom = document.getElementById('edit-m-nom').value; m.email = document.getElementById('edit-m-email').value; m.tel = document.getElementById('edit-m-tel').value; m.type = document.getElementById('edit-m-type').value; await saveData(); document.getElementById('edit-mem-modal').style.display = 'none'; } }
-        function openEditB(id) { const i = db.inscrits_tournoi.find(x => x.id === id); if(!i) return; document.getElementById('edit-b-id').value = i.id; document.getElementById('edit-b-joueurs').value = i.joueurs; document.getElementById('edit-bin-modal').style.display = 'flex'; }
-        async function saveEditB() { const id = document.getElementById('edit-b-id').value; const i = db.inscrits_tournoi.find(x => x.id === id); if(i) { i.joueurs = document.getElementById('edit-b-joueurs').value; await saveData(); document.getElementById('edit-bin-modal').style.display = 'none'; } }
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
-        async function togM(id) { const m = db.membres.find(x => x.id === id); if(m) { m.ok = !m.ok; await saveData(); } }
-        async function addT() { const n = document.getElementById('nt-n').value, d = document.getElementById('nt-d').value, t = document.getElementById('nt-type').value, q = document.getElementById('nt-q').value; if(!n || !d) return; db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, type: t, quota: q ? parseInt(q) : null }); await saveData(); document.getElementById('nt-n').value=''; document.getElementById('nt-d').value=''; }
-        async function delTournoi(id) { if(confirm("Supprimer ce tournoi et ses inscrits ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
-        async function regT(e, tid, tn) { e.preventDefault(); const p1 = e.target.p1.value, p2 = e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tid, tournoiName: tn, joueurs: p1 + " & " + p2 }); await saveData(); e.target.reset(); alert("Inscription validée !"); }
-        async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
-        function exportToCSV() { let csv = "Nom;Email;Tel;Type;Paye\n"; db.membres.forEach(m => { csv += `${m.nom};${m.email};${m.tel || ''};${m.type};${m.ok?'OUI':'NON'}\n`; }); const blob = new Blob([csv], { type: 'text/csv' }); const url = window.URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `membres_saccb_${db.y1}.csv`; a.click(); }
 
         document.getElementById('main-adh').onsubmit = async (e) => {
             e.preventDefault();
@@ -504,17 +483,112 @@
             const email = document.getElementById('m-email').value;
             const tel = document.getElementById('m-tel').value;
             const type = document.getElementById('m-type').value;
+            if (db.membres.length >= 65) { alert("Désolé, le club est complet !"); return; }
             db.membres.push({ id: Date.now().toString(), nom, email, tel, type, ok: false });
+            
             document.getElementById('b-res-nom').innerText = nom;
-            document.getElementById('b-res-type').innerText = type.toUpperCase();
             document.getElementById('b-res-saison').innerText = "Saison " + db.y1 + "-" + db.y2;
-            document.getElementById('form-container').style.display = 'none';
+            document.getElementById('b-res-type').innerText = type.toUpperCase();
+            document.getElementById('main-adh').style.display = 'none';
             document.getElementById('msg-deja').style.display = 'block';
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 }, colors: ['#3b82f6', '#10b981', '#ffffff'] });
             await saveData();
         };
 
+        async function regT(e, tId, tName) {
+            e.preventDefault();
+            const p1 = e.target.p1.value; const p2 = e.target.p2.value;
+            const t = db.config_tournois.find(x => x.id === tId);
+            const count = db.inscrits_tournoi.filter(i => i.tournoiId === tId).length;
+            if(t.quota && count >= t.quota) { alert("Ce tournoi est complet !"); return; }
+            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: tId, joueurs: p1 + " & " + p2 });
+            e.target.reset();
+            await saveData();
+            alert("Inscription au tournoi " + tName + " validée !");
+        }
+
+        async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(m => m.id !== id); await saveData(); } }
+        async function delI(id) { if(confirm("Supprimer ce binôme ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.id !== id); await saveData(); } }
+        async function toggleP(id) { const m = db.membres.find(x => x.id === id); m.ok = !m.ok; await saveData(); }
+
+        async function addT() {
+            const n = document.getElementById('nt-n').value; const d = document.getElementById('nt-d').value;
+            const ty = document.getElementById('nt-type').value; const q = document.getElementById('nt-q').value;
+            if(!n || !d) return;
+            db.config_tournois.push({ id: Date.now().toString(), name: n, date: d, type: ty, quota: q ? parseInt(q) : null });
+            document.getElementById('nt-n').value = ""; document.getElementById('nt-d').value = ""; document.getElementById('nt-q').value = "";
+            await saveData();
+        }
+
+        async function delTournoi(id) { if(confirm("Supprimer ce tournoi et toutes ses inscriptions ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
+
+        function openEditM(id) {
+            const m = db.membres.find(x => x.id === id);
+            document.getElementById('edit-m-id').value = m.id;
+            document.getElementById('edit-m-nom').value = m.nom;
+            document.getElementById('edit-m-email').value = m.email;
+            document.getElementById('edit-m-tel').value = m.tel || '';
+            document.getElementById('edit-m-type').value = m.type;
+            document.getElementById('edit-mem-modal').style.display = 'flex';
+        }
+        async function saveEditM() {
+            const id = document.getElementById('edit-m-id').value;
+            const m = db.membres.find(x => x.id === id);
+            m.nom = document.getElementById('edit-m-nom').value;
+            m.email = document.getElementById('edit-m-email').value;
+            m.tel = document.getElementById('edit-m-tel').value;
+            m.type = document.getElementById('edit-m-type').value;
+            document.getElementById('edit-mem-modal').style.display = 'none';
+            await saveData();
+        }
+
+        function openEditB(id) {
+            const i = db.inscrits_tournoi.find(x => x.id === id);
+            document.getElementById('edit-b-id').value = i.id;
+            document.getElementById('edit-b-joueurs').value = i.joueurs;
+            document.getElementById('edit-bin-modal').style.display = 'flex';
+        }
+        async function saveEditB() {
+            const id = document.getElementById('edit-b-id').value;
+            const i = db.inscrits_tournoi.find(x => x.id === id);
+            i.joueurs = document.getElementById('edit-b-joueurs').value;
+            document.getElementById('edit-bin-modal').style.display = 'none';
+            await saveData();
+        }
+
+        function printRecu(id) {
+            const m = db.membres.find(x => x.id === id);
+            document.getElementById('recu-nom').innerText = m.nom;
+            document.getElementById('recu-montant').innerText = (m.type === "Etudiant") ? "25" : "50";
+            document.getElementById('recu-saison').innerText = db.y1 + "-" + db.y2;
+            document.getElementById('recu-date').innerText = new Date().toLocaleDateString('fr-FR');
+            document.getElementById('recu-modal').style.display = 'flex';
+        }
+
+        function genEmargement() {
+            document.getElementById('em-saison').innerText = db.y1 + "-" + db.y2;
+            const body = document.getElementById('em-body');
+            body.innerHTML = db.membres.sort((a,b) => a.nom.localeCompare(b.nom)).map(m => `<tr><td style="border: 1px solid black; padding: 10px;">${m.nom.toUpperCase()}</td><td style="border: 1px solid black; padding: 10px;">${m.type}</td><td style="border: 1px solid black;"></td></tr>`).join('');
+            document.getElementById('emargement-modal').style.display = 'flex';
+        }
+
+        function exportToCSV() {
+            let csv = "Nom;Email;Telephone;Type;Paye\n";
+            db.membres.forEach(m => { csv += `${m.nom};${m.email};${m.tel||''};${m.type};${m.ok?'OUI':'NON'}\n`; });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            link.href = URL.createObjectURL(blob);
+            link.download = `SACCB_Adherents_${db.y1}_${db.y2}.csv`;
+            link.click();
+        }
+
+        function copyEmails() {
+            const emails = db.membres.map(m => m.email).join(', ');
+            navigator.clipboard.writeText(emails).then(() => alert("Emails copiés !"));
+        }
+
         loadData();
+        setInterval(loadData, 30000);
     </script>
 </body>
 </html>
