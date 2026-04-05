@@ -105,6 +105,7 @@
 
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
         <div class="card" style="max-width:300px; text-align:center;">
+            <input type="email" id="admin-user" placeholder="Email Admin">
             <input type="password" id="pass" placeholder="Code Admin">
             <button onclick="checkAdmin()" class="btn" style="margin-bottom:10px;">Entrer</button>
             <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444;">RETOUR</button>
@@ -156,6 +157,7 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
+        const ADMIN_EMAIL = "hernancm68@hotmail.com";
         const PASS = "43210";
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
 
@@ -227,7 +229,18 @@
         async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
         async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
-        function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
+        
+        function checkAdmin() { 
+            const user = document.getElementById('admin-user').value;
+            const pass = document.getElementById('pass').value;
+            if(user === ADMIN_EMAIL && pass === PASS) { 
+                document.getElementById('login-modal').style.display='none'; 
+                document.getElementById('admin-panel').style.display='block'; 
+            } else {
+                alert("Identifiants incorrects");
+            }
+        }
+
         function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
         
         document.getElementById('main-adh').onsubmit = async (e) => { 
