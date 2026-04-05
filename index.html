@@ -5,227 +5,29 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SACCB - Club de Badminton</title>
     <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600&display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <style>
-        :root {
-            --bg-dark: #0f172a;
-            --bg-card: #1e293b;
-            --primary: #3b82f6;
-            --accent: #10b981;
-            --text-main: #f8fafc;
-            --text-muted: #94a3b8;
-            --danger: #ef4444;
-        }
-
-        * {
-            box-sizing: border-box;
-            margin: 0;
-            padding: 0;
-        }
-
-        body {
-            background: var(--bg-dark);
-            color: var(--text-main);
-            font-family: 'Outfit', sans-serif;
-            line-height: 1.6;
-            scroll-behavior: smooth;
-        }
-
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 15px 30px;
-            background: rgba(15, 23, 42, 0.95);
-            backdrop-filter: blur(10px);
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-        }
-
-        .nav-logo {
-            font-family: 'Bebas Neue';
-            font-size: 32px;
-            color: var(--primary);
-            text-decoration: none;
-            letter-spacing: 2px;
-        }
-
-        .nav-links {
-            display: flex;
-            gap: 20px;
-            align-items: center;
-        }
-
-        .nav-links a {
-            color: var(--text-muted);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 600;
-            text-transform: uppercase;
-            transition: 0.3s;
-        }
-
-        .nav-links a:hover {
-            color: var(--primary);
-        }
-
-        section {
-            padding: 120px 20px 60px;
-            max-width: 1100px;
-            margin: 0 auto;
-        }
-
-        h2 {
-            font-family: 'Bebas Neue';
-            font-size: 48px;
-            margin-bottom: 30px;
-            color: var(--primary);
-            text-transform: uppercase;
-            letter-spacing: 1px;
-        }
-
-        .card {
-            background: var(--bg-card);
-            padding: 30px;
-            border-radius: 20px;
-            border: 1px solid rgba(255,255,255,0.1);
-            margin-bottom: 30px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-        }
-
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .info-item {
-            margin-bottom: 15px;
-        }
-
-        .info-label {
-            color: var(--text-muted);
-            font-size: 14px;
-            display: block;
-        }
-
-        .info-value {
-            font-size: 18px;
-            font-weight: 500;
-        }
-
-        .tournoi-card {
-            background: var(--bg-card);
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            border-left: 8px solid var(--accent);
-            position: relative;
-        }
-
-        .tournoi-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 20px;
-        }
-
-        .tournoi-badge {
-            background: var(--accent);
-            color: var(--bg-dark);
-            padding: 5px 12px;
-            border-radius: 50px;
-            font-weight: 700;
-            font-size: 12px;
-            text-transform: uppercase;
-        }
-
-        .liste-inscrits {
-            margin: 15px 0;
-            padding: 15px;
-            background: rgba(0,0,0,0.2);
-            border-radius: 10px;
-            font-size: 15px;
-        }
-
-        .liste-inscrits span {
-            display: block;
-            padding: 5px 0;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-
-        input, select {
-            width: 100%;
-            padding: 15px;
-            margin-bottom: 15px;
-            background: var(--bg-dark);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 10px;
-            font-family: inherit;
-        }
-
-        .btn {
-            background: var(--primary);
-            color: white;
-            border: none;
-            padding: 16px 30px;
-            border-radius: 10px;
-            cursor: pointer;
-            font-weight: 700;
-            width: 100%;
-            text-transform: uppercase;
-            transition: 0.3s;
-        }
-
-        .btn:hover {
-            opacity: 0.9;
-            transform: translateY(-2px);
-        }
-
-        .admin-panel {
-            display: none;
-            position: fixed;
-            inset: 0;
-            background: var(--bg-dark);
-            z-index: 2000;
-            overflow-y: auto;
-            padding: 30px;
-        }
-
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 10px;
-        }
-
-        th, td {
-            padding: 12px;
-            text-align: left;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
-            font-size: 14px;
-        }
-
-        .btn-del {
-            background: var(--danger);
-            padding: 5px 10px;
-            font-size: 11px;
-            color: white;
-            border: none;
-            border-radius: 5px;
-            cursor: pointer;
-        }
-
-        .group-header {
-            background: rgba(59, 130, 246, 0.2);
-            padding: 8px 12px;
-            font-weight: bold;
-            color: var(--primary);
-        }
+        :root { --bg-dark: #0f172a; --bg-card: #1e293b; --primary: #3b82f6; --accent: #10b981; --text-main: #f8fafc; --text-muted: #94a3b8; --danger: #ef4444; }
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { background: var(--bg-dark); color: var(--text-main); font-family: 'Outfit', sans-serif; line-height: 1.6; scroll-behavior: smooth; }
+        nav { position: fixed; top: 0; left: 0; right: 0; z-index: 1000; display: flex; align-items: center; justify-content: space-between; padding: 15px 30px; background: rgba(15, 23, 42, 0.95); backdrop-filter: blur(10px); border-bottom: 1px solid rgba(255,255,255,0.1); }
+        .nav-logo { font-family: 'Bebas Neue'; font-size: 32px; color: var(--primary); text-decoration: none; letter-spacing: 2px; }
+        .nav-links { display: flex; gap: 20px; align-items: center; }
+        .nav-links a { color: var(--text-muted); text-decoration: none; font-size: 13px; font-weight: 600; text-transform: uppercase; }
+        section { padding: 120px 20px 60px; max-width: 1100px; margin: 0 auto; }
+        h2 { font-family: 'Bebas Neue'; font-size: 48px; margin-bottom: 30px; color: var(--primary); text-transform: uppercase; }
+        .card { background: var(--bg-card); padding: 30px; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); margin-bottom: 30px; }
+        .tournoi-card { background: var(--bg-card); border-radius: 20px; padding: 30px; margin-bottom: 30px; border-left: 8px solid var(--accent); }
+        .liste-inscrits { margin: 15px 0; padding: 15px; background: rgba(0,0,0,0.2); border-radius: 10px; font-size: 15px; }
+        .liste-inscrits span { display: block; padding: 5px 0; border-bottom: 1px solid rgba(255,255,255,0.05); }
+        .liste-inscrits span:last-child { border-bottom: none; }
+        input, select { width: 100%; padding: 15px; margin-bottom: 15px; background: var(--bg-dark); border: 1px solid rgba(255,255,255,0.1); color: white; border-radius: 10px; }
+        .btn { background: var(--primary); color: white; border: none; padding: 16px 30px; border-radius: 10px; cursor: pointer; font-weight: 700; width: 100%; text-transform: uppercase; }
+        .contact-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 30px; margin-top: 40px; }
+        .admin-panel { display: none; position: fixed; inset: 0; background: var(--bg-dark); z-index: 2000; overflow-y: auto; padding: 30px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+        th, td { padding: 12px; text-align: left; border-bottom: 1px solid rgba(255,255,255,0.1); font-size: 14px; }
+        .btn-del { background: var(--danger); padding: 5px 10px; font-size: 11px; color: white; border: none; border-radius: 5px; cursor: pointer; }
+        .group-header { background: rgba(59, 130, 246, 0.2); padding: 8px 12px; font-weight: bold; color: var(--primary); }
     </style>
 </head>
 <body>
@@ -236,34 +38,33 @@
             <a href="#presentation">L'Asso</a>
             <a href="#tournois">Tournois</a>
             <a href="#inscription">Adhésion</a>
-            <button onclick="document.getElementById('login-modal').style.display='flex'" class="btn" style="width:auto; padding:10px 20px; font-size: 12px;">ADMIN</button>
+            <button onclick="document.getElementById('login-modal').style.display='flex'" class="btn" style="width:auto; padding:10px 20px;">ADMIN</button>
         </div>
     </nav>
 
     <section id="presentation">
         <h2>Qui sommes-nous ?</h2>
         <div class="card">
-            <p>Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
-            <p style="margin-top: 20px; color: var(--accent); font-weight: bold;">📍 Salle Paul Vatine, Sainte-Adresse</p>
+            <p style="font-size: 18px;">Le <strong>SACCB</strong> est le club de badminton de Sainte-Adresse. Un esprit convivial et du jeu pour tous les niveaux !</p>
+            <p style="margin-top: 20px; color: var(--accent); font-weight: bold;">📍 Salle Paul Vatine, 30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse</p>
         </div>
-        <div class="grid">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
             <div class="card">
-                <h3>🕒 Horaires</h3>
-                <p>Lundi : 18h30 - 22h30</p>
-                <p>Jeudi : 18h30 - 22h30</p>
-                <p>Samedi : 17h30 - 20h00</p>
+                <h3 style="color: var(--primary); font-family: 'Bebas Neue'; font-size: 30px;">🕒 Horaires</h3>
+                <p>Lundi & Jeudi : 18h30 - Fermeture</p>
+                <p>Samedi : 17h30 - Fermeture</p>
             </div>
             <div class="card">
-                <h3>💰 Tarifs</h3>
-                <p>Adulte : 50€</p>
-                <p>Étudiant / Jeune : 25€</p>
+                <h3 style="color: var(--accent); font-family: 'Bebas Neue'; font-size: 30px;">💰 Tarifs Annuels</h3>
+                <p>Adulte : 50€ / an</p>
+                <p>Étudiant : 25€ / an</p>
             </div>
         </div>
     </section>
 
     <section id="tournois">
         <h2>Tournois à venir</h2>
-        <div id="tournois-list">Chargement des tournois...</div>
+        <div id="tournois-list">Chargement...</div>
     </section>
 
     <section id="inscription">
@@ -275,167 +76,167 @@
                     <input type="text" id="m-nom" placeholder="Nom et Prénom" required>
                     <input type="email" id="m-email" placeholder="Email" required>
                     <input type="tel" id="m-tel" placeholder="Téléphone" required>
-                    <select id="m-type">
-                        <option value="Adulte">Adulte (50€)</option>
-                        <option value="Etudiant">Étudiant (25€)</option>
-                    </select>
+                    <select id="m-type"><option value="Adulte">Adulte (50€)</option><option value="Etudiant">Étudiant (25€)</option></select>
                     <button type="submit" class="btn">Valider mon inscription</button>
                 </form>
             </div>
-            <div id="msg-deja" style="display:none; text-align:center;">
-                <h3>✅ INSCRIPTION ENREGISTRÉE !</h3>
-                <p>Bienvenue au club !</p>
-            </div>
+            <div id="msg-deja" style="display:none; text-align:center;"><h3>✅ INSCRIPTION ENREGISTRÉE !</h3></div>
         </div>
     </section>
 
+    <footer style="padding: 80px 20px; background: #070b14; text-align: center;">
+        <h2 style="color: white; font-family: 'Bebas Neue';">Contactez-nous</h2>
+        <div class="contact-grid">
+            <div class="card">
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT</p>
+                <p style="font-size: 20px;">Hernan Camara</p>
+                <p>07 77 06 18 75</p>
+                <p style="font-size: 14px; color: var(--text-muted);">hernancm68@hotmail.com</p>
+            </div>
+            <div class="card">
+                <p style="color: var(--primary); font-weight: bold; margin-bottom: 10px;">PRÉSIDENT ADJOINT</p>
+                <p style="font-size: 20px;">Matthieu Demare</p>
+                <p>06 52 48 62 28</p>
+                <p style="font-size: 14px; color: var(--text-muted);">demare.matthieu@outlook.fr</p>
+            </div>
+        </div>
+        <p id="copy-annee" style="margin-top: 50px; color: var(--text-muted); font-size: 14px;"></p>
+    </footer>
+
     <div id="login-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:3000; align-items:center; justify-content:center;">
-        <div class="card" style="max-width:350px;">
-            <h3>Connexion Admin</h3>
-            <input type="email" id="admin-email" placeholder="Email">
-            <input type="password" id="admin-password" placeholder="Mot de passe">
-            <button onclick="handleLogin()" class="btn">Se connecter</button>
-            <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444; margin-top:10px;">Retour</button>
+        <div class="card" style="max-width:300px; text-align:center;">
+            <input type="password" id="pass" placeholder="Code Admin">
+            <button onclick="checkAdmin()" class="btn" style="margin-bottom:10px;">Entrer</button>
+            <button onclick="document.getElementById('login-modal').style.display='none'" class="btn" style="background:#444;">RETOUR</button>
         </div>
     </div>
 
     <div id="admin-panel" class="admin-panel">
         <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
             <h2>GESTION SACCB</h2>
-            <button onclick="handleLogout()" class="btn" style="width:auto; background:var(--danger);">Déconnexion</button>
+            <button onclick="document.getElementById('admin-panel').style.display='none'" class="btn" style="width:auto; background:var(--danger);">Fermer</button>
         </div>
         
-        <div class="card">
+        <div class="card" style="border:1px solid var(--accent);">
             <h3>📅 Période de la Saison</h3>
-            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                <input type="number" id="y1-input">
-                <input type="number" id="y2-input">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px;">
+                <input type="number" id="y1-input" placeholder="Ex: 2024">
+                <input type="number" id="y2-input" placeholder="Ex: 2025">
             </div>
-            <button onclick="updateSeason()" class="btn">Mettre à jour la saison</button>
-            <button onclick="resetMembres()" class="btn" style="background:var(--danger); margin-top:10px;">Réinitialiser les Adhérents</button>
+            <button onclick="updateSeason()" class="btn" style="background:var(--accent); margin-bottom:10px;">Mettre à jour la saison</button>
+            <button onclick="resetMembres()" class="btn" style="background:var(--danger);">⚠️ Réinitialiser les adhérents</button>
         </div>
 
+        <div class="card" style="border:1px solid var(--primary);"><h3>💾 Sauvegarde PC</h3><button onclick="exportToCSV()" class="btn" style="background:#8b5cf6; margin-top:10px;">Exporter les données (.csv)</button></div>
         <div class="card">
-            <h3>Nouveau Tournoi</h3>
+            <h3>Liste des Tournois</h3>
+            <div id="adm-t-list"></div>
+            <hr style="margin:20px 0; opacity:0.1;">
+            <h4>Nouveau Tournoi</h4>
             <input type="text" id="nt-n" placeholder="Nom du tournoi">
             <input type="text" id="nt-d" placeholder="Date">
             <select id="nt-type">
-                <option value="Mixte">Mixte</option>
-                <option value="Hommes">Hommes</option>
-                <option value="Femmes">Femmes</option>
+                <option value="">Type de double (Optionnel)</option>
+                <option value="Mixte">👫 Double Mixte</option>
+                <option value="Hommes">👬 Double Hommes</option>
+                <option value="Femmes">👭 Double Femmes</option>
             </select>
-            <input type="number" id="nt-q" placeholder="Quota max (0 si illimité)">
-            <button onclick="addT()" class="btn">Publier le tournoi</button>
+            <input type="number" id="nt-q" placeholder="Quota max doubles (vide = illimité)">
+            <button onclick="addT()" class="btn">Publier</button>
         </div>
-
+        
         <div class="card">
-            <h3>Inscriptions Tournois</h3>
+            <h3>Inscriptions Tournois (Groupées)</h3>
             <div id="adm-i-list-container"></div>
         </div>
 
-        <div class="card">
-            <h3>Adhérents Club</h3>
-            <table>
-                <thead><tr><th>Nom</th><th>Email</th><th>Actions</th></tr></thead>
-                <tbody id="adm-m-list"></tbody>
-            </table>
-        </div>
+        <div class="card"><h3>Adhérents Club</h3><table><thead><tr><th>Nom</th><th>Email</th><th>Tel</th><th>Type</th><th>Paiement</th><th>X</th></tr></thead><tbody id="adm-m-list"></tbody></table></div>
     </div>
 
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
-        // REMPLACE CETTE CLÉ PAR TA CLÉ eyJ... SI CELLE-CI NE MARCHE PAS
-        const SUPA_KEY = "Sb_publishable_5OKdNxeTZocY8lhZhvhStg_LeX6nVCT"; 
-        const _supabase = supabase.createClient(SUPA_URL, SUPA_KEY);
-        
+        const SUPA_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
+        const PASS = "43210";
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
 
-        async function handleLogin() {
-            const { error } = await _supabase.auth.signInWithPassword({
-                email: document.getElementById('admin-email').value,
-                password: document.getElementById('admin-password').value
-            });
-            if (error) alert("Erreur: " + error.message);
-            else { 
-                document.getElementById('login-modal').style.display='none'; 
-                document.getElementById('admin-panel').style.display='block'; 
-                loadData(); 
-            }
-        }
-
-        async function handleLogout() { await _supabase.auth.signOut(); location.reload(); }
-
         async function loadData() {
-            const { data } = await _supabase.from('saccb_db').select('data').order('created_at', { ascending: false }).limit(1);
-            if (data && data[0]) db = data[0].data;
-            updateUI();
+            try {
+                const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&order=created_at.desc&limit=1`, { headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` } });
+                const json = await res.json();
+                if (json[0] && json[0].data) db = json[0].data;
+                document.getElementById('y1-input').value = db.y1;
+                document.getElementById('y2-input').value = db.y2;
+                updateUI();
+            } catch (e) { console.error("Erreur sync"); }
         }
 
-        async function saveData() { await _supabase.from('saccb_db').insert([{ data: db }]); updateUI(); }
+        async function saveData() {
+            try {
+                await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { method: 'POST', headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ data: db }) });
+                updateUI();
+            } catch (e) { alert("Erreur sauvegarde."); }
+        }
+
+        async function updateSeason() { db.y1 = document.getElementById('y1-input').value; db.y2 = document.getElementById('y2-input').value; await saveData(); alert("Saison mise à jour !"); }
+        async function resetMembres() { if(confirm("Supprimer TOUS les adhérents ? Cette action est irréversible.")) { db.membres = []; await saveData(); } }
 
         function updateUI() {
             document.getElementById('titre-saison').innerText = "Inscription Saison " + db.y1 + "-" + db.y2;
+            document.getElementById('copy-annee').innerText = "© " + db.y1 + " SACCB — Sainte-Adresse";
+            
             const list = document.getElementById('tournois-list');
-            list.innerHTML = "";
+            const admTList = document.getElementById('adm-t-list');
+            list.innerHTML = db.config_tournois.length === 0 ? "Aucun tournoi prévu." : "";
+            admTList.innerHTML = "";
+            
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                const isFull = t.quota > 0 && inscrits.length >= t.quota;
-                list.innerHTML += `
-                    <div class="tournoi-card">
-                        <div class="tournoi-header">
-                            <h3>${t.name} - ${t.date}</h3>
-                            <span class="tournoi-badge">${t.type}</span>
-                        </div>
-                        <div class="liste-inscrits">${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('')}</div>
-                        ${isFull ? '<h3>COMPLET</h3>' : `
-                        <form onsubmit="regT(event, '${t.id}', '${t.name}')">
-                            <input name="p1" placeholder="Joueur 1" required>
-                            <input name="p2" placeholder="Joueur 2" required>
-                            <button type="submit" class="btn">S'inscrire</button>
-                        </form>`}
-                    </div>`;
+                const isFull = t.quota && inscrits.length >= t.quota;
+                const typeLabel = t.type ? ` <span style="font-size:14px; opacity:0.8;">(${t.type})</span>` : "";
+                const qMsg = t.quota ? `<br><small style="color:var(--accent)">Remplissage : ${inscrits.length} / ${t.quota} doubles</small>` : "";
+                
+                list.innerHTML += `<div class="tournoi-card"><h3>${t.name} - ${t.date}${typeLabel}${qMsg}</h3><div class="liste-inscrits"><strong>Binômes inscrits :</strong><br>${inscrits.map(i => `<span>✅ ${i.joueurs}</span>`).join('') || 'Aucun'}</div>${isFull ? '<h3 style="color:var(--danger);text-align:center">COMPLET</h3>' : `<form onsubmit="regT(event, '${t.id}', '${t.name}')"><div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;"><input type="text" name="p1" placeholder="Joueur 1" required><input type="text" name="p2" placeholder="Joueur 2" required></div><button type="submit" class="btn">S'inscrire</button></form>`}</div>`;
+                admTList.innerHTML += `<div style="display:flex;justify-content:space-between;padding:10px;border-bottom:1px solid #444;"><span>${t.name} (${t.type || 'N/C'})</span><button onclick="delTournoi('${t.id}')" class="btn-del">SUPPRIMER</button></div>`;
             });
-            
+
             const groupContainer = document.getElementById('adm-i-list-container');
             groupContainer.innerHTML = "";
             db.config_tournois.forEach(t => {
                 const inscrits = db.inscrits_tournoi.filter(i => i.tournoiId === t.id);
-                if(inscrits.length > 0) {
-                    let h = `<div class="group-header">${t.name}</div><table>`;
-                    inscrits.forEach(i => h += `<tr><td>${i.joueurs}</td><td><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`);
-                    groupContainer.innerHTML += h + `</table><br>`;
+                if (inscrits.length > 0) {
+                    let html = `<div class="group-header">${t.name}</div><table>`;
+                    inscrits.forEach(i => { html += `<tr><td>${i.joueurs}</td><td style="width:50px;"><button onclick="delI('${i.id}')" class="btn-del">X</button></td></tr>`; });
+                    html += `</table><br>`;
+                    groupContainer.innerHTML += html;
                 }
             });
+            if(groupContainer.innerHTML === "") groupContainer.innerHTML = "<p>Aucune inscription enregistrée.</p>";
 
             document.getElementById('quota-msg').innerText = "Places restantes au club : " + (65 - db.membres.length);
-            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td><button onclick="delM('${m.id}')" class="btn-del">Supprimer</button></td></tr>`).join('');
+            document.getElementById('adm-m-list').innerHTML = db.membres.map(m => `<tr><td>${m.nom}</td><td>${m.email}</td><td>${m.tel || '-'}</td><td>${m.type}</td><td><button onclick="togM('${m.id}')" style="background:${m.ok?'var(--accent)':'#444'};color:white;border:none;padding:5px;border-radius:5px;">${m.ok?'OUI':'NON'}</button></td><td><button onclick="delM('${m.id}')" class="btn-del">X</button></td></tr>`).join('');
         }
 
-        async function regT(e, id, name) { 
-            e.preventDefault(); 
-            db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: e.target.p1.value + " & " + e.target.p2.value }); 
-            await saveData(); 
-            e.target.reset(); 
-        }
-
+        async function regT(e, id, name) { e.preventDefault(); const binome = e.target.p1.value + " & " + e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: binome, ok: false }); await saveData(); e.target.reset(); }
         async function addT() { 
-            db.config_tournois.push({id: Date.now().toString(), name:document.getElementById('nt-n').value, date:document.getElementById('nt-d').value, type:document.getElementById('nt-type').value, quota:parseInt(document.getElementById('nt-q').value)}); 
-            await saveData(); 
+            const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'), ty=document.getElementById('nt-type'); 
+            if(!n.value) return; 
+            db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, type: ty.value, quota: q.value ? parseInt(q.value) : null}); 
+            await saveData(); n.value=""; d.value=""; q.value=""; ty.value="";
         }
-
-        async function updateSeason() { db.y1=document.getElementById('y1-input').value; db.y2=document.getElementById('y2-input').value; await saveData(); }
-        async function delI(id) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); }
-        async function delM(id) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); }
-        async function resetMembres() { if(confirm("Vider la liste ?")) { db.membres=[]; await saveData(); } }
-
-        document.getElementById('main-adh').onsubmit = async (e) => {
-            e.preventDefault();
-            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value });
-            document.getElementById('form-container').style.display='none';
-            document.getElementById('msg-deja').style.display='block';
-            await saveData();
+        async function delTournoi(id) { if(confirm("Supprimer ce tournoi ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
+        async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
+        async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
+        async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
+        function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
+        function exportToCSV() { let csv = "--- ADHERENTS ---\nNom,Email,Tel,Type,Paye\n" + db.membres.map(m => `${m.nom},${m.email},${m.tel},${m.type},${m.ok?'OUI':'NON'}`).join("\n") + "\n\n--- TOURNOIS ---\nTournoi,Binome\n" + db.inscrits_tournoi.map(i => `${i.tournoiName},${i.joueurs}`).join("\n"); const link = document.createElement("a"); link.setAttribute("href", encodeURI("data:text/csv;charset=utf-8," + csv)); link.setAttribute("download", "SACCB_Export.csv"); document.body.appendChild(link); link.click(); document.body.removeChild(link); }
+        
+        document.getElementById('main-adh').onsubmit = async (e) => { 
+            e.preventDefault(); 
+            db.membres.push({ id: Date.now().toString(), nom: document.getElementById('m-nom').value, email: document.getElementById('m-email').value, tel: document.getElementById('m-tel').value, type: document.getElementById('m-type').value, ok: false }); 
+            document.getElementById('form-container').style.display='none'; 
+            document.getElementById('msg-deja').style.display='block'; 
+            await saveData(); 
         };
-
         loadData();
     </script>
 </body>
