@@ -157,7 +157,7 @@
     <script>
         const SUPA_URL = "https://jsceiujlopxgsjlxbvyu.supabase.co";
         const SUPA_KEY = "EyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImpzY2VpdWpsb3B4Z3NqbHhidnl1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzUzMTk4NDgsImV4cCI6MjA5MDg5NTg0OH0.4cjGuVhGC1qjtrT4jtsK4vK25_C50N5og4z3KLmC8po";
-        const ADMIN_EMAIL = "hernancm68@hotmail.com";
+        const ADMIN_EMAILS = ["hernancm68@hotmail.com", "gabin.binay@gmail.com"];
         const PASS = "43210";
         let db = { membres: [], inscrits_tournoi: [], config_tournois: [], y1: 2024, y2: 2025 };
 
@@ -231,9 +231,9 @@
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
         
         function checkAdmin() { 
-            const user = document.getElementById('admin-user').value;
+            const user = document.getElementById('admin-user').value.toLowerCase();
             const pass = document.getElementById('pass').value;
-            if(user === ADMIN_EMAIL && pass === PASS) { 
+            if(ADMIN_EMAILS.includes(user) && pass === PASS) { 
                 document.getElementById('login-modal').style.display='none'; 
                 document.getElementById('admin-panel').style.display='block'; 
             } else {
