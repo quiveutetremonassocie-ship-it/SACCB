@@ -135,7 +135,7 @@
             try {
                 await fetch(`${SUPA_URL}/rest/v1/saccb_db`, { method: 'POST', headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}`, "Content-Type": "application/json", "Prefer": "return=minimal" }, body: JSON.stringify({ data: db }) });
                 updateUI();
-            } catch (e) { alert("Erreur serveur Supabase."); }
+            } catch (e) { alert("Erreur sauvegarde."); }
         }
 
         function updateUI() {
@@ -161,9 +161,14 @@
 
         async function regT(e, id, name) { e.preventDefault(); const binome = e.target.p1.value + " & " + e.target.p2.value; db.inscrits_tournoi.push({ id: Date.now().toString(), tournoiId: id, tournoiName: name, joueurs: binome, ok: false }); await saveData(); e.target.reset(); }
         async function addT() { const n=document.getElementById('nt-n'), d=document.getElementById('nt-d'), q=document.getElementById('nt-q'); if(!n.value) return; db.config_tournois.push({id: Date.now().toString(), name:n.value, date:d.value, quota: q.value ? parseInt(q.value) : null}); await saveData(); n.value=""; d.value=""; q.value=""; }
-        async function delTournoi(id) { if(confirm("Supprimer ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
-        async function delI(id) { if(confirm("Supprimer ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x=>x.id!==id); await saveData(); } }
-        async function delM(id) { if(confirm("Supprimer ?")) { db.membres = db.membres.filter(x=>x.id!==id); await saveData(); } }
+        
+        // --- CORRECTION SUPPRESSION TOURNOI ---
+        async function delTournoi(id) { if(confirm("Supprimer ce tournoi ?")) { db.config_tournois = db.config_tournois.filter(t => t.id !== id); db.inscrits_tournoi = db.inscrits_tournoi.filter(i => i.tournoiId !== id); await saveData(); } }
+        
+        // --- CORRECTION SUPPRESSION PERSONNES ---
+        async function delI(id) { if(confirm("Supprimer cette inscription ?")) { db.inscrits_tournoi = db.inscrits_tournoi.filter(x => x.id !== id); await saveData(); } }
+        async function delM(id) { if(confirm("Supprimer cet adhérent ?")) { db.membres = db.membres.filter(x => x.id !== id); await saveData(); } }
+        
         async function togT(id) { const x=db.inscrits_tournoi.find(i=>i.id===id); if(x){x.ok=!x.ok; await saveData();}}
         async function togM(id) { const x=db.membres.find(m=>m.id===id); if(x){x.ok=!x.ok; await saveData();}}
         function checkAdmin() { if(document.getElementById('pass').value === PASS) { document.getElementById('login-modal').style.display='none'; document.getElementById('admin-panel').style.display='block'; } }
