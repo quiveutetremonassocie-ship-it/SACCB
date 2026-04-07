@@ -159,6 +159,17 @@
   </div>
 </div>
 
+<!-- MODAL RESET MOT DE PASSE -->
+<div id="reset-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.95); z-index:6000; align-items:center; justify-content:center;">
+  <div class="card" style="max-width:360px; text-align:center;">
+    <h3 style="margin-bottom:20px; color:var(--primary);">🔐 Nouveau mot de passe</h3>
+    <p style="color:var(--text-muted); font-size:14px; margin-bottom:20px;">Choisissez un nouveau mot de passe pour votre compte admin.</p>
+    <input type="password" id="new-pass-1" placeholder="Nouveau mot de passe" style="margin-bottom:10px;">
+    <input type="password" id="new-pass-2" placeholder="Confirmer le mot de passe">
+    <button onclick="doResetPassword()" class="btn" style="margin-bottom:10px;">Enregistrer</button>
+  </div>
+</div>
+
 <!-- PANEL ADMIN -->
 <div id="admin-panel" class="admin-panel">
   <div style="display:flex; justify-content:space-between; margin-bottom:30px;">
@@ -773,10 +784,41 @@
   });
 
   // =============================================
+  // RESET MOT DE PASSE (lien email Supabase)
+  // =============================================
+  async function doResetPassword() {
+    const p1 = document.getElementById('new-pass-1').value;
+    const p2 = document.getElementById('new-pass-2').value;
+    if (!p1 || p1.length < 6) { alert("Le mot de passe doit faire au moins 6 caractères."); return; }
+    if (p1 !== p2) { alert("Les mots de passe ne correspondent pas."); return; }
+    const { error } = await supabaseClient.auth.updateUser({ password: p1 });
+    if (error) {
+      alert("Erreur : " + error.message);
+    } else {
+      alert("✅ Mot de passe mis à jour ! Vous pouvez maintenant vous connecter.");
+      document.getElementById('reset-modal').style.display = 'none';
+      // Nettoyer le fragment de l'URL
+      history.replaceState(null, '', window.location.pathname);
+    }
+  }
+
+  // =============================================
   // INITIALISATION — données publiques uniquement
   // Les données des membres ne sont JAMAIS chargées
   // sans authentification admin préalable
   // =============================================
+
+  // Détecter un lien de reset mot de passe Supabase
+  (function checkRecoveryToken() {
+    const hash = window.location.hash;
+    if (hash.includes('type=recovery') && hash.includes('access_token')) {
+      // Extraire et définir la session Supabase depuis le fragment
+      supabaseClient.auth.getSession().then(() => {
+        document.getElementById('reset-modal').style.display = 'flex';
+      });
+    }
+  })();
+
   loadPublicData();
 </script>
 </body>
