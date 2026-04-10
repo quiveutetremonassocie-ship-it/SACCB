@@ -1,0 +1,106 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700&display=swap");
+
+:root {
+  --bg-dark: #0a0f1f;
+  --bg-card: #111a2e;
+  --primary: #3b82f6;
+  --accent: #10b981;
+  --text-main: #f8fafc;
+  --text-muted: #94a3b8;
+  --danger: #ef4444;
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  background: var(--bg-dark);
+  color: var(--text-main);
+  font-family: "Outfit", system-ui, sans-serif;
+  scroll-behavior: smooth;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Fond global : image badminton + overlay sombre + grille animée */
+body {
+  position: relative;
+  min-height: 100vh;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background-image: url("https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=1920&q=80");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+  filter: brightness(0.25) saturate(1.1);
+  z-index: -2;
+}
+
+body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(ellipse at top left, rgba(59,130,246,0.15), transparent 50%),
+    radial-gradient(ellipse at bottom right, rgba(16,185,129,0.12), transparent 50%),
+    linear-gradient(180deg, rgba(10,15,31,0.85) 0%, rgba(10,15,31,0.92) 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+@layer components {
+  .glass {
+    @apply bg-white/[0.04] backdrop-blur-xl border border-white/10 rounded-2xl shadow-2xl;
+  }
+  .glass-strong {
+    @apply bg-white/[0.07] backdrop-blur-2xl border border-white/15 rounded-2xl shadow-2xl;
+  }
+  .btn {
+    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-semibold uppercase tracking-wide text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+  .btn-primary {
+    @apply btn text-white bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-400 hover:to-blue-500 shadow-lg shadow-blue-600/30 hover:shadow-blue-500/50 hover:-translate-y-0.5;
+  }
+  .btn-accent {
+    @apply btn text-white bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 shadow-lg shadow-emerald-600/30 hover:-translate-y-0.5;
+  }
+  .btn-danger {
+    @apply btn text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-lg shadow-red-600/30 hover:-translate-y-0.5;
+  }
+  .btn-ghost {
+    @apply btn text-white bg-white/5 border border-white/10 hover:bg-white/10;
+  }
+  .input {
+    @apply w-full px-4 py-3 rounded-xl bg-white/5 border border-white/10 text-white placeholder-white/40 focus:outline-none focus:border-blue-500 focus:bg-white/10 transition;
+  }
+  .label {
+    @apply text-xs uppercase tracking-widest text-white/50 font-semibold mb-1 block;
+  }
+  .h-display {
+    @apply font-display tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-blue-400 via-blue-300 to-emerald-400;
+  }
+  .section-pad {
+    @apply max-w-6xl mx-auto px-6 py-20;
+  }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }
+::-webkit-scrollbar-thumb { background: rgba(59,130,246,0.4); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(59,130,246,0.6); }
+
+/* Print pour reçu et émargement */
+@media print {
+  body * { visibility: hidden; }
+  body::before, body::after { display: none; }
+  .printable, .printable * { visibility: visible; }
+  .printable { position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; }
+  .no-print { display: none !important; }
+}
