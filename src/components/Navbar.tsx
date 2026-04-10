@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Menu, X, Shield } from "lucide-react";
+import Shuttlecock from "./Shuttlecock";
 
 export default function Navbar({ onAdmin }: { onAdmin: () => void }) {
   const [scrolled, setScrolled] = useState(false);
@@ -15,6 +16,8 @@ export default function Navbar({ onAdmin }: { onAdmin: () => void }) {
 
   const links = [
     { href: "#presentation", label: "L'Asso" },
+    { href: "#actualites", label: "Actus" },
+    { href: "#horaires", label: "Horaires" },
     { href: "#tournois", label: "Tournois" },
     { href: "#inscription", label: "Adhésion" },
     { href: "#contact", label: "Contact" },
@@ -30,10 +33,12 @@ export default function Navbar({ onAdmin }: { onAdmin: () => void }) {
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <a href="#" className="flex items-center gap-2 group">
-          <span className="w-9 h-9 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/30 group-hover:scale-110 transition">
-            <span className="text-white font-display text-lg">S</span>
+          <span className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 via-blue-500 to-emerald-500 flex items-center justify-center shadow-lg shadow-blue-500/40 group-hover:scale-110 group-hover:rotate-3 transition">
+            <Shuttlecock className="w-6 h-6 text-white" color="white" />
           </span>
-          <span className="font-display text-2xl tracking-widest text-white">SACCB</span>
+          <span className="font-display text-2xl tracking-widest text-white">
+            SACCB
+          </span>
         </a>
 
         <div className="hidden md:flex items-center gap-8">

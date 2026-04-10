@@ -54,7 +54,8 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
   const current = actualites[index];
 
   return (
-    <section id="actualites" className="section-pad">
+    <section id="actualites" className="bg-section-wrap bg-news relative">
+      <div className="section-pad relative">
       <motion.div
         initial={{ opacity: 0, y: 30 }}
         whileInView={{ opacity: 1, y: 0 }}
@@ -62,9 +63,10 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
         transition={{ duration: 0.6 }}
         className="text-center mb-10"
       >
-        <p className="text-xs uppercase tracking-widest text-amber-400 font-semibold mb-3">
-          En ce moment
-        </p>
+        <div className="sport-label mb-5">
+          <span className="sport-label-dot" />
+          <span className="sport-label-text text-amber-300">En ce moment</span>
+        </div>
         <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Actualités</h2>
         <p className="text-white/60 max-w-2xl mx-auto">
           Retrouvez ici les dernières nouvelles du club, événements et moments forts.
@@ -212,6 +214,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
           </motion.div>
         )}
       </AnimatePresence>
+      </div>
     </section>
   );
 }

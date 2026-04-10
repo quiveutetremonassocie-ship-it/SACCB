@@ -1,26 +1,48 @@
 "use client";
 
 import { motion } from "framer-motion";
+import Shuttlecock from "./Shuttlecock";
 
 export default function Presentation() {
   return (
-    <section id="presentation" className="section-pad">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        whileInView={{ opacity: 1, y: 0 }}
-        viewport={{ once: true }}
-        transition={{ duration: 0.6 }}
-        className="text-center"
-      >
-        <p className="text-xs uppercase tracking-widest text-emerald-400 font-semibold mb-3">
-          Le club
-        </p>
-        <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Qui sommes-nous ?</h2>
-        <p className="text-white/60 max-w-2xl mx-auto">
-          Le SACCB est le club de badminton de Sainte-Adresse. Un esprit convivial, du jeu pour tous
-          les niveaux, et une équipe accueillante.
-        </p>
-      </motion.div>
+    <section id="presentation" className="bg-section-wrap bg-schedule relative">
+      <div className="section-pad relative">
+        {/* Décor shuttlecocks */}
+        <Shuttlecock
+          className="absolute top-10 -left-4 w-24 h-24 text-blue-400/15 animate-float-rev hidden md:block"
+          color="#60a5fa"
+        />
+        <Shuttlecock
+          className="absolute bottom-10 -right-4 w-28 h-28 text-emerald-400/15 animate-float hidden md:block"
+          color="#34d399"
+        />
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center max-w-3xl mx-auto relative"
+        >
+          <div className="sport-label mb-5">
+            <span className="sport-label-dot" />
+            <span className="sport-label-text text-emerald-300">Le club</span>
+          </div>
+          <h2 className="font-display text-6xl md:text-7xl h-display mb-6">Qui sommes-nous ?</h2>
+          <p className="text-white/70 text-lg leading-relaxed">
+            Le <span className="text-white font-semibold">SACCB</span> est le club de badminton de
+            Sainte-Adresse. Un esprit convivial, du jeu pour tous les niveaux et une équipe
+            accueillante qui vit au rythme du volant depuis plusieurs saisons.
+          </p>
+
+          {/* Séparateur "court" */}
+          <div className="flex items-center justify-center gap-4 mt-10">
+            <span className="h-px w-16 bg-gradient-to-r from-transparent to-yellow-400/50" />
+            <Shuttlecock className="w-6 h-6 text-yellow-400" color="#facc15" />
+            <span className="h-px w-16 bg-gradient-to-l from-transparent to-yellow-400/50" />
+          </div>
+        </motion.div>
+      </div>
     </section>
   );
 }

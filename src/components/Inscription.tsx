@@ -61,9 +61,13 @@ export default function Inscription({
   }
 
   return (
-    <section id="inscription" className="section-pad">
+    <section id="inscription" className="bg-section-wrap bg-signup relative">
+      <div className="section-pad relative">
       <div className="text-center mb-14">
-        <p className="text-xs uppercase tracking-widest text-emerald-400 font-semibold mb-3">Adhésion</p>
+        <div className="sport-label mb-5">
+          <span className="sport-label-dot" />
+          <span className="sport-label-text text-emerald-300">Adhésion</span>
+        </div>
         <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
           Saison {db.y1}–{db.y2}
         </h2>
@@ -123,6 +127,7 @@ export default function Inscription({
           </form>
         )}
       </motion.div>
+      </div>
     </section>
   );
 }

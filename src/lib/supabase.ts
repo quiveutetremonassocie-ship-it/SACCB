@@ -8,7 +8,7 @@ export const SHEETS_WEBHOOK =
   "https://script.google.com/macros/s/AKfycbzdHqIZYTGMagGlySoqBeVeFbl1Ve2Z4EXnbQ5K_U5aoZ-HgivyqUMq0O_d0dtFxOCv/exec";
 
 export const FACTURE_BUCKET = "factures";
-export const ACTU_BUCKET = "actualites";
+export const ACTU_BUCKET = "actualities";
 
 export const supabaseClient = createClient(SUPA_URL, SUPA_KEY, {
   auth: {

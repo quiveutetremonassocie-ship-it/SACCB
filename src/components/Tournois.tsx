@@ -11,9 +11,13 @@ export default function Tournois({ db }: { db: DB }) {
   const tournois = db.config_tournois ?? [];
 
   return (
-    <section id="tournois" className="section-pad">
+    <section id="tournois" className="bg-section-wrap bg-tournament relative">
+      <div className="section-pad relative">
       <div className="text-center mb-14">
-        <p className="text-xs uppercase tracking-widest text-blue-400 font-semibold mb-3">Compétitions</p>
+        <div className="sport-label mb-5">
+          <span className="sport-label-dot" />
+          <span className="sport-label-text text-yellow-300">Compétitions</span>
+        </div>
         <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Tournois à venir</h2>
         <p className="text-white/60 max-w-2xl mx-auto">
           Inscrivez votre binôme aux prochains tournois du club.
@@ -21,7 +25,7 @@ export default function Tournois({ db }: { db: DB }) {
       </div>
 
       {tournois.length === 0 ? (
-        <div className="glass p-10 text-center text-white/60">
+        <div className="glass-sport p-10 text-center text-white/60">
           <Trophy className="w-12 h-12 mx-auto mb-4 text-white/30" />
           Aucun tournoi prévu pour le moment.
         </div>
@@ -33,6 +37,7 @@ export default function Tournois({ db }: { db: DB }) {
           })}
         </div>
       )}
+      </div>
     </section>
   );
 }
@@ -89,7 +94,7 @@ function TournoiCard({ t, inscrits }: { t: any; inscrits: any[] }) {
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true }}
       transition={{ duration: 0.5 }}
-      className="glass overflow-hidden"
+      className="glass-sport overflow-hidden"
     >
       <div className="relative p-7 border-l-4 border-emerald-500">
         <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
