@@ -36,11 +36,21 @@ export type InscritTournoi = {
   joueurs: string;
 };
 
+export type Actualite = {
+  id: string;
+  title: string;
+  description: string;
+  imageUrl: string;
+  imagePath?: string; // chemin dans Supabase Storage (pour pouvoir supprimer)
+  createdAt: string;
+};
+
 export type DB = {
   membres: Membre[];
   factures: Facture[];
   inscrits_tournoi: InscritTournoi[];
   config_tournois: Tournoi[];
+  actualites: Actualite[];
   y1: number;
   y2: number;
   insc_open: boolean;

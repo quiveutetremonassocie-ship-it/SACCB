@@ -9,6 +9,7 @@ import StatsAdhesions from "./StatsAdhesions";
 import TournoisAdmin from "./TournoisAdmin";
 import InscriptionsAdmin from "./InscriptionsAdmin";
 import MembresAdmin from "./MembresAdmin";
+import ActualitesAdmin from "./ActualitesAdmin";
 import RecuModal from "./RecuModal";
 import EmargementModal from "./EmargementModal";
 import EditMembreModal from "./EditMembreModal";
@@ -108,6 +109,9 @@ export default function AdminPanel({
             </div>
           </div>
 
+          <div className="lg:col-span-2">
+            <ActualitesAdmin db={db} onPersist={onPersist} />
+          </div>
           <div className="lg:col-span-2">
             <TournoisAdmin db={db} onPersist={onPersist} />
           </div>

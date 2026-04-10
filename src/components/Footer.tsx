@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Mail, Phone, User } from "lucide-react";
 
 export default function Footer({ year }: { year: number }) {
@@ -11,22 +12,34 @@ export default function Footer({ year }: { year: number }) {
           <h2 className="font-display text-5xl h-display">Contactez-nous</h2>
         </div>
 
-        <div className="grid md:grid-cols-2 gap-6 max-w-3xl mx-auto">
+        <div className="max-w-md mx-auto">
           <ContactCard
             role="Président"
             name="Hernan Camara"
             phone="07 77 06 18 75"
             email="hernancm68@hotmail.com"
           />
-          <ContactCard
-            role="Président adjoint"
-            name="Matthieu Demare"
-            phone="06 52 48 62 28"
-            email="demare.matthieu@outlook.fr"
-          />
         </div>
 
-        <p className="text-center mt-16 text-xs text-white/40">
+        <div className="mt-16 pt-8 border-t border-white/5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/50">
+          <Link href="/mentions-legales" className="hover:text-white transition">
+            Mentions légales
+          </Link>
+          <span className="text-white/20">•</span>
+          <Link href="/cgu" className="hover:text-white transition">
+            CGU
+          </Link>
+          <span className="text-white/20">•</span>
+          <Link href="/cgv" className="hover:text-white transition">
+            CGV
+          </Link>
+          <span className="text-white/20">•</span>
+          <Link href="/politique-confidentialite" className="hover:text-white transition">
+            Politique de confidentialité
+          </Link>
+        </div>
+
+        <p className="text-center mt-6 text-xs text-white/40">
           © {year} SACCB — Sainte-Adresse · Salle Paul Vatine
         </p>
       </div>

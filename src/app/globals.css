@@ -90,6 +90,17 @@ body::after {
   }
 }
 
+/* Pages légales */
+.legal-content h2 {
+  @apply font-display text-xl md:text-2xl tracking-wider text-white mt-8 mb-3 first:mt-0;
+}
+.legal-content section + section { @apply mt-2; }
+.legal-content p { @apply text-white/75 leading-relaxed mb-3; }
+.legal-content ul { @apply list-disc list-outside pl-5 space-y-1.5 text-white/75 mb-4; }
+.legal-content a { @apply text-blue-400 hover:text-blue-300 underline underline-offset-2; }
+.legal-content strong { @apply text-white font-semibold; }
+.legal-content em { @apply text-amber-300 not-italic bg-amber-500/10 px-2 py-0.5 rounded; }
+
 /* Scrollbar */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: rgba(255,255,255,0.02); }

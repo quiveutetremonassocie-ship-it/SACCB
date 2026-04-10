@@ -7,6 +7,8 @@ import { supabaseClient } from "@/lib/supabase";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Presentation from "./Presentation";
+import Actualites from "./Actualites";
+import Horaires from "./Horaires";
 import Tournois from "./Tournois";
 import Inscription from "./Inscription";
 import Footer from "./Footer";
@@ -88,6 +90,8 @@ export default function Site() {
       <main>
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />
         <Presentation />
+        <Actualites actualites={db.actualites || []} />
+        <Horaires />
         <Tournois db={db} />
         <Inscription
           db={db}

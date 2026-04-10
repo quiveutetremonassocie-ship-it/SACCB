@@ -6,6 +6,7 @@ export const emptyDB = (): DB => ({
   factures: [],
   inscrits_tournoi: [],
   config_tournois: [],
+  actualites: [],
   y1: 2024,
   y2: 2025,
   insc_open: true,
@@ -23,6 +24,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     y2: d.y2 ?? 2025,
     config_tournois: d.config_tournois ?? [],
     inscrits_tournoi: d.inscrits_tournoi ?? [],
+    actualites: d.actualites ?? [],
     membresCount: (d.membres || []).length,
   };
 }
@@ -40,6 +42,7 @@ export async function fetchAdminDB(): Promise<DB | null> {
     ...emptyDB(),
     ...d,
     factures: d.factures ?? [],
+    actualites: d.actualites ?? [],
     insc_open: d.insc_open ?? true,
   };
 }
