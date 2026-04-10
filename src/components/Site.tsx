@@ -49,9 +49,26 @@ export default function Site() {
       const hash = window.location.hash;
       if (hash.includes("type=recovery") && hash.includes("access_token")) {
         supabaseClient.auth.getSession().then(() => setResetOpen(true));
+        return;
       }
+      // Auto-restauration de session admin (cookie persistant)
+      supabaseClient.auth.getSession().then(({ data }) => {
+        if (data.session) {
+          setAdminOpen(true);
+          refreshAdmin();
+        }
+      });
     }
-  }, [refreshPublic]);
+  }, [refreshPublic, refreshAdmin]);
+
+  // Bloque le scroll du body quand le panel admin est ouvert
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    document.body.style.overflow = adminOpen ? "hidden" : "";
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [adminOpen]);
 
   const onLoginSuccess = async () => {
     setLoginOpen(false);
@@ -69,7 +86,7 @@ export default function Site() {
     <>
       <Navbar onAdmin={() => setLoginOpen(true)} />
       <main>
-        <Hero seasonY1={db.y1} seasonY2={db.y2} />
+        <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />
         <Presentation />
         <Tournois db={db} />
         <Inscription

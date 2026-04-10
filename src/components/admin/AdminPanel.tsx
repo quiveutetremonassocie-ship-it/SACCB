@@ -76,7 +76,7 @@ export default function AdminPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-[2000] bg-bgdark/98 backdrop-blur-2xl overflow-y-auto">
+    <div className="fixed inset-0 z-[2000] bg-bgdark overflow-y-auto">
       <div className="max-w-6xl mx-auto p-6 md:p-10">
         <div className="flex items-center justify-between mb-8 sticky top-0 z-10 -mx-6 px-6 py-4 bg-bgdark/95 backdrop-blur-xl border-b border-white/10">
           <div>

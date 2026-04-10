@@ -3,7 +3,15 @@
 import { motion } from "framer-motion";
 import { ChevronDown, MapPin, Trophy } from "lucide-react";
 
-export default function Hero({ seasonY1, seasonY2 }: { seasonY1: number; seasonY2: number }) {
+export default function Hero({
+  seasonY1,
+  seasonY2,
+  inscOpen,
+}: {
+  seasonY1: number;
+  seasonY2: number;
+  inscOpen: boolean;
+}) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24">
       {/* Particules / orbes flottants */}
@@ -20,11 +28,19 @@ export default function Hero({ seasonY1, seasonY2 }: { seasonY1: number; seasonY
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.6 }}
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/5 border border-white/10 backdrop-blur-md mb-8"
+          className={`inline-flex items-center gap-2 px-4 py-2 rounded-full border backdrop-blur-md mb-8 ${
+            inscOpen
+              ? "bg-emerald-500/10 border-emerald-400/30"
+              : "bg-red-500/10 border-red-400/30"
+          }`}
         >
-          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+          <span
+            className={`w-2 h-2 rounded-full animate-pulse ${
+              inscOpen ? "bg-emerald-400" : "bg-red-400"
+            }`}
+          />
           <span className="text-xs uppercase tracking-widest text-white/80">
-            Saison {seasonY1}–{seasonY2} ouverte
+            Saison {seasonY1}–{seasonY2} {inscOpen ? "ouverte" : "fermée"}
           </span>
         </motion.div>
 

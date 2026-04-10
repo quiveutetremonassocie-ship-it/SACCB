@@ -9,4 +9,11 @@ export const SHEETS_WEBHOOK =
 
 export const FACTURE_BUCKET = "factures";
 
-export const supabaseClient = createClient(SUPA_URL, SUPA_KEY);
+export const supabaseClient = createClient(SUPA_URL, SUPA_KEY, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+    storageKey: "saccb-admin-session",
+  },
+});
