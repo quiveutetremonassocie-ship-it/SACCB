@@ -19,9 +19,9 @@ export default function Hero({
       <div className="absolute inset-0 pointer-events-none">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
-          src="https://images.unsplash.com/photo-1613918108466-292b78a8ef95?auto=format&fit=crop&w=2400&q=85"
-          alt=""
-          className="w-full h-full object-cover opacity-30"
+          src="/salle.png"
+          alt="Salle Paul Vatine — Sainte-Adresse"
+          className="w-full h-full object-cover opacity-40"
         />
         <div className="absolute inset-0 bg-gradient-to-b from-[#05080f]/60 via-[#05080f]/75 to-[#05080f]" />
         <div className="absolute inset-0 bg-gradient-to-r from-[#05080f]/90 via-transparent to-[#05080f]/80" />
