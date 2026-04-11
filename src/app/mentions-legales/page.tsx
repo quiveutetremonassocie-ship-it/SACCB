@@ -23,7 +23,7 @@ export default function Page() {
             76310 Sainte-Adresse
           </li>
           <li>
-            <strong>Numéro RNA / W :</strong> <em>[à compléter]</em>
+            <strong>Numéro RNA / W :</strong> W762011355
           </li>
           <li>
             <strong>Numéro SIRET :</strong> <em>[à compléter]</em>

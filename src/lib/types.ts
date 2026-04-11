@@ -36,14 +36,28 @@ export type InscritTournoi = {
   joueurs: string;
 };
 
+export type ActualiteImage = {
+  url: string;
+  path?: string; // chemin Supabase Storage (pour suppression)
+};
+
 export type Actualite = {
   id: string;
   title: string;
   description: string;
-  imageUrl: string;
-  imagePath?: string; // chemin dans Supabase Storage (pour pouvoir supprimer)
+  images?: ActualiteImage[]; // galerie complète, [0] = image principale affichée dans le carrousel
+  // Champs legacy (compat ascendante pour anciennes actus)
+  imageUrl?: string;
+  imagePath?: string;
   createdAt: string;
 };
+
+// Helper pour récupérer la liste normalisée des images d'une actualité
+export function actualiteImages(a: Actualite): ActualiteImage[] {
+  if (a.images && a.images.length > 0) return a.images;
+  if (a.imageUrl) return [{ url: a.imageUrl, path: a.imagePath }];
+  return [];
+}
 
 export type DB = {
   membres: Membre[];

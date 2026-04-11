@@ -1,8 +1,17 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Newspaper, Plus, Trash2, Upload, ArrowUp, ArrowDown, Eye } from "lucide-react";
-import { DB, Actualite } from "@/lib/types";
+import {
+  Newspaper,
+  Plus,
+  Trash2,
+  Upload,
+  ArrowUp,
+  ArrowDown,
+  Eye,
+  X,
+} from "lucide-react";
+import { DB, Actualite, ActualiteImage, actualiteImages } from "@/lib/types";
 import { supabaseClient, ACTU_BUCKET } from "@/lib/supabase";
 import Actualites from "../Actualites";
 
@@ -15,14 +24,14 @@ export default function ActualitesAdmin({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
-  const [pendingFile, setPendingFile] = useState<File | null>(null);
+  const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
   const fileInput = useRef<HTMLInputElement>(null);
 
   const list = db.actualites || [];
 
-  async function uploadImage(id: string, file: File) {
+  async function uploadOne(id: string, file: File): Promise<ActualiteImage | null> {
     const path = `${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error } = await supabaseClient.storage
       .from(ACTU_BUCKET)
@@ -32,18 +41,27 @@ export default function ActualitesAdmin({
       return null;
     }
     const { data } = supabaseClient.storage.from(ACTU_BUCKET).getPublicUrl(path);
-    return { path, url: data.publicUrl };
+    return { url: data.publicUrl, path };
+  }
+
+  async function uploadMany(id: string, files: File[]): Promise<ActualiteImage[]> {
+    const out: ActualiteImage[] = [];
+    for (const f of files) {
+      const r = await uploadOne(id, f);
+      if (r) out.push(r);
+    }
+    return out;
   }
 
   async function addActualite() {
-    if (!title || !description || !pendingFile) {
-      alert("Titre, description et image requis.");
+    if (!title || !description || pendingFiles.length === 0) {
+      alert("Titre, description et au moins une image requis.");
       return;
     }
     setBusy(true);
     const id = Date.now().toString();
-    const uploaded = await uploadImage(id, pendingFile);
-    if (!uploaded) {
+    const images = await uploadMany(id, pendingFiles);
+    if (images.length === 0) {
       setBusy(false);
       return;
     }
@@ -51,15 +69,14 @@ export default function ActualitesAdmin({
       id,
       title,
       description,
-      imageUrl: uploaded.url,
-      imagePath: uploaded.path,
+      images,
       createdAt: new Date().toISOString(),
     };
     const next = { ...db, actualites: [...list, a] };
     await onPersist(next);
     setTitle("");
     setDescription("");
-    setPendingFile(null);
+    setPendingFiles([]);
     if (fileInput.current) fileInput.current.value = "";
     setBusy(false);
   }
@@ -67,8 +84,12 @@ export default function ActualitesAdmin({
   async function delActualite(id: string) {
     if (!confirm("Supprimer cette actualité ?")) return;
     const a = list.find((x) => x.id === id);
-    if (a?.imagePath) {
-      await supabaseClient.storage.from(ACTU_BUCKET).remove([a.imagePath]).catch(() => {});
+    if (a) {
+      const imgs = actualiteImages(a);
+      const paths = imgs.map((i) => i.path).filter(Boolean) as string[];
+      if (paths.length > 0) {
+        await supabaseClient.storage.from(ACTU_BUCKET).remove(paths).catch(() => {});
+      }
     }
     const next = { ...db, actualites: list.filter((x) => x.id !== id) };
     await onPersist(next);
@@ -82,25 +103,69 @@ export default function ActualitesAdmin({
     await onPersist(next);
   }
 
-  async function replaceImage(id: string, file: File) {
+  async function addImagesTo(id: string, files: FileList | null) {
+    if (!files || files.length === 0) return;
     setBusy(true);
-    const old = list.find((x) => x.id === id);
-    if (old?.imagePath) {
-      await supabaseClient.storage.from(ACTU_BUCKET).remove([old.imagePath]).catch(() => {});
-    }
-    const uploaded = await uploadImage(id, file);
-    if (!uploaded) {
-      setBusy(false);
-      return;
-    }
+    const uploaded = await uploadMany(id, Array.from(files));
     const next = {
       ...db,
-      actualites: list.map((x) =>
-        x.id === id ? { ...x, imageUrl: uploaded.url, imagePath: uploaded.path } : x
-      ),
+      actualites: list.map((x) => {
+        if (x.id !== id) return x;
+        const existing = actualiteImages(x);
+        return {
+          ...x,
+          images: [...existing, ...uploaded],
+          // on retire les anciens champs legacy une fois migré
+          imageUrl: undefined,
+          imagePath: undefined,
+        };
+      }),
     };
     await onPersist(next);
     setBusy(false);
+  }
+
+  async function removeImage(actuId: string, imgIndex: number) {
+    if (!confirm("Supprimer cette image ?")) return;
+    const a = list.find((x) => x.id === actuId);
+    if (!a) return;
+    const imgs = actualiteImages(a);
+    const target = imgs[imgIndex];
+    if (!target) return;
+    if (imgs.length === 1) {
+      alert("Impossible de supprimer la dernière image. Supprime plutôt l'actualité entière.");
+      return;
+    }
+    if (target.path) {
+      await supabaseClient.storage.from(ACTU_BUCKET).remove([target.path]).catch(() => {});
+    }
+    const remaining = imgs.filter((_, i) => i !== imgIndex);
+    const next = {
+      ...db,
+      actualites: list.map((x) =>
+        x.id === actuId
+          ? { ...x, images: remaining, imageUrl: undefined, imagePath: undefined }
+          : x
+      ),
+    };
+    await onPersist(next);
+  }
+
+  async function setMainImage(actuId: string, imgIndex: number) {
+    const a = list.find((x) => x.id === actuId);
+    if (!a) return;
+    const imgs = actualiteImages(a);
+    if (imgIndex === 0) return;
+    const reordered = [imgs[imgIndex], ...imgs.filter((_, i) => i !== imgIndex)];
+    const next = {
+      ...db,
+      actualites: list.map((x) =>
+        x.id === actuId
+          ? { ...x, images: reordered, imageUrl: undefined, imagePath: undefined }
+          : x
+      ),
+    };
+    await onPersist(next);
   }
 
   async function move(id: string, dir: -1 | 1) {
@@ -144,27 +209,50 @@ export default function ActualitesAdmin({
           />
           <textarea
             className="input w-full min-h-[100px] resize-y"
-            placeholder="Description (visible en dessous de l'image)"
+            placeholder="Description (visible en dessous des images)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
           <label className="flex items-center gap-3 text-sm text-white/60 cursor-pointer hover:text-white transition">
             <Upload className="w-4 h-4" />
             <span>
-              {pendingFile ? (
-                <span className="text-amber-400 font-semibold">{pendingFile.name}</span>
+              {pendingFiles.length > 0 ? (
+                <span className="text-amber-400 font-semibold">
+                  {pendingFiles.length} image{pendingFiles.length > 1 ? "s" : ""} sélectionnée
+                  {pendingFiles.length > 1 ? "s" : ""}
+                </span>
               ) : (
-                "Choisir une image"
+                "Choisir une ou plusieurs images (la 1ère sera l'image principale)"
               )}
             </span>
             <input
               ref={fileInput}
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={(e) => setPendingFile(e.target.files?.[0] || null)}
+              onChange={(e) => setPendingFiles(Array.from(e.target.files || []))}
             />
           </label>
+          {pendingFiles.length > 0 && (
+            <div className="flex gap-2 flex-wrap">
+              {pendingFiles.map((f, i) => (
+                <div
+                  key={i}
+                  className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-200"
+                >
+                  {i === 0 && <span className="text-yellow-300">★</span>}
+                  <span className="truncate max-w-[140px]">{f.name}</span>
+                  <button
+                    onClick={() => setPendingFiles((p) => p.filter((_, j) => j !== i))}
+                    className="text-amber-400/60 hover:text-amber-400"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
           <button
             onClick={addActualite}
             disabled={busy}
@@ -176,68 +264,127 @@ export default function ActualitesAdmin({
       </div>
 
       {/* LISTE */}
-      <div className="space-y-3 mb-5">
+      <div className="space-y-4 mb-5">
         {list.length === 0 && (
           <p className="text-center text-white/40 py-6 text-sm">Aucune actualité pour le moment</p>
         )}
-        {list.map((a, i) => (
-          <div key={a.id} className="bg-black/30 rounded-2xl p-4 border border-white/5 flex gap-4">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src={a.imageUrl}
-              alt={a.title}
-              className="w-28 h-28 object-cover rounded-xl shrink-0"
-            />
-            <div className="flex-1 min-w-0 space-y-2">
-              <input
-                className="input w-full !text-sm"
-                value={a.title}
-                onChange={(e) => updateField(a.id, "title", e.target.value)}
-              />
-              <textarea
-                className="input w-full !text-xs min-h-[60px] resize-y"
-                value={a.description}
-                onChange={(e) => updateField(a.id, "description", e.target.value)}
-              />
-              <div className="flex items-center gap-2 flex-wrap">
-                <label className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 cursor-pointer bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
-                  <Upload className="w-3 h-3" /> Remplacer l'image
+        {list.map((a, i) => {
+          const imgs = actualiteImages(a);
+          return (
+            <div key={a.id} className="bg-black/30 rounded-2xl p-4 border border-white/5">
+              <div className="flex gap-4 mb-3">
+                <div className="relative w-32 h-32 shrink-0 rounded-xl overflow-hidden bg-black/40">
+                  {imgs[0] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={imgs[0].url}
+                      alt={a.title}
+                      className="w-full h-full object-cover"
+                    />
+                  )}
+                  {imgs.length > 1 && (
+                    <div className="absolute bottom-1 right-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white font-semibold">
+                      +{imgs.length - 1}
+                    </div>
+                  )}
+                </div>
+                <div className="flex-1 min-w-0 space-y-2">
                   <input
-                    type="file"
-                    accept="image/*"
-                    className="hidden"
-                    onChange={(e) => {
-                      const f = e.target.files?.[0];
-                      if (f) replaceImage(a.id, f);
-                    }}
+                    className="input w-full !text-sm"
+                    value={a.title}
+                    onChange={(e) => updateField(a.id, "title", e.target.value)}
                   />
-                </label>
-                <button
-                  onClick={() => move(a.id, -1)}
-                  disabled={i === 0}
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Monter"
-                >
-                  <ArrowUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => move(a.id, 1)}
-                  disabled={i === list.length - 1}
-                  className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
-                  title="Descendre"
-                >
-                  <ArrowDown className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => delActualite(a.id)}
-                  className="btn-danger !px-3 !py-1.5 !text-xs ml-auto"
-                >
-                  <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                </button>
+                  <textarea
+                    className="input w-full !text-xs min-h-[60px] resize-y"
+                    value={a.description}
+                    onChange={(e) => updateField(a.id, "description", e.target.value)}
+                  />
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <button
+                      onClick={() => move(a.id, -1)}
+                      disabled={i === 0}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Monter"
+                    >
+                      <ArrowUp className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => move(a.id, 1)}
+                      disabled={i === list.length - 1}
+                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                      title="Descendre"
+                    >
+                      <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => delActualite(a.id)}
+                      className="btn-danger !px-3 !py-1.5 !text-xs ml-auto"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Galerie d'images */}
+              <div className="border-t border-white/5 pt-3">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-[10px] uppercase tracking-widest text-white/50 font-semibold">
+                    Galerie ({imgs.length})
+                  </p>
+                  <label className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 cursor-pointer bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
+                    <Upload className="w-3 h-3" /> Ajouter des images
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={(e) => addImagesTo(a.id, e.target.files)}
+                    />
+                  </label>
+                </div>
+                <div className="flex gap-2 flex-wrap">
+                  {imgs.map((img, idx) => (
+                    <div key={idx} className="relative group">
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
+                      <img
+                        src={img.url}
+                        alt=""
+                        className={`w-20 h-20 object-cover rounded-lg border-2 ${
+                          idx === 0
+                            ? "border-yellow-400 ring-2 ring-yellow-400/20"
+                            : "border-white/10"
+                        }`}
+                      />
+                      {idx === 0 && (
+                        <div className="absolute top-0.5 left-0.5 px-1.5 py-0.5 rounded bg-yellow-400 text-black text-[9px] font-bold uppercase">
+                          Principale
+                        </div>
+                      )}
+                      <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1">
+                        {idx !== 0 && (
+                          <button
+                            onClick={() => setMainImage(a.id, idx)}
+                            className="text-[9px] uppercase tracking-wider text-yellow-300 hover:text-yellow-200 font-bold"
+                          >
+                            ★ Définir principale
+                          </button>
+                        )}
+                        <button
+                          onClick={() => removeImage(a.id, idx)}
+                          className="text-red-400 hover:text-red-300"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
-          </div>
-        ))}
+          );
+        })}
       </div>
 
       {/* APERCU LIVE */}
@@ -247,9 +394,7 @@ export default function ActualitesAdmin({
             <Eye className="w-3.5 h-3.5" /> Aperçu du rendu côté site (temps réel, rotation 5s)
           </p>
           <div className="rounded-3xl overflow-hidden bg-bgdark/60 p-4 border border-white/5">
-            <div className="pointer-events-auto">
-              <Actualites actualites={list} />
-            </div>
+            <Actualites actualites={list} />
           </div>
         </div>
       )}

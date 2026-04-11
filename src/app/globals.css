@@ -32,16 +32,16 @@ body {
 }
 
 /* ============ BADMINTON FOND GLOBAL ============ */
-/* Image badminton nette en fond fixe */
+/* Image Salle Paul Vatine en fond fixe */
 body::before {
   content: "";
   position: fixed;
   inset: 0;
-  background-image: url("https://images.unsplash.com/photo-1626224583764-f87db24ac4ea?auto=format&fit=crop&w=2000&q=85");
+  background-image: url("/salle.png");
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
-  filter: brightness(0.35) saturate(1.2) contrast(1.1);
+  filter: brightness(0.4) saturate(1.15) contrast(1.05);
   z-index: -3;
 }
 
