@@ -5,6 +5,8 @@ export type Membre = {
   tel?: string;
   type: "Adulte" | "Etudiant";
   ok?: boolean;
+  paymentMethod?: "online" | "virement";
+  paymentDate?: string;
 };
 
 export type FactureFile = {

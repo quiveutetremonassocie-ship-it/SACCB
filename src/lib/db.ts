@@ -62,6 +62,7 @@ export async function publicAddMembre(newMembre: {
   tel: string;
   type: "Adulte" | "Etudiant";
   ok: boolean;
+  paymentMethod?: "online" | "virement";
 }): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
     headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -73,6 +74,34 @@ export async function publicAddMembre(newMembre: {
   }
   currentData.membres = currentData.membres || [];
   currentData.membres.push(newMembre);
+  await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
+    method: "PATCH",
+    headers: {
+      apikey: SUPA_KEY,
+      Authorization: `Bearer ${SUPA_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ data: currentData }),
+  });
+  fetch(SHEETS_WEBHOOK, { method: "POST", mode: "no-cors", body: JSON.stringify(currentData) }).catch(() => {});
+  return { ok: true };
+}
+
+export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }> {
+  const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
+    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+  });
+  const json = await res.json();
+  const currentData = json[0]?.data ?? emptyDB();
+  let found = false;
+  currentData.membres = (currentData.membres || []).map((m: any) => {
+    if (m.id === membreId) {
+      found = true;
+      return { ...m, ok: true, paymentDate: new Date().toISOString() };
+    }
+    return m;
+  });
+  if (!found) return { ok: false };
   await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
     method: "PATCH",
     headers: {

@@ -1,11 +1,16 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { useState } from "react";
-import { CheckCircle2, Lock } from "lucide-react";
+import { useEffect, useState } from "react";
+import { CheckCircle2, Lock, CreditCard, Banknote, Clock } from "lucide-react";
 import confetti from "canvas-confetti";
 import { DB } from "@/lib/types";
-import { publicAddMembre } from "@/lib/db";
+import { publicAddMembre, publicMarkPaid } from "@/lib/db";
+
+const HELLOASSO_URL =
+  "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte";
+
+type PaymentMode = "online" | "virement";
 
 export default function Inscription({
   db,
@@ -20,11 +25,44 @@ export default function Inscription({
   prix: { Adulte: number; Etudiant: number };
   onMembreAdded: () => void;
 }) {
-  const [done, setDone] = useState<{ nom: string; type: string } | null>(null);
+  const [done, setDone] = useState<{ nom: string; type: string; mode: PaymentMode } | null>(null);
   const [loading, setLoading] = useState(false);
+  const [mode, setMode] = useState<PaymentMode>("online");
 
   const remaining = quota - membresCount;
   const progress = Math.min((membresCount / quota) * 100, 100);
+
+  // Détection du retour depuis HelloAsso après paiement réussi
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("payment") !== "success") return;
+
+    const pendingId = localStorage.getItem("saccb_pending_membre_id");
+    const pendingNom = localStorage.getItem("saccb_pending_membre_nom");
+    const pendingType = localStorage.getItem("saccb_pending_membre_type");
+    if (!pendingId) {
+      // Nettoie l'URL même sans pending pour éviter les ré-déclenchements
+      window.history.replaceState({}, "", window.location.pathname + "#inscription");
+      return;
+    }
+
+    publicMarkPaid(pendingId).then((r) => {
+      localStorage.removeItem("saccb_pending_membre_id");
+      localStorage.removeItem("saccb_pending_membre_nom");
+      localStorage.removeItem("saccb_pending_membre_type");
+      if (r.ok) {
+        setDone({ nom: pendingNom || "", type: pendingType || "Adulte", mode: "online" });
+        confetti({ particleCount: 130, spread: 75, origin: { y: 0.6 } });
+        onMembreAdded();
+      }
+      window.history.replaceState({}, "", window.location.pathname + "#inscription");
+      // Scroll vers la section inscription
+      setTimeout(() => {
+        document.getElementById("inscription")?.scrollIntoView({ behavior: "smooth" });
+      }, 100);
+    });
+  }, [onMembreAdded]);
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -42,20 +80,35 @@ export default function Inscription({
       return;
     }
 
+    const id = Date.now().toString();
     const r = await publicAddMembre({
-      id: Date.now().toString(),
+      id,
       nom,
       email,
       tel,
       type,
       ok: false,
+      paymentMethod: mode,
     });
-    setLoading(false);
     if (!r.ok) {
+      setLoading(false);
       alert(r.reason || "Erreur");
       return;
     }
-    setDone({ nom, type });
+
+    if (mode === "online") {
+      // On enregistre le membre en attente, puis on redirige vers HelloAsso.
+      // Au retour (?payment=success), on retrouve l'id via localStorage et on marque payé.
+      localStorage.setItem("saccb_pending_membre_id", id);
+      localStorage.setItem("saccb_pending_membre_nom", nom);
+      localStorage.setItem("saccb_pending_membre_type", type);
+      window.location.href = HELLOASSO_URL;
+      return;
+    }
+
+    // Paiement par virement : on enregistre simplement, en attente
+    setLoading(false);
+    setDone({ nom, type, mode: "virement" });
     onMembreAdded();
     confetti({ particleCount: 130, spread: 75, origin: { y: 0.6 } });
   }
@@ -106,12 +159,38 @@ export default function Inscription({
             </p>
           </div>
         ) : done ? (
-          <div className="text-center py-6">
-            <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto mb-3" />
-            <h3 className="text-xl font-bold text-white mb-4">Inscription enregistrée !</h3>
-            <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
-            <p className="text-xs text-white/50 mt-4">Pensez à faire une capture d&apos;écran de votre badge.</p>
-          </div>
+          done.mode === "online" ? (
+            <div className="text-center py-6">
+              <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-white mb-2">Paiement confirmé !</h3>
+              <p className="text-white/70 text-sm mb-4">
+                Merci {done.nom}, votre adhésion est validée.
+              </p>
+              <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
+              <p className="text-xs text-white/50 mt-4">
+                Pensez à faire une capture d&apos;écran de votre badge.
+              </p>
+            </div>
+          ) : (
+            <div className="text-center py-6">
+              <Clock className="w-14 h-14 text-amber-400 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-white mb-2">Inscription enregistrée !</h3>
+              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 text-left">
+                <p className="text-amber-200 text-sm font-semibold mb-1">
+                  Paiement en attente
+                </p>
+                <p className="text-white/70 text-sm">
+                  Merci {done.nom}. Pour finaliser votre adhésion, veuillez vous
+                  rapprocher de <strong className="text-white">Hernan</strong> au prochain
+                  entraînement afin de procéder au règlement par virement bancaire.
+                </p>
+              </div>
+              <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
+              <p className="text-xs text-white/50 mt-4">
+                Pensez à faire une capture d&apos;écran de votre badge.
+              </p>
+            </div>
+          )
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
             <input className="input" name="nom" placeholder="Nom et prénom" required />
@@ -121,9 +200,74 @@ export default function Inscription({
               <option value="Adulte">Adulte ({prix.Adulte}€)</option>
               <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
             </select>
+
+            <div className="pt-2">
+              <p className="text-xs uppercase tracking-widest text-white/50 mb-2">
+                Mode de paiement
+              </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => setMode("online")}
+                  className={`relative text-left rounded-xl border p-4 transition-all ${
+                    mode === "online"
+                      ? "border-emerald-400/60 bg-emerald-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <CreditCard
+                      className={`w-4 h-4 ${
+                        mode === "online" ? "text-emerald-400" : "text-white/60"
+                      }`}
+                    />
+                    <span className="text-white font-semibold text-sm">
+                      Payer en ligne
+                    </span>
+                  </div>
+                  <p className="text-white/60 text-xs">
+                    Carte bancaire via HelloAsso (sécurisé)
+                  </p>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => setMode("virement")}
+                  className={`relative text-left rounded-xl border p-4 transition-all ${
+                    mode === "virement"
+                      ? "border-amber-400/60 bg-amber-500/10"
+                      : "border-white/10 bg-white/5 hover:border-white/20"
+                  }`}
+                >
+                  <div className="flex items-center gap-2 mb-1">
+                    <Banknote
+                      className={`w-4 h-4 ${
+                        mode === "virement" ? "text-amber-400" : "text-white/60"
+                      }`}
+                    />
+                    <span className="text-white font-semibold text-sm">
+                      Virement bancaire
+                    </span>
+                  </div>
+                  <p className="text-white/60 text-xs">
+                    Règlement auprès de Hernan
+                  </p>
+                </button>
+              </div>
+            </div>
+
             <button type="submit" className="btn-primary w-full" disabled={loading}>
-              {loading ? "Envoi..." : "Valider mon inscription"}
+              {loading
+                ? "Envoi..."
+                : mode === "online"
+                ? "Continuer vers le paiement"
+                : "Valider mon inscription"}
             </button>
+            {mode === "online" && (
+              <p className="text-xs text-white/50 text-center">
+                Vous serez redirigé vers HelloAsso pour finaliser le paiement.
+              </p>
+            )}
           </form>
         )}
       </motion.div>

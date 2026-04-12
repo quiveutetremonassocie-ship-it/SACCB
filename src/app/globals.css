@@ -41,20 +41,20 @@ body::before {
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
-  filter: brightness(0.4) saturate(1.15) contrast(1.05);
+  filter: brightness(0.7) saturate(1.15) contrast(1.05);
   z-index: -3;
 }
 
-/* Overlay gradient + lignes de court */
+/* Overlay gradient + lignes de court (plus léger pour laisser voir la salle) */
 body::after {
   content: "";
   position: fixed;
   inset: 0;
   background:
-    radial-gradient(ellipse at top left, rgba(59,130,246,0.18), transparent 55%),
-    radial-gradient(ellipse at bottom right, rgba(16,185,129,0.15), transparent 55%),
+    radial-gradient(ellipse at top left, rgba(59,130,246,0.15), transparent 55%),
+    radial-gradient(ellipse at bottom right, rgba(16,185,129,0.12), transparent 55%),
     radial-gradient(ellipse at center, rgba(250,204,21,0.04), transparent 70%),
-    linear-gradient(180deg, rgba(5,8,15,0.88) 0%, rgba(5,8,15,0.96) 100%);
+    linear-gradient(180deg, rgba(5,8,15,0.55) 0%, rgba(5,8,15,0.72) 100%);
   z-index: -2;
   pointer-events: none;
 }

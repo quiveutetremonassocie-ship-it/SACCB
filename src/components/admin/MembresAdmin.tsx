@@ -79,6 +79,7 @@ export default function MembresAdmin({
               <th className="p-3">Email</th>
               <th className="p-3">Tel</th>
               <th className="p-3">Type</th>
+              <th className="p-3">Mode</th>
               <th className="p-3">Paiement</th>
               <th className="p-3">Actions</th>
             </tr>
@@ -93,6 +94,15 @@ export default function MembresAdmin({
                 <td className="p-3 text-white/70 break-all">{m.email}</td>
                 <td className="p-3 text-white/60">{m.tel || "-"}</td>
                 <td className="p-3 text-white/70">{m.type}</td>
+                <td className="p-3">
+                  {m.paymentMethod === "online" ? (
+                    <span className="text-blue-400 text-xs">En ligne</span>
+                  ) : m.paymentMethod === "virement" ? (
+                    <span className="text-amber-400 text-xs">Virement</span>
+                  ) : (
+                    <span className="text-white/40 text-xs">–</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
@@ -124,7 +134,7 @@ export default function MembresAdmin({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={6} className="p-6 text-center text-white/40">
+                <td colSpan={7} className="p-6 text-center text-white/40">
                   Aucun adhérent.
                 </td>
               </tr>
