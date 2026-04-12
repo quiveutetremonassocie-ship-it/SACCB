@@ -264,9 +264,15 @@ export default function Inscription({
                 : "Valider mon inscription"}
             </button>
             {mode === "online" && (
-              <p className="text-xs text-white/50 text-center">
-                Vous serez redirigé vers HelloAsso pour finaliser le paiement.
-              </p>
+              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-center">
+                <p className="text-xs text-white/50">
+                  Vous serez redirigé vers HelloAsso pour finaliser le paiement.
+                </p>
+                <p className="text-xs text-amber-300 mt-1">
+                  Un don à HelloAsso est pré-sélectionné lors du paiement.
+                  Celui-ci est facultatif et peut être modifié ou mis à 0&euro;.
+                </p>
+              </div>
             )}
           </form>
         )}
