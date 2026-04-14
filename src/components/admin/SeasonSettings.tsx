@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock } from "lucide-react";
-import { DB } from "@/lib/types";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus } from "lucide-react";
+import { DB, QUOTA_DEFAULT } from "@/lib/types";
 
 export default function SeasonSettings({
   db,
@@ -15,10 +15,12 @@ export default function SeasonSettings({
 }) {
   const [y1, setY1] = useState(db.y1);
   const [y2, setY2] = useState(db.y2);
+  const currentQuota = db.quota ?? QUOTA_DEFAULT;
+  const [quota, setQuota] = useState(currentQuota);
 
   async function update() {
-    await onPersist({ ...db, y1: Number(y1), y2: Number(y2) });
-    alert("Saison mise à jour !");
+    await onPersist({ ...db, y1: Number(y1), y2: Number(y2), quota: Number(quota) });
+    alert("Paramètres mis à jour !");
   }
 
   async function toggle() {
@@ -54,6 +56,31 @@ export default function SeasonSettings({
           placeholder="Année 2"
         />
       </div>
+
+      <div className="mb-3">
+        <label className="text-xs uppercase tracking-widest text-white/50 mb-1 block">
+          Places disponibles
+        </label>
+        <div className="flex items-center gap-3">
+          <input
+            type="number"
+            className="input flex-1"
+            value={quota}
+            min={db.membres.length}
+            onChange={(e) => setQuota(Number(e.target.value))}
+          />
+          <span className="text-white/50 text-sm whitespace-nowrap">
+            {db.membres.length} / {quota} inscrits
+          </span>
+        </div>
+        {db.membres.length >= currentQuota && (
+          <p className="text-amber-400 text-xs mt-1 flex items-center gap-1">
+            <UserPlus className="w-3 h-3" />
+            Club complet — augmentez le quota pour accepter de nouveaux membres
+          </p>
+        )}
+      </div>
+
       <div className="space-y-3">
         <button
           onClick={toggle}
@@ -70,10 +97,10 @@ export default function SeasonSettings({
           )}
         </button>
         <button onClick={update} className="btn-accent w-full">
-          <RefreshCw className="w-4 h-4" /> Mettre à jour les dates
+          <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
         </button>
         <button onClick={reset} className="btn-danger w-full">
-          ⚠️ Réinitialiser les adhérents
+          Réinitialiser les adhérents
         </button>
       </div>
     </div>

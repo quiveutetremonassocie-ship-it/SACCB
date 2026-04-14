@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { X, FileSpreadsheet, FileText } from "lucide-react";
+import { useMemo, useRef, useState } from "react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
@@ -109,6 +109,8 @@ export default function AdminPanel({
             </div>
           </div>
 
+          <HelloAssoQR />
+
           <div className="lg:col-span-2">
             <ActualitesAdmin db={db} onPersist={onPersist} />
           </div>
@@ -158,6 +160,61 @@ export default function AdminPanel({
           }}
         />
       )}
+    </div>
+  );
+}
+
+const HELLOASSO_URL =
+  "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte";
+
+function HelloAssoQR() {
+  const linkRef = useRef<HTMLAnchorElement>(null);
+
+  function downloadQR() {
+    const a = document.createElement("a");
+    a.href = "/qr-helloasso.png";
+    a.download = "QR-HelloAsso-SACCB.png";
+    a.click();
+  }
+
+  return (
+    <div className="lg:col-span-2 glass p-6">
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
+          <QrCode className="w-5 h-5 text-white" />
+        </div>
+        <h3 className="font-display text-2xl tracking-wider text-white">HelloAsso — Paiement en ligne</h3>
+      </div>
+      <div className="flex flex-col sm:flex-row items-center gap-6">
+        <div className="bg-white rounded-2xl p-3 shadow-lg">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/qr-helloasso.png"
+            alt="QR Code HelloAsso"
+            className="w-48 h-48 object-contain"
+          />
+        </div>
+        <div className="flex-1 space-y-3">
+          <p className="text-white/70 text-sm">
+            Partagez ce QR code aux adhérents pour qu&apos;ils puissent payer leur adhésion
+            directement en ligne via HelloAsso.
+          </p>
+          <div className="flex flex-wrap gap-3">
+            <button onClick={downloadQR} className="btn-primary">
+              <Download className="w-4 h-4" /> Télécharger le QR
+            </button>
+            <a
+              ref={linkRef}
+              href={HELLOASSO_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="btn-accent inline-flex items-center gap-2"
+            >
+              <ExternalLink className="w-4 h-4" /> Ouvrir HelloAsso
+            </a>
+          </div>
+        </div>
+      </div>
     </div>
   );
 }

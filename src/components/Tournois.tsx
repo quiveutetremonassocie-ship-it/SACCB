@@ -4,8 +4,7 @@ import { motion } from "framer-motion";
 import { Calendar, Trophy, Users } from "lucide-react";
 import { useState } from "react";
 import { DB } from "@/lib/types";
-import { fetchPublicDB } from "@/lib/db";
-import { SUPA_KEY, SUPA_URL, SHEETS_WEBHOOK } from "@/lib/supabase";
+import { publicRegisterTournoi } from "@/lib/db";
 
 export default function Tournois({ db }: { db: DB }) {
   const tournois = db.config_tournois ?? [];
@@ -57,32 +56,14 @@ function TournoiCard({ t, inscrits }: { t: any; inscrits: any[] }) {
       return;
     }
     try {
-      const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
-        headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-      });
-      const json = await res.json();
-      const cur = json[0]?.data ?? {};
-      cur.inscrits_tournoi = cur.inscrits_tournoi || [];
-      cur.inscrits_tournoi.push({
-        id: Date.now().toString(),
-        tournoiId: t.id,
-        joueurs: `${p1} / ${p2}`,
-      });
-      await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
-        method: "PATCH",
-        headers: {
-          apikey: SUPA_KEY,
-          Authorization: `Bearer ${SUPA_KEY}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ data: cur }),
-      });
-      fetch(SHEETS_WEBHOOK, { method: "POST", mode: "no-cors", body: JSON.stringify(cur) }).catch(
-        () => {}
-      );
-      alert(`✅ Inscription enregistrée pour ${t.name} !`);
-      (e.target as HTMLFormElement).reset();
-      window.location.reload();
+      const r = await publicRegisterTournoi(t.id, p1, p2);
+      if (r.ok) {
+        alert(`Inscription enregistrée pour ${t.name} !`);
+        (e.target as HTMLFormElement).reset();
+        window.location.reload();
+      } else {
+        alert(r.reason || "Erreur lors de l'inscription.");
+      }
     } finally {
       setSubmitting(false);
     }

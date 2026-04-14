@@ -80,14 +80,11 @@ export default function Inscription({
       return;
     }
 
-    const id = Date.now().toString();
     const r = await publicAddMembre({
-      id,
       nom,
       email,
       tel,
       type,
-      ok: false,
       paymentMethod: mode,
     });
     if (!r.ok) {
@@ -99,7 +96,7 @@ export default function Inscription({
     if (mode === "online") {
       // On enregistre le membre en attente, puis on redirige vers HelloAsso.
       // Au retour (?payment=success), on retrouve l'id via localStorage et on marque payé.
-      localStorage.setItem("saccb_pending_membre_id", id);
+      localStorage.setItem("saccb_pending_membre_id", r.membreId || "");
       localStorage.setItem("saccb_pending_membre_nom", nom);
       localStorage.setItem("saccb_pending_membre_type", type);
       window.location.href = HELLOASSO_URL;

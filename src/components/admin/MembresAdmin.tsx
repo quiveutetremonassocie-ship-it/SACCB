@@ -50,11 +50,16 @@ export default function MembresAdmin({
 
   return (
     <div className="glass p-6">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
-          <Users className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between mb-5">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
+            <Users className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="font-display text-2xl tracking-wider text-white">Adhérents Club</h3>
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-white">Adhérents Club</h3>
+        <span className="px-4 py-2 rounded-full bg-blue-500/20 text-blue-300 text-sm font-bold">
+          {db.membres.length} adhérent{db.membres.length > 1 ? "s" : ""}
+        </span>
       </div>
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">

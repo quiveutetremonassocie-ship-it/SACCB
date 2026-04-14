@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { DB, PRIX, QUOTA_CLUB } from "@/lib/types";
+import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchPublicDB, saveDB } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import Navbar from "./Navbar";
@@ -96,7 +96,7 @@ export default function Site() {
         <Inscription
           db={db}
           membresCount={membresCount}
-          quota={QUOTA_CLUB}
+          quota={db.quota ?? QUOTA_DEFAULT}
           prix={PRIX}
           onMembreAdded={() => setMembresCount((n) => n + 1)}
         />

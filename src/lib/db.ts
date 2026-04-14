@@ -1,4 +1,4 @@
-import { supabaseClient, SUPA_URL, SUPA_KEY, SHEETS_WEBHOOK } from "./supabase";
+import { supabaseClient, SUPA_URL, SUPA_KEY, EDGE_FUNCTION_URL } from "./supabase";
 import { DB } from "./types";
 
 export const emptyDB = (): DB => ({
@@ -12,23 +12,27 @@ export const emptyDB = (): DB => ({
   insc_open: true,
 });
 
+// ─── Données publiques (via Edge Function sécurisée) ───
 export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: number }> {
-  const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    body: JSON.stringify({ action: "fetch_public" }),
   });
-  const json = await res.json();
-  const d = json[0]?.data ?? {};
+  const d = await res.json();
   return {
     insc_open: d.insc_open ?? true,
     y1: d.y1 ?? 2024,
     y2: d.y2 ?? 2025,
+    quota: d.quota ?? 65,
     config_tournois: d.config_tournois ?? [],
     inscrits_tournoi: d.inscrits_tournoi ?? [],
     actualites: d.actualites ?? [],
-    membresCount: (d.membres || []).length,
+    membresCount: d.membresCount ?? 0,
   };
 }
 
+// ─── Données admin (authentifié via Supabase Auth — protégé par RLS) ───
 export async function fetchAdminDB(): Promise<DB | null> {
   const { data: { session } } = await supabaseClient.auth.getSession();
   if (!session) return null;
@@ -47,70 +51,52 @@ export async function fetchAdminDB(): Promise<DB | null> {
   };
 }
 
+// ─── Sauvegarde admin (authentifié — protégé par RLS) ───
 export async function saveDB(db: DB): Promise<void> {
   const { error } = await supabaseClient.from("saccb_db").update({ data: db }).eq("id", 1);
-  fetch(SHEETS_WEBHOOK, { method: "POST", mode: "no-cors", body: JSON.stringify(db) }).catch(() => {});
   if (error) {
     await supabaseClient.from("saccb_db").insert([{ id: 1, data: db }]);
   }
+  // Synchroniser Google Sheets via Edge Function
+  fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    body: JSON.stringify({ action: "sync_sheets", data: db }),
+  }).catch(() => {});
 }
 
-export async function publicAddMembre(newMembre: {
-  id: string;
+// ─── Inscription publique (via Edge Function sécurisée) ───
+export async function publicAddMembre(membre: {
   nom: string;
   email: string;
   tel: string;
   type: "Adulte" | "Etudiant";
-  ok: boolean;
   paymentMethod?: "online" | "virement";
-}): Promise<{ ok: boolean; reason?: string }> {
-  const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+}): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    body: JSON.stringify({ action: "add_membre", ...membre }),
   });
-  const json = await res.json();
-  const currentData = json[0]?.data ?? emptyDB();
-  if (currentData.membres?.find((m: any) => m.email === newMembre.email)) {
-    return { ok: false, reason: "Cet email est déjà inscrit !" };
-  }
-  currentData.membres = currentData.membres || [];
-  currentData.membres.push(newMembre);
-  await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
-    method: "PATCH",
-    headers: {
-      apikey: SUPA_KEY,
-      Authorization: `Bearer ${SUPA_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ data: currentData }),
-  });
-  fetch(SHEETS_WEBHOOK, { method: "POST", mode: "no-cors", body: JSON.stringify(currentData) }).catch(() => {});
-  return { ok: true };
+  return res.json();
 }
 
+// ─── Inscription tournoi (via Edge Function sécurisée) ───
+export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    body: JSON.stringify({ action: "register_tournoi", tournoiId, p1, p2 }),
+  });
+  return res.json();
+}
+
+// ─── Marquer payé (via Edge Function sécurisée) ───
 export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }> {
-  const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    body: JSON.stringify({ action: "mark_paid", membreId }),
   });
-  const json = await res.json();
-  const currentData = json[0]?.data ?? emptyDB();
-  let found = false;
-  currentData.membres = (currentData.membres || []).map((m: any) => {
-    if (m.id === membreId) {
-      found = true;
-      return { ...m, ok: true, paymentDate: new Date().toISOString() };
-    }
-    return m;
-  });
-  if (!found) return { ok: false };
-  await fetch(`${SUPA_URL}/rest/v1/saccb_db?id=eq.1`, {
-    method: "PATCH",
-    headers: {
-      apikey: SUPA_KEY,
-      Authorization: `Bearer ${SUPA_KEY}`,
-      "Content-Type": "application/json",
-    },
-    body: JSON.stringify({ data: currentData }),
-  });
-  fetch(SHEETS_WEBHOOK, { method: "POST", mode: "no-cors", body: JSON.stringify(currentData) }).catch(() => {});
-  return { ok: true };
+  return res.json();
 }

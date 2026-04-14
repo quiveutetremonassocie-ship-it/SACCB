@@ -17,8 +17,12 @@ export default function ResetPasswordModal({
   if (!open) return null;
 
   async function submit() {
-    if (!p1 || p1.length < 6) {
-      alert("Le mot de passe doit faire au moins 6 caractères.");
+    if (!p1 || p1.length < 12) {
+      alert("Le mot de passe doit faire au moins 12 caractères.");
+      return;
+    }
+    if (!/[A-Z]/.test(p1) || !/[a-z]/.test(p1) || !/[0-9]/.test(p1)) {
+      alert("Le mot de passe doit contenir au moins une majuscule, une minuscule et un chiffre.");
       return;
     }
     if (p1 !== p2) {

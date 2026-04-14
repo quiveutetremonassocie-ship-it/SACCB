@@ -70,7 +70,8 @@ export type DB = {
   y1: number;
   y2: number;
   insc_open: boolean;
+  quota?: number;
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
-export const QUOTA_CLUB = 65;
+export const QUOTA_DEFAULT = 65;
