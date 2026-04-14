@@ -209,20 +209,24 @@ export default function Inscription({
                   className={`relative text-left rounded-xl border p-4 transition-all ${
                     mode === "online"
                       ? "border-emerald-400/60 bg-emerald-500/10"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
+                      : "border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <CreditCard
                       className={`w-4 h-4 ${
-                        mode === "online" ? "text-emerald-400" : "text-white/60"
+                        mode === "online" ? "text-emerald-400" : "text-white/70"
                       }`}
                     />
-                    <span className="text-white font-semibold text-sm">
+                    <span className={`font-semibold text-sm ${
+                      mode === "online" ? "text-white" : "text-white/80"
+                    }`}>
                       Payer en ligne
                     </span>
                   </div>
-                  <p className="text-white/60 text-xs">
+                  <p className={`text-xs ${
+                    mode === "online" ? "text-white/60" : "text-white/50"
+                  }`}>
                     Carte bancaire via HelloAsso (sécurisé)
                   </p>
                 </button>
@@ -233,20 +237,24 @@ export default function Inscription({
                   className={`relative text-left rounded-xl border p-4 transition-all ${
                     mode === "virement"
                       ? "border-amber-400/60 bg-amber-500/10"
-                      : "border-white/10 bg-white/5 hover:border-white/20"
+                      : "border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Banknote
                       className={`w-4 h-4 ${
-                        mode === "virement" ? "text-amber-400" : "text-white/60"
+                        mode === "virement" ? "text-amber-400" : "text-white/70"
                       }`}
                     />
-                    <span className="text-white font-semibold text-sm">
+                    <span className={`font-semibold text-sm ${
+                      mode === "virement" ? "text-white" : "text-white/80"
+                    }`}>
                       Virement bancaire
                     </span>
                   </div>
-                  <p className="text-white/60 text-xs">
+                  <p className={`text-xs ${
+                    mode === "virement" ? "text-white/60" : "text-white/50"
+                  }`}>
                     Règlement auprès de Hernan
                   </p>
                 </button>
