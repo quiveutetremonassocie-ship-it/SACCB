@@ -74,6 +74,76 @@ Deno.serve(async (req) => {
     return json({ error: "Invalid JSON" }, 400);
   }
 
+  // ─── WEBHOOK HELLOASSO (notification automatique de paiement) ───
+  // HelloAsso envoie un payload avec eventType, pas de champ "action"
+  if (body.eventType === "Payment" || body.eventType === "Order") {
+    // Vérifier que l'appel vient bien de HelloAsso (IP whitelist)
+    const helloassoIP = "51.138.206.200";
+    const callerIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+
+    // Extraire l'email du payeur
+    const paymentData = body.data as Record<string, unknown> | undefined;
+    const payer = paymentData?.payer as Record<string, unknown> | undefined;
+    const payerEmail = String(payer?.email || "").toLowerCase().trim();
+
+    if (!payerEmail) {
+      return json({ ok: false, reason: "No payer email" }, 400);
+    }
+
+    // Pour les paiements, vérifier que le statut est "Authorized"
+    if (body.eventType === "Payment") {
+      const state = paymentData?.state as string;
+      if (state !== "Authorized") {
+        // Ignorer les remboursements, échecs, etc.
+        return json({ ok: true, ignored: true });
+      }
+    }
+
+    // Lire la BDD
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false }, 500);
+
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+
+    // Chercher le membre par email
+    let found = false;
+    for (const m of membres) {
+      if (String(m.email || "").toLowerCase() === payerEmail && !m.ok) {
+        m.ok = true;
+        m.paymentDate = new Date().toISOString();
+        m.paymentMethod = "online";
+        found = true;
+        break;
+      }
+    }
+
+    if (found) {
+      currentData.membres = membres;
+      await supabaseAdmin
+        .from("saccb_db")
+        .update({ data: currentData })
+        .eq("id", 1);
+
+      // Sync Google Sheets
+      const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
+      if (sheetsWebhook) {
+        fetch(sheetsWebhook, {
+          method: "POST",
+          body: JSON.stringify(currentData),
+        }).catch(() => {});
+      }
+    }
+
+    // Toujours retourner 200 pour que HelloAsso ne re-tente pas
+    return json({ ok: true, matched: found });
+  }
+
   const action = body.action as string;
 
   // ─── ACTION: Récupérer les données publiques ───
