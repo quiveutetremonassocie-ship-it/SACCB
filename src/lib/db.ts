@@ -16,7 +16,7 @@ export const emptyDB = (): DB => ({
 export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: number }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "fetch_public" }),
   });
   const d = await res.json();
@@ -60,7 +60,7 @@ export async function saveDB(db: DB): Promise<void> {
   // Synchroniser Google Sheets via Edge Function
   fetch(EDGE_FUNCTION_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "sync_sheets", data: db }),
   }).catch(() => {});
 }
@@ -75,7 +75,7 @@ export async function publicAddMembre(membre: {
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "add_membre", ...membre }),
   });
   return res.json();
@@ -85,7 +85,7 @@ export async function publicAddMembre(membre: {
 export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "register_tournoi", tournoiId, p1, p2 }),
   });
   return res.json();
@@ -95,7 +95,7 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
 export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY },
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "mark_paid", membreId }),
   });
   return res.json();
