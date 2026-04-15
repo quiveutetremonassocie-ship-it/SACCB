@@ -77,12 +77,12 @@ export default function AdminPanel({
   }
 
   return (
-    <div className="fixed inset-0 z-[2000] bg-bgdark overflow-y-auto">
+    <div className="fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto">
       <div className="max-w-6xl mx-auto p-6 md:p-10">
-        <div className="flex items-center justify-between mb-8 sticky top-0 z-10 -mx-6 px-6 py-4 bg-bgdark/95 backdrop-blur-xl border-b border-white/10">
+        <div className="flex items-center justify-between mb-8 sticky top-0 z-10 -mx-6 px-6 py-4 bg-[#f8fafc]/95 backdrop-blur-xl border-b border-slate-200">
           <div>
-            <p className="text-xs uppercase tracking-widest text-blue-400 font-semibold">Panel</p>
-            <h2 className="font-display text-3xl md:text-4xl tracking-wider text-white">Gestion SACCB</h2>
+            <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold">Panel</p>
+            <h2 className="font-display text-3xl md:text-4xl tracking-wider text-slate-800">Gestion SACCB</h2>
           </div>
           <button onClick={onClose} className="btn-danger">
             <X className="w-4 h-4" /> Fermer
@@ -98,7 +98,7 @@ export default function AdminPanel({
           <StatsAdhesions totals={totals} />
 
           <div className="lg:col-span-2 glass p-6">
-            <h3 className="font-display text-xl tracking-wider text-white mb-4">💾 Sauvegarde PC</h3>
+            <h3 className="font-display text-xl tracking-wider text-slate-800 mb-4">💾 Sauvegarde PC</h3>
             <div className="grid sm:grid-cols-2 gap-3">
               <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500">
                 <FileSpreadsheet className="w-4 h-4" /> Exporter CSV
@@ -183,7 +183,7 @@ function HelloAssoQR() {
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center">
           <QrCode className="w-5 h-5 text-white" />
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-white">HelloAsso — Paiement en ligne</h3>
+        <h3 className="font-display text-2xl tracking-wider text-slate-800">HelloAsso — Paiement en ligne</h3>
       </div>
       <div className="flex flex-col sm:flex-row items-center gap-6">
         <div className="bg-white rounded-2xl p-3 shadow-lg">
@@ -195,7 +195,7 @@ function HelloAssoQR() {
           />
         </div>
         <div className="flex-1 space-y-3">
-          <p className="text-white/70 text-sm">
+          <p className="text-slate-500 text-sm">
             Partagez ce QR code aux adhérents pour qu&apos;ils puissent payer leur adhésion
             directement en ligne via HelloAsso.
           </p>

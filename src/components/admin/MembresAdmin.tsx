@@ -55,15 +55,15 @@ export default function MembresAdmin({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center">
             <Users className="w-5 h-5 text-white" />
           </div>
-          <h3 className="font-display text-2xl tracking-wider text-white">Adhérents Club</h3>
+          <h3 className="font-display text-2xl tracking-wider text-slate-800">Adhérents Club</h3>
         </div>
-        <span className="px-4 py-2 rounded-full bg-blue-500/20 text-blue-300 text-sm font-bold">
+        <span className="px-4 py-2 rounded-full bg-blue-100 text-blue-700 text-sm font-bold">
           {db.membres.length} adhérent{db.membres.length > 1 ? "s" : ""}
         </span>
       </div>
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
-          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-white/40" />
+          <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
           <input
             className="input !pl-10"
             placeholder="Recherche..."
@@ -76,10 +76,10 @@ export default function MembresAdmin({
         </button>
       </div>
 
-      <div className="overflow-x-auto rounded-xl border border-white/5">
+      <div className="overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
-          <thead className="bg-white/5">
-            <tr className="text-left text-xs uppercase tracking-widest text-white/60">
+          <thead className="bg-slate-50">
+            <tr className="text-left text-xs uppercase tracking-widest text-slate-500">
               <th className="p-3">Nom</th>
               <th className="p-3">Email</th>
               <th className="p-3">Tel</th>
@@ -93,19 +93,19 @@ export default function MembresAdmin({
             {filtered.map((m) => (
               <tr
                 key={m.id}
-                className={`border-t border-white/5 ${!m.ok ? "opacity-70" : ""}`}
+                className={`border-t border-slate-100 ${!m.ok ? "opacity-70" : ""}`}
               >
-                <td className="p-3 text-white">{m.nom}</td>
-                <td className="p-3 text-white/70 break-all">{m.email}</td>
-                <td className="p-3 text-white/60">{m.tel || "-"}</td>
-                <td className="p-3 text-white/70">{m.type}</td>
+                <td className="p-3 text-slate-800">{m.nom}</td>
+                <td className="p-3 text-slate-500 break-all">{m.email}</td>
+                <td className="p-3 text-slate-400">{m.tel || "-"}</td>
+                <td className="p-3 text-slate-500">{m.type}</td>
                 <td className="p-3">
                   {m.paymentMethod === "online" ? (
-                    <span className="text-blue-400 text-xs">En ligne</span>
+                    <span className="text-blue-600 text-xs">En ligne</span>
                   ) : m.paymentMethod === "virement" ? (
-                    <span className="text-amber-400 text-xs">Virement</span>
+                    <span className="text-amber-600 text-xs">Virement</span>
                   ) : (
-                    <span className="text-white/40 text-xs">–</span>
+                    <span className="text-slate-300 text-xs">&ndash;</span>
                   )}
                 </td>
                 <td className="p-3">
@@ -116,9 +116,9 @@ export default function MembresAdmin({
                       onChange={(e) => togglePaiement(m.id, e.target.checked)}
                     />
                     {m.ok ? (
-                      <span className="text-emerald-400 text-xs">Payé</span>
+                      <span className="text-emerald-600 text-xs">Payé</span>
                     ) : (
-                      <span className="text-red-400 text-xs">En attente</span>
+                      <span className="text-red-500 text-xs">En attente</span>
                     )}
                   </label>
                 </td>
@@ -139,7 +139,7 @@ export default function MembresAdmin({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-white/40">
+                <td colSpan={7} className="p-6 text-center text-slate-400">
                   Aucun adhérent.
                 </td>
               </tr>

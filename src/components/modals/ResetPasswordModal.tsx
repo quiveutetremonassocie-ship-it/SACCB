@@ -40,11 +40,11 @@ export default function ResetPasswordModal({
   }
 
   return (
-    <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-black/90 backdrop-blur-sm p-4">
-      <div className="glass-strong p-8 w-full max-w-sm text-center">
-        <KeyRound className="w-10 h-10 text-blue-400 mx-auto mb-3" />
-        <h3 className="font-display text-2xl tracking-wider text-white mb-2">Nouveau mot de passe</h3>
-        <p className="text-xs text-white/50 mb-5">Choisissez un nouveau mot de passe pour votre compte admin.</p>
+    <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm text-center">
+        <KeyRound className="w-10 h-10 text-blue-600 mx-auto mb-3" />
+        <h3 className="font-display text-2xl tracking-wider text-slate-800 mb-2">Nouveau mot de passe</h3>
+        <p className="text-xs text-slate-400 mb-5">Choisissez un nouveau mot de passe pour votre compte admin.</p>
         <div className="space-y-3">
           <input
             type="password"

@@ -15,17 +15,17 @@ export default function Tournois({ db }: { db: DB }) {
       <div className="text-center mb-14">
         <div className="sport-label mb-5">
           <span className="sport-label-dot" />
-          <span className="sport-label-text text-yellow-300">Compétitions</span>
+          <span className="sport-label-text text-amber-600">Compétitions</span>
         </div>
         <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Tournois à venir</h2>
-        <p className="text-white/60 max-w-2xl mx-auto">
+        <p className="text-slate-500 max-w-2xl mx-auto">
           Inscrivez votre binôme aux prochains tournois du club.
         </p>
       </div>
 
       {tournois.length === 0 ? (
-        <div className="glass-sport p-10 text-center text-white/60">
-          <Trophy className="w-12 h-12 mx-auto mb-4 text-white/30" />
+        <div className="glass-sport p-10 text-center text-slate-400">
+          <Trophy className="w-12 h-12 mx-auto mb-4 text-slate-300" />
           Aucun tournoi prévu pour le moment.
         </div>
       ) : (
@@ -78,42 +78,42 @@ function TournoiCard({ t, inscrits }: { t: any; inscrits: any[] }) {
       className="glass-sport overflow-hidden"
     >
       <div className="relative p-7 border-l-4 border-emerald-500">
-        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-emerald-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+        <div className="absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl from-emerald-100/40 to-transparent rounded-full blur-2xl pointer-events-none" />
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div>
-            <h3 className="font-display text-3xl text-white tracking-wider">{t.name}</h3>
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-white/60">
+            <h3 className="font-display text-3xl text-slate-800 tracking-wider">{t.name}</h3>
+            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500">
               <span className="flex items-center gap-1.5">
                 <Calendar className="w-4 h-4" /> {t.date}
               </span>
               {t.type && (
-                <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-300 text-xs font-semibold uppercase">
+                <span className="px-3 py-1 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold uppercase">
                   Double {t.type}
                 </span>
               )}
               {t.quota && (
-                <span className="flex items-center gap-1.5 text-emerald-400">
+                <span className="flex items-center gap-1.5 text-emerald-600">
                   <Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles
                 </span>
               )}
             </div>
           </div>
           {isFull && (
-            <span className="px-4 py-2 rounded-full bg-red-500/20 text-red-400 text-sm font-bold uppercase">
+            <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">
               Complet
             </span>
           )}
         </div>
 
-        <div className="bg-black/20 rounded-xl p-4 mb-4">
-          <p className="text-xs uppercase tracking-widest text-white/50 mb-2">Binômes inscrits</p>
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
+          <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Binômes inscrits</p>
           {inscrits.length === 0 ? (
-            <p className="text-white/40 text-sm">Aucun pour le moment</p>
+            <p className="text-slate-400 text-sm">Aucun pour le moment</p>
           ) : (
             <ul className="space-y-1">
               {inscrits.map((i) => (
-                <li key={i.id} className="text-sm text-white/80 flex items-center gap-2">
-                  <span className="text-emerald-400">✓</span> {i.joueurs}
+                <li key={i.id} className="text-sm text-slate-600 flex items-center gap-2">
+                  <span className="text-emerald-500">✓</span> {i.joueurs}
                 </li>
               ))}
             </ul>

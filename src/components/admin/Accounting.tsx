@@ -118,22 +118,22 @@ export default function Accounting({
   }
 
   return (
-    <div className="glass p-6 border border-blue-500/30">
+    <div className="glass p-6 border border-blue-200">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center">
           <Wallet className="w-5 h-5 text-white" />
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-white">Comptabilité & Trésorerie</h3>
+        <h3 className="font-display text-2xl tracking-wider text-slate-800">Comptabilité & Trésorerie</h3>
       </div>
 
       <div className="grid sm:grid-cols-3 gap-3 mb-6">
-        <Stat label="Adhésions reçues" value={`${totals.totalRecolte}€`} accent="text-emerald-400" />
-        <Stat label="Dépenses" value={`${totals.totalDepenses}€`} accent="text-red-400" />
-        <Stat label="Solde actuel" value={`${totals.solde}€`} accent="text-blue-400" />
+        <Stat label="Adhésions reçues" value={`${totals.totalRecolte}€`} accent="text-emerald-600" />
+        <Stat label="Dépenses" value={`${totals.totalDepenses}€`} accent="text-red-500" />
+        <Stat label="Solde actuel" value={`${totals.solde}€`} accent="text-blue-600" />
       </div>
 
-      <div className="bg-black/30 rounded-2xl p-5 mb-5 border border-white/5">
-        <h4 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">
+      <div className="bg-slate-50 rounded-2xl p-5 mb-5 border border-slate-200">
+        <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
           Ajouter une dépense / facture
         </h4>
         <div className="grid md:grid-cols-[1fr_140px_auto] gap-2 mb-3">
@@ -154,12 +154,12 @@ export default function Accounting({
             <Plus className="w-4 h-4" /> Ajouter
           </button>
         </div>
-        <label className="flex items-center gap-3 text-sm text-white/60 cursor-pointer hover:text-white transition">
+        <label className="flex items-center gap-3 text-sm text-slate-500 cursor-pointer hover:text-slate-700 transition">
           <Upload className="w-4 h-4" />
           <span>
             Joindre PDF / images (factures, justificatifs)
             {pendingFiles.length > 0 && (
-              <span className="ml-2 text-blue-400 font-semibold">{pendingFiles.length} fichier(s)</span>
+              <span className="ml-2 text-blue-600 font-semibold">{pendingFiles.length} fichier(s)</span>
             )}
           </span>
           <input
@@ -173,10 +173,10 @@ export default function Accounting({
         </label>
       </div>
 
-      <div className="max-h-[400px] overflow-y-auto rounded-xl border border-white/5">
+      <div className="max-h-[400px] overflow-y-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
-          <thead className="bg-white/5 sticky top-0">
-            <tr className="text-left text-white/60 text-xs uppercase tracking-widest">
+          <thead className="bg-slate-50 sticky top-0">
+            <tr className="text-left text-slate-500 text-xs uppercase tracking-widest">
               <th className="p-3">Date</th>
               <th className="p-3">Description</th>
               <th className="p-3">Montant</th>
@@ -186,45 +186,45 @@ export default function Accounting({
           </thead>
           <tbody>
             {[...(db.factures || [])].reverse().map((f) => (
-              <tr key={f.id} className="border-t border-white/5 align-top">
-                <td className="p-3 text-white/70 whitespace-nowrap">{f.date}</td>
-                <td className="p-3 text-white">{f.desc}</td>
-                <td className="p-3 font-semibold text-red-400 whitespace-nowrap">{f.montant}€</td>
+              <tr key={f.id} className="border-t border-slate-100 align-top">
+                <td className="p-3 text-slate-500 whitespace-nowrap">{f.date}</td>
+                <td className="p-3 text-slate-800">{f.desc}</td>
+                <td className="p-3 font-semibold text-red-500 whitespace-nowrap">{f.montant}€</td>
                 <td className="p-3">
                   <div className="space-y-1">
                     {(f.files || []).map((file) => (
                       <div
                         key={file.path}
-                        className="flex items-center gap-2 bg-white/5 rounded-lg px-2 py-1 text-xs"
+                        className="flex items-center gap-2 bg-slate-50 rounded-lg px-2 py-1 text-xs"
                       >
-                        <FileText className="w-3.5 h-3.5 text-blue-400 shrink-0" />
-                        <span className="truncate max-w-[140px] text-white/80" title={file.name}>
+                        <FileText className="w-3.5 h-3.5 text-blue-600 shrink-0" />
+                        <span className="truncate max-w-[140px] text-slate-600" title={file.name}>
                           {file.name}
                         </span>
                         <button
                           onClick={() => viewFile(file.path)}
-                          className="text-white/50 hover:text-white"
+                          className="text-slate-400 hover:text-slate-700"
                           title="Voir"
                         >
                           <Eye className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => downloadFile(file)}
-                          className="text-white/50 hover:text-white"
+                          className="text-slate-400 hover:text-slate-700"
                           title="Télécharger"
                         >
                           <Download className="w-3.5 h-3.5" />
                         </button>
                         <button
                           onClick={() => removeFile(f.id, file)}
-                          className="text-red-400/60 hover:text-red-400"
+                          className="text-red-400 hover:text-red-500"
                           title="Supprimer"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
                       </div>
                     ))}
-                    <label className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 cursor-pointer">
+                    <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer">
                       <Upload className="w-3 h-3" /> Ajouter
                       <input
                         type="file"
@@ -245,7 +245,7 @@ export default function Accounting({
             ))}
             {(!db.factures || db.factures.length === 0) && (
               <tr>
-                <td colSpan={5} className="p-6 text-center text-white/40">
+                <td colSpan={5} className="p-6 text-center text-slate-400">
                   Aucune facture enregistrée
                 </td>
               </tr>
@@ -259,8 +259,8 @@ export default function Accounting({
 
 function Stat({ label, value, accent }: { label: string; value: string; accent: string }) {
   return (
-    <div className="bg-black/30 rounded-xl p-4 border border-white/5">
-      <p className="text-[10px] uppercase tracking-widest text-white/50 font-semibold">{label}</p>
+    <div className="bg-slate-50 rounded-xl p-4 border border-slate-200">
+      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">{label}</p>
       <p className={`text-3xl font-display tracking-wider mt-1 ${accent}`}>{value}</p>
     </div>
   );

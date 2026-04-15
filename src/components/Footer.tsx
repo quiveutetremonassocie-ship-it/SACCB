@@ -5,11 +5,11 @@ import { Mail, Phone, User } from "lucide-react";
 
 export default function Footer({ year }: { year: number }) {
   return (
-    <footer id="contact" className="bg-black/60 backdrop-blur-xl border-t border-white/10 mt-20">
+    <footer id="contact" className="bg-[#1e3a5f] border-t border-[#1e3a5f] mt-20">
       <div className="max-w-6xl mx-auto px-6 py-20">
         <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-widest text-blue-400 font-semibold mb-3">Équipe</p>
-          <h2 className="font-display text-5xl h-display">Contactez-nous</h2>
+          <p className="text-xs uppercase tracking-widest text-blue-300 font-semibold mb-3">Équipe</p>
+          <h2 className="font-display text-5xl h-display text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-200 to-emerald-300">Contactez-nous</h2>
         </div>
 
         <div className="max-w-md mx-auto">
@@ -59,8 +59,8 @@ function ContactCard({
   email: string;
 }) {
   return (
-    <div className="glass p-7 hover:bg-white/[0.06] transition group">
-      <p className="text-xs uppercase tracking-widest text-blue-400 font-bold mb-3">{role}</p>
+    <div className="bg-white/10 border border-white/20 rounded-2xl p-7 hover:bg-white/[0.15] transition group">
+      <p className="text-xs uppercase tracking-widest text-blue-300 font-bold mb-3">{role}</p>
       <div className="flex items-center gap-2 mb-3">
         <User className="w-5 h-5 text-white/50" />
         <span className="text-xl text-white font-semibold">{name}</span>

@@ -33,7 +33,7 @@ export default function LoginModal({
 
   return (
     <div className="fixed inset-0 z-[3000] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
-      <div className="glass-strong p-8 w-full max-w-sm relative">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm relative">
         <button
           onClick={onClose}
           className="absolute top-3 right-3 text-white/40 hover:text-white p-2"

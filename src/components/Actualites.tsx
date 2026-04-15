@@ -75,10 +75,10 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
         >
           <div className="sport-label mb-5">
             <span className="sport-label-dot" />
-            <span className="sport-label-text text-amber-300">En ce moment</span>
+            <span className="sport-label-text text-amber-600">En ce moment</span>
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Actualités</h2>
-          <p className="text-white/60 max-w-2xl mx-auto">
+          <p className="text-slate-500 max-w-2xl mx-auto">
             Retrouvez ici les dernières nouvelles du club, événements et moments forts.
           </p>
         </motion.div>
@@ -90,7 +90,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
         >
           <button
             onClick={() => openModal(index)}
-            className="relative block w-full aspect-[16/9] rounded-3xl overflow-hidden group shadow-2xl shadow-black/60 border border-white/10"
+            className="relative block w-full aspect-[16/9] rounded-3xl overflow-hidden group shadow-2xl shadow-slate-300/40 border border-slate-200"
           >
             <AnimatePresence mode="wait">
               <motion.div
@@ -109,7 +109,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                     className="w-full h-full object-cover"
                   />
                 )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
                 <div className="absolute left-0 right-0 bottom-0 p-6 md:p-10 text-left">
                   <div className="flex items-center gap-2 mb-3">
                     <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 backdrop-blur">
@@ -149,7 +149,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                   key={a.id}
                   onClick={() => setIndex(i)}
                   className={`h-1.5 rounded-full transition-all ${
-                    i === index ? "w-8 bg-amber-400" : "w-2 bg-white/20 hover:bg-white/40"
+                    i === index ? "w-8 bg-amber-500" : "w-2 bg-slate-300 hover:bg-slate-400"
                   }`}
                   aria-label={`Actualité ${i + 1}`}
                 />
@@ -165,7 +165,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[1800] bg-black/90 backdrop-blur-xl flex items-center justify-center p-4"
+              className="fixed inset-0 z-[1800] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4"
               onClick={closeModal}
             >
               <button
@@ -183,7 +183,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.3 }}
                 onClick={(e) => e.stopPropagation()}
-                className="max-w-5xl w-full max-h-[92vh] overflow-y-auto bg-bgdark border border-white/10 rounded-3xl shadow-2xl"
+                className="max-w-5xl w-full max-h-[92vh] overflow-y-auto bg-white border border-slate-200 rounded-3xl shadow-2xl"
               >
                 {/* Image principale + flèches galerie */}
                 <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-3xl bg-black">
@@ -233,7 +233,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
 
                 {/* Bande de miniatures */}
                 {currentModalImages.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-white/5 bg-black/40">
+                  <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-slate-200 bg-slate-100">
                     {currentModalImages.map((img, i) => (
                       <button
                         key={i}
@@ -241,7 +241,7 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                         className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition ${
                           i === galleryIndex
                             ? "border-amber-400 ring-2 ring-amber-400/30"
-                            : "border-white/10 hover:border-white/30"
+                            : "border-slate-200 hover:border-slate-300"
                         }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -254,14 +254,14 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                 <div className="p-6 md:p-10">
                   <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 mb-4">
                     <Newspaper className="w-3.5 h-3.5 text-amber-300" />
-                    <span className="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">
+                    <span className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold">
                       Actualité {modalIndex + 1} / {n}
                     </span>
                   </div>
-                  <h3 className="font-display text-3xl md:text-4xl text-white mb-4 tracking-wide">
+                  <h3 className="font-display text-3xl md:text-4xl text-slate-800 mb-4 tracking-wide">
                     {actualites[modalIndex].title}
                   </h3>
-                  <p className="text-white/80 text-base md:text-lg whitespace-pre-wrap leading-relaxed">
+                  <p className="text-slate-600 text-base md:text-lg whitespace-pre-wrap leading-relaxed">
                     {actualites[modalIndex].description}
                   </p>
                 </div>

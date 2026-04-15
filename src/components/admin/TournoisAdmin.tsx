@@ -55,20 +55,20 @@ export default function TournoisAdmin({
     <div className="glass p-6">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-          <Trophy className="w-5 h-5 text-white" />
+          <Trophy className="w-5 h-5 text-slate-800" />
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-white">Liste des tournois</h3>
+        <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
       </div>
 
       <div className="space-y-2 mb-6">
         {(db.config_tournois || []).map((t) => (
           <div
             key={t.id}
-            className="flex items-center justify-between bg-white/5 rounded-xl px-4 py-3"
+            className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3"
           >
             <div>
-              <p className="text-white font-semibold">{t.name}</p>
-              <p className="text-xs text-white/50">{t.date}</p>
+              <p className="text-slate-800 font-semibold">{t.name}</p>
+              <p className="text-xs text-slate-400">{t.date}</p>
             </div>
             <button onClick={() => del(t.id)} className="btn-danger !px-3 !py-1.5 !text-xs">
               <Trash2 className="w-3.5 h-3.5" />
@@ -76,11 +76,11 @@ export default function TournoisAdmin({
           </div>
         ))}
         {(!db.config_tournois || db.config_tournois.length === 0) && (
-          <p className="text-white/40 text-sm">Aucun tournoi.</p>
+          <p className="text-slate-400 text-sm">Aucun tournoi.</p>
         )}
       </div>
 
-      <h4 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">
+      <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
         Nouveau tournoi
       </h4>
       <div className="grid sm:grid-cols-2 gap-3 mb-3">

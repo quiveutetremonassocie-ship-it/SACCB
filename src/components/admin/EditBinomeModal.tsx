@@ -14,9 +14,9 @@ export default function EditBinomeModal({
   const [joueurs, setJoueurs] = useState(bin.joueurs);
 
   return (
-    <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/90 p-4">
-      <div className="glass-strong p-7 w-full max-w-md">
-        <h3 className="font-display text-2xl tracking-wider text-white mb-5">Modifier le binôme</h3>
+    <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-7 w-full max-w-md">
+        <h3 className="font-display text-2xl tracking-wider text-slate-800 mb-5">Modifier le binôme</h3>
         <input
           className="input mb-3"
           value={joueurs}

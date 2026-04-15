@@ -116,12 +116,12 @@ export default function Inscription({
       <div className="text-center mb-14">
         <div className="sport-label mb-5">
           <span className="sport-label-dot" />
-          <span className="sport-label-text text-emerald-300">Adhésion</span>
+          <span className="sport-label-text text-emerald-600">Adhésion</span>
         </div>
         <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
           Saison {db.y1}–{db.y2}
         </h2>
-        <p className="text-white/60 max-w-2xl mx-auto">
+        <p className="text-slate-500 max-w-2xl mx-auto">
           Rejoignez l&apos;aventure SACCB. Quelques minutes suffisent.
         </p>
       </div>
@@ -134,12 +134,12 @@ export default function Inscription({
       >
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm mb-2">
-            <span className="text-white/70">Places restantes</span>
-            <span className="text-emerald-400 font-semibold">
+            <span className="text-slate-500">Places restantes</span>
+            <span className="text-emerald-600 font-semibold">
               {remaining} / {quota}
             </span>
           </div>
-          <div className="h-2 bg-white/10 rounded-full overflow-hidden">
+          <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
             <div
               className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-700"
               style={{ width: `${progress}%` }}
@@ -150,40 +150,40 @@ export default function Inscription({
         {!db.insc_open ? (
           <div className="text-center py-10">
             <Lock className="w-12 h-12 text-red-400 mx-auto mb-4" />
-            <h3 className="text-xl font-bold text-red-400 mb-2">Inscriptions closes</h3>
-            <p className="text-white/60 text-sm">
+            <h3 className="text-xl font-bold text-red-500 mb-2">Inscriptions closes</h3>
+            <p className="text-slate-500 text-sm">
               La période d&apos;inscription est terminée ou le club est complet. À bientôt !
             </p>
           </div>
         ) : done ? (
           done.mode === "online" ? (
             <div className="text-center py-6">
-              <CheckCircle2 className="w-14 h-14 text-emerald-400 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-white mb-2">Paiement confirmé !</h3>
-              <p className="text-white/70 text-sm mb-4">
+              <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Paiement confirmé !</h3>
+              <p className="text-slate-600 text-sm mb-4">
                 Merci {done.nom}, votre adhésion est validée.
               </p>
               <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
-              <p className="text-xs text-white/50 mt-4">
+              <p className="text-xs text-slate-500 mt-4">
                 Pensez à faire une capture d&apos;écran de votre badge.
               </p>
             </div>
           ) : (
             <div className="text-center py-6">
-              <Clock className="w-14 h-14 text-amber-400 mx-auto mb-3" />
-              <h3 className="text-xl font-bold text-white mb-2">Inscription enregistrée !</h3>
-              <div className="bg-amber-500/10 border border-amber-500/30 rounded-xl p-4 mb-4 text-left">
-                <p className="text-amber-200 text-sm font-semibold mb-1">
+              <Clock className="w-14 h-14 text-amber-500 mx-auto mb-3" />
+              <h3 className="text-xl font-bold text-slate-800 mb-2">Inscription enregistrée !</h3>
+              <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-left">
+                <p className="text-amber-700 text-sm font-semibold mb-1">
                   Paiement en attente
                 </p>
-                <p className="text-white/70 text-sm">
+                <p className="text-slate-600 text-sm">
                   Merci {done.nom}. Pour finaliser votre adhésion, veuillez vous
-                  rapprocher de <strong className="text-white">Hernan</strong> au prochain
+                  rapprocher de <strong className="text-slate-800">Hernan</strong> au prochain
                   entraînement afin de procéder au règlement par virement bancaire.
                 </p>
               </div>
               <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
-              <p className="text-xs text-white/50 mt-4">
+              <p className="text-xs text-slate-500 mt-4">
                 Pensez à faire une capture d&apos;écran de votre badge.
               </p>
             </div>
@@ -199,7 +199,7 @@ export default function Inscription({
             </select>
 
             <div className="pt-2">
-              <p className="text-xs uppercase tracking-widest text-white/50 mb-2">
+              <p className="text-xs uppercase tracking-widest text-slate-500 mb-2">
                 Mode de paiement
               </p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -208,24 +208,24 @@ export default function Inscription({
                   onClick={() => setMode("online")}
                   className={`relative text-left rounded-xl border p-4 transition-all ${
                     mode === "online"
-                      ? "border-emerald-400/60 bg-emerald-500/10"
-                      : "border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10"
+                      ? "border-emerald-400 bg-emerald-50"
+                      : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <CreditCard
                       className={`w-4 h-4 ${
-                        mode === "online" ? "text-emerald-400" : "text-white/70"
+                        mode === "online" ? "text-emerald-500" : "text-slate-400"
                       }`}
                     />
                     <span className={`font-semibold text-sm ${
-                      mode === "online" ? "text-white" : "text-white/80"
+                      mode === "online" ? "text-slate-800" : "text-slate-800"
                     }`}>
                       Payer en ligne
                     </span>
                   </div>
                   <p className={`text-xs ${
-                    mode === "online" ? "text-white/60" : "text-white/50"
+                    mode === "online" ? "text-slate-500" : "text-slate-500"
                   }`}>
                     Carte bancaire via HelloAsso (sécurisé)
                   </p>
@@ -236,24 +236,24 @@ export default function Inscription({
                   onClick={() => setMode("virement")}
                   className={`relative text-left rounded-xl border p-4 transition-all ${
                     mode === "virement"
-                      ? "border-amber-400/60 bg-amber-500/10"
-                      : "border-white/20 bg-white/5 hover:border-white/30 hover:bg-white/10"
+                      ? "border-amber-400 bg-amber-50"
+                      : "border-slate-200 bg-slate-50 hover:border-slate-300 hover:bg-white"
                   }`}
                 >
                   <div className="flex items-center gap-2 mb-1">
                     <Banknote
                       className={`w-4 h-4 ${
-                        mode === "virement" ? "text-amber-400" : "text-white/70"
+                        mode === "virement" ? "text-amber-500" : "text-slate-400"
                       }`}
                     />
                     <span className={`font-semibold text-sm ${
-                      mode === "virement" ? "text-white" : "text-white/80"
+                      mode === "virement" ? "text-slate-800" : "text-slate-800"
                     }`}>
                       Virement bancaire
                     </span>
                   </div>
                   <p className={`text-xs ${
-                    mode === "virement" ? "text-white/60" : "text-white/50"
+                    mode === "virement" ? "text-slate-500" : "text-slate-500"
                   }`}>
                     Règlement auprès de Hernan
                   </p>
@@ -269,11 +269,11 @@ export default function Inscription({
                 : "Valider mon inscription"}
             </button>
             {mode === "online" && (
-              <div className="bg-blue-500/10 border border-blue-500/20 rounded-lg p-3 text-center">
-                <p className="text-xs text-white/50">
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 text-center">
+                <p className="text-xs text-slate-500">
                   Vous serez redirigé vers HelloAsso pour finaliser le paiement.
                 </p>
-                <p className="text-xs text-amber-300 mt-1">
+                <p className="text-xs text-amber-600 mt-1">
                   Un don à HelloAsso est pré-sélectionné lors du paiement.
                   Celui-ci est facultatif et peut être modifié ou mis à 0&euro;.
                 </p>
@@ -289,7 +289,7 @@ export default function Inscription({
 
 function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y2: number }) {
   return (
-    <div className="relative max-w-sm mx-auto bg-gradient-to-br from-bgcard to-bgdark border-2 border-blue-500/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
+    <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
       <div className="font-display text-xl text-blue-400 tracking-widest border-b border-white/10 pb-2 mb-4">
         MEMBRE OFFICIEL SACCB

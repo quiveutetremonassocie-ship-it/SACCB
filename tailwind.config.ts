@@ -5,17 +5,17 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        primary: "#3b82f6",
+        primary: "#1e3a5f",
         accent: "#10b981",
         danger: "#ef4444",
-        bgdark: "#0a0f1f",
-        bgcard: "#111a2e",
+        bglight: "#f8fafc",
+        bgcard: "#ffffff",
+        bgdark: "#1e3a5f",
       },
       fontFamily: {
         display: ["'Bebas Neue'", "sans-serif"],
         sans: ["Outfit", "system-ui", "sans-serif"],
       },
-      backdropBlur: { xs: "2px" },
       animation: {
         "fade-in": "fadeIn 0.6s ease-out",
         "slide-up": "slideUp 0.6s ease-out",

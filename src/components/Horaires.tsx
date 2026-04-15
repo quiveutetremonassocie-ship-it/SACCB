@@ -17,10 +17,10 @@ export default function Horaires() {
         >
           <div className="sport-label mb-5">
             <span className="sport-label-dot" />
-            <span className="sport-label-text text-blue-300">Infos pratiques</span>
+            <span className="sport-label-text text-blue-600">Infos pratiques</span>
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Horaires & Tarifs</h2>
-          <p className="text-white/60 max-w-xl mx-auto">
+          <p className="text-slate-500 max-w-xl mx-auto">
             Trois créneaux par semaine, pour tous les niveaux.
           </p>
         </motion.div>
@@ -53,8 +53,8 @@ export default function Horaires() {
           title="Où nous trouver"
           accent="from-purple-500 to-pink-500"
         >
-          <p className="text-white text-lg font-semibold">Salle Paul Vatine</p>
-          <p className="text-white/60 text-sm mt-1">
+          <p className="text-slate-800 text-lg font-semibold">Salle Paul Vatine</p>
+          <p className="text-slate-400 text-sm mt-1">
             30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse
           </p>
         </Card>
@@ -65,14 +65,14 @@ export default function Horaires() {
 
 function ScheduleRow({ days, time }: { days: string; time: string }) {
   return (
-    <div className="flex items-center justify-between py-2.5 border-b border-white/5 last:border-0">
+    <div className="flex items-center justify-between py-2.5 border-b border-slate-100 last:border-0">
       <span
-        className="text-white font-bold text-sm uppercase tracking-widest"
+        className="text-slate-800 font-bold text-sm uppercase tracking-widest"
         style={{ fontFamily: "Oswald, sans-serif" }}
       >
         {days}
       </span>
-      <span className="text-white/70 text-sm">{time}</span>
+      <span className="text-slate-500 text-sm">{time}</span>
     </div>
   );
 }
@@ -81,20 +81,20 @@ function PriceRow({ label, price, last }: { label: string; price: string; last?:
   return (
     <div
       className={`flex items-center justify-between py-3 ${
-        last ? "" : "border-b border-white/5"
+        last ? "" : "border-b border-slate-100"
       }`}
     >
       <span
-        className="text-white/80 uppercase tracking-widest text-sm"
+        className="text-slate-600 uppercase tracking-widest text-sm"
         style={{ fontFamily: "Oswald, sans-serif" }}
       >
         {label}
       </span>
       <div className="flex items-baseline gap-1">
-        <span className="font-display text-4xl text-transparent bg-clip-text bg-gradient-to-b from-white to-white/60">
+        <span className="font-display text-4xl text-transparent bg-clip-text bg-gradient-to-b from-[#1e3a5f] to-[#2d5a8e]">
           {price}
         </span>
-        <span className="text-lg text-white/50">€</span>
+        <span className="text-lg text-slate-400">€</span>
       </div>
     </div>
   );
@@ -121,7 +121,7 @@ function Card({
     >
       <Shuttlecock
         className="absolute -top-2 -right-2 w-16 h-16 opacity-[0.04] group-hover:opacity-10 transition"
-        color="white"
+        color="#1e3a5f"
       />
       <div className="flex items-center gap-4 mb-5 relative">
         <div
@@ -130,7 +130,7 @@ function Card({
           {icon}
         </div>
         <h3
-          className="font-display text-2xl tracking-widest text-white uppercase"
+          className="font-display text-2xl tracking-widest text-slate-800 uppercase"
           style={{ fontFamily: "'Bebas Neue', sans-serif" }}
         >
           {title}

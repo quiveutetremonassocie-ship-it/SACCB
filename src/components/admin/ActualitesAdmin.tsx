@@ -179,13 +179,13 @@ export default function ActualitesAdmin({
   }
 
   return (
-    <div className="glass p-6 border border-amber-500/30">
+    <div className="glass p-6 border border-amber-200">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
             <Newspaper className="w-5 h-5 text-white" />
           </div>
-          <h3 className="font-display text-2xl tracking-wider text-white">Actualités</h3>
+          <h3 className="font-display text-2xl tracking-wider text-slate-800">Actualités</h3>
         </div>
         <button
           onClick={() => setShowPreview((s) => !s)}
@@ -196,8 +196,8 @@ export default function ActualitesAdmin({
       </div>
 
       {/* AJOUT */}
-      <div className="bg-black/30 rounded-2xl p-5 mb-5 border border-white/5">
-        <h4 className="text-sm font-semibold text-white mb-3 uppercase tracking-widest">
+      <div className="bg-slate-50 rounded-2xl p-5 mb-5 border border-slate-200">
+        <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
           Nouvelle actualité
         </h4>
         <div className="space-y-3">
@@ -213,7 +213,7 @@ export default function ActualitesAdmin({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
-          <label className="flex items-center gap-3 text-sm text-white/60 cursor-pointer hover:text-white transition">
+          <label className="flex items-center gap-3 text-sm text-slate-500 cursor-pointer hover:text-slate-700 transition">
             <Upload className="w-4 h-4" />
             <span>
               {pendingFiles.length > 0 ? (
@@ -239,7 +239,7 @@ export default function ActualitesAdmin({
               {pendingFiles.map((f, i) => (
                 <div
                   key={i}
-                  className="flex items-center gap-1 px-2 py-1 bg-amber-500/10 border border-amber-500/20 rounded text-xs text-amber-200"
+                  className="flex items-center gap-1 px-2 py-1 bg-amber-50 border border-amber-200 rounded text-xs text-amber-700"
                 >
                   {i === 0 && <span className="text-yellow-300">★</span>}
                   <span className="truncate max-w-[140px]">{f.name}</span>
@@ -266,14 +266,14 @@ export default function ActualitesAdmin({
       {/* LISTE */}
       <div className="space-y-4 mb-5">
         {list.length === 0 && (
-          <p className="text-center text-white/40 py-6 text-sm">Aucune actualité pour le moment</p>
+          <p className="text-center text-slate-400 py-6 text-sm">Aucune actualité pour le moment</p>
         )}
         {list.map((a, i) => {
           const imgs = actualiteImages(a);
           return (
-            <div key={a.id} className="bg-black/30 rounded-2xl p-4 border border-white/5">
+            <div key={a.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
               <div className="flex gap-4 mb-3">
-                <div className="relative w-32 h-32 shrink-0 rounded-xl overflow-hidden bg-black/40">
+                <div className="relative w-32 h-32 shrink-0 rounded-xl overflow-hidden bg-slate-200">
                   {imgs[0] && (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img
@@ -303,7 +303,7 @@ export default function ActualitesAdmin({
                     <button
                       onClick={() => move(a.id, -1)}
                       disabled={i === 0}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Monter"
                     >
                       <ArrowUp className="w-3.5 h-3.5" />
@@ -311,7 +311,7 @@ export default function ActualitesAdmin({
                     <button
                       onClick={() => move(a.id, 1)}
                       disabled={i === list.length - 1}
-                      className="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-white/60 hover:text-white disabled:opacity-30 disabled:cursor-not-allowed"
+                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
                       title="Descendre"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
@@ -327,12 +327,12 @@ export default function ActualitesAdmin({
               </div>
 
               {/* Galerie d'images */}
-              <div className="border-t border-white/5 pt-3">
+              <div className="border-t border-slate-200 pt-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] uppercase tracking-widest text-white/50 font-semibold">
+                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
                     Galerie ({imgs.length})
                   </p>
-                  <label className="inline-flex items-center gap-1 text-xs text-blue-400 hover:text-blue-300 cursor-pointer bg-blue-500/10 px-3 py-1.5 rounded-lg border border-blue-500/20">
+                  <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
                     <Upload className="w-3 h-3" /> Ajouter des images
                     <input
                       type="file"
@@ -353,7 +353,7 @@ export default function ActualitesAdmin({
                         className={`w-20 h-20 object-cover rounded-lg border-2 ${
                           idx === 0
                             ? "border-yellow-400 ring-2 ring-yellow-400/20"
-                            : "border-white/10"
+                            : "border-slate-200"
                         }`}
                       />
                       {idx === 0 && (
@@ -389,11 +389,11 @@ export default function ActualitesAdmin({
 
       {/* APERCU LIVE */}
       {showPreview && list.length > 0 && (
-        <div className="mt-6 pt-6 border-t border-white/10">
-          <p className="text-xs uppercase tracking-widest text-amber-400 font-semibold mb-4 flex items-center gap-2">
+        <div className="mt-6 pt-6 border-t border-slate-200">
+          <p className="text-xs uppercase tracking-widest text-amber-600 font-semibold mb-4 flex items-center gap-2">
             <Eye className="w-3.5 h-3.5" /> Aperçu du rendu côté site (temps réel, rotation 5s)
           </p>
-          <div className="rounded-3xl overflow-hidden bg-bgdark/60 p-4 border border-white/5">
+          <div className="rounded-3xl overflow-hidden bg-slate-50 p-4 border border-slate-200">
             <Actualites actualites={list} />
           </div>
         </div>

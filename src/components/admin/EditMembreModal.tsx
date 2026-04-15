@@ -15,9 +15,9 @@ export default function EditMembreModal({
   const [m, setM] = useState<Membre>(membre);
 
   return (
-    <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/90 p-4">
-      <div className="glass-strong p-7 w-full max-w-md">
-        <h3 className="font-display text-2xl tracking-wider text-white mb-5">Modifier l&apos;adhérent</h3>
+    <div className="fixed inset-0 z-[4000] flex items-center justify-center bg-black/50 p-4">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-7 w-full max-w-md">
+        <h3 className="font-display text-2xl tracking-wider text-slate-800 mb-5">Modifier l&apos;adhérent</h3>
         <div className="space-y-3">
           <input className="input" value={m.nom} onChange={(e) => setM({ ...m, nom: e.target.value })} placeholder="Nom" />
           <input className="input" value={m.email} onChange={(e) => setM({ ...m, email: e.target.value })} placeholder="Email" />

@@ -33,12 +33,12 @@ export default function SeasonSettings({
   }
 
   return (
-    <div className="glass p-6 border border-emerald-500/30">
+    <div className="glass p-6 border border-emerald-200">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
           <CalendarCog className="w-5 h-5 text-white" />
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-white">Paramètres saison</h3>
+        <h3 className="font-display text-2xl tracking-wider text-slate-800">Paramètres saison</h3>
       </div>
       <div className="grid grid-cols-2 gap-3 mb-3">
         <input
@@ -58,7 +58,7 @@ export default function SeasonSettings({
       </div>
 
       <div className="mb-3">
-        <label className="text-xs uppercase tracking-widest text-white/50 mb-1 block">
+        <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 block">
           Places disponibles
         </label>
         <div className="flex items-center gap-3">
@@ -69,12 +69,12 @@ export default function SeasonSettings({
             min={db.membres.length}
             onChange={(e) => setQuota(Number(e.target.value))}
           />
-          <span className="text-white/50 text-sm whitespace-nowrap">
+          <span className="text-slate-400 text-sm whitespace-nowrap">
             {db.membres.length} / {quota} inscrits
           </span>
         </div>
         {db.membres.length >= currentQuota && (
-          <p className="text-amber-400 text-xs mt-1 flex items-center gap-1">
+          <p className="text-amber-600 text-xs mt-1 flex items-center gap-1">
             <UserPlus className="w-3 h-3" />
             Club complet — augmentez le quota pour accepter de nouveaux membres
           </p>
