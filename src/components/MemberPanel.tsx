@@ -1,7 +1,9 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff } from "lucide-react";
+import { useState } from "react";
 import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
+import { memberChangeCode } from "@/lib/db";
 
 export default function MemberPanel({
   session,
@@ -16,9 +18,37 @@ export default function MemberPanel({
   whatsappLink?: string | null;
   onClose: () => void;
 }) {
+  const [showCodeForm, setShowCodeForm] = useState(false);
+  const [oldCode, setOldCode] = useState("");
+  const [newCode, setNewCode] = useState("");
+  const [confirmCode, setConfirmCode] = useState("");
+  const [showOld, setShowOld] = useState(false);
+  const [showNew, setShowNew] = useState(false);
+  const [codeMsg, setCodeMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [codeLoading, setCodeLoading] = useState(false);
+
   function logout() {
     clearMemberSession();
     onClose();
+  }
+
+  async function handleChangeCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (newCode !== confirmCode) {
+      setCodeMsg({ ok: false, text: "Les deux nouveaux codes ne correspondent pas." });
+      return;
+    }
+    setCodeLoading(true);
+    setCodeMsg(null);
+    const r = await memberChangeCode(session.email, oldCode, newCode);
+    setCodeLoading(false);
+    if (r.ok) {
+      setCodeMsg({ ok: true, text: "Code modifié avec succès !" });
+      setOldCode(""); setNewCode(""); setConfirmCode("");
+      setTimeout(() => setShowCodeForm(false), 1500);
+    } else {
+      setCodeMsg({ ok: false, text: r.reason || "Erreur." });
+    }
   }
 
   return (
@@ -52,6 +82,67 @@ export default function MemberPanel({
           <p className="text-xs text-slate-400 text-center mt-2">
             Faites une capture d&apos;écran pour la conserver.
           </p>
+        </div>
+
+        {/* Changer le code */}
+        <div className="mb-4">
+          <button
+            onClick={() => { setShowCodeForm(!showCodeForm); setCodeMsg(null); }}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
+          >
+            <KeyRound className="w-4 h-4" />
+            Changer mon code personnel
+          </button>
+          {showCodeForm && (
+            <form onSubmit={handleChangeCode} className="mt-3 space-y-2">
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type={showOld ? "text" : "password"}
+                  inputMode="numeric"
+                  placeholder="Code actuel"
+                  value={oldCode}
+                  onChange={(e) => setOldCode(e.target.value)}
+                  required
+                />
+                <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type={showNew ? "text" : "password"}
+                  inputMode="numeric"
+                  placeholder="Nouveau code (min. 4 chiffres)"
+                  pattern="\d{4,}"
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value)}
+                  required
+                />
+                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <input
+                className="input"
+                type="password"
+                inputMode="numeric"
+                placeholder="Confirmer le nouveau code"
+                value={confirmCode}
+                onChange={(e) => setConfirmCode(e.target.value)}
+                required
+              />
+              {codeMsg && (
+                <p className={`text-xs text-center font-semibold ${codeMsg.ok ? "text-emerald-600" : "text-red-500"}`}>
+                  {codeMsg.text}
+                </p>
+              )}
+              <button type="submit" className="btn-primary w-full !text-sm" disabled={codeLoading}>
+                {codeLoading ? "Enregistrement..." : "Enregistrer le nouveau code"}
+              </button>
+            </form>
+          )}
         </div>
 
         {/* WhatsApp */}

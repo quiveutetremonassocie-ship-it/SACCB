@@ -562,6 +562,45 @@ Deno.serve(async (req) => {
     return json({ ok: true, sent: emails.length });
   }
 
+  // ─── ACTION: Changer le code personnel d'un membre ───
+  if (action === "change_code") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const oldCode = sanitize(String(body.oldCode || ""));
+    const newCode = sanitize(String(body.newCode || ""));
+
+    if (!email || !oldCode || !newCode) return json({ ok: false, reason: "Champs manquants." }, 400);
+    if (!/^\d{4,}$/.test(newCode)) return json({ ok: false, reason: "Le nouveau code doit contenir au moins 4 chiffres." }, 400);
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+
+    const membre = membres.find(
+      (m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === oldCode
+    );
+
+    if (!membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
+
+    membre.code = newCode;
+    currentData.membres = membres;
+
+    const { error: updateError } = await supabaseAdmin
+      .from("saccb_db")
+      .update({ data: currentData })
+      .eq("id", 1);
+
+    if (updateError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    return json({ ok: true });
+  }
+
   // ─── ACTION: Envoyer l'email de confirmation à un membre (virement validé par admin) ───
   if (action === "send_confirmation") {
     const membreId = String(body.membreId || "");

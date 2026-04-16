@@ -121,6 +121,20 @@ export async function notifyMembres(
   return res.json();
 }
 
+// ─── Changer le code personnel d'un membre ───
+export async function memberChangeCode(
+  email: string,
+  oldCode: string,
+  newCode: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "change_code", email, oldCode, newCode }),
+  });
+  return res.json();
+}
+
 // ─── Envoyer email de confirmation (virement validé par admin) ───
 export async function adminSendConfirmation(membreId: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
