@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
+import { adminSendConfirmation } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -35,6 +36,10 @@ export default function MembresAdmin({
       membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)),
     };
     await onPersist(next);
+    // Si on vient de valider le paiement, envoyer l'email de confirmation
+    if (val) {
+      adminSendConfirmation(id).catch(() => {});
+    }
   }
 
   async function del(id: string) {
