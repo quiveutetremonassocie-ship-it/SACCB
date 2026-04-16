@@ -27,6 +27,7 @@ export default function Navbar({
     { href: "#actualites", label: "Actus" },
     { href: "#horaires", label: "Horaires" },
     { href: "#tournois", label: "Tournois" },
+    { href: "#palmares", label: "Palmarès" },
     { href: "#inscription", label: "Adhésion" },
     { href: "#contact", label: "Contact" },
   ];

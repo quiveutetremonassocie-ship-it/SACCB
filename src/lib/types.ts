@@ -38,6 +38,7 @@ export type InscritTournoi = {
   id: string;
   tournoiId: string;
   joueurs: string;
+  resultat?: string | null; // ex: "3/25" (3ème sur 25 équipes)
 };
 
 export type ActualiteImage = {
@@ -63,6 +64,14 @@ export function actualiteImages(a: Actualite): ActualiteImage[] {
   return [];
 }
 
+export type SeasonArchive = {
+  y1: number;
+  y2: number;
+  membresCount: number;
+  config_tournois: Tournoi[];
+  inscrits_tournoi: InscritTournoi[];
+};
+
 export type DB = {
   membres: Membre[];
   factures: Facture[];
@@ -74,6 +83,7 @@ export type DB = {
   insc_open: boolean;
   quota?: number;
   whatsappLink?: string; // lien d'invitation groupe WhatsApp
+  archives?: SeasonArchive[]; // historique des saisons précédentes
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;

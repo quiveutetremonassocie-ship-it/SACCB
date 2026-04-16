@@ -18,6 +18,7 @@ import MemberLoginModal from "./modals/MemberLoginModal";
 import ResetPasswordModal from "./modals/ResetPasswordModal";
 import AdminPanel from "./admin/AdminPanel";
 import MemberPanel from "./MemberPanel";
+import Palmares from "./Palmares";
 
 export default function Site() {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -132,6 +133,7 @@ export default function Site() {
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
         />
+        <Palmares db={db} />
         <Inscription
           db={db}
           membresCount={membresCount}

@@ -28,6 +28,8 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     config_tournois: d.config_tournois ?? [],
     inscrits_tournoi: d.inscrits_tournoi ?? [],
     actualites: d.actualites ?? [],
+    archives: d.archives ?? [],
+    whatsappLink: d.whatsappLink,
     membresCount: d.membresCount ?? 0,
   };
 }
@@ -101,6 +103,19 @@ export async function verifyMembre(
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code }),
+  });
+  return res.json();
+}
+
+// ─── Notifier les adhérents par email (via Edge Function) ───
+export async function notifyMembres(
+  tournoiId: string,
+  tournoiName: string
+): Promise<{ ok: boolean; sent?: number; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "notify_membres", tournoiId, tournoiName }),
   });
   return res.json();
 }

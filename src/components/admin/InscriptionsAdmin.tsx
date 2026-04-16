@@ -22,6 +22,16 @@ export default function InscriptionsAdmin({
     await onPersist(next);
   }
 
+  async function setResultat(id: string, resultat: string) {
+    const next = {
+      ...db,
+      inscrits_tournoi: db.inscrits_tournoi.map((i) =>
+        i.id === id ? { ...i, resultat: resultat.trim() || null } : i
+      ),
+    };
+    await onPersist(next);
+  }
+
   async function addBinome(tournoiId: string) {
     if (!p1.trim() || !p2.trim()) {
       alert("Les deux noms sont requis.");
@@ -108,19 +118,31 @@ export default function InscriptionsAdmin({
                 {inscrits.map((i) => (
                   <div
                     key={i.id}
-                    className="flex items-center justify-between bg-slate-50 rounded-xl px-3 py-2"
+                    className="bg-slate-50 rounded-xl px-3 py-2"
                   >
-                    <span className="text-slate-700 text-sm">{i.joueurs}</span>
-                    <div className="flex gap-1">
-                      <button
-                        onClick={() => onEditBin({ id: i.id, joueurs: i.joueurs })}
-                        className="btn-primary !px-2 !py-1 !text-xs"
-                      >
-                        <Pencil className="w-3 h-3" />
-                      </button>
-                      <button onClick={() => del(i.id)} className="btn-danger !px-2 !py-1 !text-xs">
-                        <Trash2 className="w-3 h-3" />
-                      </button>
+                    <div className="flex items-center justify-between">
+                      <span className="text-slate-700 text-sm font-medium">{i.joueurs}</span>
+                      <div className="flex gap-1">
+                        <button
+                          onClick={() => onEditBin({ id: i.id, joueurs: i.joueurs })}
+                          className="btn-primary !px-2 !py-1 !text-xs"
+                        >
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                        <button onClick={() => del(i.id)} className="btn-danger !px-2 !py-1 !text-xs">
+                          <Trash2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 mt-1">
+                      <span className="text-xs text-slate-400 shrink-0">Résultat :</span>
+                      <input
+                        className="input !text-xs !py-0.5 !px-2 flex-1"
+                        placeholder='ex: 3/25 (3ème sur 25)'
+                        defaultValue={i.resultat || ""}
+                        onBlur={(e) => setResultat(i.id, e.target.value)}
+                        onKeyDown={(e) => e.key === "Enter" && setResultat(i.id, (e.target as HTMLInputElement).value)}
+                      />
                     </div>
                   </div>
                 ))}

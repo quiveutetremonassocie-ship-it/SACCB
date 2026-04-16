@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive } from "lucide-react";
 import { DB, QUOTA_DEFAULT } from "@/lib/types";
 
 export default function SeasonSettings({
@@ -37,6 +37,25 @@ export default function SeasonSettings({
   async function reset() {
     if (!confirm("Supprimer TOUS les adhérents ? Action irréversible.")) return;
     await onPersist({ ...db, membres: [] });
+  }
+
+  async function archiveSeason() {
+    if (!confirm(`Archiver la saison ${db.y1}–${db.y2} ? Cela sauvegarde les tournois et résultats dans l'historique.`)) return;
+    const archive = {
+      y1: db.y1,
+      y2: db.y2,
+      membresCount: db.membres.length,
+      config_tournois: db.config_tournois,
+      inscrits_tournoi: db.inscrits_tournoi,
+    };
+    const prevArchives = db.archives ?? [];
+    // Évite les doublons de saison
+    const filtered = prevArchives.filter((a) => !(a.y1 === db.y1 && a.y2 === db.y2));
+    await onPersist({
+      ...db,
+      archives: [...filtered, archive],
+    });
+    alert(`✅ Saison ${db.y1}–${db.y2} archivée !`);
   }
 
   return (
@@ -122,6 +141,9 @@ export default function SeasonSettings({
         </button>
         <button onClick={update} className="btn-accent w-full">
           <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
+        </button>
+        <button onClick={archiveSeason} className="btn-ghost w-full">
+          <Archive className="w-4 h-4" /> Archiver cette saison
         </button>
         <button onClick={reset} className="btn-danger w-full">
           Réinitialiser les adhérents

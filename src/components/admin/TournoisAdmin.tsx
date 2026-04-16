@@ -1,8 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trophy, Trash2 } from "lucide-react";
+import { Plus, Trophy, Trash2, Bell } from "lucide-react";
 import { DB } from "@/lib/types";
+import { notifyMembres } from "@/lib/db";
 
 export default function TournoisAdmin({
   db,
@@ -44,6 +45,8 @@ export default function TournoisAdmin({
     setQ("");
   }
 
+  const [notifying, setNotifying] = useState<string | null>(null);
+
   async function del(id: string) {
     if (!confirm("Supprimer ce tournoi et toutes ses inscriptions ?")) return;
     const next = {
@@ -52,6 +55,18 @@ export default function TournoisAdmin({
       inscrits_tournoi: db.inscrits_tournoi.filter((i) => i.tournoiId !== id),
     };
     await onPersist(next);
+  }
+
+  async function notify(id: string, name: string) {
+    if (!confirm(`Envoyer un email à tous les adhérents pour le tournoi "${name}" ?`)) return;
+    setNotifying(id);
+    const r = await notifyMembres(id, name);
+    setNotifying(null);
+    if (r.ok) {
+      alert(`✅ Email envoyé à ${r.sent} adhérent(s) !`);
+    } else {
+      alert("Erreur : " + (r.reason || "Inconnue"));
+    }
   }
 
   return (
@@ -76,9 +91,20 @@ export default function TournoisAdmin({
                 <p className="text-xs text-amber-600">Limite : {t.dateLimit}</p>
               )}
             </div>
-            <button onClick={() => del(t.id)} className="btn-danger !px-3 !py-1.5 !text-xs">
-              <Trash2 className="w-3.5 h-3.5" />
-            </button>
+            <div className="flex gap-2">
+              <button
+                onClick={() => notify(t.id, t.name)}
+                disabled={notifying === t.id}
+                className="btn-primary !px-3 !py-1.5 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500"
+                title="Prévenir les adhérents par email"
+              >
+                <Bell className="w-3.5 h-3.5" />
+                {notifying === t.id ? "Envoi..." : "Prévenir"}
+              </button>
+              <button onClick={() => del(t.id)} className="btn-danger !px-3 !py-1.5 !text-xs">
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
           </div>
         ))}
         {(!db.config_tournois || db.config_tournois.length === 0) && (

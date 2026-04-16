@@ -167,6 +167,8 @@ Deno.serve(async (req) => {
       config_tournois: d.config_tournois ?? [],
       inscrits_tournoi: d.inscrits_tournoi ?? [],
       actualites: d.actualites ?? [],
+      archives: d.archives ?? [],
+      whatsappLink: d.whatsappLink ?? null,
       membresCount: ((d.membres as unknown[]) || []).length,
     });
   }
@@ -399,6 +401,93 @@ Deno.serve(async (req) => {
     }
 
     return json({ ok: true });
+  }
+
+  // ─── ACTION: Notifier les adhérents par email ───
+  if (action === "notify_membres") {
+    const tournoiId = sanitize(String(body.tournoiId || ""));
+    const tournoiName = sanitize(String(body.tournoiName || ""));
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+
+    if (!resendKey) {
+      return json({ ok: false, reason: "Service email non configuré (RESEND_API_KEY manquant)." });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+    const tournois = (currentData.config_tournois || []) as Record<string, unknown>[];
+
+    const tournoi = tournois.find((t) => t.id === tournoiId);
+    if (!tournoi) return json({ ok: false, reason: "Tournoi introuvable." });
+
+    // Récupère les emails des membres ayant payé
+    const emails = membres
+      .filter((m) => m.ok === true)
+      .map((m) => String(m.email || ""))
+      .filter(Boolean);
+
+    if (emails.length === 0) {
+      return json({ ok: false, reason: "Aucun adhérent actif trouvé." });
+    }
+
+    const dateStr = tournoi.dateLimit
+      ? `Date limite d'inscription : ${tournoi.dateLimit}`
+      : `Date du tournoi : ${tournoi.date}`;
+
+    // Envoi via Resend (BCC pour ne pas exposer les emails entre membres)
+    const sendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${resendKey}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        from: "SACCB <contact@saccb.fr>",
+        to: ["contact@saccb.fr"],
+        bcc: emails,
+        subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            </div>
+            <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <h2 style="color: #1e3a5f; margin-top: 0;">🏸 Nouveau tournoi disponible !</h2>
+              <p style="color: #475569;">Bonjour,</p>
+              <p style="color: #475569;">Un nouveau tournoi vient d'être ajouté sur le site du club :</p>
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1e3a5f;">${tournoi.name}</p>
+                <p style="margin: 8px 0 0; color: #64748b;">${dateStr}</p>
+                ${tournoi.type ? `<p style="margin: 4px 0 0; color: #64748b;">Type : Double ${tournoi.type}</p>` : ""}
+              </div>
+              <p style="color: #475569;">Connectez-vous à votre espace membre pour inscrire votre binôme.</p>
+              <a href="https://saccb.fr/#tournois" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                Voir les tournois →
+              </a>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
+                Vous recevez cet email car vous êtes membre du SACCB.
+              </p>
+            </div>
+          </div>
+        `,
+      }),
+    });
+
+    if (!sendRes.ok) {
+      const errText = await sendRes.text();
+      return json({ ok: false, reason: "Erreur envoi email : " + errText });
+    }
+
+    return json({ ok: true, sent: emails.length });
   }
 
   return json({ error: "Action inconnue" }, 400);
