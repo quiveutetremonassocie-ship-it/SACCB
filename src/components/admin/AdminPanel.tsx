@@ -14,6 +14,7 @@ import RecuModal from "./RecuModal";
 import EmargementModal from "./EmargementModal";
 import EditMembreModal from "./EditMembreModal";
 import EditBinomeModal from "./EditBinomeModal";
+import StatsVisites from "./StatsVisites";
 
 export default function AdminPanel({
   db,
@@ -97,6 +98,9 @@ export default function AdminPanel({
 
           <SeasonSettings db={db} onPersist={onPersist} onRefresh={onRefresh} />
           <StatsAdhesions totals={totals} />
+          <div className="lg:col-span-2">
+            <StatsVisites pageviews={db.pageviews ?? {}} />
+          </div>
 
           <div className="lg:col-span-2 glass p-4 md:p-6">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde PC</h3>

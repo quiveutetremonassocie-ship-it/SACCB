@@ -30,6 +30,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     actualites: d.actualites ?? [],
     archives: d.archives ?? [],
     whatsappLink: d.whatsappLink,
+    pageviews: d.pageviews ?? {},
     membresCount: d.membresCount ?? 0,
   };
 }

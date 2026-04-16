@@ -84,6 +84,7 @@ export type DB = {
   quota?: number;
   whatsappLink?: string; // lien d'invitation groupe WhatsApp
   archives?: SeasonArchive[]; // historique des saisons précédentes
+  pageviews?: Record<string, number>; // { "YYYY-MM-DD": count }
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
