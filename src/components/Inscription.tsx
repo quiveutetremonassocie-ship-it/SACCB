@@ -138,16 +138,32 @@ export default function Inscription({
         <div className="mb-6">
           <div className="flex items-center justify-between text-sm mb-2">
             <span className="text-slate-500">Places restantes</span>
-            <span className="text-emerald-600 font-semibold">
+            <span className={`font-semibold ${progress >= 90 ? "text-red-500 animate-pulse" : progress >= 75 ? "text-amber-500" : "text-emerald-600"}`}>
               {remaining} / {quota}
             </span>
           </div>
           <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
             <div
-              className="h-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-700"
+              className={`h-full transition-all duration-700 ${
+                progress >= 90
+                  ? "bg-gradient-to-r from-red-500 to-red-400 animate-pulse"
+                  : progress >= 75
+                  ? "bg-gradient-to-r from-amber-500 to-orange-400"
+                  : "bg-gradient-to-r from-blue-500 to-emerald-500"
+              }`}
               style={{ width: `${progress}%` }}
             />
           </div>
+          {progress >= 90 && remaining > 0 && (
+            <p className="text-xs text-red-500 font-semibold mt-1.5 animate-pulse">
+              ⚠️ Plus que {remaining} place{remaining > 1 ? "s" : ""} disponible{remaining > 1 ? "s" : ""} !
+            </p>
+          )}
+          {progress >= 75 && progress < 90 && (
+            <p className="text-xs text-amber-600 font-semibold mt-1.5">
+              🏃 Le club se remplit vite, ne tardez pas !
+            </p>
+          )}
         </div>
 
         {!db.insc_open ? (
