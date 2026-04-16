@@ -450,7 +450,7 @@ Deno.serve(async (req) => {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: "SACCB <onboarding@resend.dev>",
+        from: "SACCB <contact@saccb.fr>",
         to: ["contact@saccb.fr"],
         bcc: emails,
         subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
