@@ -70,7 +70,7 @@ export default function TournoisAdmin({
   }
 
   return (
-    <div className="glass p-6">
+    <div className="glass p-4 md:p-6">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
           <Trophy className="w-5 h-5 text-slate-800" />
@@ -115,7 +115,7 @@ export default function TournoisAdmin({
       <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
         Nouveau tournoi
       </h4>
-      <div className="grid sm:grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
         <input className="input" value={n} onChange={(e) => setN(e.target.value)} placeholder="Nom du tournoi" />
         <div>
           <label className="text-xs text-slate-400 mb-1 block">Date du tournoi</label>

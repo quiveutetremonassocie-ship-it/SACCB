@@ -59,7 +59,7 @@ export default function SeasonSettings({
   }
 
   return (
-    <div className="glass p-6 border border-emerald-200">
+    <div className="glass p-4 md:p-6 border border-emerald-200">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
           <CalendarCog className="w-5 h-5 text-white" />
