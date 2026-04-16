@@ -13,6 +13,7 @@ export default function TournoisAdmin({
 }) {
   const [n, setN] = useState("");
   const [d, setD] = useState("");
+  const [dateLimit, setDateLimit] = useState("");
   const [type, setType] = useState("");
   const [q, setQ] = useState("");
 
@@ -29,6 +30,7 @@ export default function TournoisAdmin({
           id: Date.now().toString(),
           name: n,
           date: d,
+          dateLimit: dateLimit || null,
           type: type || null,
           quota: q ? parseInt(q) : null,
         },
@@ -37,6 +39,7 @@ export default function TournoisAdmin({
     await onPersist(next);
     setN("");
     setD("");
+    setDateLimit("");
     setType("");
     setQ("");
   }
@@ -69,6 +72,9 @@ export default function TournoisAdmin({
             <div>
               <p className="text-slate-800 font-semibold">{t.name}</p>
               <p className="text-xs text-slate-400">{t.date}</p>
+              {t.dateLimit && (
+                <p className="text-xs text-amber-600">Limite : {t.dateLimit}</p>
+              )}
             </div>
             <button onClick={() => del(t.id)} className="btn-danger !px-3 !py-1.5 !text-xs">
               <Trash2 className="w-3.5 h-3.5" />
@@ -85,7 +91,20 @@ export default function TournoisAdmin({
       </h4>
       <div className="grid sm:grid-cols-2 gap-3 mb-3">
         <input className="input" value={n} onChange={(e) => setN(e.target.value)} placeholder="Nom du tournoi" />
-        <input className="input" value={d} onChange={(e) => setD(e.target.value)} placeholder="Date" />
+        <div>
+          <label className="text-xs text-slate-400 mb-1 block">Date du tournoi</label>
+          <input className="input" value={d} onChange={(e) => setD(e.target.value)} placeholder="ex: 25 mai 2025" />
+        </div>
+        <div>
+          <label className="text-xs text-slate-400 mb-1 block">Date limite d&apos;inscription</label>
+          <input
+            className="input"
+            type="date"
+            value={dateLimit}
+            onChange={(e) => setDateLimit(e.target.value)}
+            placeholder="Date limite"
+          />
+        </div>
         <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
           <option value="">Type de double (optionnel)</option>
           <option value="Mixte">👫 Double Mixte</option>

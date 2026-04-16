@@ -171,6 +171,49 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ─── ACTION: Vérification membre (connexion espace membre) ───
+  if (action === "verify_membre") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+
+    if (!email || !code) return json({ ok: false, reason: "Email et code requis." }, 400);
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+
+    const membre = membres.find(
+      (m) =>
+        String(m.email || "").toLowerCase() === email &&
+        String(m.code || "") === code &&
+        m.ok === true
+    );
+
+    if (!membre) {
+      return json({
+        ok: false,
+        reason: "Email ou code incorrect, ou adhésion non encore validée.",
+      });
+    }
+
+    return json({
+      ok: true,
+      membre: {
+        id: membre.id,
+        nom: membre.nom,
+        type: membre.type,
+        email: membre.email,
+      },
+    });
+  }
+
   // ─── ACTION: Inscription publique ───
   if (action === "add_membre") {
     const nom = sanitize(String(body.nom || ""));
@@ -178,11 +221,15 @@ Deno.serve(async (req) => {
     const tel = sanitize(String(body.tel || ""));
     const type = body.type === "Etudiant" ? "Etudiant" : "Adulte";
     const paymentMethod = body.paymentMethod === "virement" ? "virement" : "online";
+    const code = sanitize(String(body.code || ""));
 
     // Validation
     if (!nom || nom.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
     if (!isValidPhone(tel)) return json({ ok: false, reason: "Téléphone invalide." }, 400);
+    if (!code || !/^\d{4,}$/.test(code)) {
+      return json({ ok: false, reason: "Le code doit contenir au moins 4 chiffres." }, 400);
+    }
 
     // Lire les données actuelles
     const { data, error } = await supabaseAdmin
@@ -215,6 +262,7 @@ Deno.serve(async (req) => {
       type,
       ok: false,
       paymentMethod,
+      code,
     };
 
     membres.push(newMembre);

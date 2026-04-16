@@ -72,6 +72,7 @@ export async function publicAddMembre(membre: {
   tel: string;
   type: "Adulte" | "Etudiant";
   paymentMethod?: "online" | "virement";
+  code?: string;
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
@@ -87,6 +88,19 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "register_tournoi", tournoiId, p1, p2 }),
+  });
+  return res.json();
+}
+
+// ─── Vérification membre (connexion espace membre) ───
+export async function verifyMembre(
+  email: string,
+  code: string
+): Promise<{ ok: boolean; membre?: { id: string; nom: string; type: string; email: string }; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code }),
   });
   return res.json();
 }

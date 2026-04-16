@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Lock, CreditCard, Banknote, Clock } from "lucide-react";
+import { CheckCircle2, Lock, CreditCard, Banknote, Clock, MessageCircle } from "lucide-react";
 import confetti from "canvas-confetti";
 import { DB } from "@/lib/types";
 import { publicAddMembre, publicMarkPaid } from "@/lib/db";
@@ -28,6 +28,7 @@ export default function Inscription({
   const [done, setDone] = useState<{ nom: string; type: string; mode: PaymentMode } | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
+  const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
   const progress = Math.min((membresCount / quota) * 100, 100);
@@ -73,6 +74,7 @@ export default function Inscription({
     const email = String(fd.get("email") || "").trim();
     const tel = String(fd.get("tel") || "").trim();
     const type = String(fd.get("type") || "Adulte") as "Adulte" | "Etudiant";
+    const code = String(fd.get("code") || "").trim();
 
     if (membresCount >= quota) {
       alert("Le club est complet !");
@@ -86,6 +88,7 @@ export default function Inscription({
       tel,
       type,
       paymentMethod: mode,
+      code,
     });
     if (!r.ok) {
       setLoading(false);
@@ -164,9 +167,20 @@ export default function Inscription({
                 Merci {done.nom}, votre adhésion est validée.
               </p>
               <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
-              <p className="text-xs text-slate-500 mt-4">
+              <p className="text-xs text-slate-500 mt-4 mb-4">
                 Pensez à faire une capture d&apos;écran de votre badge.
               </p>
+              {whatsappLink && (
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold px-5 py-3 rounded-xl transition"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Rejoindre le groupe WhatsApp
+                </a>
+              )}
             </div>
           ) : (
             <div className="text-center py-6">
@@ -183,9 +197,20 @@ export default function Inscription({
                 </p>
               </div>
               <Badge nom={done.nom} type={done.type} y1={db.y1} y2={db.y2} />
-              <p className="text-xs text-slate-500 mt-4">
+              <p className="text-xs text-slate-500 mt-4 mb-4">
                 Pensez à faire une capture d&apos;écran de votre badge.
               </p>
+              {whatsappLink && (
+                <a
+                  href={whatsappLink}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold px-5 py-3 rounded-xl transition"
+                >
+                  <MessageCircle className="w-5 h-5" />
+                  Rejoindre le groupe WhatsApp
+                </a>
+              )}
             </div>
           )
         ) : (
@@ -197,6 +222,24 @@ export default function Inscription({
               <option value="Adulte">Adulte ({prix.Adulte}€)</option>
               <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
             </select>
+            <div>
+              <label className="block text-xs uppercase tracking-widest text-slate-500 mb-1">
+                Code personnel
+              </label>
+              <input
+                className="input"
+                name="code"
+                type="password"
+                placeholder="Minimum 4 chiffres (ex: 1234)"
+                pattern="\d{4,}"
+                inputMode="numeric"
+                title="Le code doit contenir au moins 4 chiffres"
+                required
+              />
+              <p className="text-xs text-slate-400 mt-1">
+                Ce code vous permettra de vous connecter à votre espace membre sur un autre appareil.
+              </p>
+            </div>
 
             <div className="pt-2">
               <p className="text-xs uppercase tracking-widest text-slate-500 mb-2">

@@ -4,6 +4,7 @@ import { useCallback, useEffect, useState } from "react";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchPublicDB, saveDB } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
+import { getMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Presentation from "./Presentation";
@@ -13,8 +14,10 @@ import Tournois from "./Tournois";
 import Inscription from "./Inscription";
 import Footer from "./Footer";
 import LoginModal from "./modals/LoginModal";
+import MemberLoginModal from "./modals/MemberLoginModal";
 import ResetPasswordModal from "./modals/ResetPasswordModal";
 import AdminPanel from "./admin/AdminPanel";
+import MemberPanel from "./MemberPanel";
 
 export default function Site() {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -22,6 +25,9 @@ export default function Site() {
   const [adminOpen, setAdminOpen] = useState(false);
   const [loginOpen, setLoginOpen] = useState(false);
   const [resetOpen, setResetOpen] = useState(false);
+  const [memberLoginOpen, setMemberLoginOpen] = useState(false);
+  const [memberPanelOpen, setMemberPanelOpen] = useState(false);
+  const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
 
   const refreshPublic = useCallback(async () => {
     try {
@@ -43,6 +49,12 @@ export default function Site() {
     setDb(next);
     setMembresCount(next.membres.length);
     await saveDB(next);
+  }, []);
+
+  // Restaurer la session membre depuis localStorage
+  useEffect(() => {
+    const session = getMemberSession();
+    if (session) setMemberSession(session);
   }, []);
 
   useEffect(() => {
@@ -84,15 +96,42 @@ export default function Site() {
     setDb((d) => ({ ...d, membres: [], factures: [] }));
   };
 
+  const onMemberButtonClick = () => {
+    if (memberSession) {
+      setMemberPanelOpen(true);
+    } else {
+      setMemberLoginOpen(true);
+    }
+  };
+
+  const onMemberLoginSuccess = (session: MemberSession) => {
+    setMemberSession(session);
+    setMemberLoginOpen(false);
+    setMemberPanelOpen(true);
+  };
+
+  const onMemberPanelClose = () => {
+    setMemberSession(null);
+    setMemberPanelOpen(false);
+  };
+
   return (
     <>
-      <Navbar onAdmin={() => setLoginOpen(true)} />
+      <Navbar
+        onAdmin={() => setLoginOpen(true)}
+        onMember={onMemberButtonClick}
+        isMember={!!memberSession}
+      />
       <main>
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />
         <Presentation />
         <Actualites actualites={db.actualites || []} />
         <Horaires />
-        <Tournois db={db} />
+        <Tournois
+          db={db}
+          memberSession={memberSession}
+          onLoginRequest={() => setMemberLoginOpen(true)}
+        />
         <Inscription
           db={db}
           membresCount={membresCount}
@@ -105,6 +144,20 @@ export default function Site() {
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
       <ResetPasswordModal open={resetOpen} onClose={() => setResetOpen(false)} />
+      <MemberLoginModal
+        open={memberLoginOpen}
+        onClose={() => setMemberLoginOpen(false)}
+        onSuccess={onMemberLoginSuccess}
+      />
+      {memberSession && memberPanelOpen && (
+        <MemberPanel
+          session={memberSession}
+          y1={db.y1}
+          y2={db.y2}
+          whatsappLink={db.whatsappLink}
+          onClose={onMemberPanelClose}
+        />
+      )}
       {adminOpen && (
         <AdminPanel db={db} onClose={onCloseAdmin} onPersist={persist} onRefresh={refreshAdmin} />
       )}

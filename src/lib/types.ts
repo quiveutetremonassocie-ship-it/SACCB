@@ -7,6 +7,7 @@ export type Membre = {
   ok?: boolean;
   paymentMethod?: "online" | "virement";
   paymentDate?: string;
+  code?: string; // code personnel (4+ chiffres) pour l'espace membre
 };
 
 export type FactureFile = {
@@ -28,6 +29,7 @@ export type Tournoi = {
   id: string;
   name: string;
   date: string;
+  dateLimit?: string | null; // date limite d'inscription (format YYYY-MM-DD ou DD/MM/YYYY)
   type?: string | null;
   quota?: number | null;
 };
@@ -71,6 +73,7 @@ export type DB = {
   y2: number;
   insc_open: boolean;
   quota?: number;
+  whatsappLink?: string; // lien d'invitation groupe WhatsApp
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;

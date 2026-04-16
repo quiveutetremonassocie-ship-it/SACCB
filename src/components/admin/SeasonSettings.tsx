@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle } from "lucide-react";
 import { DB, QUOTA_DEFAULT } from "@/lib/types";
 
 export default function SeasonSettings({
@@ -17,9 +17,16 @@ export default function SeasonSettings({
   const [y2, setY2] = useState(db.y2);
   const currentQuota = db.quota ?? QUOTA_DEFAULT;
   const [quota, setQuota] = useState(currentQuota);
+  const [whatsappLink, setWhatsappLink] = useState(db.whatsappLink || "");
 
   async function update() {
-    await onPersist({ ...db, y1: Number(y1), y2: Number(y2), quota: Number(quota) });
+    await onPersist({
+      ...db,
+      y1: Number(y1),
+      y2: Number(y2),
+      quota: Number(quota),
+      whatsappLink: whatsappLink.trim() || undefined,
+    });
     alert("Paramètres mis à jour !");
   }
 
@@ -79,6 +86,23 @@ export default function SeasonSettings({
             Club complet — augmentez le quota pour accepter de nouveaux membres
           </p>
         )}
+      </div>
+
+      {/* Lien WhatsApp */}
+      <div className="mb-3">
+        <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          <MessageCircle className="w-3 h-3" /> Lien groupe WhatsApp
+        </label>
+        <input
+          type="url"
+          className="input w-full"
+          placeholder="https://chat.whatsapp.com/..."
+          value={whatsappLink}
+          onChange={(e) => setWhatsappLink(e.target.value)}
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          Affiché après paiement et dans l&apos;espace membre.
+        </p>
       </div>
 
       <div className="space-y-3">

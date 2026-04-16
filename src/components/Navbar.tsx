@@ -1,10 +1,18 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, X, Shield } from "lucide-react";
+import { Menu, X, Shield, UserCircle2 } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
 
-export default function Navbar({ onAdmin }: { onAdmin: () => void }) {
+export default function Navbar({
+  onAdmin,
+  onMember,
+  isMember,
+}: {
+  onAdmin: () => void;
+  onMember: () => void;
+  isMember: boolean;
+}) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
@@ -52,6 +60,13 @@ export default function Navbar({ onAdmin }: { onAdmin: () => void }) {
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#1e3a5f] to-emerald-500 group-hover:w-full transition-all" />
             </a>
           ))}
+          <button
+            onClick={onMember}
+            className={`btn-ghost !px-4 !py-2.5 !text-xs flex items-center gap-1.5 ${isMember ? "!border-emerald-400 !text-emerald-700" : ""}`}
+          >
+            <UserCircle2 className="w-4 h-4" />
+            {isMember ? "Mon espace" : "Espace membre"}
+          </button>
           <button onClick={onAdmin} className="btn-primary !px-5 !py-2.5">
             <Shield className="w-4 h-4" /> Admin
           </button>
@@ -78,6 +93,16 @@ export default function Navbar({ onAdmin }: { onAdmin: () => void }) {
               {l.label}
             </a>
           ))}
+          <button
+            onClick={() => {
+              setOpen(false);
+              onMember();
+            }}
+            className={`btn-ghost w-full ${isMember ? "!border-emerald-400 !text-emerald-700" : ""}`}
+          >
+            <UserCircle2 className="w-4 h-4" />
+            {isMember ? "Mon espace" : "Espace membre"}
+          </button>
           <button
             onClick={() => {
               setOpen(false);
