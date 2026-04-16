@@ -121,6 +121,16 @@ export async function notifyMembres(
   return res.json();
 }
 
+// ─── Code oublié — envoyer le code par email ───
+export async function publicForgotCode(email: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "forgot_code", email: email.toLowerCase().trim() }),
+  });
+  return res.json();
+}
+
 // ─── Changer le code personnel d'un membre ───
 export async function memberChangeCode(
   email: string,

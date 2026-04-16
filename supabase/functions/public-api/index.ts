@@ -562,6 +562,69 @@ Deno.serve(async (req) => {
     return json({ ok: true, sent: emails.length });
   }
 
+  // ─── ACTION: Code oublié — envoyer le code par email ───
+  if (action === "forgot_code") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
+
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+
+    const membre = membres.find(
+      (m) => String(m.email || "").toLowerCase() === email && m.ok === true
+    );
+
+    // On répond toujours ok:true pour ne pas révéler si l'email existe
+    if (membre && membre.code) {
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          to: [email],
+          subject: "🔑 Votre code personnel SACCB",
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
+              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <h2 style="color: #1e3a5f; margin-top: 0;">Récupération de code</h2>
+                <p style="color: #475569;">Bonjour <strong>${membre.nom}</strong>,</p>
+                <p style="color: #475569;">Vous avez demandé à récupérer votre code personnel. Le voici :</p>
+                <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 16px 0; text-align: center;">
+                  <p style="margin: 0 0 8px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code personnel</p>
+                  <p style="margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1e3a5f;">${membre.code}</p>
+                </div>
+                <p style="color: #64748b; font-size: 13px;">Utilisez ce code avec votre email pour vous connecter à votre espace membre sur saccb.fr.</p>
+                <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                  Se connecter →
+                </a>
+                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
+                  Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
+                </p>
+              </div>
+            </div>
+          `,
+        }),
+      }).catch(() => {});
+    }
+
+    return json({ ok: true });
+  }
+
   // ─── ACTION: Changer le code personnel d'un membre ───
   if (action === "change_code") {
     const email = sanitize(String(body.email || "")).toLowerCase();
