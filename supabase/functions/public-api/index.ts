@@ -379,6 +379,14 @@ Deno.serve(async (req) => {
                 <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
                   Accéder à mon espace membre →
                 </a>
+                ${currentData.whatsappLink ? `
+                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
+                  <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club pour rester informé des entraînements et tournois :</p>
+                  <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
+                    💬 Rejoindre le groupe WhatsApp
+                  </a>
+                </div>
+                ` : ""}
                 <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
                   SACCB — Sainte-Adresse, Le Havre
                 </p>
