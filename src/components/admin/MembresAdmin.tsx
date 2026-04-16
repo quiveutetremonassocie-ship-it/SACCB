@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Eye, EyeOff } from "lucide-react";
+import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
 import { adminSendConfirmation } from "@/lib/db";
 
@@ -17,16 +17,6 @@ export default function MembresAdmin({
   onRecu: (m: Membre) => void;
 }) {
   const [search, setSearch] = useState("");
-  const [visibleCodes, setVisibleCodes] = useState<Set<string>>(new Set());
-
-  function toggleCode(id: string) {
-    setVisibleCodes((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -133,17 +123,7 @@ export default function MembresAdmin({
                   </span>
                 )}
               </label>
-              <div className="flex gap-1 flex-wrap">
-                {m.code && (
-                  <button
-                    onClick={() => toggleCode(m.id)}
-                    className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-slate-500 !to-slate-600"
-                    title={visibleCodes.has(m.id) ? "Masquer le code" : "Voir le code"}
-                  >
-                    {visibleCodes.has(m.id) ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    {visibleCodes.has(m.id) && <span className="ml-1 font-mono tracking-widest">{m.code}</span>}
-                  </button>
-                )}
+              <div className="flex gap-1">
                 <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
@@ -208,16 +188,6 @@ export default function MembresAdmin({
                 </td>
                 <td className="p-3">
                   <div className="flex gap-1">
-                    {m.code && (
-                      <button
-                        onClick={() => toggleCode(m.id)}
-                        className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-slate-500 !to-slate-600"
-                        title={visibleCodes.has(m.id) ? "Masquer le code" : "Voir le code"}
-                      >
-                        {visibleCodes.has(m.id) ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
-                        {visibleCodes.has(m.id) && <span className="ml-1 font-mono tracking-widest">{m.code}</span>}
-                      </button>
-                    )}
                     <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                       <Receipt className="w-3 h-3" />
                     </button>

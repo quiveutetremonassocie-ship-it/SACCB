@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useEffect, useState } from "react";
-import { CheckCircle2, Lock, CreditCard, Banknote, Clock, MessageCircle } from "lucide-react";
+import { CheckCircle2, Lock, CreditCard, Banknote, Clock, MessageCircle, Eye, EyeOff } from "lucide-react";
 import confetti from "canvas-confetti";
 import { DB } from "@/lib/types";
 import { publicAddMembre, publicMarkPaid } from "@/lib/db";
@@ -28,6 +28,7 @@ export default function Inscription({
   const [done, setDone] = useState<{ nom: string; type: string; mode: PaymentMode } | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
+  const [showCode, setShowCode] = useState(false);
   const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
@@ -242,16 +243,26 @@ export default function Inscription({
               <label className="block text-xs uppercase tracking-widest text-slate-500 mb-1">
                 Code personnel
               </label>
-              <input
-                className="input"
-                name="code"
-                type="password"
-                placeholder="Minimum 4 chiffres (ex: 1234)"
-                pattern="\d{4,}"
-                inputMode="numeric"
-                title="Le code doit contenir au moins 4 chiffres"
-                required
-              />
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  name="code"
+                  type={showCode ? "text" : "password"}
+                  placeholder="Minimum 4 chiffres (ex: 1234)"
+                  pattern="\d{4,}"
+                  inputMode="numeric"
+                  title="Le code doit contenir au moins 4 chiffres"
+                  required
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowCode(!showCode)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                  tabIndex={-1}
+                >
+                  {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
               <p className="text-xs text-slate-400 mt-1">
                 Ce code vous permettra de vous connecter à votre espace membre sur un autre appareil.
               </p>
