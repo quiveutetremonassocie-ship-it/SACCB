@@ -38,12 +38,15 @@ export default function MembresAdmin({
   }, [db.membres, search]);
 
   async function togglePaiement(id: string, val: boolean) {
-    // Marque payé sans envoyer d'email — utilise le bouton ✉️ pour envoyer manuellement
     const next = {
       ...db,
       membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)),
     };
     await onPersist(next);
+    // Envoie l'email de confirmation automatiquement quand on valide le paiement
+    if (val) {
+      adminSendConfirmation(id).catch(() => {});
+    }
   }
 
   async function sendEmail(m: Membre) {
