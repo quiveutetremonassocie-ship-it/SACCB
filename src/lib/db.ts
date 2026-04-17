@@ -122,6 +122,16 @@ export async function notifyMembres(
   return res.json();
 }
 
+// ─── Notifier tous les anciens adhérents du début de nouvelle saison ───
+export async function adminNotifyNewSeason(): Promise<{ ok: boolean; sent?: number; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "notify_new_season" }),
+  });
+  return res.json();
+}
+
 // ─── Code oublié — envoyer le code par email ───
 export async function publicForgotCode(email: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {

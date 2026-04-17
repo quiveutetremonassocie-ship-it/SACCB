@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles } from "lucide-react";
 import { DB, QUOTA_DEFAULT } from "@/lib/types";
+import { adminNotifyNewSeason } from "@/lib/db";
 
 export default function SeasonSettings({
   db,
@@ -74,6 +75,13 @@ export default function SeasonSettings({
       insc_close_date: undefined,
     });
     alert(`✅ Nouvelle saison ${newY1}–${newY2} démarrée ! Tous les adhérents sont en attente de renouvellement.`);
+
+    // Proposer d'envoyer un email à tous les anciens adhérents
+    if (confirm(`Envoyer un email à tous les ${db.membres.length} adhérents pour les prévenir que la nouvelle saison est ouverte ?`)) {
+      const r = await adminNotifyNewSeason();
+      if (r.ok) alert(`✅ Email envoyé à ${r.sent} adhérent${(r.sent ?? 0) > 1 ? "s" : ""} !`);
+      else alert("Erreur lors de l'envoi : " + r.reason);
+    }
   }
 
   async function archiveSeason() {

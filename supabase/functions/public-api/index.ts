@@ -641,6 +641,74 @@ Deno.serve(async (req) => {
     return json({ ok: true, sent: emails.length });
   }
 
+  // ─── ACTION: Notifier tous les anciens adhérents du début de nouvelle saison ───
+  if (action === "notify_new_season") {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+
+    // Envoyer à tous les membres (anciens adhérents), peu importe newsOptIn
+    const emails = membres
+      .map((m) => String(m.email || ""))
+      .filter(Boolean);
+
+    if (emails.length === 0) return json({ ok: false, reason: "Aucun adhérent trouvé." });
+
+    const sendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "SACCB <contact@saccb.fr>",
+        to: ["contact@saccb.fr"],
+        bcc: emails,
+        subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            </div>
+            <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <h2 style="color: #1e3a5f; margin-top: 0;">🎉 La nouvelle saison est lancée !</h2>
+              <p style="color: #475569;">Bonjour,</p>
+              <p style="color: #475569;">
+                La saison <strong>${d.y1}–${d.y2}</strong> du SACCB est maintenant ouverte !
+                Les places partent vite, alors ne tardez pas à renouveler votre adhésion.
+              </p>
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 4px; color: #64748b; font-size: 13px;">Votre code personnel vous permettra de vous reconnecter directement sur le site.</p>
+                <p style="margin: 0; color: #64748b; font-size: 13px;">Si vous l'avez oublié, cliquez sur <strong>"Code oublié ?"</strong> sur la page de connexion.</p>
+              </div>
+              <a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
+                🏸 Je renouvelle mon adhésion →
+              </a>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
+                SACCB — Sainte-Adresse, Le Havre
+              </p>
+            </div>
+          </div>
+        `,
+      }),
+    });
+
+    if (!sendRes.ok) {
+      const errText = await sendRes.text();
+      return json({ ok: false, reason: "Erreur envoi : " + errText });
+    }
+
+    return json({ ok: true, sent: emails.length });
+  }
+
   // ─── ACTION: Rappels automatiques d'inscription (J-30 et J-15) ───
   if (action === "check_reminders") {
     const resendKey = Deno.env.get("RESEND_API_KEY");
