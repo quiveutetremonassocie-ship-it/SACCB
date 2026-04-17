@@ -8,6 +8,7 @@ export type Membre = {
   paymentMethod?: "online" | "virement";
   paymentDate?: string;
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
+  newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
 };
 
 export type FactureFile = {
@@ -83,6 +84,7 @@ export type DB = {
   insc_open: boolean;
   quota?: number;
   whatsappLink?: string; // lien d'invitation groupe WhatsApp
+  insc_close_date?: string; // date de fermeture des inscriptions (YYYY-MM-DD) pour les rappels
   archives?: SeasonArchive[]; // historique des saisons précédentes
   pageviews?: Record<string, number>; // { "YYYY-MM-DD": count }
 };

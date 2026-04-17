@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock } from "lucide-react";
+import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
 import { adminSendConfirmation } from "@/lib/db";
 
@@ -17,6 +17,13 @@ export default function MembresAdmin({
   onRecu: (m: Membre) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [sendingEmail, setSendingEmail] = useState<string | null>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
+  const [addForm, setAddForm] = useState({
+    nom: "", email: "", tel: "", type: "Adulte" as "Adulte" | "Etudiant",
+    paymentMethod: "virement" as "online" | "virement", code: "", ok: false,
+  });
+  const [addLoading, setAddLoading] = useState(false);
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -31,15 +38,18 @@ export default function MembresAdmin({
   }, [db.membres, search]);
 
   async function togglePaiement(id: string, val: boolean) {
+    // Marque payé sans envoyer d'email — utilise le bouton ✉️ pour envoyer manuellement
     const next = {
       ...db,
       membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)),
     };
     await onPersist(next);
-    // Si on vient de valider le paiement, envoyer l'email de confirmation
-    if (val) {
-      adminSendConfirmation(id).catch(() => {});
-    }
+  }
+
+  async function sendEmail(m: Membre) {
+    setSendingEmail(m.id);
+    await adminSendConfirmation(m.id);
+    setSendingEmail(null);
   }
 
   async function del(id: string) {
@@ -53,6 +63,28 @@ export default function MembresAdmin({
     navigator.clipboard.writeText(emails).then(() => alert("Emails copiés !"));
   }
 
+  async function handleAddMembre() {
+    if (!addForm.nom || !addForm.email) return;
+    setAddLoading(true);
+    const newMembre: Membre = {
+      id: Date.now().toString(),
+      nom: addForm.nom.trim(),
+      email: addForm.email.trim().toLowerCase(),
+      tel: addForm.tel.trim(),
+      type: addForm.type,
+      paymentMethod: addForm.paymentMethod,
+      code: addForm.code.trim() || undefined,
+      ok: addForm.ok,
+      newsOptIn: false,
+    };
+    await onPersist({ ...db, membres: [...db.membres, newMembre] });
+    setAddForm({ nom: "", email: "", tel: "", type: "Adulte", paymentMethod: "virement", code: "", ok: false });
+    setShowAddForm(false);
+    setAddLoading(false);
+  }
+
+  const newsCount = db.membres.filter((m) => m.newsOptIn === true).length;
+
   return (
     <div className="glass p-4 md:p-6">
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -60,11 +92,18 @@ export default function MembresAdmin({
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shrink-0">
             <Users className="w-5 h-5 text-white" />
           </div>
-          <h3 className="font-display text-xl md:text-2xl tracking-wider text-slate-800">Adhérents</h3>
+          <div>
+            <h3 className="font-display text-xl md:text-2xl tracking-wider text-slate-800">Adhérents</h3>
+            <p className="text-xs text-slate-400 flex items-center gap-1">
+              <Bell className="w-3 h-3" /> {newsCount} abonné{newsCount > 1 ? "s" : ""} aux news
+            </p>
+          </div>
         </div>
-        <span className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-bold">
-          {db.membres.length} adhérent{db.membres.length > 1 ? "s" : ""}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="px-3 py-1.5 rounded-full bg-blue-100 text-blue-700 text-sm font-bold">
+            {db.membres.length} adhérent{db.membres.length > 1 ? "s" : ""}
+          </span>
+        </div>
       </div>
 
       <div className="flex gap-2 mb-4">
@@ -81,7 +120,44 @@ export default function MembresAdmin({
           <Mail className="w-4 h-4" />
           <span className="hidden sm:inline ml-1">Emails</span>
         </button>
+        <button onClick={() => setShowAddForm(!showAddForm)} className="btn-accent !px-3 shrink-0" title="Ajouter un adhérent">
+          <UserPlus className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1">Ajouter</span>
+        </button>
       </div>
+
+      {/* Formulaire ajout manuel */}
+      {showAddForm && (
+        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4 space-y-3">
+          <div className="flex items-center justify-between mb-1">
+            <p className="text-sm font-semibold text-slate-700">Ajouter un adhérent manuellement</p>
+            <button onClick={() => setShowAddForm(false)} className="text-slate-400 hover:text-slate-600">
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <input className="input !text-sm" placeholder="Nom et prénom *" value={addForm.nom} onChange={(e) => setAddForm({ ...addForm, nom: e.target.value })} />
+            <input className="input !text-sm" type="email" placeholder="Email *" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
+            <input className="input !text-sm" placeholder="Téléphone" value={addForm.tel} onChange={(e) => setAddForm({ ...addForm, tel: e.target.value })} />
+            <input className="input !text-sm" placeholder="Code personnel (optionnel)" value={addForm.code} onChange={(e) => setAddForm({ ...addForm, code: e.target.value })} />
+            <select className="input !text-sm" value={addForm.type} onChange={(e) => setAddForm({ ...addForm, type: e.target.value as any })}>
+              <option value="Adulte">Adulte</option>
+              <option value="Etudiant">Étudiant</option>
+            </select>
+            <select className="input !text-sm" value={addForm.paymentMethod} onChange={(e) => setAddForm({ ...addForm, paymentMethod: e.target.value as any })}>
+              <option value="virement">Virement</option>
+              <option value="online">En ligne</option>
+            </select>
+          </div>
+          <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+            <input type="checkbox" checked={addForm.ok} onChange={(e) => setAddForm({ ...addForm, ok: e.target.checked })} className="w-4 h-4" />
+            Paiement déjà reçu
+          </label>
+          <button onClick={handleAddMembre} className="btn-primary !text-sm" disabled={addLoading || !addForm.nom || !addForm.email}>
+            {addLoading ? "Ajout..." : "Ajouter l'adhérent"}
+          </button>
+        </div>
+      )}
 
       {/* Mobile : cartes */}
       <div className="md:hidden space-y-3">
@@ -92,7 +168,14 @@ export default function MembresAdmin({
           >
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0">
-                <p className="font-semibold text-slate-800 truncate">{m.nom}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="font-semibold text-slate-800 truncate">{m.nom}</p>
+                  {m.newsOptIn === true ? (
+                    <Bell className="w-3 h-3 text-emerald-500 shrink-0" aria-label="Abonné aux news" />
+                  ) : (
+                    <BellOff className="w-3 h-3 text-slate-300 shrink-0" aria-label="Non abonné aux news" />
+                  )}
+                </div>
                 <p className="text-xs text-slate-500 truncate">{m.email}</p>
                 {m.tel && <p className="text-xs text-slate-400">{m.tel}</p>}
               </div>
@@ -124,6 +207,16 @@ export default function MembresAdmin({
                 )}
               </label>
               <div className="flex gap-1">
+                {m.ok && (
+                  <button
+                    onClick={() => sendEmail(m)}
+                    disabled={sendingEmail === m.id}
+                    className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500"
+                    title="Envoyer l'email de confirmation"
+                  >
+                    <Send className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
@@ -152,6 +245,7 @@ export default function MembresAdmin({
               <th className="p-3">Tel</th>
               <th className="p-3">Type</th>
               <th className="p-3">Mode</th>
+              <th className="p-3">News</th>
               <th className="p-3">Paiement</th>
               <th className="p-3">Actions</th>
             </tr>
@@ -173,6 +267,13 @@ export default function MembresAdmin({
                   )}
                 </td>
                 <td className="p-3">
+                  {m.newsOptIn === true ? (
+                    <span className="flex items-center gap-1 text-emerald-600 text-xs"><Bell className="w-3 h-3" /> Oui</span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-slate-300 text-xs"><BellOff className="w-3 h-3" /> Non</span>
+                  )}
+                </td>
+                <td className="p-3">
                   <label className="flex items-center gap-2 cursor-pointer">
                     <input
                       type="checkbox"
@@ -188,6 +289,16 @@ export default function MembresAdmin({
                 </td>
                 <td className="p-3">
                   <div className="flex gap-1">
+                    {m.ok && (
+                      <button
+                        onClick={() => sendEmail(m)}
+                        disabled={sendingEmail === m.id}
+                        className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500"
+                        title="Envoyer l'email de confirmation"
+                      >
+                        <Send className="w-3 h-3" />
+                      </button>
+                    )}
                     <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                       <Receipt className="w-3 h-3" />
                     </button>
@@ -203,7 +314,7 @@ export default function MembresAdmin({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={7} className="p-6 text-center text-slate-400">Aucun adhérent.</td>
+                <td colSpan={8} className="p-6 text-center text-slate-400">Aucun adhérent.</td>
               </tr>
             )}
           </tbody>

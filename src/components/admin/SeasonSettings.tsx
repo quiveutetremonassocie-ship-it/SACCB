@@ -18,6 +18,7 @@ export default function SeasonSettings({
   const currentQuota = db.quota ?? QUOTA_DEFAULT;
   const [quota, setQuota] = useState(currentQuota);
   const [whatsappLink, setWhatsappLink] = useState(db.whatsappLink || "");
+  const [inscCloseDate, setInscCloseDate] = useState(db.insc_close_date || "");
 
   async function update() {
     await onPersist({
@@ -26,6 +27,7 @@ export default function SeasonSettings({
       y2: Number(y2),
       quota: Number(quota),
       whatsappLink: whatsappLink.trim() || undefined,
+      insc_close_date: inscCloseDate.trim() || undefined,
     });
     alert("Paramètres mis à jour !");
   }
@@ -105,6 +107,22 @@ export default function SeasonSettings({
             Club complet — augmentez le quota pour accepter de nouveaux membres
           </p>
         )}
+      </div>
+
+      {/* Date de fermeture des inscriptions */}
+      <div className="mb-3">
+        <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          📅 Date limite d&apos;inscription
+        </label>
+        <input
+          type="date"
+          className="input w-full"
+          value={inscCloseDate}
+          onChange={(e) => setInscCloseDate(e.target.value)}
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          Des rappels automatiques seront envoyés aux abonnés aux news à J-30 et J-15.
+        </p>
       </div>
 
       {/* Lien WhatsApp */}

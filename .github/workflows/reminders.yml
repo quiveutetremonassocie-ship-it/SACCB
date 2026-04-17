@@ -1,0 +1,20 @@
+name: Rappels inscription automatiques
+
+on:
+  schedule:
+    # Tous les jours à 8h du matin (heure Paris en été = UTC+2, donc 6h UTC)
+    - cron: "0 6 * * *"
+  workflow_dispatch: # permet de lancer manuellement pour tester
+
+jobs:
+  remind:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Vérifier rappels J-30 / J-15
+        run: |
+          curl -s -X POST "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/public-api" \
+            -H "Content-Type: application/json" \
+            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -d '{"action":"check_reminders"}'
+          echo " — Rappels vérifiés"

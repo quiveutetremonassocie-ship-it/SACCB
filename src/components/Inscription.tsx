@@ -29,6 +29,7 @@ export default function Inscription({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
   const [showCode, setShowCode] = useState(false);
+  const [newsOptIn, setNewsOptIn] = useState(true);
   const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
@@ -90,6 +91,7 @@ export default function Inscription({
       type,
       paymentMethod: mode,
       code,
+      newsOptIn,
     });
     if (!r.ok) {
       setLoading(false);
@@ -330,6 +332,26 @@ export default function Inscription({
                 </button>
               </div>
             </div>
+
+            {/* Newsletter opt-in */}
+            <label className="flex items-start gap-3 cursor-pointer select-none group">
+              <div className="relative mt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={newsOptIn}
+                  onChange={(e) => setNewsOptIn(e.target.checked)}
+                  className="sr-only"
+                />
+                <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${newsOptIn ? "bg-emerald-500 border-emerald-500" : "border-slate-300 bg-white"}`}>
+                  {newsOptIn && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </div>
+              </div>
+              <span className="text-sm text-slate-600 leading-snug">
+                <span className="font-medium text-slate-800">Recevoir les news du club</span>
+                <br />
+                <span className="text-xs text-slate-400">Nouveaux tournois, rappels d&apos;inscription, infos club</span>
+              </span>
+            </label>
 
             <button type="submit" className="btn-primary w-full" disabled={loading}>
               {loading

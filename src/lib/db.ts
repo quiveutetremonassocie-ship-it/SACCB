@@ -76,6 +76,7 @@ export async function publicAddMembre(membre: {
   type: "Adulte" | "Etudiant";
   paymentMethod?: "online" | "virement";
   code?: string;
+  newsOptIn?: boolean;
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
