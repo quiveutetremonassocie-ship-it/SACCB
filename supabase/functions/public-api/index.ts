@@ -130,6 +130,60 @@ Deno.serve(async (req) => {
         .update({ data: currentData })
         .eq("id", 1);
 
+      // Email de confirmation (fire and forget)
+      const paidMembre = membres.find((m) => String(m.email || "").toLowerCase() === payerEmail);
+      const resendKey = Deno.env.get("RESEND_API_KEY");
+      if (resendKey && paidMembre) {
+        const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
+        const prix = prixMap[String(paidMembre.type)] ?? 50;
+        const membreCode = String(paidMembre.code || "");
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "SACCB <contact@saccb.fr>",
+            to: [String(paidMembre.email)],
+            subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
+                <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                  <h2 style="color: #16a34a; margin-top: 0;">✅ Paiement confirmé !</h2>
+                  <p style="color: #475569;">Bonjour <strong>${paidMembre.nom}</strong>,</p>
+                  <p style="color: #475569;">Votre paiement a bien été reçu. Votre adhésion au SACCB pour la saison ${currentData.y1}–${currentData.y2} est désormais <strong>validée</strong>.</p>
+                  <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 0 0 8px; color: #64748b; font-size: 13px;">RÉCAPITULATIF</p>
+                    <p style="margin: 4px 0; color: #1e293b;"><strong>Nom :</strong> ${paidMembre.nom}</p>
+                    <p style="margin: 4px 0; color: #1e293b;"><strong>Type :</strong> ${paidMembre.type}</p>
+                    <p style="margin: 4px 0; color: #1e293b;"><strong>Montant réglé :</strong> ${prix}€</p>
+                  </div>
+                  <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                    <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code personnel</p>
+                    <p style="margin: 0 0 8px; color: #92400e; font-size: 13px;">Conservez-le précieusement pour vous connecter à votre espace membre sur saccb.fr :</p>
+                    <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e3a5f; text-align: center;">${membreCode}</p>
+                  </div>
+                  ${currentData.whatsappLink ? `
+                  <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
+                    <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club :</p>
+                    <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
+                      💬 Rejoindre le groupe WhatsApp
+                    </a>
+                  </div>
+                  ` : ""}
+                  <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
+                    Accéder à mon espace membre →
+                  </a>
+                  <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">SACCB — Sainte-Adresse, Le Havre</p>
+                </div>
+              </div>
+            `,
+          }),
+        }).catch(() => {});
+      }
+
       // Sync Google Sheets
       const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
       if (sheetsWebhook) {
