@@ -212,21 +212,6 @@ Deno.serve(async (req) => {
 
     const d = data.data as Record<string, unknown>;
 
-    // Incrémenter le compteur de visites du jour
-    const today = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
-    const pageviews = (d.pageviews || {}) as Record<string, number>;
-    pageviews[today] = (pageviews[today] || 0) + 1;
-
-    // Garder seulement les 60 derniers jours pour ne pas surcharger
-    const keys = Object.keys(pageviews).sort();
-    if (keys.length > 60) {
-      keys.slice(0, keys.length - 60).forEach((k) => delete pageviews[k]);
-    }
-    d.pageviews = pageviews;
-
-    // Sauvegarder les visites (fire and forget)
-    supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1).then(() => {});
-
     // On ne renvoie JAMAIS les données sensibles (emails, tels, factures)
     return json({
       insc_open: d.insc_open ?? true,
@@ -239,7 +224,6 @@ Deno.serve(async (req) => {
       archives: d.archives ?? [],
       whatsappLink: d.whatsappLink ?? null,
       membresCount: ((d.membres as unknown[]) || []).length,
-      pageviews,
     });
   }
 
