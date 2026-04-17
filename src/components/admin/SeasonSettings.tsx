@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2 } from "lucide-react";
 import { DB, QUOTA_DEFAULT } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
@@ -53,6 +53,13 @@ export default function SeasonSettings({
       inscrits_tournoi: lastArchive.inscrits_tournoi ?? [],
     });
     alert(`✅ ${count} tournoi(s) restauré(s) !`);
+  }
+
+  async function deleteArchive(idx: number) {
+    const archive = db.archives![idx];
+    if (!confirm(`Supprimer définitivement l'archive de la saison ${archive.y1}–${archive.y2} ?\n\nCette action est irréversible.`)) return;
+    const newArchives = (db.archives ?? []).filter((_, i) => i !== idx);
+    await onPersist({ ...db, archives: newArchives });
   }
 
   async function newSeason() {
@@ -230,6 +237,34 @@ export default function SeasonSettings({
           Réinitialiser les adhérents
         </button>
       </div>
+
+      {/* Gestion des archives */}
+      {db.archives && db.archives.length > 0 && (
+        <div className="mt-6 pt-5 border-t border-slate-200">
+          <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
+            <Archive className="w-3 h-3" /> Archives des saisons
+          </p>
+          <div className="space-y-2">
+            {db.archives.map((archive, idx) => (
+              <div key={`${archive.y1}-${archive.y2}`} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2.5 border border-slate-200">
+                <div>
+                  <p className="text-sm font-semibold text-slate-700">Saison {archive.y1}–{archive.y2}</p>
+                  <p className="text-xs text-slate-400">
+                    {archive.membresCount} adhérents · {archive.config_tournois?.length ?? 0} tournoi{(archive.config_tournois?.length ?? 0) > 1 ? "s" : ""}
+                  </p>
+                </div>
+                <button
+                  onClick={() => deleteArchive(idx)}
+                  className="btn-danger !px-2 !py-1 !text-xs"
+                  title="Supprimer cette archive"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

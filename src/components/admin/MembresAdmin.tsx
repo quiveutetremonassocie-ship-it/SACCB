@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
-import { adminSendConfirmation } from "@/lib/db";
+import { adminSendConfirmation, adminSendWelcome } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -22,8 +22,21 @@ export default function MembresAdmin({
   const [addForm, setAddForm] = useState({
     nom: "", email: "", tel: "", type: "Adulte" as "Adulte" | "Etudiant",
     paymentMethod: "virement" as "online" | "virement", code: "", ok: false,
+    sendWelcome: true,
   });
   const [addLoading, setAddLoading] = useState(false);
+
+  function genCode() {
+    return String(Math.floor(1000 + Math.random() * 9000));
+  }
+
+  function openAddForm() {
+    setAddForm({
+      nom: "", email: "", tel: "", type: "Adulte", paymentMethod: "virement",
+      code: genCode(), ok: true, sendWelcome: true,
+    });
+    setShowAddForm(true);
+  }
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -69,6 +82,7 @@ export default function MembresAdmin({
   async function handleAddMembre() {
     if (!addForm.nom || !addForm.email) return;
     setAddLoading(true);
+    const finalCode = addForm.code.trim() || genCode();
     const newMembre: Membre = {
       id: Date.now().toString(),
       nom: addForm.nom.trim(),
@@ -76,12 +90,18 @@ export default function MembresAdmin({
       tel: addForm.tel.trim(),
       type: addForm.type,
       paymentMethod: addForm.paymentMethod,
-      code: addForm.code.trim() || undefined,
+      code: finalCode,
       ok: addForm.ok,
       newsOptIn: false,
     };
     await onPersist({ ...db, membres: [...db.membres, newMembre] });
-    setAddForm({ nom: "", email: "", tel: "", type: "Adulte", paymentMethod: "virement", code: "", ok: false });
+
+    // Envoyer l'email de bienvenue si demandé
+    if (addForm.sendWelcome) {
+      adminSendWelcome(newMembre.id).catch(() => {});
+    }
+
+    setAddForm({ nom: "", email: "", tel: "", type: "Adulte", paymentMethod: "virement", code: genCode(), ok: true, sendWelcome: true });
     setShowAddForm(false);
     setAddLoading(false);
   }
@@ -123,7 +143,7 @@ export default function MembresAdmin({
           <Mail className="w-4 h-4" />
           <span className="hidden sm:inline ml-1">Emails</span>
         </button>
-        <button onClick={() => setShowAddForm(!showAddForm)} className="btn-accent !px-3 shrink-0" title="Ajouter un adhérent">
+        <button onClick={openAddForm} className="btn-accent !px-3 shrink-0" title="Ajouter un adhérent">
           <UserPlus className="w-4 h-4" />
           <span className="hidden sm:inline ml-1">Ajouter</span>
         </button>
@@ -142,7 +162,20 @@ export default function MembresAdmin({
             <input className="input !text-sm" placeholder="Nom et prénom *" value={addForm.nom} onChange={(e) => setAddForm({ ...addForm, nom: e.target.value })} />
             <input className="input !text-sm" type="email" placeholder="Email *" value={addForm.email} onChange={(e) => setAddForm({ ...addForm, email: e.target.value })} />
             <input className="input !text-sm" placeholder="Téléphone" value={addForm.tel} onChange={(e) => setAddForm({ ...addForm, tel: e.target.value })} />
-            <input className="input !text-sm" placeholder="Code personnel (optionnel)" value={addForm.code} onChange={(e) => setAddForm({ ...addForm, code: e.target.value })} />
+            <div className="relative">
+              <input
+                className="input !text-sm pr-10 font-mono"
+                placeholder="Code provisoire"
+                value={addForm.code}
+                onChange={(e) => setAddForm({ ...addForm, code: e.target.value })}
+              />
+              <button
+                type="button"
+                onClick={() => setAddForm({ ...addForm, code: genCode() })}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400 hover:text-slate-600 border border-slate-200 rounded px-1.5 py-0.5"
+                title="Regénérer"
+              >↺</button>
+            </div>
             <select className="input !text-sm" value={addForm.type} onChange={(e) => setAddForm({ ...addForm, type: e.target.value as any })}>
               <option value="Adulte">Adulte</option>
               <option value="Etudiant">Étudiant</option>
@@ -152,10 +185,16 @@ export default function MembresAdmin({
               <option value="online">En ligne</option>
             </select>
           </div>
-          <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
-            <input type="checkbox" checked={addForm.ok} onChange={(e) => setAddForm({ ...addForm, ok: e.target.checked })} className="w-4 h-4" />
-            Paiement déjà reçu
-          </label>
+          <div className="space-y-2">
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+              <input type="checkbox" checked={addForm.ok} onChange={(e) => setAddForm({ ...addForm, ok: e.target.checked })} className="w-4 h-4" />
+              Paiement déjà reçu
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-sm text-slate-600">
+              <input type="checkbox" checked={addForm.sendWelcome} onChange={(e) => setAddForm({ ...addForm, sendWelcome: e.target.checked })} className="w-4 h-4 accent-emerald-500" />
+              <span>Envoyer un email de bienvenue avec le code provisoire</span>
+            </label>
+          </div>
           <button onClick={handleAddMembre} className="btn-primary !text-sm" disabled={addLoading || !addForm.nom || !addForm.email}>
             {addLoading ? "Ajout..." : "Ajouter l'adhérent"}
           </button>

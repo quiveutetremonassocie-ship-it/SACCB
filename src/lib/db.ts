@@ -165,6 +165,16 @@ export async function adminSendConfirmation(membreId: string): Promise<{ ok: boo
   return res.json();
 }
 
+// ─── Envoyer email de bienvenue (ajout manuel par admin) ───
+export async function adminSendWelcome(membreId: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "send_welcome", membreId }),
+  });
+  return res.json();
+}
+
 // ─── Marquer payé (via Edge Function sécurisée) ───
 export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }> {
   const res = await fetch(EDGE_FUNCTION_URL, {

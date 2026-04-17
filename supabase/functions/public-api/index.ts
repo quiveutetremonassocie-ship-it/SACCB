@@ -1006,5 +1006,106 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // ─── ACTION: Email de bienvenue (ajout manuel par admin) ───
+  if (action === "send_welcome") {
+    const membreId = String(body.membreId || "");
+    if (!membreId) return json({ ok: false, reason: "membreId manquant." }, 400);
+
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+    const membre = membres.find((m) => m.id === membreId);
+
+    if (!membre) return json({ ok: false, reason: "Membre introuvable." });
+
+    const membreCode = String(membre.code || "");
+    if (!membreCode) return json({ ok: false, reason: "Ce membre n'a pas de code." });
+
+    const sendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "SACCB <contact@saccb.fr>",
+        to: [String(membre.email)],
+        subject: "🏸 Bienvenue au SACCB — Votre accès espace membre",
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            </div>
+            <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <h2 style="color: #1e3a5f; margin-top: 0;">🎉 Bienvenue au club, ${membre.nom} !</h2>
+              <p style="color: #475569;">
+                Vous avez été inscrit(e) au SACCB pour la saison <strong>${currentData.y1}–${currentData.y2}</strong>.
+                Vous avez accès à votre espace membre sur le site du club.
+              </p>
+
+              <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 8px; color: #64748b; font-size: 13px; font-weight: bold; text-transform: uppercase; letter-spacing: 0.05em;">Vos identifiants de connexion</p>
+                <p style="margin: 6px 0; color: #1e293b;"><strong>Site :</strong> <a href="https://saccb.fr" style="color: #1e3a5f;">saccb.fr</a></p>
+                <p style="margin: 6px 0; color: #1e293b;"><strong>Email :</strong> ${membre.email}</p>
+              </div>
+
+              <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 16px 0; text-align: center;">
+                <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code provisoire</p>
+                <p style="margin: 0 0 12px; color: #92400e; font-size: 12px;">Utilisez ce code pour vous connecter la première fois</p>
+                <p style="margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1e3a5f;">${membreCode}</p>
+              </div>
+
+              <div style="background: #f0f9ff; border: 1px solid #bae6fd; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 10px; color: #0c4a6e; font-size: 14px; font-weight: bold;">Comment accéder à votre espace membre :</p>
+                <ol style="margin: 0; padding-left: 20px; color: #0369a1; font-size: 13px; line-height: 1.8;">
+                  <li>Rendez-vous sur <a href="https://saccb.fr" style="color: #1e3a5f; font-weight: bold;">saccb.fr</a></li>
+                  <li>Cliquez sur <strong>«&nbsp;Espace membre&nbsp;»</strong> en haut de la page</li>
+                  <li>Entrez votre email et votre code provisoire ci-dessus</li>
+                </ol>
+              </div>
+
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px; margin: 16px 0;">
+                <p style="margin: 0; color: #166534; font-size: 13px;">
+                  💡 <strong>Changer votre code :</strong> une fois connecté, cliquez sur
+                  <em>«&nbsp;Changer mon code personnel&nbsp;»</em> dans votre espace.
+                  Vous pouvez aussi utiliser <em>«&nbsp;Code oublié ?&nbsp;»</em> sur la page de connexion.
+                </p>
+              </div>
+
+              ${currentData.whatsappLink ? `
+              <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
+                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club :</p>
+                <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
+                  💬 Rejoindre le groupe WhatsApp
+                </a>
+              </div>
+              ` : ""}
+
+              <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
+                Accéder au site →
+              </a>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">SACCB — Sainte-Adresse, Le Havre</p>
+            </div>
+          </div>
+        `,
+      }),
+    });
+
+    if (!sendRes.ok) {
+      const errText = await sendRes.text();
+      return json({ ok: false, reason: "Erreur envoi email : " + errText });
+    }
+
+    return json({ ok: true });
+  }
+
   return json({ error: "Action inconnue" }, 400);
 });
