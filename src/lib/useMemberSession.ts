@@ -9,6 +9,7 @@ export type MemberSession = {
   type: string;
   email: string;
   expiry: number;
+  paid?: boolean; // false = adhésion non renouvelée pour la saison en cours
 };
 
 export function getMemberSession(): MemberSession | null {

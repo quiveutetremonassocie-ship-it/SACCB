@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles } from "lucide-react";
 import { DB, QUOTA_DEFAULT } from "@/lib/types";
 
 export default function SeasonSettings({
@@ -39,6 +39,41 @@ export default function SeasonSettings({
   async function reset() {
     if (!confirm("Supprimer TOUS les adhérents ? Action irréversible.")) return;
     await onPersist({ ...db, membres: [] });
+  }
+
+  async function newSeason() {
+    const newY1 = Number(prompt(`Année de début de la nouvelle saison (actuel: ${db.y1}) :`, String(db.y1 + 1)));
+    if (!newY1 || isNaN(newY1)) return;
+    const newY2 = newY1 + 1;
+    if (!confirm(
+      `Démarrer la saison ${newY1}–${newY2} ?\n\n` +
+      `• Les ${db.membres.length} adhérents sont conservés mais remis en "non payé"\n` +
+      `• Ils pourront se reconnecter et renouveler leur adhésion\n` +
+      `• Ceux qui ne paient pas avant la date limite seront supprimés automatiquement`
+    )) return;
+
+    // Archive la saison actuelle
+    const archive = {
+      y1: db.y1, y2: db.y2,
+      membresCount: db.membres.filter((m) => m.ok).length,
+      config_tournois: db.config_tournois,
+      inscrits_tournoi: db.inscrits_tournoi,
+    };
+    const prevArchives = db.archives ?? [];
+    const filtered = prevArchives.filter((a) => !(a.y1 === db.y1 && a.y2 === db.y2));
+
+    await onPersist({
+      ...db,
+      y1: newY1,
+      y2: newY2,
+      archives: [...filtered, archive],
+      membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
+      config_tournois: [],
+      inscrits_tournoi: [],
+      insc_open: true,
+      insc_close_date: undefined,
+    });
+    alert(`✅ Nouvelle saison ${newY1}–${newY2} démarrée ! Tous les adhérents sont en attente de renouvellement.`);
   }
 
   async function archiveSeason() {
@@ -162,6 +197,9 @@ export default function SeasonSettings({
         </button>
         <button onClick={archiveSeason} className="btn-ghost w-full">
           <Archive className="w-4 h-4" /> Archiver cette saison
+        </button>
+        <button onClick={newSeason} className="btn-accent w-full">
+          <Sparkles className="w-4 h-4" /> Démarrer une nouvelle saison
         </button>
         <button onClick={reset} className="btn-danger w-full">
           Réinitialiser les adhérents

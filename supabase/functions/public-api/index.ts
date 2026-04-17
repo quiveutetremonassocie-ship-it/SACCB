@@ -261,22 +261,23 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
+    // On accepte la connexion même si ok=false (renouvellement de saison)
     const membre = membres.find(
       (m) =>
         String(m.email || "").toLowerCase() === email &&
-        String(m.code || "") === code &&
-        m.ok === true
+        String(m.code || "") === code
     );
 
     if (!membre) {
       return json({
         ok: false,
-        reason: "Email ou code incorrect, ou adhésion non encore validée.",
+        reason: "Email ou code incorrect.",
       });
     }
 
     return json({
       ok: true,
+      paid: membre.ok === true,
       membre: {
         id: membre.id,
         nom: membre.nom,
@@ -316,9 +317,30 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
-    // Vérifier doublon email
-    if (membres.find((m) => m.email === email)) {
-      return json({ ok: false, reason: "Cet email est déjà inscrit !" });
+    // Renouvellement : email existe mais ok=false (nouvelle saison)
+    const existingIdx = membres.findIndex((m) => String(m.email || "").toLowerCase() === email);
+    if (existingIdx !== -1) {
+      if (membres[existingIdx].ok === true) {
+        return json({ ok: false, reason: "Cet email est déjà inscrit et son adhésion est active !" });
+      }
+      // Renouvellement : on met à jour l'entrée existante
+      const existing = membres[existingIdx];
+      membres[existingIdx] = {
+        ...existing,
+        tel: tel || existing.tel,
+        type,
+        paymentMethod,
+        code: code || existing.code,
+        newsOptIn,
+        ok: false,
+      };
+      currentData.membres = membres;
+      const { error: renewError } = await supabaseAdmin
+        .from("saccb_db")
+        .update({ data: currentData })
+        .eq("id", 1);
+      if (renewError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+      return json({ ok: true, membreId: String(existing.id), renewed: true });
     }
 
     // Vérifier quota (dynamique, 65 par défaut)
@@ -640,51 +662,112 @@ Deno.serve(async (req) => {
     const todayTs = new Date(new Date().toISOString().slice(0, 10)).getTime();
     const daysLeft = Math.round((closeTs - todayTs) / (1000 * 60 * 60 * 24));
 
-    if (daysLeft !== 30 && daysLeft !== 15) {
-      return json({ ok: true, skipped: `Aucun rappel aujourd'hui (J-${daysLeft}).` });
-    }
-
     const membres = (d.membres || []) as Record<string, unknown>[];
-    const emails = membres
+    const newsEmails = membres
       .filter((m) => m.ok === true && m.newsOptIn !== false)
       .map((m) => String(m.email || ""))
       .filter(Boolean);
 
-    if (emails.length === 0) return json({ ok: true, skipped: "Aucun abonné actif." });
+    const results: Record<string, unknown> = {};
 
-    const closeFormatted = new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    // ── Rappels fermeture des inscriptions saison (J-30 / J-15) ──
+    if (daysLeft === 30 || daysLeft === 15) {
+      if (newsEmails.length > 0) {
+        const closeFormatted = new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+        fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "SACCB <contact@saccb.fr>",
+            to: ["contact@saccb.fr"],
+            bcc: newsEmails,
+            subject: `⏰ Plus que ${daysLeft} jours pour s'inscrire au SACCB !`,
+            html: `
+              <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
+                <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                  <h2 style="color: #1e3a5f; margin-top: 0;">⏰ Plus que ${daysLeft} jours !</h2>
+                  <p style="color: #475569;">Les inscriptions pour la saison ${d.y1}–${d.y2} ferment le <strong>${closeFormatted}</strong>.</p>
+                  <p style="color: #475569;">Faites passer le mot autour de vous — il reste encore de la place !</p>
+                  <a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                    Voir les inscriptions →
+                  </a>
+                  <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
+                </div>
+              </div>
+            `,
+          }),
+        }).catch(() => {});
+        results.season_reminder = { sent: newsEmails.length, daysLeft };
+      }
+    }
 
-    await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "SACCB <contact@saccb.fr>",
-        to: ["contact@saccb.fr"],
-        bcc: emails,
-        subject: `⏰ Plus que ${daysLeft} jours pour s'inscrire au SACCB !`,
-        html: `
-          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+    // ── Suppression des non-payés après fermeture ──
+    if (daysLeft < 0) {
+      const before = membres.length;
+      const kept = membres.filter((m) => m.ok === true);
+      if (kept.length < before) {
+        d.membres = kept;
+        d.insc_open = false;
+        await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+        results.cleanup = { removed: before - kept.length };
+      }
+    }
+
+    // ── Rappels tournois (J-30 / J-15 avant dateLimit) ──
+    const tournois = (d.config_tournois || []) as Record<string, unknown>[];
+    const tournoiRemindersSent: string[] = [];
+    for (const t of tournois) {
+      const dateLimit = String(t.dateLimit || t.date || "");
+      if (!dateLimit) continue;
+      const tTs = new Date(dateLimit.includes("/")
+        ? dateLimit.split("/").reverse().join("-")
+        : dateLimit).getTime();
+      const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
+      if (tDaysLeft !== 30 && tDaysLeft !== 15) continue;
+      if (newsEmails.length === 0) continue;
+
+      const dateFormatted = new Date(tTs).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          to: ["contact@saccb.fr"],
+          bcc: newsEmails,
+          subject: `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
+              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <h2 style="color: #1e3a5f; margin-top: 0;">🏸 Plus que ${tDaysLeft} jours !</h2>
+                <p style="color: #475569;">La date limite d'inscription pour le tournoi <strong>${t.name}</strong> approche !</p>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                  <p style="margin: 0; font-size: 18px; font-weight: bold; color: #1e3a5f;">${t.name}</p>
+                  <p style="margin: 8px 0 0; color: #64748b;">📅 Date limite : <strong>${dateFormatted}</strong></p>
+                  ${t.type ? `<p style="margin: 4px 0 0; color: #64748b;">Type : Double ${t.type}</p>` : ""}
+                </div>
+                <p style="color: #475569;">Connectez-vous à votre espace membre pour inscrire votre binôme.</p>
+                <a href="https://saccb.fr/#tournois" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                  Voir les tournois →
+                </a>
+                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
+              </div>
             </div>
-            <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-              <h2 style="color: #1e3a5f; margin-top: 0;">⏰ Plus que ${daysLeft} jours !</h2>
-              <p style="color: #475569;">Les inscriptions pour la saison ${d.y1}–${d.y2} ferment le <strong>${closeFormatted}</strong>.</p>
-              <p style="color: #475569;">Faites passer le mot autour de vous — il reste encore de la place !</p>
-              <a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
-                Voir les inscriptions →
-              </a>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
-                Vous recevez cet email car vous êtes membre du SACCB et avez accepté de recevoir les news.
-              </p>
-            </div>
-          </div>
-        `,
-      }),
-    }).catch(() => {});
+          `,
+        }),
+      }).catch(() => {});
+      tournoiRemindersSent.push(String(t.name));
+    }
+    if (tournoiRemindersSent.length > 0) results.tournoi_reminders = tournoiRemindersSent;
 
-    return json({ ok: true, sent: emails.length, daysLeft });
+    return json({ ok: true, ...results });
   }
 
   // ─── ACTION: Code oublié — envoyer le code par email ───

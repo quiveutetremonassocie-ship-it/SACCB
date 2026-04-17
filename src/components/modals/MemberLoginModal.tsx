@@ -37,8 +37,8 @@ export default function MemberLoginModal({
       setError(r.reason || "Email ou code incorrect.");
       return;
     }
-    const sess = { membreId: r.membre.id, nom: r.membre.nom, type: r.membre.type, email: r.membre.email };
-    const stored = setMemberSession(sess);
+    const sess = { membreId: r.membre.id, nom: r.membre.nom, type: r.membre.type, email: r.membre.email, paid: r.paid !== false };
+    setMemberSession(sess);
     onSuccess({ ...sess, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 });
     setEmail("");
     setCode("");

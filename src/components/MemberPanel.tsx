@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode } from "@/lib/db";
@@ -72,6 +72,26 @@ export default function MemberPanel({
             Déconnexion
           </button>
         </div>
+
+        {/* Renouvellement si non payé pour cette saison */}
+        {session.paid === false && (
+          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-amber-800 font-semibold text-sm mb-1">⏳ Adhésion à renouveler</p>
+            <p className="text-amber-700 text-xs mb-3">
+              Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore réglée.
+              Renouvelez-la pour conserver votre accès.
+            </p>
+            <a
+              href="https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm w-full"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Renouveler mon adhésion
+            </a>
+          </div>
+        )}
 
         {/* Badge membre */}
         <div className="mb-6">
