@@ -42,6 +42,19 @@ export default function SeasonSettings({
     await onPersist({ ...db, membres: [] });
   }
 
+  async function restoreTournois() {
+    const lastArchive = db.archives?.[db.archives.length - 1];
+    if (!lastArchive) return;
+    const count = lastArchive.config_tournois?.length ?? 0;
+    if (!confirm(`Restaurer les ${count} tournoi(s) de la saison ${lastArchive.y1}–${lastArchive.y2} ?`)) return;
+    await onPersist({
+      ...db,
+      config_tournois: lastArchive.config_tournois ?? [],
+      inscrits_tournoi: lastArchive.inscrits_tournoi ?? [],
+    });
+    alert(`✅ ${count} tournoi(s) restauré(s) !`);
+  }
+
   async function newSeason() {
     const newY1 = Number(prompt(`Année de début de la nouvelle saison (actuel: ${db.y1}) :`, String(db.y1 + 1)));
     if (!newY1 || isNaN(newY1)) return;
@@ -69,8 +82,7 @@ export default function SeasonSettings({
       y2: newY2,
       archives: [...filtered, archive],
       membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
-      config_tournois: [],
-      inscrits_tournoi: [],
+      // On garde les tournois — l'admin les gère séparément
       insc_open: true,
       insc_close_date: undefined,
     });
@@ -209,6 +221,11 @@ export default function SeasonSettings({
         <button onClick={newSeason} className="btn-accent w-full">
           <Sparkles className="w-4 h-4" /> Démarrer une nouvelle saison
         </button>
+        {db.archives && db.archives.length > 0 && db.archives[db.archives.length - 1].config_tournois?.length > 0 && (
+          <button onClick={restoreTournois} className="btn-ghost w-full text-amber-700 border-amber-300 hover:bg-amber-50">
+            ↩️ Restaurer les tournois depuis l&apos;archive
+          </button>
+        )}
         <button onClick={reset} className="btn-danger w-full">
           Réinitialiser les adhérents
         </button>
