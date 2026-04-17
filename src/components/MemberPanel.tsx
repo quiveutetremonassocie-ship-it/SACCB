@@ -1,23 +1,31 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw } from "lucide-react";
-import { useState } from "react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal } from "lucide-react";
+import { useState, useMemo } from "react";
 import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode } from "@/lib/db";
+import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 
 export default function MemberPanel({
   session,
   y1,
   y2,
   whatsappLink,
+  configTournois = [],
+  inscritsTournoi = [],
+  archives = [],
   onClose,
 }: {
   session: MemberSession;
   y1: number;
   y2: number;
   whatsappLink?: string | null;
+  configTournois?: Tournoi[];
+  inscritsTournoi?: InscritTournoi[];
+  archives?: SeasonArchive[];
   onClose: () => void;
 }) {
+  const [histOpen, setHistOpen] = useState(false);
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [oldCode, setOldCode] = useState("");
   const [newCode, setNewCode] = useState("");
@@ -26,6 +34,36 @@ export default function MemberPanel({
   const [showNew, setShowNew] = useState(false);
   const [codeMsg, setCodeMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [codeLoading, setCodeLoading] = useState(false);
+
+  // Historique : fusionner saison courante + archives, garder tournois passés
+  const today = new Date().toISOString().slice(0, 10);
+  const allSeasons = useMemo(() => {
+    const current = {
+      y1, y2,
+      config_tournois: configTournois,
+      inscrits_tournoi: inscritsTournoi,
+      membresCount: 0,
+    };
+    return [...(archives ?? []), current]
+      .map((s) => {
+        const past = (s.config_tournois ?? []).filter((t) => t.date <= today);
+        if (past.length === 0) return null;
+        return {
+          label: `${s.y1}–${s.y2}`,
+          tournois: past.map((t) => {
+            const inscrits = (s.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
+            const myEntry = inscrits.find((i) =>
+              i.joueurs.toLowerCase().includes(session.nom.toLowerCase())
+            );
+            return { tournoi: t, myEntry, totalEquipes: inscrits.length };
+          }),
+        };
+      })
+      .filter(Boolean)
+      .reverse() as { label: string; tournois: { tournoi: Tournoi; myEntry: InscritTournoi | undefined; totalEquipes: number }[] }[];
+  }, [archives, configTournois, inscritsTournoi, y1, y2, today, session.nom]);
+
+  const totalPast = allSeasons.reduce((s, a) => s + a.tournois.length, 0);
 
   function logout() {
     clearMemberSession();
@@ -165,6 +203,57 @@ export default function MemberPanel({
           )}
         </div>
 
+        {/* Historique des tournois */}
+        {totalPast > 0 && (
+          <div className="mb-4">
+            <button
+              onClick={() => setHistOpen(!histOpen)}
+              className="flex items-center justify-between w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
+            >
+              <span className="flex items-center gap-2">
+                <Trophy className="w-4 h-4 text-amber-500" />
+                Historique des tournois ({totalPast})
+              </span>
+              {histOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+            {histOpen && (
+              <div className="mt-2 space-y-3">
+                {allSeasons.map((season) => (
+                  <div key={season.label}>
+                    <p className="text-xs uppercase tracking-widest text-slate-400 mb-1.5 px-1">Saison {season.label}</p>
+                    <div className="space-y-1.5">
+                      {season.tournois.map(({ tournoi, myEntry, totalEquipes }) => (
+                        <div key={tournoi.id} className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="min-w-0">
+                              <p className="text-sm font-medium text-slate-800 truncate">{tournoi.name}</p>
+                              <p className="text-xs text-slate-400">{new Date(tournoi.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
+                              {myEntry && (
+                                <p className="text-xs text-slate-500 mt-0.5 truncate">
+                                  🎾 {myEntry.joueurs}
+                                </p>
+                              )}
+                            </div>
+                            <div className="shrink-0 text-right">
+                              {myEntry?.resultat ? (
+                                <ResultBadge resultat={myEntry.resultat} total={totalEquipes} />
+                              ) : myEntry ? (
+                                <span className="text-xs text-slate-400">Participé</span>
+                              ) : (
+                                <span className="text-xs text-slate-300">—</span>
+                              )}
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
         {/* WhatsApp */}
         {whatsappLink ? (
           <a
@@ -206,4 +295,15 @@ function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y
       </div>
     </div>
   );
+}
+
+function ResultBadge({ resultat, total }: { resultat: string; total: number }) {
+  const parts = resultat.split("/");
+  const rank = parseInt(parts[0]);
+  const tot = parseInt(parts[1]) || total;
+  if (isNaN(rank)) return <span className="text-xs text-slate-500">{resultat}</span>;
+  if (rank === 1) return <span className="text-sm font-bold text-yellow-500">🥇 1er / {tot}</span>;
+  if (rank === 2) return <span className="text-sm font-bold text-slate-400">🥈 2e / {tot}</span>;
+  if (rank === 3) return <span className="text-sm font-bold text-amber-600">🥉 3e / {tot}</span>;
+  return <span className="text-xs font-semibold text-slate-600">{rank}e / {tot}</span>;
 }

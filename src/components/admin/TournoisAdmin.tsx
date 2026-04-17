@@ -38,6 +38,7 @@ export default function TournoisAdmin({
           dateLimit: dateLimit || null,
           type: type || null,
           quota: q ? parseInt(q) : null,
+          saison: `${db.y1}-${db.y2}`,
         },
       ],
     };

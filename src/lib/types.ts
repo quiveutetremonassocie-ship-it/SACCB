@@ -33,6 +33,7 @@ export type Tournoi = {
   dateLimit?: string | null; // date limite d'inscription (format YYYY-MM-DD ou DD/MM/YYYY)
   type?: string | null;
   quota?: number | null;
+  saison?: string; // ex: "2024-2025", auto-renseigné à la création
 };
 
 export type InscritTournoi = {

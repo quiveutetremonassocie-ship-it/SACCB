@@ -157,6 +157,9 @@ export default function Site() {
           y1={db.y1}
           y2={db.y2}
           whatsappLink={db.whatsappLink}
+          configTournois={db.config_tournois ?? []}
+          inscritsTournoi={db.inscrits_tournoi ?? []}
+          archives={db.archives ?? []}
           onClose={onMemberPanelClose}
         />
       )}
