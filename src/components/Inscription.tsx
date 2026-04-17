@@ -7,8 +7,10 @@ import confetti from "canvas-confetti";
 import { DB } from "@/lib/types";
 import { publicAddMembre, publicMarkPaid } from "@/lib/db";
 
-const HELLOASSO_URL =
+const HELLOASSO_BASE_URL =
   "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte";
+// HelloAsso redirigera vers cette URL après paiement réussi
+const HELLOASSO_URL = `${HELLOASSO_BASE_URL}?backUrl=${encodeURIComponent("https://saccb.fr/?payment=success")}`;
 
 type PaymentMode = "online" | "virement";
 
