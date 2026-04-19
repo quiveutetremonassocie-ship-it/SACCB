@@ -114,12 +114,19 @@ export default function Site() {
 
   const onCloseAdmin = async () => {
     if (!isMemberAdmin) {
+      // Admin Supabase Auth : déconnexion complète
       await supabaseClient.auth.signOut();
+      setIsMemberAdmin(false);
+      memberAdminCode.current = null;
+      setDb((d) => ({ ...d, membres: [], factures: [] }));
     }
+    // Admin via membre : on garde le code en mémoire, bouton Admin reste visible
     setAdminOpen(false);
-    setIsMemberAdmin(false);
-    memberAdminCode.current = null;
-    setDb((d) => ({ ...d, membres: [], factures: [] }));
+  };
+
+  const onReopenAdmin = async () => {
+    setAdminOpen(true);
+    await refreshAdmin();
   };
 
   const onMemberButtonClick = () => {
@@ -159,6 +166,8 @@ export default function Site() {
       <Navbar
         onMember={onMemberButtonClick}
         isMember={!!memberSession}
+        isAdmin={isMemberAdmin && !adminOpen}
+        onAdmin={onReopenAdmin}
       />
       <main>
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />

@@ -276,6 +276,8 @@ export default function SeasonSettings({
               <span className="text-sm text-slate-700">{email}</span>
               <button
                 onClick={async () => {
+                  const conf = prompt(`Tapez CONFIRMER pour retirer ${email} des admins :`);
+                  if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
                   const newEmails = (db.adminEmails ?? []).filter((e) => e !== email);
                   await onPersist({ ...db, adminEmails: newEmails });
                 }}
@@ -294,14 +296,16 @@ export default function SeasonSettings({
             placeholder="email@exemple.fr"
             value={adminEmailInput}
             onChange={(e) => setAdminEmailInput(e.target.value)}
-            onKeyDown={(e) => {
+            onKeyDown={async (e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
                 const email = adminEmailInput.trim().toLowerCase();
                 if (!email) return;
                 const current = db.adminEmails ?? [];
-                if (current.includes(email)) return;
-                onPersist({ ...db, adminEmails: [...current, email] });
+                if (current.includes(email)) { alert("Cet email est déjà admin."); return; }
+                const conf = prompt(`Tapez CONFIRMER pour donner l'accès admin à ${email} :`);
+                if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
+                await onPersist({ ...db, adminEmails: [...current, email] });
                 setAdminEmailInput("");
               }
             }}
@@ -311,7 +315,9 @@ export default function SeasonSettings({
               const email = adminEmailInput.trim().toLowerCase();
               if (!email) return;
               const current = db.adminEmails ?? [];
-              if (current.includes(email)) return;
+              if (current.includes(email)) { alert("Cet email est déjà admin."); return; }
+              const conf = prompt(`Tapez CONFIRMER pour donner l'accès admin à ${email} :`);
+              if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
               await onPersist({ ...db, adminEmails: [...current, email] });
               setAdminEmailInput("");
             }}
