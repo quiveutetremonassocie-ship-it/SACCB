@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
@@ -27,6 +27,8 @@ export default function SeasonSettings({
   const [inscCloseDate, setInscCloseDate] = useState(db.insc_close_date || "");
   const [adminEmailInput, setAdminEmailInput] = useState("");
   const [contactEmailInput, setContactEmailInput] = useState("");
+  const [credEmail, setCredEmail] = useState("");
+  const [credCode, setCredCode] = useState("");
 
   // Edition archive
   const [editingArchiveIdx, setEditingArchiveIdx] = useState<number | null>(null);
@@ -326,6 +328,72 @@ export default function SeasonSettings({
               if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
               await onPersist({ ...db, adminEmails: [...current, email] });
               setAdminEmailInput("");
+            }}
+            className="btn-primary !px-3"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>}
+
+      {/* Codes admin indépendants (sans être adhérent) */}
+      {isSuperAdmin && <div className="mt-6 pt-5 border-t border-slate-200">
+        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          <KeyRound className="w-3 h-3" /> Codes admin (accès sans être adhérent)
+        </p>
+        <p className="text-xs text-slate-400 mb-3">
+          Ces emails+codes donnent accès à l'admin via l'espace membre, même sans être inscrit.
+        </p>
+        <div className="space-y-1.5 mb-3">
+          {(db.adminCredentials ?? []).length === 0 && (
+            <p className="text-xs text-slate-300 italic">Aucun code admin configuré.</p>
+          )}
+          {(db.adminCredentials ?? []).map((cred) => (
+            <div key={cred.email} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
+              <div>
+                <p className="text-sm font-medium text-slate-700">{cred.email}</p>
+                <p className="text-xs text-slate-400">Code : {cred.code}</p>
+              </div>
+              <button
+                onClick={async () => {
+                  const conf = prompt(`Tapez CONFIRMER pour supprimer le code admin de ${cred.email} :`);
+                  if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
+                  const newCreds = (db.adminCredentials ?? []).filter((c) => c.email !== cred.email);
+                  await onPersist({ ...db, adminCredentials: newCreds });
+                }}
+                className="text-red-400 hover:text-red-600 transition"
+                title="Supprimer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="input !text-sm flex-1"
+            type="email"
+            placeholder="email@exemple.fr"
+            value={credEmail}
+            onChange={(e) => setCredEmail(e.target.value)}
+          />
+          <input
+            className="input !text-sm w-24"
+            type="text"
+            placeholder="Code"
+            value={credCode}
+            onChange={(e) => setCredCode(e.target.value)}
+            maxLength={20}
+          />
+          <button
+            onClick={async () => {
+              const email = credEmail.trim().toLowerCase();
+              const code = credCode.trim();
+              if (!email || !code) { alert("Email et code requis."); return; }
+              const current = db.adminCredentials ?? [];
+              const newCreds = current.filter((c) => c.email !== email);
+              await onPersist({ ...db, adminCredentials: [...newCreds, { email, code }] });
+              setCredEmail(""); setCredCode("");
             }}
             className="btn-primary !px-3"
           >

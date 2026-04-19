@@ -258,8 +258,23 @@ Deno.serve(async (req) => {
 
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
+    const adminCredentials = ((currentData.adminCredentials || []) as { email: string; code: string }[]);
+    const adminEmails = ((currentData.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
 
-    // On accepte la connexion même si ok=false (renouvellement de saison)
+    // Vérifier d'abord les credentials admin indépendants (pas besoin d'être adhérent)
+    const adminCred = adminCredentials.find(
+      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code
+    );
+    if (adminCred) {
+      return json({
+        ok: true,
+        paid: true,
+        isAdmin: true,
+        membre: { id: "admin-" + email, nom: email, type: "Adulte", email },
+      });
+    }
+
+    // Sinon vérifier dans les adhérents normaux
     const membre = membres.find(
       (m) =>
         String(m.email || "").toLowerCase() === email &&
@@ -267,13 +282,9 @@ Deno.serve(async (req) => {
     );
 
     if (!membre) {
-      return json({
-        ok: false,
-        reason: "Email ou code incorrect.",
-      });
+      return json({ ok: false, reason: "Email ou code incorrect." });
     }
 
-    const adminEmails = ((currentData.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
     const isAdmin = adminEmails.includes(email);
 
     return json({
