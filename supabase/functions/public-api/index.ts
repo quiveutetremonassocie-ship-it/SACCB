@@ -312,10 +312,14 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
     const adminEmails = ((d.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
-    const membre = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
-    if (!membre) return json({ ok: false, reason: "Identifiants incorrects." });
-    if (!adminEmails.includes(email)) return json({ ok: false, reason: "Accès non autorisé." });
+    // Vérifier via adminCredentials (admin sans adhérent) OU via membres
+    const validAdminCred = adminCredentials.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
+    const validMembre = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
+
+    if (!validAdminCred && !validMembre) return json({ ok: false, reason: "Identifiants incorrects." });
+    if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
 
     return json({ ok: true, data: d });
   }
@@ -333,10 +337,13 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
     const adminEmails = ((d.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const adminCredentialsCheck = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
-    const membre = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
-    if (!membre) return json({ ok: false, reason: "Identifiants incorrects." });
-    if (!adminEmails.includes(email)) return json({ ok: false, reason: "Accès non autorisé." });
+    const validAdminCredSave = adminCredentialsCheck.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
+    const validMembreSave = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
+
+    if (!validAdminCredSave && !validMembreSave) return json({ ok: false, reason: "Identifiants incorrects." });
+    if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
 
     // Seuls les super-admins peuvent modifier la liste adminEmails
     const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
