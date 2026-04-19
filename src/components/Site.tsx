@@ -64,10 +64,24 @@ export default function Site() {
     }
   }, [isMemberAdmin, memberSession]);
 
-  // Restaurer la session membre depuis localStorage
+  // Restaurer la session membre depuis localStorage + code admin depuis sessionStorage
   useEffect(() => {
     const session = getMemberSession();
-    if (session) setMemberSession(session);
+    if (session) {
+      setMemberSession(session);
+      // Si la session est admin, restaurer le code depuis sessionStorage
+      if (session.isAdmin) {
+        const savedCode = sessionStorage.getItem("saccb_admin_code");
+        if (savedCode) {
+          memberAdminCode.current = savedCode;
+          setIsMemberAdmin(true);
+          // Recharger les données admin en arrière-plan
+          fetchAdminDBByMember(session.email, savedCode).then((data) => {
+            if (data) { setDb(data); setMembresCount(data.membres.length); }
+          });
+        }
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -123,9 +137,10 @@ export default function Site() {
       setIsMemberAdmin(false);
       setSupabaseAdminEmail(undefined);
       memberAdminCode.current = null;
+      sessionStorage.removeItem("saccb_admin_code");
       setDb((d) => ({ ...d, membres: [], factures: [] }));
     }
-    // Admin via membre : on garde le code en mémoire, bouton Admin reste visible
+    // Admin via membre : on garde le code en mémoire + sessionStorage, bouton Admin reste visible
     setAdminOpen(false);
   };
 
@@ -144,8 +159,9 @@ export default function Site() {
     setMemberLoginOpen(false);
 
     if (session.isAdmin && adminCode) {
-      // Admin via espace membre : stocker le code en mémoire, ouvrir l'admin
+      // Admin via espace membre : stocker le code en mémoire + sessionStorage, ouvrir l'admin
       memberAdminCode.current = adminCode;
+      sessionStorage.setItem("saccb_admin_code", adminCode);
       setIsMemberAdmin(true);
       const data = await fetchAdminDBByMember(session.email, adminCode);
       if (data) {
@@ -164,6 +180,9 @@ export default function Site() {
   const onMemberPanelClose = () => {
     setMemberSession(null);
     setMemberPanelOpen(false);
+    setIsMemberAdmin(false);
+    memberAdminCode.current = null;
+    sessionStorage.removeItem("saccb_admin_code");
   };
 
   return (
