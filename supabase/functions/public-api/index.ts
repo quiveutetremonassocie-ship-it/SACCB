@@ -6,7 +6,7 @@ const corsHeaders = {
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
-// Rate limiting simple en mémoire (par IP, reset au redéploiement)
+// Rate limiting général (par IP, reset au redéploiement)
 const rateLimitMap = new Map<string, { count: number; reset: number }>();
 const RATE_LIMIT = 10; // max 10 requêtes
 const RATE_WINDOW = 60_000; // par minute
@@ -20,6 +20,20 @@ function isRateLimited(ip: string): boolean {
   }
   entry.count++;
   return entry.count > RATE_LIMIT;
+}
+
+// Rate limiting spécifique formulaire de contact (max 3 par heure par IP)
+const contactLimitMap = new Map<string, { count: number; reset: number }>();
+
+function isContactRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = contactLimitMap.get(ip);
+  if (!entry || now > entry.reset) {
+    contactLimitMap.set(ip, { count: 1, reset: now + 3_600_000 }); // 1 heure
+    return false;
+  }
+  entry.count++;
+  return entry.count > 3; // max 3 messages par heure
 }
 
 function sanitize(str: string): string {
@@ -1008,6 +1022,11 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Formulaire de contact public ───
   if (action === "contact") {
+    // Rate limit spécifique contact : max 3 par heure par IP
+    if (isContactRateLimited(ip)) {
+      return json({ ok: false, reason: "Trop de messages envoyés. Réessayez dans une heure." }, 429);
+    }
+
     const name = sanitize(String(body.name || ""));
     const email = sanitize(String(body.email || "")).toLowerCase();
     const message = String(body.message || "").slice(0, 1000).replace(/[<>]/g, "");

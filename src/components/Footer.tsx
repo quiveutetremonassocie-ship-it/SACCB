@@ -52,12 +52,24 @@ function ContactForm() {
   const [nom, setNom] = useState("");
   const [email, setEmail] = useState("");
   const [message, setMessage] = useState("");
+  const [honeypot, setHoneypot] = useState(""); // champ piège invisible pour les bots
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+  const [formOpenedAt] = useState(() => Date.now()); // heure d'ouverture du formulaire
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+
+    // Anti-spam 1 : honeypot — si rempli c'est un bot
+    if (honeypot) return;
+
+    // Anti-spam 2 : temps minimum de 4 secondes sur le formulaire
+    if (Date.now() - formOpenedAt < 4000) {
+      setError("Envoi trop rapide. Attendez quelques secondes.");
+      return;
+    }
+
     setLoading(true);
     setError("");
     const r = await publicContact(nom.trim(), email.trim(), message.trim());
@@ -85,6 +97,17 @@ function ContactForm() {
 
   return (
     <form onSubmit={handleSubmit} className="bg-white/10 border border-white/20 rounded-2xl p-7 space-y-4">
+      {/* Champ piège anti-bot — invisible pour les humains */}
+      <div style={{ display: "none" }} aria-hidden="true">
+        <input
+          type="text"
+          name="website"
+          tabIndex={-1}
+          autoComplete="off"
+          value={honeypot}
+          onChange={(e) => setHoneypot(e.target.value)}
+        />
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div>
           <label className="text-xs uppercase tracking-widest text-blue-300 mb-1.5 block">Nom</label>
