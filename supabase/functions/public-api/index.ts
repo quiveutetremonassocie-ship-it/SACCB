@@ -984,15 +984,26 @@ Deno.serve(async (req) => {
 
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
+    const adminCredentials = ((currentData.adminCredentials || []) as { email: string; code: string }[]);
 
+    // Vérifier d'abord dans adminCredentials
+    const adminCred = adminCredentials.find(
+      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === oldCode
+    );
+
+    // Vérifier ensuite dans les adhérents
     const membre = membres.find(
       (m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === oldCode
     );
 
-    if (!membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
+    if (!adminCred && !membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
 
-    membre.code = newCode;
+    // Mettre à jour dans les deux endroits si besoin
+    if (membre) membre.code = newCode;
+    if (adminCred) adminCred.code = newCode;
+
     currentData.membres = membres;
+    currentData.adminCredentials = adminCredentials;
 
     const { error: updateError } = await supabaseAdmin
       .from("saccb_db")
