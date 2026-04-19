@@ -5,7 +5,7 @@ import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive,
 import { DB, QUOTA_DEFAULT, SeasonArchive } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
-const SUPER_ADMIN = "gabin.binay@gmail.com";
+const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
 
 export default function SeasonSettings({
   db,
@@ -18,7 +18,7 @@ export default function SeasonSettings({
   onRefresh: () => Promise<void>;
   adminEmail?: string;
 }) {
-  const isSuperAdmin = adminEmail?.toLowerCase() === SUPER_ADMIN;
+  const isSuperAdmin = SUPER_ADMINS.includes(adminEmail?.toLowerCase() ?? "");
   const [y1, setY1] = useState(db.y1);
   const [y2, setY2] = useState(db.y2);
   const currentQuota = db.quota ?? QUOTA_DEFAULT;
