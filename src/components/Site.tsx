@@ -34,6 +34,7 @@ export default function Site() {
   // Credentials admin via espace membre (stockés en mémoire uniquement, jamais en localStorage)
   const memberAdminCode = useRef<string | null>(null);
   const [isMemberAdmin, setIsMemberAdmin] = useState(false); // true = admin via membre (pas Supabase Auth)
+  const [supabaseAdminEmail, setSupabaseAdminEmail] = useState<string | undefined>(undefined);
 
   const refreshPublic = useCallback(async () => {
     try {
@@ -80,6 +81,7 @@ export default function Site() {
       // Auto-restauration de session admin Supabase (fallback)
       supabaseClient.auth.getSession().then(({ data }) => {
         if (data.session) {
+          setSupabaseAdminEmail(data.session.user?.email ?? undefined);
           setAdminOpen(true);
           fetchAdminDB().then((d) => { if (d) { setDb(d); setMembresCount(d.membres.length); } });
         }
@@ -109,6 +111,8 @@ export default function Site() {
   const onLoginSuccess = async () => {
     setLoginOpen(false);
     setAdminOpen(true);
+    const { data: { session } } = await supabaseClient.auth.getSession();
+    setSupabaseAdminEmail(session?.user?.email ?? undefined);
     await fetchAdminDB().then((d) => { if (d) { setDb(d); setMembresCount(d.membres.length); } });
   };
 
@@ -117,6 +121,7 @@ export default function Site() {
       // Admin Supabase Auth : déconnexion complète
       await supabaseClient.auth.signOut();
       setIsMemberAdmin(false);
+      setSupabaseAdminEmail(undefined);
       memberAdminCode.current = null;
       setDb((d) => ({ ...d, membres: [], factures: [] }));
     }
@@ -217,7 +222,7 @@ export default function Site() {
           onClose={onCloseAdmin}
           onPersist={persist}
           onRefresh={refreshAdmin}
-          adminEmail={isMemberAdmin ? memberSession?.email : undefined}
+          adminEmail={isMemberAdmin ? memberSession?.email : supabaseAdminEmail}
         />
       )}
     </>
