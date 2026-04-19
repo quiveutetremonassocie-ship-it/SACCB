@@ -20,11 +20,13 @@ export default function AdminPanel({
   onClose,
   onPersist,
   onRefresh,
+  adminEmail,
 }: {
   db: DB;
   onClose: () => void;
   onPersist: (db: DB) => Promise<void>;
   onRefresh: () => Promise<void>;
+  adminEmail?: string;
 }) {
   const [recuMembre, setRecuMembre] = useState<Membre | null>(null);
   const [emargementOpen, setEmargementOpen] = useState(false);
@@ -95,7 +97,7 @@ export default function AdminPanel({
             <Accounting db={db} totals={totals} onPersist={onPersist} />
           </div>
 
-          <SeasonSettings db={db} onPersist={onPersist} onRefresh={onRefresh} />
+          <SeasonSettings db={db} onPersist={onPersist} onRefresh={onRefresh} adminEmail={adminEmail} />
           <StatsAdhesions totals={totals} />
           <div className="lg:col-span-2">
           </div>

@@ -212,7 +212,13 @@ export default function Site() {
         />
       )}
       {adminOpen && (
-        <AdminPanel db={db} onClose={onCloseAdmin} onPersist={persist} onRefresh={refreshAdmin} />
+        <AdminPanel
+          db={db}
+          onClose={onCloseAdmin}
+          onPersist={persist}
+          onRefresh={refreshAdmin}
+          adminEmail={isMemberAdmin ? memberSession?.email : undefined}
+        />
       )}
     </>
   );

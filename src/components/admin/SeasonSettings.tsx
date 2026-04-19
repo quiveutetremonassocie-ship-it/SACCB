@@ -5,15 +5,20 @@ import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive,
 import { DB, QUOTA_DEFAULT, SeasonArchive } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
+const SUPER_ADMIN = "gabin.binay@gmail.com";
+
 export default function SeasonSettings({
   db,
   onPersist,
   onRefresh,
+  adminEmail,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   onRefresh: () => Promise<void>;
+  adminEmail?: string;
 }) {
+  const isSuperAdmin = adminEmail?.toLowerCase() === SUPER_ADMIN;
   const [y1, setY1] = useState(db.y1);
   const [y2, setY2] = useState(db.y2);
   const currentQuota = db.quota ?? QUOTA_DEFAULT;
@@ -259,8 +264,8 @@ export default function SeasonSettings({
         </div>
       )}
 
-      {/* Accès admin via espace membre */}
-      <div className="mt-6 pt-5 border-t border-slate-200">
+      {/* Accès admin via espace membre — visible uniquement par le super-admin */}
+      {isSuperAdmin && <div className="mt-6 pt-5 border-t border-slate-200">
         <p className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
           <ShieldCheck className="w-3 h-3" /> Accès admin via espace membre
         </p>
@@ -326,7 +331,7 @@ export default function SeasonSettings({
             <Plus className="w-4 h-4" />
           </button>
         </div>
-      </div>
+      </div>}
     </div>
   );
 }
