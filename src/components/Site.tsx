@@ -19,6 +19,7 @@ import ResetPasswordModal from "./modals/ResetPasswordModal";
 import AdminPanel from "./admin/AdminPanel";
 import MemberPanel from "./MemberPanel";
 import Palmares from "./Palmares";
+import CookieBanner from "./CookieBanner";
 
 export default function Site() {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -66,7 +67,7 @@ export default function Site() {
         supabaseClient.auth.getSession().then(() => setResetOpen(true));
         return;
       }
-      // Auto-restauration de session admin (cookie persistant)
+      // Auto-restauration de session admin
       supabaseClient.auth.getSession().then(({ data }) => {
         if (data.session) {
           setAdminOpen(true);
@@ -76,13 +77,23 @@ export default function Site() {
     }
   }, [refreshPublic, refreshAdmin]);
 
-  // Bloque le scroll du body quand le panel admin est ouvert
+  // Raccourci clavier admin : Ctrl+Shift+A (ou Cmd+Shift+A sur Mac)
+  useEffect(() => {
+    function handleKeyDown(e: KeyboardEvent) {
+      if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
+        e.preventDefault();
+        if (!adminOpen) setLoginOpen(true);
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [adminOpen]);
+
+  // Bloque le scroll quand admin est ouvert
   useEffect(() => {
     if (typeof document === "undefined") return;
     document.body.style.overflow = adminOpen ? "hidden" : "";
-    return () => {
-      document.body.style.overflow = "";
-    };
+    return () => { document.body.style.overflow = ""; };
   }, [adminOpen]);
 
   const onLoginSuccess = async () => {
@@ -98,11 +109,8 @@ export default function Site() {
   };
 
   const onMemberButtonClick = () => {
-    if (memberSession) {
-      setMemberPanelOpen(true);
-    } else {
-      setMemberLoginOpen(true);
-    }
+    if (memberSession) setMemberPanelOpen(true);
+    else setMemberLoginOpen(true);
   };
 
   const onMemberLoginSuccess = (session: MemberSession) => {
@@ -119,7 +127,6 @@ export default function Site() {
   return (
     <>
       <Navbar
-        onAdmin={() => setLoginOpen(true)}
         onMember={onMemberButtonClick}
         isMember={!!memberSession}
       />
@@ -142,7 +149,9 @@ export default function Site() {
           onMembreAdded={() => setMembresCount((n) => n + 1)}
         />
       </main>
-      <Footer year={db.y1} />
+      <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
+
+      <CookieBanner />
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
       <ResetPasswordModal open={resetOpen} onClose={() => setResetOpen(false)} />

@@ -1,15 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Menu, X, Shield, UserCircle2 } from "lucide-react";
+import { Menu, X, UserCircle2 } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
 
 export default function Navbar({
-  onAdmin,
   onMember,
   isMember,
 }: {
-  onAdmin: () => void;
   onMember: () => void;
   isMember: boolean;
 }) {
@@ -68,9 +66,6 @@ export default function Navbar({
             <UserCircle2 className="w-4 h-4" />
             {isMember ? "Mon espace" : "Espace membre"}
           </button>
-          <button onClick={onAdmin} className="btn-primary !px-5 !py-2.5">
-            <Shield className="w-4 h-4" /> Admin
-          </button>
         </div>
 
         <button
@@ -95,23 +90,11 @@ export default function Navbar({
             </a>
           ))}
           <button
-            onClick={() => {
-              setOpen(false);
-              onMember();
-            }}
+            onClick={() => { setOpen(false); onMember(); }}
             className={`btn-ghost w-full ${isMember ? "!border-emerald-400 !text-emerald-700" : ""}`}
           >
             <UserCircle2 className="w-4 h-4" />
             {isMember ? "Mon espace" : "Espace membre"}
-          </button>
-          <button
-            onClick={() => {
-              setOpen(false);
-              onAdmin();
-            }}
-            className="btn-primary w-full"
-          >
-            <Shield className="w-4 h-4" /> Admin
           </button>
         </div>
       )}

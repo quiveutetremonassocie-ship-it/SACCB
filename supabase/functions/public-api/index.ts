@@ -1006,6 +1006,53 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // ─── ACTION: Formulaire de contact public ───
+  if (action === "contact") {
+    const name = sanitize(String(body.name || ""));
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const message = String(body.message || "").slice(0, 1000).replace(/[<>]/g, "");
+
+    if (!name || name.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
+    if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
+    if (!message || message.length < 5) return json({ ok: false, reason: "Message trop court." }, 400);
+
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    // Lire le mail de destination depuis la DB (configurable)
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const d = (data?.data ?? {}) as Record<string, unknown>;
+    // Email de destination : contact@saccb.fr par défaut, ou celui configuré dans la DB
+    const toEmail = String(d.contactEmail || "contact@saccb.fr");
+
+    const sendRes = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        from: "SACCB Site <contact@saccb.fr>",
+        to: [toEmail],
+        reply_to: [email],
+        subject: `📩 Message de ${name} via saccb.fr`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+            <h2 style="color: #1e3a5f;">Nouveau message depuis saccb.fr</h2>
+            <p><strong>De :</strong> ${name}</p>
+            <p><strong>Email :</strong> <a href="mailto:${email}">${email}</a></p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+            <p style="white-space: pre-wrap; color: #475569;">${message}</p>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
+            <p style="color: #94a3b8; font-size: 12px;">Message reçu via le formulaire de contact de saccb.fr</p>
+          </div>
+        `,
+      }),
+    });
+
+    if (!sendRes.ok) {
+      return json({ ok: false, reason: "Erreur lors de l'envoi." });
+    }
+    return json({ ok: true });
+  }
+
   // ─── ACTION: Email de bienvenue (ajout manuel par admin) ───
   if (action === "send_welcome") {
     const membreId = String(body.membreId || "");

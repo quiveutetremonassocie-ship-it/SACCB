@@ -32,6 +32,7 @@ export default function Inscription({
   const [mode, setMode] = useState<PaymentMode>("online");
   const [showCode, setShowCode] = useState(false);
   const [newsOptIn, setNewsOptIn] = useState(true);
+  const [rgpdOk, setRgpdOk] = useState(false);
   const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
@@ -80,8 +81,21 @@ export default function Inscription({
     const type = String(fd.get("type") || "Adulte") as "Adulte" | "Etudiant";
     const code = String(fd.get("code") || "").trim();
 
+    if (!rgpdOk) {
+      alert("Vous devez accepter les CGU et la politique de confidentialité.");
+      setLoading(false);
+      return;
+    }
+
     if (membresCount >= quota) {
       alert("Le club est complet !");
+      setLoading(false);
+      return;
+    }
+
+    // Vérification complexité du code : pas que des chiffres identiques (ex: 1111)
+    if (/^(.)\1+$/.test(code)) {
+      alert("Le code ne peut pas être composé uniquement du même chiffre (ex: 1111). Choisissez un code plus sécurisé.");
       setLoading(false);
       return;
     }
@@ -334,6 +348,33 @@ export default function Inscription({
                 </button>
               </div>
             </div>
+
+            {/* RGPD — obligatoire */}
+            <label className="flex items-start gap-3 cursor-pointer select-none group">
+              <div className="relative mt-0.5 shrink-0">
+                <input
+                  type="checkbox"
+                  checked={rgpdOk}
+                  onChange={(e) => setRgpdOk(e.target.checked)}
+                  className="sr-only"
+                  required
+                />
+                <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${rgpdOk ? "bg-blue-500 border-blue-500" : "border-red-300 bg-white"}`}>
+                  {rgpdOk && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </div>
+              </div>
+              <span className="text-sm text-slate-600 leading-snug">
+                <span className="font-medium text-slate-800">J&apos;accepte les conditions <span className="text-red-500">*</span></span>
+                <br />
+                <span className="text-xs text-slate-500">
+                  En m&apos;inscrivant, j&apos;accepte les{" "}
+                  <a href="/cgu" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-700">CGU</a>
+                  {" "}et la{" "}
+                  <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-700">politique de confidentialité</a>.
+                  Mes données sont utilisées uniquement pour la gestion du club.
+                </span>
+              </span>
+            </label>
 
             {/* Newsletter opt-in */}
             <label className="flex items-start gap-3 cursor-pointer select-none group">
