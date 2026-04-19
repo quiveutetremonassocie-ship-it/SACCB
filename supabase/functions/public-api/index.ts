@@ -327,6 +327,14 @@ Deno.serve(async (req) => {
     if (!membre) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email)) return json({ ok: false, reason: "Accès non autorisé." });
 
+    // Seul le super-admin peut modifier la liste adminEmails
+    const SUPER_ADMIN = "gabin.binay@gmail.com";
+    const currentAdminEmails = JSON.stringify([...(d.adminEmails || [])].map((e: string) => String(e).toLowerCase()).sort());
+    const newAdminEmails = JSON.stringify([...((newData.adminEmails || []) as string[])].map((e: string) => String(e).toLowerCase()).sort());
+    if (currentAdminEmails !== newAdminEmails && email !== SUPER_ADMIN) {
+      return json({ ok: false, reason: "Seul le super-administrateur peut modifier la liste des admins." }, 403);
+    }
+
     const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
