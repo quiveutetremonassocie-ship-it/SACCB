@@ -1093,18 +1093,13 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    // Lire le mail de destination depuis la DB (configurable)
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
-    const d = (data?.data ?? {}) as Record<string, unknown>;
-    // Email de destination : contact@saccb.fr par défaut, ou celui configuré dans la DB
-    const toEmail = String(d.contactEmail || "contact@saccb.fr");
-
     const sendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB Site <contact@saccb.fr>",
-        to: [toEmail],
+        to: ["hernancm68@hotmail.com"],
+        cc: ["gabin.binay@gmail.com"],
         reply_to: [email],
         subject: `📩 Message de ${name} via saccb.fr`,
         html: `
@@ -1122,7 +1117,8 @@ Deno.serve(async (req) => {
     });
 
     if (!sendRes.ok) {
-      return json({ ok: false, reason: "Erreur lors de l'envoi." });
+      const errBody = await sendRes.json().catch(() => ({}));
+      return json({ ok: false, reason: `Erreur Resend (${sendRes.status}): ${JSON.stringify(errBody)}` });
     }
     return json({ ok: true });
   }
