@@ -1,8 +1,8 @@
 "use client";
 
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchPublicDB, saveDB } from "@/lib/db";
+import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import { getMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
@@ -31,6 +31,10 @@ export default function Site() {
   const [memberPanelOpen, setMemberPanelOpen] = useState(false);
   const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
 
+  // Credentials admin via espace membre (stockés en mémoire uniquement, jamais en localStorage)
+  const memberAdminCode = useRef<string | null>(null);
+  const [isMemberAdmin, setIsMemberAdmin] = useState(false); // true = admin via membre (pas Supabase Auth)
+
   const refreshPublic = useCallback(async () => {
     try {
       const d = await fetchPublicDB();
@@ -40,18 +44,24 @@ export default function Site() {
   }, []);
 
   const refreshAdmin = useCallback(async () => {
-    const data = await fetchAdminDB();
-    if (data) {
-      setDb(data);
-      setMembresCount(data.membres.length);
+    if (isMemberAdmin && memberSession && memberAdminCode.current) {
+      const data = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
+      if (data) { setDb(data); setMembresCount(data.membres.length); }
+    } else {
+      const data = await fetchAdminDB();
+      if (data) { setDb(data); setMembresCount(data.membres.length); }
     }
-  }, []);
+  }, [isMemberAdmin, memberSession]);
 
   const persist = useCallback(async (next: DB) => {
     setDb(next);
     setMembresCount(next.membres.length);
-    await saveDB(next);
-  }, []);
+    if (isMemberAdmin && memberSession && memberAdminCode.current) {
+      await saveDBByMember(memberSession.email, memberAdminCode.current, next);
+    } else {
+      await saveDB(next);
+    }
+  }, [isMemberAdmin, memberSession]);
 
   // Restaurer la session membre depuis localStorage
   useEffect(() => {
@@ -67,17 +77,17 @@ export default function Site() {
         supabaseClient.auth.getSession().then(() => setResetOpen(true));
         return;
       }
-      // Auto-restauration de session admin
+      // Auto-restauration de session admin Supabase (fallback)
       supabaseClient.auth.getSession().then(({ data }) => {
         if (data.session) {
           setAdminOpen(true);
-          refreshAdmin();
+          fetchAdminDB().then((d) => { if (d) { setDb(d); setMembresCount(d.membres.length); } });
         }
       });
     }
-  }, [refreshPublic, refreshAdmin]);
+  }, [refreshPublic]);
 
-  // Raccourci clavier admin : Ctrl+Shift+A (ou Cmd+Shift+A sur Mac)
+  // Raccourci clavier admin : Ctrl+Shift+A
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
@@ -99,12 +109,16 @@ export default function Site() {
   const onLoginSuccess = async () => {
     setLoginOpen(false);
     setAdminOpen(true);
-    await refreshAdmin();
+    await fetchAdminDB().then((d) => { if (d) { setDb(d); setMembresCount(d.membres.length); } });
   };
 
   const onCloseAdmin = async () => {
-    await supabaseClient.auth.signOut();
+    if (!isMemberAdmin) {
+      await supabaseClient.auth.signOut();
+    }
     setAdminOpen(false);
+    setIsMemberAdmin(false);
+    memberAdminCode.current = null;
     setDb((d) => ({ ...d, membres: [], factures: [] }));
   };
 
@@ -113,10 +127,26 @@ export default function Site() {
     else setMemberLoginOpen(true);
   };
 
-  const onMemberLoginSuccess = (session: MemberSession) => {
+  const onMemberLoginSuccess = async (session: MemberSession, adminCode?: string) => {
     setMemberSession(session);
     setMemberLoginOpen(false);
-    setMemberPanelOpen(true);
+
+    if (session.isAdmin && adminCode) {
+      // Admin via espace membre : stocker le code en mémoire, ouvrir l'admin
+      memberAdminCode.current = adminCode;
+      setIsMemberAdmin(true);
+      const data = await fetchAdminDBByMember(session.email, adminCode);
+      if (data) {
+        setDb(data);
+        setMembresCount(data.membres.length);
+        setAdminOpen(true);
+      } else {
+        // Fallback : ouvrir l'espace membre normalement
+        setMemberPanelOpen(true);
+      }
+    } else {
+      setMemberPanelOpen(true);
+    }
   };
 
   const onMemberPanelClose = () => {

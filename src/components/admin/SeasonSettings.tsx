@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
@@ -20,6 +20,7 @@ export default function SeasonSettings({
   const [quota, setQuota] = useState(currentQuota);
   const [whatsappLink, setWhatsappLink] = useState(db.whatsappLink || "");
   const [inscCloseDate, setInscCloseDate] = useState(db.insc_close_date || "");
+  const [adminEmailInput, setAdminEmailInput] = useState("");
 
   // Edition archive
   const [editingArchiveIdx, setEditingArchiveIdx] = useState<number | null>(null);
@@ -257,6 +258,69 @@ export default function SeasonSettings({
           </p>
         </div>
       )}
+
+      {/* Accès admin via espace membre */}
+      <div className="mt-6 pt-5 border-t border-slate-200">
+        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3" /> Accès admin via espace membre
+        </p>
+        <p className="text-xs text-slate-400 mb-3">
+          Ces emails peuvent accéder au panneau admin en se connectant avec leur code membre.
+        </p>
+        <div className="space-y-1.5 mb-3">
+          {(db.adminEmails ?? []).length === 0 && (
+            <p className="text-xs text-slate-300 italic">Aucun email admin configuré.</p>
+          )}
+          {(db.adminEmails ?? []).map((email) => (
+            <div key={email} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+              <span className="text-sm text-slate-700">{email}</span>
+              <button
+                onClick={async () => {
+                  const newEmails = (db.adminEmails ?? []).filter((e) => e !== email);
+                  await onPersist({ ...db, adminEmails: newEmails });
+                }}
+                className="text-red-400 hover:text-red-600 transition"
+                title="Retirer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="input !text-sm flex-1"
+            type="email"
+            placeholder="email@exemple.fr"
+            value={adminEmailInput}
+            onChange={(e) => setAdminEmailInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const email = adminEmailInput.trim().toLowerCase();
+                if (!email) return;
+                const current = db.adminEmails ?? [];
+                if (current.includes(email)) return;
+                onPersist({ ...db, adminEmails: [...current, email] });
+                setAdminEmailInput("");
+              }
+            }}
+          />
+          <button
+            onClick={async () => {
+              const email = adminEmailInput.trim().toLowerCase();
+              if (!email) return;
+              const current = db.adminEmails ?? [];
+              if (current.includes(email)) return;
+              await onPersist({ ...db, adminEmails: [...current, email] });
+              setAdminEmailInput("");
+            }}
+            className="btn-primary !px-3"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

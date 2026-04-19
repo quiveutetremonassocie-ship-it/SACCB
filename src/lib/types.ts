@@ -87,6 +87,7 @@ export type DB = {
   whatsappLink?: string; // lien d'invitation groupe WhatsApp
   insc_close_date?: string; // date de fermeture des inscriptions (YYYY-MM-DD) pour les rappels
   archives?: SeasonArchive[]; // historique des saisons précédentes
+  adminEmails?: string[]; // emails ayant accès au panneau admin via l'espace membre
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;

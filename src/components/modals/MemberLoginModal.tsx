@@ -12,7 +12,7 @@ export default function MemberLoginModal({
 }: {
   open: boolean;
   onClose: () => void;
-  onSuccess: (session: MemberSession) => void;
+  onSuccess: (session: MemberSession, adminCode?: string) => void;
 }) {
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
@@ -37,9 +37,9 @@ export default function MemberLoginModal({
       setError(r.reason || "Email ou code incorrect.");
       return;
     }
-    const sess = { membreId: r.membre.id, nom: r.membre.nom, type: r.membre.type, email: r.membre.email, paid: r.paid !== false };
+    const sess = { membreId: r.membre.id, nom: r.membre.nom, type: r.membre.type, email: r.membre.email, paid: r.paid !== false, isAdmin: r.isAdmin === true };
     setMemberSession(sess);
-    onSuccess({ ...sess, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 });
+    onSuccess({ ...sess, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, r.isAdmin ? code : undefined);
     setEmail("");
     setCode("");
   }

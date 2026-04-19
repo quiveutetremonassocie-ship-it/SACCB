@@ -273,9 +273,13 @@ Deno.serve(async (req) => {
       });
     }
 
+    const adminEmails = ((currentData.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const isAdmin = adminEmails.includes(email);
+
     return json({
       ok: true,
       paid: membre.ok === true,
+      isAdmin,
       membre: {
         id: membre.id,
         nom: membre.nom,
@@ -283,6 +287,49 @@ Deno.serve(async (req) => {
         email: membre.email,
       },
     });
+  }
+
+  // ─── ACTION: Récupérer toute la DB en tant qu'admin membre ───
+  if (action === "admin_fetch") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    if (!email || !code) return json({ ok: false, reason: "Identifiants manquants." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const adminEmails = ((d.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+
+    const membre = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
+    if (!membre) return json({ ok: false, reason: "Identifiants incorrects." });
+    if (!adminEmails.includes(email)) return json({ ok: false, reason: "Accès non autorisé." });
+
+    return json({ ok: true, data: d });
+  }
+
+  // ─── ACTION: Sauvegarder la DB en tant qu'admin membre ───
+  if (action === "admin_save") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const newData = body.data as Record<string, unknown>;
+    if (!email || !code || !newData) return json({ ok: false, reason: "Données manquantes." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const adminEmails = ((d.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+
+    const membre = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
+    if (!membre) return json({ ok: false, reason: "Identifiants incorrects." });
+    if (!adminEmails.includes(email)) return json({ ok: false, reason: "Accès non autorisé." });
+
+    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
+    if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
   }
 
   // ─── ACTION: Inscription publique ───

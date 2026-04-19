@@ -10,6 +10,7 @@ export type MemberSession = {
   email: string;
   expiry: number;
   paid?: boolean; // false = adhésion non renouvelée pour la saison en cours
+  isAdmin?: boolean; // true = accès au panneau admin
 };
 
 export function getMemberSession(): MemberSession | null {

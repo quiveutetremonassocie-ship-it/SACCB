@@ -99,7 +99,7 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
 export async function verifyMembre(
   email: string,
   code: string
-): Promise<{ ok: boolean; paid?: boolean; membre?: { id: string; nom: string; type: string; email: string }; reason?: string }> {
+): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; membre?: { id: string; nom: string; type: string; email: string }; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -163,6 +163,26 @@ export async function adminSendConfirmation(membreId: string): Promise<{ ok: boo
     body: JSON.stringify({ action: "send_confirmation", membreId }),
   });
   return res.json();
+}
+
+// ─── Admin via espace membre (email+code comme credentials) ───
+export async function fetchAdminDBByMember(email: string, code: string): Promise<DB | null> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_fetch", email: email.toLowerCase().trim(), code }),
+  });
+  const r = await res.json();
+  if (!r.ok || !r.data) return null;
+  return { ...r.data, factures: r.data.factures ?? [], actualites: r.data.actualites ?? [], insc_open: r.data.insc_open ?? true };
+}
+
+export async function saveDBByMember(email: string, code: string, db: DB): Promise<void> {
+  await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_save", email: email.toLowerCase().trim(), code, data: db }),
+  });
 }
 
 // ─── Formulaire de contact public ───

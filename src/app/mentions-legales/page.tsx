@@ -26,18 +26,11 @@ export default function Page() {
             <strong>Numéro RNA / W :</strong> W762011355
           </li>
           <li>
-            <strong>Numéro SIRET :</strong> <em>[à compléter]</em>
-          </li>
-          <li>
-            <strong>Numéro de TVA intracommunautaire :</strong>{" "}
-            <em>[à compléter si applicable]</em>
-          </li>
-          <li>
             <strong>Directeur de la publication :</strong> Hernan Camara, Président
           </li>
           <li>
             <strong>Contact :</strong>{" "}
-            <a href="mailto:hernancm68@hotmail.com">hernancm68@hotmail.com</a> — 07 77 06 18 75
+            <a href="mailto:contact@saccb.fr">contact@saccb.fr</a>
           </li>
         </ul>
       </section>
