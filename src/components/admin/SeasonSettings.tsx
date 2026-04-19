@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
@@ -26,6 +26,7 @@ export default function SeasonSettings({
   const [whatsappLink, setWhatsappLink] = useState(db.whatsappLink || "");
   const [inscCloseDate, setInscCloseDate] = useState(db.insc_close_date || "");
   const [adminEmailInput, setAdminEmailInput] = useState("");
+  const [contactEmailInput, setContactEmailInput] = useState("");
 
   // Edition archive
   const [editingArchiveIdx, setEditingArchiveIdx] = useState<number | null>(null);
@@ -325,6 +326,69 @@ export default function SeasonSettings({
               if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
               await onPersist({ ...db, adminEmails: [...current, email] });
               setAdminEmailInput("");
+            }}
+            className="btn-primary !px-3"
+          >
+            <Plus className="w-4 h-4" />
+          </button>
+        </div>
+      </div>}
+
+      {/* Emails recevant les messages du formulaire de contact — visible uniquement par les super-admins */}
+      {isSuperAdmin && <div className="mt-6 pt-5 border-t border-slate-200">
+        <p className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          <Mail className="w-3 h-3" /> Emails de contact
+        </p>
+        <p className="text-xs text-slate-400 mb-3">
+          Ces emails reçoivent les messages envoyés via le formulaire de contact du site.
+        </p>
+        <div className="space-y-1.5 mb-3">
+          {(db.contactEmails ?? []).length === 0 && (
+            <p className="text-xs text-slate-300 italic">Aucun email configuré (emails par défaut utilisés).</p>
+          )}
+          {(db.contactEmails ?? []).map((email) => (
+            <div key={email} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+              <span className="text-sm text-slate-700">{email}</span>
+              <button
+                onClick={async () => {
+                  const newEmails = (db.contactEmails ?? []).filter((e) => e !== email);
+                  await onPersist({ ...db, contactEmails: newEmails });
+                }}
+                className="text-red-400 hover:text-red-600 transition"
+                title="Retirer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+          ))}
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="input !text-sm flex-1"
+            type="email"
+            placeholder="email@exemple.fr"
+            value={contactEmailInput}
+            onChange={(e) => setContactEmailInput(e.target.value)}
+            onKeyDown={async (e) => {
+              if (e.key === "Enter") {
+                e.preventDefault();
+                const email = contactEmailInput.trim().toLowerCase();
+                if (!email) return;
+                const current = db.contactEmails ?? [];
+                if (current.includes(email)) return;
+                await onPersist({ ...db, contactEmails: [...current, email] });
+                setContactEmailInput("");
+              }
+            }}
+          />
+          <button
+            onClick={async () => {
+              const email = contactEmailInput.trim().toLowerCase();
+              if (!email) return;
+              const current = db.contactEmails ?? [];
+              if (current.includes(email)) return;
+              await onPersist({ ...db, contactEmails: [...current, email] });
+              setContactEmailInput("");
             }}
             className="btn-primary !px-3"
           >

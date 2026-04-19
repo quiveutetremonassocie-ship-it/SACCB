@@ -1093,12 +1093,18 @@ Deno.serve(async (req) => {
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
 
+    // Lire les emails de contact depuis la DB, sinon fallback sur les emails par défaut
+    const { data: dbData } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const dbD = (dbData?.data ?? {}) as Record<string, unknown>;
+    const contactEmails = ((dbD.contactEmails || []) as string[]);
+    const toEmails = contactEmails.length > 0 ? contactEmails : ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
+
     const sendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB Site <contact@saccb.fr>",
-        to: ["gabin.binay@gmail.com", "hernancm68@hotmail.com"],
+        to: toEmails,
         reply_to: [email],
         subject: `📩 Message de ${name} via saccb.fr`,
         html: `

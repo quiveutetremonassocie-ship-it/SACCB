@@ -88,6 +88,7 @@ export type DB = {
   insc_close_date?: string; // date de fermeture des inscriptions (YYYY-MM-DD) pour les rappels
   archives?: SeasonArchive[]; // historique des saisons précédentes
   adminEmails?: string[]; // emails ayant accès au panneau admin via l'espace membre
+  contactEmails?: string[]; // emails recevant les messages du formulaire de contact
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
