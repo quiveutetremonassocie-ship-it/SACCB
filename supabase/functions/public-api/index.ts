@@ -1104,7 +1104,8 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB Site <contact@saccb.fr>",
-        to: toEmails,
+        to: ["contact@saccb.fr"],
+        bcc: toEmails,
         reply_to: [email],
         subject: `📩 Message de ${name} via saccb.fr`,
         html: `
