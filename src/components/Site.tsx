@@ -185,6 +185,11 @@ export default function Site() {
     sessionStorage.removeItem("saccb_admin_code");
   };
 
+  // Fermer le panneau sans se déconnecter
+  const onMemberPanelBack = () => {
+    setMemberPanelOpen(false);
+  };
+
   return (
     <>
       <Navbar
@@ -233,6 +238,7 @@ export default function Site() {
           inscritsTournoi={db.inscrits_tournoi ?? []}
           archives={db.archives ?? []}
           onClose={onMemberPanelClose}
+          onBack={onMemberPanelBack}
         />
       )}
       {adminOpen && (

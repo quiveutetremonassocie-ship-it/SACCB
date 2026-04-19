@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal, X } from "lucide-react";
 import { useState, useMemo } from "react";
 import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode } from "@/lib/db";
@@ -15,6 +15,7 @@ export default function MemberPanel({
   inscritsTournoi = [],
   archives = [],
   onClose,
+  onBack,
 }: {
   session: MemberSession;
   y1: number;
@@ -24,6 +25,7 @@ export default function MemberPanel({
   inscritsTournoi?: InscritTournoi[];
   archives?: SeasonArchive[];
   onClose: () => void;
+  onBack?: () => void;
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [showCodeForm, setShowCodeForm] = useState(false);
@@ -102,13 +104,25 @@ export default function MemberPanel({
               <p className="text-xs text-slate-400">Saison {y1}–{y2}</p>
             </div>
           </div>
-          <button
-            onClick={logout}
-            className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition"
-          >
-            <LogOut className="w-4 h-4" />
-            Déconnexion
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={logout}
+              className="flex items-center gap-1 text-xs text-slate-400 hover:text-slate-600 transition"
+              title="Se déconnecter"
+            >
+              <LogOut className="w-4 h-4" />
+              Déco
+            </button>
+            {onBack && (
+              <button
+                onClick={onBack}
+                className="text-slate-400 hover:text-slate-600 transition"
+                title="Fermer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Renouvellement si non payé pour cette saison */}
