@@ -236,6 +236,7 @@ export default function Site() {
           archives={db.archives ?? []}
           onClose={onMemberPanelClose}
           onBack={onMemberPanelBack}
+          isAdmin={isMemberAdmin}
         />
       )}
       {adminOpen && (

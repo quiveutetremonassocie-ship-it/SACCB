@@ -102,7 +102,7 @@ export default function Navbar({
           </nav>
 
           <div className="hidden md:flex items-center gap-3">
-            {isAdmin && onAdmin && (
+            {/* {isAdmin && onAdmin && (
               <button
                 onClick={onAdmin}
                 className="inline-flex items-center gap-2 px-4 py-2 border border-[color:var(--gold)] text-[color:var(--gold)] text-[11px] uppercase font-semibold hover:bg-[color:var(--gold)] hover:text-white transition-colors"
@@ -114,7 +114,7 @@ export default function Navbar({
                 <ShieldCheck className="w-3.5 h-3.5" />
                 Admin
               </button>
-            )}
+            )} */}
             <button
               onClick={onMember}
               className={`inline-flex items-center gap-2 px-4 py-2 border text-[11px] uppercase font-semibold transition-colors ${

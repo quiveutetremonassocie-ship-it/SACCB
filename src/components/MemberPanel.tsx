@@ -1,10 +1,25 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal, X } from "lucide-react";
+import {
+  LogOut,
+  MessageCircle,
+  UserCircle2,
+  Trophy,
+  KeyRound,
+  Eye,
+  EyeOff,
+  RefreshCw,
+  ChevronDown,
+  ChevronUp,
+  Medal,
+  X,
+} from "lucide-react";
 import { useState, useMemo } from "react";
 import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
+import Link from "next/link";
+import { div } from "framer-motion/client";
 
 export default function MemberPanel({
   session,
@@ -16,6 +31,7 @@ export default function MemberPanel({
   archives = [],
   onClose,
   onBack,
+  isAdmin = false,
 }: {
   session: MemberSession;
   y1: number;
@@ -26,6 +42,7 @@ export default function MemberPanel({
   archives?: SeasonArchive[];
   onClose: () => void;
   onBack?: () => void;
+  isAdmin?: boolean;
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [showCodeForm, setShowCodeForm] = useState(false);
@@ -34,14 +51,17 @@ export default function MemberPanel({
   const [confirmCode, setConfirmCode] = useState("");
   const [showOld, setShowOld] = useState(false);
   const [showNew, setShowNew] = useState(false);
-  const [codeMsg, setCodeMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [codeMsg, setCodeMsg] = useState<{ ok: boolean; text: string } | null>(
+    null,
+  );
   const [codeLoading, setCodeLoading] = useState(false);
 
   // Historique : fusionner saison courante + archives, garder tournois passés
   const today = new Date().toISOString().slice(0, 10);
   const allSeasons = useMemo(() => {
     const current = {
-      y1, y2,
+      y1,
+      y2,
       config_tournois: configTournois,
       inscrits_tournoi: inscritsTournoi,
       membresCount: 0,
@@ -53,16 +73,25 @@ export default function MemberPanel({
         return {
           label: `${s.y1}–${s.y2}`,
           tournois: past.map((t) => {
-            const inscrits = (s.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
+            const inscrits = (s.inscrits_tournoi ?? []).filter(
+              (i) => i.tournoiId === t.id,
+            );
             const myEntry = inscrits.find((i) =>
-              i.joueurs.toLowerCase().includes(session.nom.toLowerCase())
+              i.joueurs.toLowerCase().includes(session.nom.toLowerCase()),
             );
             return { tournoi: t, myEntry, totalEquipes: inscrits.length };
           }),
         };
       })
       .filter(Boolean)
-      .reverse() as { label: string; tournois: { tournoi: Tournoi; myEntry: InscritTournoi | undefined; totalEquipes: number }[] }[];
+      .reverse() as {
+      label: string;
+      tournois: {
+        tournoi: Tournoi;
+        myEntry: InscritTournoi | undefined;
+        totalEquipes: number;
+      }[];
+    }[];
   }, [archives, configTournois, inscritsTournoi, y1, y2, today, session.nom]);
 
   const totalPast = allSeasons.reduce((s, a) => s + a.tournois.length, 0);
@@ -75,7 +104,10 @@ export default function MemberPanel({
   async function handleChangeCode(e: React.FormEvent) {
     e.preventDefault();
     if (newCode !== confirmCode) {
-      setCodeMsg({ ok: false, text: "Les deux nouveaux codes ne correspondent pas." });
+      setCodeMsg({
+        ok: false,
+        text: "Les deux nouveaux codes ne correspondent pas.",
+      });
       return;
     }
     setCodeLoading(true);
@@ -84,7 +116,9 @@ export default function MemberPanel({
     setCodeLoading(false);
     if (r.ok) {
       setCodeMsg({ ok: true, text: "Code modifié avec succès !" });
-      setOldCode(""); setNewCode(""); setConfirmCode("");
+      setOldCode("");
+      setNewCode("");
+      setConfirmCode("");
       setTimeout(() => setShowCodeForm(false), 1500);
     } else {
       setCodeMsg({ ok: false, text: r.reason || "Erreur." });
@@ -93,15 +127,19 @@ export default function MemberPanel({
 
   return (
     <div className="fixed inset-0 z-[4500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm my-auto max-h-[90vh] overflow-y-auto">
+      <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-lg my-auto max-h-[90vh] overflow-y-auto">
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center">
               <UserCircle2 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-display text-xl tracking-wider text-slate-800">Espace membre</h3>
-              <p className="text-xs text-slate-400">Saison {y1}–{y2}</p>
+              <h3 className="font-display text-xl tracking-wider text-slate-800">
+                Espace membre
+              </h3>
+              <p className="text-xs text-slate-400">
+                Saison {y1}–{y2}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
@@ -111,7 +149,7 @@ export default function MemberPanel({
               title="Se déconnecter"
             >
               <LogOut className="w-4 h-4" />
-              Déco
+              Se Déconnecter
             </button>
             {onBack && (
               <button
@@ -128,10 +166,12 @@ export default function MemberPanel({
         {/* Renouvellement si non payé pour cette saison */}
         {session.paid === false && (
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-amber-800 font-semibold text-sm mb-1">⏳ Adhésion à renouveler</p>
+            <p className="text-amber-800 font-semibold text-sm mb-1">
+              ⏳ Adhésion à renouveler
+            </p>
             <p className="text-amber-700 text-xs mb-3">
-              Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore réglée.
-              Renouvelez-la pour conserver votre accès.
+              Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore
+              réglée. Renouvelez-la pour conserver votre accès.
             </p>
             <a
               href="https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte"
@@ -159,7 +199,10 @@ export default function MemberPanel({
         {/* Changer le code */}
         <div className="mb-4">
           <button
-            onClick={() => { setShowCodeForm(!showCodeForm); setCodeMsg(null); }}
+            onClick={() => {
+              setShowCodeForm(!showCodeForm);
+              setCodeMsg(null);
+            }}
             className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
           >
             <KeyRound className="w-4 h-4" />
@@ -177,8 +220,16 @@ export default function MemberPanel({
                   onChange={(e) => setOldCode(e.target.value)}
                   required
                 />
-                <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <button
+                  type="button"
+                  onClick={() => setShowOld(!showOld)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                >
+                  {showOld ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
               <div className="relative">
@@ -192,8 +243,16 @@ export default function MemberPanel({
                   onChange={(e) => setNewCode(e.target.value)}
                   required
                 />
-                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                <button
+                  type="button"
+                  onClick={() => setShowNew(!showNew)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400"
+                >
+                  {showNew ? (
+                    <EyeOff className="w-4 h-4" />
+                  ) : (
+                    <Eye className="w-4 h-4" />
+                  )}
                 </button>
               </div>
               <input
@@ -206,12 +265,20 @@ export default function MemberPanel({
                 required
               />
               {codeMsg && (
-                <p className={`text-xs text-center font-semibold ${codeMsg.ok ? "text-emerald-600" : "text-red-500"}`}>
+                <p
+                  className={`text-xs text-center font-semibold ${codeMsg.ok ? "text-emerald-600" : "text-red-500"}`}
+                >
                   {codeMsg.text}
                 </p>
               )}
-              <button type="submit" className="btn-primary w-full !text-sm" disabled={codeLoading}>
-                {codeLoading ? "Enregistrement..." : "Enregistrer le nouveau code"}
+              <button
+                type="submit"
+                className="btn-primary w-full !text-sm"
+                disabled={codeLoading}
+              >
+                {codeLoading
+                  ? "Enregistrement..."
+                  : "Enregistrer le nouveau code"}
               </button>
             </form>
           )}
@@ -228,38 +295,67 @@ export default function MemberPanel({
                 <Trophy className="w-4 h-4 text-amber-500" />
                 Historique des tournois ({totalPast})
               </span>
-              {histOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+              {histOpen ? (
+                <ChevronUp className="w-4 h-4 text-slate-400" />
+              ) : (
+                <ChevronDown className="w-4 h-4 text-slate-400" />
+              )}
             </button>
             {histOpen && (
               <div className="mt-2 space-y-3">
                 {allSeasons.map((season) => (
                   <div key={season.label}>
-                    <p className="text-xs uppercase tracking-widest text-slate-400 mb-1.5 px-1">Saison {season.label}</p>
+                    <p className="text-xs uppercase tracking-widest text-slate-400 mb-1.5 px-1">
+                      Saison {season.label}
+                    </p>
                     <div className="space-y-1.5">
-                      {season.tournois.map(({ tournoi, myEntry, totalEquipes }) => (
-                        <div key={tournoi.id} className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100">
-                          <div className="flex items-start justify-between gap-2">
-                            <div className="min-w-0">
-                              <p className="text-sm font-medium text-slate-800 truncate">{tournoi.name}</p>
-                              <p className="text-xs text-slate-400">{new Date(tournoi.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
-                              {myEntry && (
-                                <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                  🎾 {myEntry.joueurs}
+                      {season.tournois.map(
+                        ({ tournoi, myEntry, totalEquipes }) => (
+                          <div
+                            key={tournoi.id}
+                            className="bg-slate-50 rounded-lg px-3 py-2 border border-slate-100"
+                          >
+                            <div className="flex items-start justify-between gap-2">
+                              <div className="min-w-0">
+                                <p className="text-sm font-medium text-slate-800 truncate">
+                                  {tournoi.name}
                                 </p>
-                              )}
-                            </div>
-                            <div className="shrink-0 text-right">
-                              {myEntry?.resultat ? (
-                                <ResultBadge resultat={myEntry.resultat} total={totalEquipes} />
-                              ) : myEntry ? (
-                                <span className="text-xs text-slate-400">Participé</span>
-                              ) : (
-                                <span className="text-xs text-slate-300">—</span>
-                              )}
+                                <p className="text-xs text-slate-400">
+                                  {new Date(tournoi.date).toLocaleDateString(
+                                    "fr-FR",
+                                    {
+                                      day: "numeric",
+                                      month: "long",
+                                      year: "numeric",
+                                    },
+                                  )}
+                                </p>
+                                {myEntry && (
+                                  <p className="text-xs text-slate-500 mt-0.5 truncate">
+                                    🎾 {myEntry.joueurs}
+                                  </p>
+                                )}
+                              </div>
+                              <div className="shrink-0 text-right">
+                                {myEntry?.resultat ? (
+                                  <ResultBadge
+                                    resultat={myEntry.resultat}
+                                    total={totalEquipes}
+                                  />
+                                ) : myEntry ? (
+                                  <span className="text-xs text-slate-400">
+                                    Participé
+                                  </span>
+                                ) : (
+                                  <span className="text-xs text-slate-300">
+                                    —
+                                  </span>
+                                )}
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        ),
+                      )}
                     </div>
                   </div>
                 ))}
@@ -287,12 +383,33 @@ export default function MemberPanel({
             </p>
           </div>
         )}
+
+        {isAdmin && (
+          <div className="w-full flex itemsc justify-center mt-8 ">
+            <Link
+              href={"/admin"}
+              className="w-fit px-4 py-2 bg-[color:var(--gold)] hover:scale-105 active:scale-95 text-white font-semibold rounded-xl transition"
+            >
+              Accéder à l'espace admin
+            </Link>
+          </div>
+        )}
       </div>
     </div>
   );
 }
 
-function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y2: number }) {
+function Badge({
+  nom,
+  type,
+  y1,
+  y2,
+}: {
+  nom: string;
+  type: string;
+  y1: number;
+  y2: number;
+}) {
   return (
     <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
@@ -304,7 +421,9 @@ function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y
         Saison {y1}–{y2}
       </div>
       <div className="flex items-end justify-between mt-6">
-        <span className="text-xs uppercase tracking-widest text-white/60">{type}</span>
+        <span className="text-xs uppercase tracking-widest text-white/60">
+          {type}
+        </span>
         <span className="font-display text-lg text-white/40">ST-ADRESSE</span>
       </div>
     </div>
@@ -315,9 +434,23 @@ function ResultBadge({ resultat, total }: { resultat: string; total: number }) {
   const parts = resultat.split("/");
   const rank = parseInt(parts[0]);
   const tot = parseInt(parts[1]) || total;
-  if (isNaN(rank)) return <span className="text-xs text-slate-500">{resultat}</span>;
-  if (rank === 1) return <span className="text-sm font-bold text-yellow-500">🥇 1er / {tot}</span>;
-  if (rank === 2) return <span className="text-sm font-bold text-slate-400">🥈 2e / {tot}</span>;
-  if (rank === 3) return <span className="text-sm font-bold text-amber-600">🥉 3e / {tot}</span>;
-  return <span className="text-xs font-semibold text-slate-600">{rank}e / {tot}</span>;
+  if (isNaN(rank))
+    return <span className="text-xs text-slate-500">{resultat}</span>;
+  if (rank === 1)
+    return (
+      <span className="text-sm font-bold text-yellow-500">🥇 1er / {tot}</span>
+    );
+  if (rank === 2)
+    return (
+      <span className="text-sm font-bold text-slate-400">🥈 2e / {tot}</span>
+    );
+  if (rank === 3)
+    return (
+      <span className="text-sm font-bold text-amber-600">🥉 3e / {tot}</span>
+    );
+  return (
+    <span className="text-xs font-semibold text-slate-600">
+      {rank}e / {tot}
+    </span>
+  );
 }
