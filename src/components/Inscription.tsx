@@ -75,7 +75,9 @@ export default function Inscription({
     if (!db.insc_open) return;
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const nom = String(fd.get("nom") || "").trim();
+    const prenom = String(fd.get("prenom") || "").trim();
+    const nomSeul = String(fd.get("nom") || "").trim();
+    const nom = `${prenom} ${nomSeul}`.trim();
     const email = String(fd.get("email") || "").trim();
     const tel = String(fd.get("tel") || "").trim();
     const type = String(fd.get("type") || "Adulte") as "Adulte" | "Etudiant";
@@ -250,7 +252,10 @@ export default function Inscription({
           )
         ) : (
           <form onSubmit={handleSubmit} className="space-y-4">
-            <input className="input" name="nom" placeholder="Nom et prénom" required />
+            <div className="grid grid-cols-2 gap-3">
+              <input className="input" name="prenom" placeholder="Prénom" required />
+              <input className="input" name="nom" placeholder="Nom" required />
+            </div>
             <input className="input" name="email" type="email" placeholder="Email" required />
             <input className="input" name="tel" type="tel" placeholder="Téléphone" required />
             <select className="input" name="type" defaultValue="Adulte">
