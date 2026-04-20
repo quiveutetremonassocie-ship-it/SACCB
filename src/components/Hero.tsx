@@ -21,10 +21,10 @@ export default function Hero({
         <img
           src="/salle.png"
           alt="Salle Paul Vatine — Sainte-Adresse"
-          className="w-full h-full object-cover opacity-40"
+          className="w-full h-full object-cover opacity-60"
         />
-        <div className="absolute inset-0 bg-gradient-to-b from-white/60 via-white/75 to-[#f8fafc]" />
-        <div className="absolute inset-0 bg-gradient-to-r from-white/90 via-transparent to-white/80" />
+        <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/55 to-[#f8fafc]" />
+        <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-transparent to-white/60" />
       </div>
 
       {/* Orbes lumineux */}
