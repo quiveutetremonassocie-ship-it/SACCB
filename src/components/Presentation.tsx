@@ -1,47 +1,95 @@
 "use client";
 
 import { motion } from "framer-motion";
-import Shuttlecock from "./Shuttlecock";
+import { Users2, Heart, Flame } from "lucide-react";
+
+const VALUES = [
+  {
+    icon: Heart,
+    title: "Convivial",
+    text: "Un club avant tout humain, où chaque adhérent trouve sa place.",
+  },
+  {
+    icon: Users2,
+    title: "Tous niveaux",
+    text: "Des débutants aux compétiteurs, le jeu se partage sans barrière.",
+  },
+  {
+    icon: Flame,
+    title: "Compétitif",
+    text: "Tournois internes, rencontres et défis tout au long de la saison.",
+  },
+];
 
 export default function Presentation() {
   return (
-    <section id="presentation" className="bg-section-wrap bg-schedule relative">
-      <div className="section-pad relative">
-        {/* Décor shuttlecocks */}
-        <Shuttlecock
-          className="absolute top-10 -left-4 w-24 h-24 text-blue-200/30 animate-float-rev hidden md:block"
-          color="#93c5fd"
-        />
-        <Shuttlecock
-          className="absolute bottom-10 -right-4 w-28 h-28 text-emerald-200/30 animate-float hidden md:block"
-          color="#6ee7b7"
-        />
-
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center max-w-3xl mx-auto relative"
-        >
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-emerald-600">Le club</span>
+    <section id="presentation" className="bg-section-wrap">
+      <div className="section-pad">
+        <header className="section-head">
+          <div>
+            <span className="section-index">01 — Le club</span>
+            <h2 className="h-title text-5xl md:text-7xl lg:text-8xl mt-4 max-w-3xl">
+              Un club de quartier<br />
+              <span className="font-editorial italic font-normal">à l&apos;esprit grand.</span>
+            </h2>
           </div>
-          <h2 className="font-display text-6xl md:text-7xl h-display mb-6">Qui sommes-nous ?</h2>
-          <p className="text-slate-600 text-lg leading-relaxed">
-            Le <span className="text-[#1e3a5f] font-semibold">SACCB</span> est le club de badminton de
-            Sainte-Adresse. Un esprit convivial, du jeu pour tous les niveaux et une équipe
-            accueillante qui vit au rythme du volant depuis plusieurs saisons.
-          </p>
+        </header>
 
-          {/* Séparateur "court" */}
-          <div className="flex items-center justify-center gap-4 mt-10">
-            <span className="h-px w-16 bg-gradient-to-r from-transparent to-yellow-400/50" />
-            <Shuttlecock className="w-6 h-6 text-amber-500" color="#f59e0b" />
-            <span className="h-px w-16 bg-gradient-to-l from-transparent to-yellow-400/50" />
-          </div>
-        </motion.div>
+        <div className="grid md:grid-cols-12 gap-10 md:gap-16">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+            className="md:col-span-5"
+          >
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--muted)] font-semibold mb-5" style={{ fontFamily: "Oswald, sans-serif" }}>
+              Notre histoire
+            </p>
+            <p className="text-lg md:text-xl leading-relaxed text-[color:var(--ink)]/85">
+              Le <strong className="font-semibold">SACCB</strong> fait vivre le badminton à{" "}
+              <em className="font-editorial italic text-[color:var(--gold)]">Sainte-Adresse</em>{" "}
+              depuis plus de quinze saisons. Un club à taille humaine, installé à la Salle Paul Vatine, qui réunit étudiants, familles et compétiteurs autour du volant.
+            </p>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-100px" }}
+            transition={{ duration: 0.8, delay: 0.1, ease: [0.22, 1, 0.36, 1] }}
+            className="md:col-span-7"
+          >
+            <p className="text-[11px] uppercase tracking-[0.28em] text-[color:var(--muted)] font-semibold mb-5" style={{ fontFamily: "Oswald, sans-serif" }}>
+              Ce qui nous anime
+            </p>
+            <ul className="divide-y divide-[color:var(--line)] border-y border-[color:var(--line)]">
+              {VALUES.map((v, i) => (
+                <motion.li
+                  key={v.title}
+                  initial={{ opacity: 0, x: -10 }}
+                  whileInView={{ opacity: 1, x: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.6, delay: i * 0.08, ease: [0.22, 1, 0.36, 1] }}
+                  className="py-6 flex items-start gap-6 group"
+                >
+                  <span className="text-[10px] tracking-[0.28em] text-[color:var(--muted)] font-semibold pt-1 w-8 shrink-0" style={{ fontFamily: "Oswald, sans-serif" }}>
+                    0{i + 1}
+                  </span>
+                  <v.icon className="w-5 h-5 text-[color:var(--gold)] mt-1 shrink-0 transition-transform duration-500 group-hover:rotate-12" />
+                  <div className="flex-1">
+                    <h3 className="font-display text-2xl md:text-3xl tracking-tight text-[color:var(--ink)]">
+                      {v.title}
+                    </h3>
+                    <p className="text-[color:var(--ink)]/70 mt-1 leading-relaxed">
+                      {v.text}
+                    </p>
+                  </div>
+                </motion.li>
+              ))}
+            </ul>
+          </motion.div>
+        </div>
       </div>
     </section>
   );

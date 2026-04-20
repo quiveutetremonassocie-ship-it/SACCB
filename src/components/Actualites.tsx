@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Newspaper, Images } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Images, ArrowUpRight } from "lucide-react";
 import { Actualite, actualiteImages } from "@/lib/types";
 
 export default function Actualites({ actualites }: { actualites: Actualite[] }) {
@@ -13,23 +13,15 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
 
   const n = actualites.length;
 
-  // Auto-rotation toutes les 5 secondes
   useEffect(() => {
     if (n < 2 || paused || modalIndex !== null) return;
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % n);
-    }, 5000);
+    const id = setInterval(() => setIndex((i) => (i + 1) % n), 6500);
     return () => clearInterval(id);
   }, [n, paused, modalIndex]);
 
-  useEffect(() => {
-    if (index >= n && n > 0) setIndex(0);
-  }, [index, n]);
+  useEffect(() => { if (index >= n && n > 0) setIndex(0); }, [index, n]);
 
-  const openModal = useCallback((i: number) => {
-    setModalIndex(i);
-    setGalleryIndex(0);
-  }, []);
+  const openModal = useCallback((i: number) => { setModalIndex(i); setGalleryIndex(0); }, []);
   const closeModal = useCallback(() => setModalIndex(null), []);
 
   const currentModalImages = useMemo(
@@ -46,7 +38,6 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
     setGalleryIndex((i) => (i - 1 + currentModalImages.length) % currentModalImages.length);
   }, [currentModalImages.length]);
 
-  // Navigation clavier dans le modal (galerie)
   useEffect(() => {
     if (modalIndex === null) return;
     const onKey = (e: KeyboardEvent) => {
@@ -62,131 +53,163 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
 
   const current = actualites[index];
   const currentMain = actualiteImages(current)[0];
+  const imageCount = actualiteImages(current).length;
 
   return (
-    <section id="actualites" className="bg-section-wrap bg-news relative">
-      <div className="section-pad relative">
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
-          className="text-center mb-10"
-        >
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-amber-600">En ce moment</span>
+    <section id="actualites" className="bg-section-wrap">
+      <div className="section-pad">
+        <header className="section-head">
+          <div>
+            <span className="section-index">02 — Journal</span>
+            <h2 className="h-title text-5xl md:text-7xl lg:text-8xl mt-4">
+              Actualités <span className="font-editorial italic font-normal">du club</span>
+            </h2>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Actualités</h2>
-          <p className="text-slate-500 max-w-2xl mx-auto">
-            Retrouvez ici les dernières nouvelles du club, événements et moments forts.
+          <p className="hidden md:block text-[color:var(--muted)] max-w-sm text-right text-sm leading-relaxed">
+            Les moments forts, événements et nouvelles de la saison.
           </p>
-        </motion.div>
+        </header>
 
         <div
-          className="relative max-w-4xl mx-auto"
+          className="grid md:grid-cols-12 gap-8 md:gap-12"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
-          <button
-            onClick={() => openModal(index)}
-            className="relative block w-full aspect-[16/9] rounded-3xl overflow-hidden group shadow-2xl shadow-slate-300/40 border border-slate-200"
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current.id}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.9, ease: "easeInOut" }}
-                className="absolute inset-0"
-              >
-                {currentMain && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={currentMain.url}
-                    alt={current.title}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="absolute left-0 right-0 bottom-0 p-6 md:p-10 text-left">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 backdrop-blur">
-                      <Newspaper className="w-3.5 h-3.5 text-amber-300" />
-                      <span className="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">
-                        Actualité
-                      </span>
-                    </div>
-                    {actualiteImages(current).length > 1 && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur">
-                        <Images className="w-3.5 h-3.5 text-blue-300" />
-                        <span className="text-[10px] uppercase tracking-widest text-blue-200 font-semibold">
-                          {actualiteImages(current).length} photos
-                        </span>
-                      </div>
+          {/* Featured slide */}
+          <div className="md:col-span-8">
+            <button
+              onClick={() => openModal(index)}
+              className="group block w-full text-left"
+              aria-label={`Lire l'actualité : ${current.title}`}
+            >
+              <div className="relative aspect-[16/10] overflow-hidden bg-[color:var(--bone-2)]">
+                <AnimatePresence mode="wait">
+                  <motion.div
+                    key={current.id}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
+                    className="absolute inset-0"
+                  >
+                    {currentMain && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={currentMain.url}
+                        alt={current.title}
+                        className="w-full h-full object-cover transition-transform duration-[1200ms] ease-out group-hover:scale-[1.03]"
+                      />
                     )}
-                  </div>
-                  <h3 className="font-display text-2xl md:text-4xl text-white mb-2 tracking-wide">
+                  </motion.div>
+                </AnimatePresence>
+
+                {imageCount > 1 && (
+                  <span className="absolute top-4 right-4 inline-flex items-center gap-1.5 px-3 py-1.5 bg-[color:var(--bone)]/95 text-[10px] uppercase tracking-[0.22em] text-[color:var(--ink)] font-semibold" style={{ fontFamily: "Oswald, sans-serif" }}>
+                    <Images className="w-3 h-3" />
+                    {imageCount}
+                  </span>
+                )}
+              </div>
+
+              <div className="mt-6 flex items-start justify-between gap-6">
+                <div className="flex-1 min-w-0">
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--gold)] font-semibold mb-3" style={{ fontFamily: "Oswald, sans-serif" }}>
+                    Édition {String(index + 1).padStart(2, "0")} / {String(n).padStart(2, "0")}
+                  </p>
+                  <h3 className="font-display text-4xl md:text-5xl tracking-tight text-[color:var(--ink)] leading-[0.95]">
                     {current.title}
                   </h3>
-                  <p className="text-white/80 text-sm md:text-base max-w-2xl line-clamp-2">
+                  <p className="text-[color:var(--ink)]/75 mt-3 line-clamp-2 max-w-2xl leading-relaxed">
                     {current.description}
                   </p>
-                  <p className="text-xs text-white/50 mt-3 uppercase tracking-widest">
-                    Cliquer pour voir le détail
-                  </p>
                 </div>
-              </motion.div>
-            </AnimatePresence>
-          </button>
+                <span className="shrink-0 w-12 h-12 border border-[color:var(--ink)] flex items-center justify-center text-[color:var(--ink)] group-hover:bg-[color:var(--ink)] group-hover:text-[color:var(--bone)] transition-colors duration-500">
+                  <ArrowUpRight className="w-4 h-4 transition-transform group-hover:rotate-45 duration-500" />
+                </span>
+              </div>
+            </button>
 
-          {/* Indicateurs */}
-          {n > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-5">
+            {n > 1 && (
+              <div className="mt-8 flex items-center gap-3">
+                {actualites.map((a, i) => (
+                  <button
+                    key={a.id}
+                    onClick={() => setIndex(i)}
+                    aria-label={`Voir l'actualité ${i + 1}`}
+                    className="group py-2"
+                  >
+                    <span
+                      className={`block h-[2px] transition-all duration-500 ${
+                        i === index ? "w-16 bg-[color:var(--ink)]" : "w-8 bg-[color:var(--line-strong)] group-hover:bg-[color:var(--ink)]/60"
+                      }`}
+                    />
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Side list of other news */}
+          <aside className="md:col-span-4 md:border-l md:border-[color:var(--line)] md:pl-8">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--muted)] font-semibold mb-5" style={{ fontFamily: "Oswald, sans-serif" }}>
+              Au sommaire
+            </p>
+            <ul className="divide-y divide-[color:var(--line)] border-y border-[color:var(--line)]">
               {actualites.map((a, i) => (
-                <button
-                  key={a.id}
-                  onClick={() => setIndex(i)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === index ? "w-8 bg-amber-500" : "w-2 bg-slate-300 hover:bg-slate-400"
-                  }`}
-                  aria-label={`Actualité ${i + 1}`}
-                />
+                <li key={a.id}>
+                  <button
+                    onClick={() => { setIndex(i); openModal(i); }}
+                    className={`w-full text-left py-4 flex items-start gap-4 transition-colors group ${
+                      i === index ? "opacity-100" : "opacity-60 hover:opacity-100"
+                    }`}
+                  >
+                    <span className="text-[10px] tracking-[0.28em] text-[color:var(--muted)] font-semibold pt-1" style={{ fontFamily: "Oswald, sans-serif" }}>
+                      {String(i + 1).padStart(2, "0")}
+                    </span>
+                    <span className="flex-1 min-w-0">
+                      <span className="block font-display text-xl tracking-tight text-[color:var(--ink)] leading-tight truncate">
+                        {a.title}
+                      </span>
+                      <span className="block text-sm text-[color:var(--muted)] line-clamp-1 mt-1">
+                        {a.description}
+                      </span>
+                    </span>
+                    <ArrowUpRight className="w-3.5 h-3.5 text-[color:var(--muted)] shrink-0 mt-1.5 transition-transform group-hover:rotate-45" />
+                  </button>
+                </li>
               ))}
-            </div>
-          )}
+            </ul>
+          </aside>
         </div>
 
-        {/* MODAL DETAIL avec galerie */}
+        {/* MODAL */}
         <AnimatePresence>
           {modalIndex !== null && (
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[1800] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4"
+              className="fixed inset-0 z-[1800] bg-[color:var(--ink)]/95 backdrop-blur-md flex items-center justify-center p-4"
               onClick={closeModal}
             >
               <button
                 onClick={closeModal}
-                className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition z-20"
+                className="absolute top-6 right-6 w-11 h-11 border border-[color:var(--bone)]/30 flex items-center justify-center text-[color:var(--bone)] hover:bg-[color:var(--bone)] hover:text-[color:var(--ink)] transition-colors z-20"
                 aria-label="Fermer"
               >
                 <X className="w-5 h-5" />
               </button>
 
-              <motion.div
+              <motion.article
                 key={actualites[modalIndex].id}
-                initial={{ opacity: 0, y: 20 }}
+                initial={{ opacity: 0, y: 12 }}
                 animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
+                exit={{ opacity: 0, y: -12 }}
+                transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
                 onClick={(e) => e.stopPropagation()}
-                className="max-w-5xl w-full max-h-[92vh] overflow-y-auto bg-white border border-slate-200 rounded-3xl shadow-2xl"
+                className="max-w-5xl w-full max-h-[92vh] overflow-y-auto bg-[color:var(--bone)]"
               >
-                {/* Image principale + flèches galerie */}
-                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-3xl bg-black">
+                <div className="relative aspect-[16/9] w-full overflow-hidden bg-black">
                   <AnimatePresence mode="wait">
                     {currentModalImages[galleryIndex] && (
                       <motion.img
@@ -205,44 +228,36 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                   {currentModalImages.length > 1 && (
                     <>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          galleryPrev();
-                        }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition"
+                        onClick={(e) => { e.stopPropagation(); galleryPrev(); }}
+                        className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-[color:var(--bone)]/95 hover:bg-[color:var(--bone)] text-[color:var(--ink)] flex items-center justify-center transition-colors"
                         aria-label="Image précédente"
                       >
                         <ChevronLeft className="w-5 h-5" />
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          galleryNext();
-                        }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition"
+                        onClick={(e) => { e.stopPropagation(); galleryNext(); }}
+                        className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 bg-[color:var(--bone)]/95 hover:bg-[color:var(--bone)] text-[color:var(--ink)] flex items-center justify-center transition-colors"
                         aria-label="Image suivante"
                       >
                         <ChevronRight className="w-5 h-5" />
                       </button>
-                      <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold">
+                      <div className="absolute top-4 right-4 px-3 py-1.5 bg-[color:var(--bone)]/95 text-[10px] uppercase tracking-[0.22em] font-semibold text-[color:var(--ink)]" style={{ fontFamily: "Oswald, sans-serif" }}>
                         {galleryIndex + 1} / {currentModalImages.length}
                       </div>
                     </>
                   )}
                 </div>
 
-                {/* Bande de miniatures */}
                 {currentModalImages.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-slate-200 bg-slate-100">
+                  <div className="flex gap-2 overflow-x-auto px-6 py-4 border-b border-[color:var(--line)]">
                     {currentModalImages.map((img, i) => (
                       <button
                         key={i}
                         onClick={() => setGalleryIndex(i)}
-                        className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition ${
-                          i === galleryIndex
-                            ? "border-amber-400 ring-2 ring-amber-400/30"
-                            : "border-slate-200 hover:border-slate-300"
+                        className={`shrink-0 w-20 h-14 overflow-hidden transition-all ${
+                          i === galleryIndex ? "ring-2 ring-[color:var(--ink)] ring-offset-2 ring-offset-[color:var(--bone)]" : "opacity-60 hover:opacity-100"
                         }`}
+                        aria-label={`Aller à l'image ${i + 1}`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img src={img.url} alt="" className="w-full h-full object-cover" />
@@ -251,21 +266,18 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                   </div>
                 )}
 
-                <div className="p-6 md:p-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 mb-4">
-                    <Newspaper className="w-3.5 h-3.5 text-amber-300" />
-                    <span className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold">
-                      Actualité {modalIndex + 1} / {n}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-3xl md:text-4xl text-slate-800 mb-4 tracking-wide">
+                <div className="p-8 md:p-12 max-w-3xl">
+                  <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--gold)] font-semibold mb-4" style={{ fontFamily: "Oswald, sans-serif" }}>
+                    Actualité {modalIndex + 1} / {n}
+                  </p>
+                  <h3 className="font-display text-4xl md:text-6xl tracking-tight text-[color:var(--ink)] leading-[0.95] mb-6">
                     {actualites[modalIndex].title}
                   </h3>
-                  <p className="text-slate-600 text-base md:text-lg whitespace-pre-wrap leading-relaxed">
+                  <p className="text-[color:var(--ink)]/80 text-lg whitespace-pre-wrap leading-relaxed">
                     {actualites[modalIndex].description}
                   </p>
                 </div>
-              </motion.div>
+              </motion.article>
             </motion.div>
           )}
         </AnimatePresence>

@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Trophy, Medal, Star, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
-import { DB, SeasonArchive, InscritTournoi, Tournoi } from "@/lib/types";
+import { DB, InscritTournoi, Tournoi } from "@/lib/types";
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -38,10 +38,7 @@ type PlayerStat = {
   podiums: number;
 };
 
-function buildResults(
-  config_tournois: Tournoi[],
-  inscrits_tournoi: InscritTournoi[]
-): TournoiResult[] {
+function buildResults(config_tournois: Tournoi[], inscrits_tournoi: InscritTournoi[]): TournoiResult[] {
   const results: TournoiResult[] = [];
   for (const insc of inscrits_tournoi) {
     if (!insc.resultat) continue;
@@ -64,18 +61,11 @@ function buildResults(
 function buildPlayerStats(results: TournoiResult[]): PlayerStat[] {
   const map = new Map<string, PlayerStat>();
   for (const r of results) {
-    // "Joueur1 / Joueur2" → deux joueurs
     const players = r.joueurs.split("/").map((p) => p.trim()).filter(Boolean);
     for (const nom of players) {
       const existing = map.get(nom);
       if (!existing) {
-        map.set(nom, {
-          nom,
-          tournaments: 1,
-          bestRank: r.rank,
-          bestTotal: r.total,
-          podiums: r.rank <= 3 ? 1 : 0,
-        });
+        map.set(nom, { nom, tournaments: 1, bestRank: r.rank, bestTotal: r.total, podiums: r.rank <= 3 ? 1 : 0 });
       } else {
         existing.tournaments++;
         if (r.rank < existing.bestRank || (r.rank === existing.bestRank && r.total > existing.bestTotal)) {
@@ -110,58 +100,52 @@ function SeasonBlock({
   if (!hasData) return null;
 
   return (
-    <div className="glass-sport overflow-hidden mb-6">
+    <div className="border-b border-[color:var(--line)]">
       <button
         onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center justify-between p-5 text-left"
+        className="w-full flex items-center justify-between py-5 text-left group"
       >
-        <div className="flex items-center gap-3">
-          <Trophy className="w-5 h-5 text-amber-500" />
-          <span className="font-display text-xl text-slate-800 tracking-wider">{label}</span>
-          <span className="text-xs text-slate-400 bg-slate-100 px-2 py-0.5 rounded-full">
+        <span className="flex items-baseline gap-4">
+          <Trophy className="w-5 h-5 text-[color:var(--gold)] self-center" />
+          <span className="font-display text-2xl md:text-3xl tracking-tight text-[color:var(--ink)]">{label}</span>
+          <span className="text-xs text-[color:var(--muted)]" style={{ fontFamily: "Oswald, sans-serif" }}>
             {results.length} résultat{results.length > 1 ? "s" : ""}
           </span>
-        </div>
-        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+        </span>
+        {open ? <ChevronUp className="w-5 h-5 text-[color:var(--muted)] group-hover:text-[color:var(--ink)]" /> : <ChevronDown className="w-5 h-5 text-[color:var(--muted)] group-hover:text-[color:var(--ink)]" />}
       </button>
 
       {open && (
-        <div className="px-5 pb-5 space-y-6">
-          {/* Tableau des résultats */}
+        <div className="pb-10 space-y-10">
           <div>
-            <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
+            <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--muted)] mb-5 font-semibold flex items-center gap-2" style={{ fontFamily: "Oswald, sans-serif" }}>
               <Medal className="w-3.5 h-3.5" /> Résultats par tournoi
             </p>
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto border-t border-[color:var(--line)]">
               <table className="w-full text-sm">
                 <thead>
-                  <tr className="bg-slate-50 text-left">
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500 rounded-l-lg">Tournoi</th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500">Binôme</th>
-                    <th className="px-3 py-2 text-xs font-semibold text-slate-500 text-center rounded-r-lg">Résultat</th>
+                  <tr className="text-left">
+                    <th className="px-3 py-3 text-[10px] uppercase tracking-[0.22em] font-semibold text-[color:var(--muted)]" style={{ fontFamily: "Oswald, sans-serif" }}>Tournoi</th>
+                    <th className="px-3 py-3 text-[10px] uppercase tracking-[0.22em] font-semibold text-[color:var(--muted)]" style={{ fontFamily: "Oswald, sans-serif" }}>Binôme</th>
+                    <th className="px-3 py-3 text-[10px] uppercase tracking-[0.22em] font-semibold text-[color:var(--muted)] text-right" style={{ fontFamily: "Oswald, sans-serif" }}>Résultat</th>
                   </tr>
                 </thead>
                 <tbody>
                   {results.map((r, i) => {
                     const medal = getMedal(r.rank);
                     return (
-                      <tr key={i} className="border-t border-slate-100">
-                        <td className="px-3 py-2">
-                          <p className="text-slate-800 font-medium">{r.tournoiName}</p>
-                          {r.tournoiDate && (
-                            <p className="text-xs text-slate-400">{r.tournoiDate}</p>
-                          )}
+                      <tr key={i} className="border-t border-[color:var(--line)]">
+                        <td className="px-3 py-3">
+                          <p className="text-[color:var(--ink)] font-medium">{r.tournoiName}</p>
+                          {r.tournoiDate && <p className="text-xs text-[color:var(--muted)]">{r.tournoiDate}</p>}
                         </td>
-                        <td className="px-3 py-2 text-slate-600">{r.joueurs}</td>
-                        <td className="px-3 py-2 text-center">
-                          <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
-                            r.rank === 1 ? "bg-yellow-100 text-yellow-700" :
-                            r.rank === 2 ? "bg-slate-100 text-slate-600" :
-                            r.rank === 3 ? "bg-amber-100 text-amber-700" :
-                            "bg-slate-50 text-slate-500"
-                          }`}>
+                        <td className="px-3 py-3 text-[color:var(--ink)]/80">{r.joueurs}</td>
+                        <td className="px-3 py-3 text-right">
+                          <span className="inline-flex items-center gap-1.5 tabular-nums" style={{ fontFamily: "Oswald, sans-serif" }}>
                             {medal && <span>{medal}</span>}
-                            {r.rank}e / {r.total}
+                            <span className={`text-sm font-semibold ${r.rank <= 3 ? "text-[color:var(--gold)]" : "text-[color:var(--ink)]/70"}`}>
+                              {r.rank} / {r.total}
+                            </span>
                           </span>
                         </td>
                       </tr>
@@ -172,26 +156,25 @@ function SeasonBlock({
             </div>
           </div>
 
-          {/* Stats par joueur */}
           {stats.length > 0 && (
             <div>
-              <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
+              <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--muted)] mb-5 font-semibold flex items-center gap-2" style={{ fontFamily: "Oswald, sans-serif" }}>
                 <Star className="w-3.5 h-3.5" /> Stats par joueur
               </p>
-              <div className="grid sm:grid-cols-2 gap-2">
+              <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-px bg-[color:var(--line)] border border-[color:var(--line)]">
                 {stats.map((s) => (
-                  <div key={s.nom} className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">
+                  <div key={s.nom} className="bg-[color:var(--bone)] p-5 flex items-center justify-between gap-4">
                     <div>
-                      <p className="text-slate-800 font-semibold text-sm">{s.nom}</p>
-                      <p className="text-xs text-slate-400">
-                        {s.tournaments} tournoi{s.tournaments > 1 ? "s" : ""} joué{s.tournaments > 1 ? "s" : ""}
+                      <p className="text-[color:var(--ink)] font-semibold">{s.nom}</p>
+                      <p className="text-xs text-[color:var(--muted)] mt-0.5">
+                        {s.tournaments} tournoi{s.tournaments > 1 ? "s" : ""}
                         {s.podiums > 0 && ` · ${s.podiums} podium${s.podiums > 1 ? "s" : ""}`}
                       </p>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-400">Meilleur</p>
-                      <span className={`text-sm font-bold ${s.bestRank <= 3 ? "text-amber-600" : "text-slate-600"}`}>
-                        {getMedal(s.bestRank) || ""} {s.bestRank}e/{s.bestTotal}
+                    <div className="text-right shrink-0">
+                      <p className="text-[9px] uppercase tracking-[0.22em] text-[color:var(--muted)] font-semibold" style={{ fontFamily: "Oswald, sans-serif" }}>Meilleur</p>
+                      <span className={`text-sm font-bold ${s.bestRank <= 3 ? "text-[color:var(--gold)]" : "text-[color:var(--ink)]"}`}>
+                        {getMedal(s.bestRank) || ""} {s.bestRank}/{s.bestTotal}
                       </span>
                     </div>
                   </div>
@@ -211,49 +194,49 @@ export default function Palmares({ db }: { db: DB }) {
   const currentResults = buildResults(db.config_tournois ?? [], db.inscrits_tournoi ?? []);
   const archives = db.archives ?? [];
 
-  const hasAnyData = currentResults.length > 0 || archives.some((a) =>
-    buildResults(a.config_tournois, a.inscrits_tournoi).length > 0
-  );
+  const hasAnyData =
+    currentResults.length > 0 ||
+    archives.some((a) => buildResults(a.config_tournois, a.inscrits_tournoi).length > 0);
 
   if (!hasAnyData) return null;
 
   return (
-    <section id="palmares" className="bg-section-wrap relative">
-      <div className="section-pad relative">
-        <div className="text-center mb-14">
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-amber-600">Historique</span>
+    <section id="palmares" className="bg-section-wrap">
+      <div className="section-pad">
+        <header className="section-head">
+          <div>
+            <span className="section-index">05 — Archives</span>
+            <h2 className="h-title text-5xl md:text-7xl lg:text-8xl mt-4">
+              Palmarès <span className="font-editorial italic font-normal">du club.</span>
+            </h2>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Palmarès</h2>
-          <p className="text-slate-500 max-w-2xl mx-auto">
-            Les résultats du club en tournois extérieurs.
+          <p className="hidden md:block text-[color:var(--muted)] max-w-xs text-right text-sm leading-relaxed">
+            Les résultats en tournois extérieurs, saison par saison.
           </p>
-        </div>
+        </header>
 
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
+          viewport={{ once: true, margin: "-80px" }}
+          transition={{ duration: 0.7 }}
+          className="border-t border-[color:var(--line)]"
         >
-          {/* Saison en cours */}
           {currentResults.length > 0 && (
             <SeasonBlock
               label={`Saison ${db.y1}–${db.y2} (en cours)`}
               config_tournois={db.config_tournois ?? []}
               inscrits_tournoi={db.inscrits_tournoi ?? []}
-              defaultOpen={true}
+              defaultOpen
             />
           )}
 
-          {/* Saisons archivées */}
           {[...archives].reverse().map((archive, i) => (
             <SeasonBlock
               key={i}
               label={`Saison ${archive.y1}–${archive.y2}`}
               config_tournois={archive.config_tournois}
               inscrits_tournoi={archive.inscrits_tournoi}
-              defaultOpen={false}
             />
           ))}
         </motion.div>
