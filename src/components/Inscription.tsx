@@ -31,7 +31,7 @@ export default function Inscription({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
   const [showCode, setShowCode] = useState(false);
-  const [newsOptIn, setNewsOptIn] = useState(true);
+  const [newsOptIn, setNewsOptIn] = useState(false);
   const [rgpdOk, setRgpdOk] = useState(false);
   const whatsappLink = db.whatsappLink || null;
 
