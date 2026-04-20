@@ -99,7 +99,17 @@ export default function Inscription({
     if (!db.insc_open) return;
     setLoading(true);
     const fd = new FormData(e.currentTarget);
-    const nom = String(fd.get("nom") || "").trim();
+    const firstName =
+      String(fd.get("firstName") || "")
+        .trim()
+        .split(" ")[0] || "";
+    const lastName =
+      String(fd.get("lastName") || "")
+        .trim()
+        .split(" ")
+        .slice(1)
+        .join(" ") || "";
+    const nom = `${firstName} ${lastName.toLocaleUpperCase()}`.trim();
     const email = String(fd.get("email") || "").trim();
     const tel = String(fd.get("tel") || "").trim();
     const type = String(fd.get("type") || "Adulte") as "Adulte" | "Etudiant";
@@ -318,11 +328,20 @@ export default function Inscription({
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className="label">Nom et prénom</label>
+                    <label className="label">Prénom</label>
                     <input
                       className="input"
-                      name="nom"
-                      placeholder="Jean Dupont"
+                      name="firstName"
+                      placeholder="Jean"
+                      required
+                    />
+                  </div>
+                  <div>
+                    <label className="label">Nom</label>
+                    <input
+                      className="input"
+                      name="lastName"
+                      placeholder="Dupont"
                       required
                     />
                   </div>
@@ -346,7 +365,7 @@ export default function Inscription({
                       required
                     />
                   </div>
-                  <div>
+                  <div className="md:col-span-2">
                     <label className="label">Tarif</label>
                     <select className="input" name="type" defaultValue="Adulte">
                       <option value="Adulte">Adulte — {prix.Adulte}€</option>
