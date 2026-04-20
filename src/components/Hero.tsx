@@ -47,7 +47,7 @@ export default function Hero({ seasonY1, seasonY2, inscOpen }: Props) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="flex flex-col md:items-center md:gap-3 text-[11px] uppercase mb-8"
+              className="flex flex-col md:flex-row md:items-center md:gap-3 text-[11px] uppercase mb-8"
               style={{
                 fontFamily: "Oswald, sans-serif",
                 letterSpacing: "0.32em",
