@@ -12,7 +12,7 @@ type Props = {
 
 export default function Hero({ seasonY1, seasonY2, inscOpen }: Props) {
   return (
-    <section className="relative min-h-[100svh] overflow-hidden pt-20 md:pt-24">
+    <section className="relative min-h-[100svh] overflow-hidden pt-6 md:pt-24">
       {/* Subtle decorative shuttlecock, very discreet */}
       <Shuttlecock
         className="absolute top-[22%] right-[8%] w-20 h-20 text-[color:var(--ink)]/10 animate-float hidden md:block"
@@ -47,23 +47,25 @@ export default function Hero({ seasonY1, seasonY2, inscOpen }: Props) {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, ease: [0.22, 1, 0.36, 1] }}
-              className="flex items-center gap-3 text-[11px] uppercase mb-8"
+              className="flex flex-col md:items-center md:gap-3 text-[11px] uppercase mb-8"
               style={{
                 fontFamily: "Oswald, sans-serif",
                 letterSpacing: "0.32em",
               }}
             >
-              <span
-                className={`w-2 h-2 rounded-full ${
-                  inscOpen
-                    ? "bg-[color:var(--forest)]"
-                    : "bg-[color:var(--danger)]"
-                }`}
-                aria-hidden="true"
-              />
-              <span className="text-[color:var(--ink)]/80 font-semibold">
-                Saison {seasonY1}–{seasonY2}
-              </span>
+              <div className="flex items-center gap-3">
+                <span
+                  className={`w-2 h-2 rounded-full ${
+                    inscOpen
+                      ? "bg-[color:var(--forest)]"
+                      : "bg-[color:var(--danger)]"
+                  }`}
+                  aria-hidden="true"
+                />
+                <span className="text-[color:var(--ink)]/80 font-semibold">
+                  Saison {seasonY1}–{seasonY2}
+                </span>
+              </div>
               <span className="w-px h-3 bg-[color:var(--ink)]/25" />
               <span
                 className={`font-semibold ${inscOpen ? "text-[color:var(--forest)]" : "text-[color:var(--danger)]"}`}
