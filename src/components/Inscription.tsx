@@ -271,10 +271,9 @@ export default function Inscription({
                   className="input pr-10"
                   name="code"
                   type={showCode ? "text" : "password"}
-                  placeholder="Minimum 4 chiffres (ex: 1234)"
-                  pattern="\d{4,}"
-                  inputMode="numeric"
-                  title="Le mot de passe doit contenir au moins 4 chiffres"
+                  placeholder="Minimum 4 caractères"
+                  minLength={4}
+                  title="Le mot de passe doit contenir au moins 4 caractères"
                   required
                 />
                 <button
@@ -287,7 +286,7 @@ export default function Inscription({
                 </button>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Ce mot de passe vous permettra de vous connecter à votre espace membre sur un autre appareil.
+                Ce mot de passe (min. 4 caractères) vous permettra de vous connecter à votre espace membre.
               </p>
             </div>
 

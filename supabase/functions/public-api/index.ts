@@ -372,8 +372,8 @@ Deno.serve(async (req) => {
     if (!nom || nom.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
     if (!isValidPhone(tel)) return json({ ok: false, reason: "Téléphone invalide." }, 400);
-    if (!code || !/^\d{4,}$/.test(code)) {
-      return json({ ok: false, reason: "Le code doit contenir au moins 4 chiffres." }, 400);
+    if (!code || code.length < 4) {
+      return json({ ok: false, reason: "Le mot de passe doit contenir au moins 4 caractères." }, 400);
     }
 
     // Lire les données actuelles
@@ -979,7 +979,7 @@ Deno.serve(async (req) => {
     const newCode = sanitize(String(body.newCode || ""));
 
     if (!email || !oldCode || !newCode) return json({ ok: false, reason: "Champs manquants." }, 400);
-    if (!/^\d{4,}$/.test(newCode)) return json({ ok: false, reason: "Le nouveau code doit contenir au moins 4 chiffres." }, 400);
+    if (newCode.length < 4) return json({ ok: false, reason: "Le mot de passe doit contenir au moins 4 caractères." }, 400);
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
