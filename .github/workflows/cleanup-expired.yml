@@ -1,0 +1,20 @@
+name: Nettoyage membres non payés
+
+on:
+  schedule:
+    # Tous les jours à 6h du matin (UTC)
+    - cron: '0 6 * * *'
+  workflow_dispatch: # Permet de lancer manuellement si besoin
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Supprimer les membres non payés après date limite
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -d "{\"action\": \"cleanup_expired\", \"secret\": \"${{ secrets.CRON_SECRET }}\"}" \
+            https://jsceiujlopxgsjlxbvyu.supabase.co/functions/v1/public-api)
+          echo "Réponse : $RESPONSE"
