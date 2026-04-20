@@ -82,10 +82,10 @@ export default function Hero({ seasonY1, seasonY2, inscOpen }: Props) {
                 delay: 0.1,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="font-display text-[12vw] md:text-[10rem] lg:text-[12rem] leading-[0.82] tracking-[-0.02em] text-[color:var(--ink)]"
+              className="font-display text-[12vw] md:text-[8vw] lg:text-[10vw] leading-[0.82] tracking-[-0.02em] text-[color:var(--ink)]"
             >
               Sainte<span className="text-[color:var(--gold)]">·</span>Adresse
-              <span className="block mt-2 md:mt-4 font-editorial italic font-normal text-[10vw] md:text-[8rem] lg:text-[10rem] text-[color:var(--ink)]/90">
+              <span className="block mt-2 md:mt-4 font-editorial italic font-normal text-[10vw] md:text-[6vw] lg:text-[8vw] text-[color:var(--ink)]/90">
                 badminton.
               </span>
             </motion.h1>
