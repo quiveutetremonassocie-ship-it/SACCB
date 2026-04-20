@@ -149,15 +149,8 @@ export default function Site() {
   };
 
   const onMemberButtonClick = () => {
-    if (isMemberAdmin) {
-      // Admin membre : ouvrir directement le panneau admin
-      setAdminOpen(true);
-      refreshAdmin();
-    } else if (memberSession) {
-      setMemberPanelOpen(true);
-    } else {
-      setMemberLoginOpen(true);
-    }
+    if (memberSession) setMemberPanelOpen(true);
+    else setMemberLoginOpen(true);
   };
 
   const onMemberLoginSuccess = async (session: MemberSession, adminCode?: string) => {
@@ -201,7 +194,7 @@ export default function Site() {
       <Navbar
         onMember={onMemberButtonClick}
         isMember={!!memberSession}
-        isAdmin={isMemberAdmin && !adminOpen}
+        isAdmin={isMemberAdmin}
         onAdmin={onReopenAdmin}
       />
       <main>
