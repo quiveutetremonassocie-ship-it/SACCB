@@ -1259,5 +1259,64 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // ─── ACTION: Nettoyage automatique des membres non payés après date limite ───
+  if (action === "cleanup_expired") {
+    // Sécurisé par un secret pour éviter les appels non autorisés
+    const secret = String(body.secret || "");
+    const expectedSecret = Deno.env.get("CRON_SECRET");
+    if (!expectedSecret || secret !== expectedSecret) {
+      return json({ ok: false, reason: "Non autorisé." }, 401);
+    }
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const d = data.data as Record<string, unknown>;
+    const inscCloseDate = String(d.insc_close_date || "");
+
+    // Pas de date limite configurée → rien à faire
+    if (!inscCloseDate) return json({ ok: true, skipped: true, reason: "Pas de date limite configurée." });
+
+    const today = new Date().toISOString().slice(0, 10);
+    // Date limite pas encore atteinte → rien à faire
+    if (today < inscCloseDate) return json({ ok: true, skipped: true, reason: `Date limite ${inscCloseDate} pas encore atteinte.` });
+
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const before = membres.length;
+    const kept = membres.filter((m) => m.ok === true); // on garde uniquement les payés
+    const removed = before - kept.length;
+
+    if (removed === 0) return json({ ok: true, removed: 0, reason: "Aucun membre à supprimer." });
+
+    d.membres = kept;
+    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+
+    // Notifier les admins par email
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (resendKey) {
+      fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          to: ["gabin.binay@gmail.com", "hernancm68@hotmail.com"],
+          subject: `🏸 SACCB — ${removed} adhérent(s) supprimé(s) automatiquement`,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
+              <h2 style="color: #1e3a5f;">Nettoyage automatique effectué</h2>
+              <p>La date limite d'inscription (<strong>${inscCloseDate}</strong>) est dépassée.</p>
+              <p><strong>${removed} adhérent(s)</strong> non payé(s) ont été supprimés automatiquement.</p>
+              <p>Il reste <strong>${kept.length} adhérent(s)</strong> actifs.</p>
+              <p style="color: #94a3b8; font-size: 12px;">Ceci est un message automatique de saccb.fr</p>
+            </div>
+          `,
+        }),
+      }).catch(() => {});
+    }
+
+    return json({ ok: true, removed, kept: kept.length });
+  }
+
   return json({ error: "Action inconnue" }, 400);
 });
