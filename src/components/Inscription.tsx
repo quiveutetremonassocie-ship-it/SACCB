@@ -259,7 +259,7 @@ export default function Inscription({
             </select>
             <div>
               <label className="block text-xs uppercase tracking-widest text-slate-500 mb-1">
-                Code personnel
+                Mot de passe personnel
               </label>
               <div className="relative">
                 <input
@@ -269,7 +269,7 @@ export default function Inscription({
                   placeholder="Minimum 4 chiffres (ex: 1234)"
                   pattern="\d{4,}"
                   inputMode="numeric"
-                  title="Le code doit contenir au moins 4 chiffres"
+                  title="Le mot de passe doit contenir au moins 4 chiffres"
                   required
                 />
                 <button
@@ -282,7 +282,7 @@ export default function Inscription({
                 </button>
               </div>
               <p className="text-xs text-slate-400 mt-1">
-                Ce code vous permettra de vous connecter à votre espace membre sur un autre appareil.
+                Ce mot de passe vous permettra de vous connecter à votre espace membre sur un autre appareil.
               </p>
             </div>
 
