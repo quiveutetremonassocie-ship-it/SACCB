@@ -150,8 +150,15 @@ export default function Site() {
   };
 
   const onMemberButtonClick = () => {
-    if (memberSession) setMemberPanelOpen(true);
-    else setMemberLoginOpen(true);
+    if (isMemberAdmin) {
+      // Admin membre : ouvrir directement le panneau admin
+      setAdminOpen(true);
+      refreshAdmin();
+    } else if (memberSession) {
+      setMemberPanelOpen(true);
+    } else {
+      setMemberLoginOpen(true);
+    }
   };
 
   const onMemberLoginSuccess = async (session: MemberSession, adminCode?: string) => {
