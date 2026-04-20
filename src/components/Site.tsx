@@ -19,7 +19,6 @@ import ResetPasswordModal from "./modals/ResetPasswordModal";
 import AdminPanel from "./admin/AdminPanel";
 import MemberPanel from "./MemberPanel";
 import Palmares from "./Palmares";
-import CookieBanner from "./CookieBanner";
 
 export default function Site() {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -225,8 +224,6 @@ export default function Site() {
         />
       </main>
       <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
-
-      <CookieBanner />
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
       <ResetPasswordModal open={resetOpen} onClose={() => setResetOpen(false)} />
