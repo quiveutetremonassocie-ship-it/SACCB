@@ -26,7 +26,10 @@ const LEGAL = [
 
 export default function Footer({ year, onAdmin }: Props) {
   return (
-    <footer id="contact" className="bg-[color:var(--ink)] text-[color:var(--bone)] relative overflow-hidden">
+    <footer
+      id="contact"
+      className="bg-[color:var(--ink)] text-[color:var(--bone)] relative overflow-hidden"
+    >
       {/* Top decorative line */}
       <div className="h-[3px] bg-[color:var(--gold)]" />
 
@@ -41,23 +44,35 @@ export default function Footer({ year, onAdmin }: Props) {
         {/* Contact header */}
         <div className="grid md:grid-cols-12 gap-10 mb-24">
           <div className="md:col-span-6">
-            <p className="text-[11px] uppercase tracking-[0.32em] text-[color:var(--gold)] font-semibold mb-4 flex items-center gap-3" style={{ fontFamily: "Oswald, sans-serif" }}>
+            <p
+              className="text-[11px] uppercase tracking-[0.32em] text-[color:var(--gold)] font-semibold mb-4 flex items-center gap-3"
+              style={{ fontFamily: "Oswald, sans-serif" }}
+            >
               <span className="w-6 h-px bg-[color:var(--gold)]/60" />
               07 — Contact
             </p>
-            <h2 className="font-display text-6xl md:text-7xl lg:text-8xl tracking-tight text-[color:var(--bone)] leading-[0.9]">
+            <h2 className="font-display text-5xl md:text-6xl lg:text-7xl tracking-tight text-[color:var(--bone)] leading-[0.9]">
               Une question ?<br />
-              <span className="font-editorial italic font-normal text-[color:var(--bone)]/85">Écrivez-nous.</span>
+              <span className="font-editorial italic font-normal text-[color:var(--bone)]/85">
+                Écrivez-nous.
+              </span>
             </h2>
             <p className="mt-6 text-[color:var(--bone)]/65 max-w-md leading-relaxed">
-              On répond à tous les messages dans la semaine. Curieux, motivés, débutants ou confirmés — bienvenue.
+              On répond à tous les messages dans la semaine. Curieux, motivés,
+              débutants ou confirmés — bienvenue.
             </p>
 
             <div className="mt-10 space-y-5">
               <InfoRow
                 icon={<MapPin className="w-4 h-4" />}
                 label="Gymnase"
-                value={<>Salle Paul Vatine<br />30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse</>}
+                value={
+                  <>
+                    Salle Paul Vatine
+                    <br />
+                    30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse
+                  </>
+                }
               />
               <InfoRow
                 icon={<Clock className="w-4 h-4" />}
@@ -77,22 +92,34 @@ export default function Footer({ year, onAdmin }: Props) {
           <div className="md:col-span-4">
             <Link href="#" className="inline-flex items-center gap-3 group">
               <span className="w-10 h-10 flex items-center justify-center border border-[color:var(--bone)]/30 group-hover:bg-[color:var(--bone)] transition-colors duration-500">
-                <Shuttlecock className="w-5 h-5 text-[color:var(--bone)] group-hover:text-[color:var(--ink)] transition-colors duration-500" color="currentColor" />
+                <Shuttlecock
+                  className="w-5 h-5 text-[color:var(--bone)] group-hover:text-[color:var(--ink)] transition-colors duration-500"
+                  color="currentColor"
+                />
               </span>
               <span>
-                <span className="block font-display text-3xl tracking-[0.1em] text-[color:var(--bone)]">SACCB</span>
-                <span className="block text-[9px] tracking-[0.3em] uppercase text-[color:var(--bone)]/50 font-semibold mt-0.5" style={{ fontFamily: "Oswald, sans-serif" }}>
+                <span className="block font-display text-3xl tracking-[0.1em] text-[color:var(--bone)]">
+                  SACCB
+                </span>
+                <span
+                  className="block text-[9px] tracking-[0.3em] uppercase text-[color:var(--bone)]/50 font-semibold mt-0.5"
+                  style={{ fontFamily: "Oswald, sans-serif" }}
+                >
                   Badminton · Sainte-Adresse
                 </span>
               </span>
             </Link>
             <p className="mt-5 text-sm text-[color:var(--bone)]/55 max-w-xs leading-relaxed">
-              Association loi 1901. Club affilié FFBaD. Établi à la Salle Paul Vatine.
+              Association loi 1901. Club affilié FFBaD. Établi à la Salle Paul
+              Vatine.
             </p>
           </div>
 
           <div className="md:col-span-4">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/50 font-semibold mb-5" style={{ fontFamily: "Oswald, sans-serif" }}>
+            <p
+              className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/50 font-semibold mb-5"
+              style={{ fontFamily: "Oswald, sans-serif" }}
+            >
               Navigation
             </p>
             <ul className="grid grid-cols-2 gap-y-2">
@@ -111,7 +138,10 @@ export default function Footer({ year, onAdmin }: Props) {
           </div>
 
           <div className="md:col-span-4">
-            <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/50 font-semibold mb-5" style={{ fontFamily: "Oswald, sans-serif" }}>
+            <p
+              className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/50 font-semibold mb-5"
+              style={{ fontFamily: "Oswald, sans-serif" }}
+            >
               Informations
             </p>
             <ul className="space-y-2">
@@ -131,40 +161,56 @@ export default function Footer({ year, onAdmin }: Props) {
         </div>
 
         {/* Bottom strip */}
-        <div className="mt-16 pt-6 border-t border-[color:var(--bone)]/12 flex flex-wrap items-center justify-between gap-4 text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/40 font-semibold" style={{ fontFamily: "Oswald, sans-serif" }}>
+        <div
+          className="mt-16 pt-6 border-t border-[color:var(--bone)]/12 flex flex-col md:flex-row flex-wrap items-center justify-center md:justify-between gap-3 text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/40 font-semibold"
+          style={{ fontFamily: "Oswald, sans-serif" }}
+        >
           <p>© {year} · SACCB</p>
-          <p className="flex items-center gap-3">
+          <p className="flex flex-col md:flex-row items-center gap-3">
             <span>Normandie · FR</span>
-            <span className="w-px h-3 bg-[color:var(--bone)]/20" />
+            {/* <span className="w-px h-3 bg-[color:var(--bone)]/20" /> */}
             <span>Made with ♡ in Sainte-Adresse</span>
           </p>
           {/* Admin hidden access */}
-          <button
+          {/* <button
             onClick={onAdmin}
-            className="opacity-0 hover:opacity-30 focus:opacity-30 transition-opacity text-[color:var(--bone)] cursor-default select-none text-[10px]"
+            className="opacity-100 hover:opacity-30 focus:opacity-30 transition-opacity text-[color:var(--bone)] cursor-default select-none text-[10px]"
             title=""
             tabIndex={-1}
             aria-hidden="true"
           >
             ·
-          </button>
+          </button> */}
         </div>
       </div>
     </footer>
   );
 }
 
-function InfoRow({ icon, label, value }: { icon: React.ReactNode; label: string; value: React.ReactNode }) {
+function InfoRow({
+  icon,
+  label,
+  value,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: React.ReactNode;
+}) {
   return (
     <div className="flex items-start gap-4">
       <span className="w-9 h-9 border border-[color:var(--bone)]/25 flex items-center justify-center text-[color:var(--gold)] shrink-0">
         {icon}
       </span>
       <div>
-        <p className="text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/50 font-semibold" style={{ fontFamily: "Oswald, sans-serif" }}>
+        <p
+          className="text-xs uppercase tracking-[0.28em] text-[color:var(--bone)]/50 font-semibold"
+          style={{ fontFamily: "Oswald, sans-serif" }}
+        >
           {label}
         </p>
-        <p className="text-sm text-[color:var(--bone)]/85 mt-1 leading-relaxed">{value}</p>
+        <p className="text-sm text-[color:var(--bone)]/85 mt-1 leading-relaxed">
+          {value}
+        </p>
       </div>
     </div>
   );
@@ -193,7 +239,9 @@ function ContactForm() {
     setLoading(false);
     if (r.ok) {
       setSent(true);
-      setNom(""); setEmail(""); setMessage("");
+      setNom("");
+      setEmail("");
+      setMessage("");
     } else {
       setError(r.reason || "Erreur lors de l'envoi. Réessayez.");
     }
@@ -203,8 +251,12 @@ function ContactForm() {
     return (
       <div className="border border-[color:var(--bone)]/20 p-8 text-center">
         <CheckCircle2 className="w-10 h-10 text-[color:var(--gold)] mx-auto mb-4" />
-        <p className="font-display text-3xl text-[color:var(--bone)] tracking-tight mb-2">Message envoyé.</p>
-        <p className="text-[color:var(--bone)]/60 text-sm">Nous vous répondrons dans les plus brefs délais.</p>
+        <p className="font-display text-3xl text-[color:var(--bone)] tracking-tight mb-2">
+          Message envoyé.
+        </p>
+        <p className="text-[color:var(--bone)]/60 text-sm">
+          Nous vous répondrons dans les plus brefs délais.
+        </p>
         <button
           onClick={() => setSent(false)}
           className="mt-5 text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/50 hover:text-[color:var(--bone)] transition-colors font-semibold link-reveal"
@@ -217,7 +269,11 @@ function ContactForm() {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6" aria-label="Formulaire de contact">
+    <form
+      onSubmit={handleSubmit}
+      className="space-y-6"
+      aria-label="Formulaire de contact"
+    >
       {/* Honeypot */}
       <div style={{ display: "none" }} aria-hidden="true">
         <input
@@ -231,8 +287,21 @@ function ContactForm() {
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-        <DarkField label="Nom" value={nom} onChange={setNom} placeholder="Votre nom" required />
-        <DarkField label="Email" value={email} onChange={setEmail} type="email" placeholder="vous@email.fr" required />
+        <DarkField
+          label="Nom"
+          value={nom}
+          onChange={setNom}
+          placeholder="Votre nom"
+          required
+        />
+        <DarkField
+          label="Email"
+          value={email}
+          onChange={setEmail}
+          type="email"
+          placeholder="vous@email.fr"
+          required
+        />
       </div>
 
       <DarkField
@@ -247,7 +316,10 @@ function ContactForm() {
       />
 
       {error && (
-        <p className="text-sm text-[color:#ff9b8e]" style={{ fontFamily: "Oswald, sans-serif" }}>
+        <p
+          className="text-sm text-[color:#ff9b8e]"
+          style={{ fontFamily: "Oswald, sans-serif" }}
+        >
           {error}
         </p>
       )}
@@ -290,7 +362,10 @@ function DarkField({
     "w-full bg-transparent border-0 border-b border-[color:var(--bone)]/25 px-0 py-3 text-[color:var(--bone)] placeholder-[color:var(--bone)]/35 focus:outline-none focus:border-[color:var(--gold)] transition-colors";
   return (
     <div>
-      <label className="block text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/55 font-semibold mb-2" style={{ fontFamily: "Oswald, sans-serif" }}>
+      <label
+        className="block text-[10px] uppercase tracking-[0.28em] text-[color:var(--bone)]/55 font-semibold mb-2"
+        style={{ fontFamily: "Oswald, sans-serif" }}
+      >
         {label}
       </label>
       {textarea ? (
@@ -315,7 +390,10 @@ function DarkField({
         />
       )}
       {hint && (
-        <p className="text-[10px] text-[color:var(--bone)]/30 mt-1 text-right" style={{ fontFamily: "Oswald, sans-serif" }}>
+        <p
+          className="text-[10px] text-[color:var(--bone)]/30 mt-1 text-right"
+          style={{ fontFamily: "Oswald, sans-serif" }}
+        >
           {hint}
         </p>
       )}

@@ -80,10 +80,10 @@ export default function Hero({ seasonY1, seasonY2, inscOpen }: Props) {
                 delay: 0.1,
                 ease: [0.22, 1, 0.36, 1],
               }}
-              className="font-display text-[14rem] md:text-[10rem] lg:text-[12rem] leading-[0.82] tracking-[-0.02em] text-[color:var(--ink)]"
+              className="font-display text-[12vw] md:text-[10rem] lg:text-[12rem] leading-[0.82] tracking-[-0.02em] text-[color:var(--ink)]"
             >
               Sainte<span className="text-[color:var(--gold)]">·</span>Adresse
-              <span className="block mt-2 md:mt-4 font-editorial italic font-normal text-[12vw] md:text-[8rem] lg:text-[10rem] text-[color:var(--ink)]/90">
+              <span className="block mt-2 md:mt-4 font-editorial italic font-normal text-[10vw] md:text-[8rem] lg:text-[10rem] text-[color:var(--ink)]/90">
                 badminton.
               </span>
             </motion.h1>
@@ -164,24 +164,13 @@ export default function Hero({ seasonY1, seasonY2, inscOpen }: Props) {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 1, delay: 0.8 }}
-          className="mt-20 md:mt-28 pt-8 border-t border-[color:var(--line-strong)] grid grid-cols-3 gap-6 md:gap-12"
+          className="mt-20 md:mt-28 pt-8 border-t border-[color:var(--line-strong)] grid grid-cols-1 md:grid-cols-3 gap-6 md:gap-12"
         >
           <StatItem num="65" label="Adhérents" />
           <StatItem num="03" label="Créneaux / sem." />
           <StatItem num="17" label="Années d'existence" />
         </motion.div>
       </div>
-
-      {/* Scroll indicator */}
-      <a
-        href="#presentation"
-        className="absolute bottom-6 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 text-[10px] uppercase text-[color:var(--ink)]/60 hover:text-[color:var(--ink)] transition-colors group"
-        style={{ fontFamily: "Oswald, sans-serif", letterSpacing: "0.3em" }}
-        aria-label="Faire défiler vers le contenu"
-      >
-        <span>Défiler</span>
-        <span className="w-px h-12 bg-[color:var(--ink)]/30 group-hover:h-16 transition-all" />
-      </a>
     </section>
   );
 }
