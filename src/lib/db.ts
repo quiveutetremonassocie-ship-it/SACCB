@@ -76,6 +76,7 @@ export async function publicAddMembre(membre: {
   paymentMethod?: "online" | "virement";
   code?: string;
   newsOptIn?: boolean;
+  grouped?: boolean; // true = inscription groupée, ne pas écraser les autres membres du même email
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",

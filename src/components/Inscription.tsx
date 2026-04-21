@@ -132,6 +132,7 @@ export default function Inscription({
 
     setLoading(true);
 
+    const isGrouped = personnes.length > 1;
     const results = await Promise.all(
       personnes.map(p =>
         publicAddMembre({
@@ -142,6 +143,7 @@ export default function Inscription({
           paymentMethod: mode,
           code,
           newsOptIn,
+          grouped: isGrouped,
         })
       )
     );

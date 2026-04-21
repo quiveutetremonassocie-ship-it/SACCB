@@ -367,6 +367,7 @@ Deno.serve(async (req) => {
     const paymentMethod = body.paymentMethod === "virement" ? "virement" : "online";
     const code = sanitize(String(body.code || ""));
     const newsOptIn = body.newsOptIn === true || body.newsOptIn === "true";
+    const grouped = body.grouped === true; // inscription groupée = ne pas écraser les autres membres du même email
 
     // Validation
     if (!nom || nom.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
@@ -388,30 +389,41 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
-    // Renouvellement : email existe mais ok=false (nouvelle saison)
-    const existingIdx = membres.findIndex((m) => String(m.email || "").toLowerCase() === email);
-    if (existingIdx !== -1) {
-      if (membres[existingIdx].ok === true) {
-        return json({ ok: false, reason: "Cet email est déjà inscrit et son adhésion est active !" });
+    // Renouvellement uniquement si inscription individuelle (pas groupée)
+    if (!grouped) {
+      const existingIdx = membres.findIndex((m) => String(m.email || "").toLowerCase() === email);
+      if (existingIdx !== -1) {
+        if (membres[existingIdx].ok === true) {
+          return json({ ok: false, reason: "Cet email est déjà inscrit et son adhésion est active !" });
+        }
+        // Renouvellement : on met à jour l'entrée existante
+        const existing = membres[existingIdx];
+        membres[existingIdx] = {
+          ...existing,
+          nom,
+          tel: tel || existing.tel,
+          type,
+          paymentMethod,
+          code: code || existing.code,
+          newsOptIn,
+          ok: false,
+        };
+        currentData.membres = membres;
+        const { error: renewError } = await supabaseAdmin
+          .from("saccb_db")
+          .update({ data: currentData })
+          .eq("id", 1);
+        if (renewError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+        return json({ ok: true, membreId: String(existing.id), renewed: true });
       }
-      // Renouvellement : on met à jour l'entrée existante
-      const existing = membres[existingIdx];
-      membres[existingIdx] = {
-        ...existing,
-        tel: tel || existing.tel,
-        type,
-        paymentMethod,
-        code: code || existing.code,
-        newsOptIn,
-        ok: false,
-      };
-      currentData.membres = membres;
-      const { error: renewError } = await supabaseAdmin
-        .from("saccb_db")
-        .update({ data: currentData })
-        .eq("id", 1);
-      if (renewError) return json({ ok: false, reason: "Erreur serveur." }, 500);
-      return json({ ok: true, membreId: String(existing.id), renewed: true });
+    } else {
+      // Inscription groupée : vérifier qu'aucune adhésion active n'existe déjà pour ce nom+email
+      const alreadyActive = membres.find(
+        (m) => String(m.email || "").toLowerCase() === email && String(m.nom || "").toLowerCase() === nom.toLowerCase() && m.ok === true
+      );
+      if (alreadyActive) {
+        return json({ ok: false, reason: `${nom} est déjà inscrit(e) avec une adhésion active !` });
+      }
     }
 
     // Vérifier quota (dynamique, 65 par défaut)
