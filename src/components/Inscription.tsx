@@ -133,20 +133,23 @@ export default function Inscription({
     setLoading(true);
 
     const isGrouped = personnes.length > 1;
-    const results = await Promise.all(
-      personnes.map(p =>
-        publicAddMembre({
-          nom: `${p.prenom.trim()} ${p.nom.trim()}`.trim(),
-          email,
-          tel,
-          type: p.type,
-          paymentMethod: mode,
-          code,
-          newsOptIn,
-          grouped: isGrouped,
-        })
-      )
-    );
+    const results: { ok: boolean; reason?: string; membreId?: string }[] = [];
+
+    // Séquentiel pour éviter les collisions en DB (pas de Promise.all)
+    for (const p of personnes) {
+      const r = await publicAddMembre({
+        nom: `${p.prenom.trim()} ${p.nom.trim()}`.trim(),
+        email,
+        tel,
+        type: p.type,
+        paymentMethod: mode,
+        code,
+        newsOptIn,
+        grouped: isGrouped,
+      });
+      results.push(r);
+      if (!r.ok) break;
+    }
 
     const failed = results.find(r => !r.ok);
     if (failed) {
