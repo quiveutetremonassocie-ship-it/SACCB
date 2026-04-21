@@ -133,7 +133,7 @@ Deno.serve(async (req) => {
         m.paymentDate = new Date().toISOString();
         m.paymentMethod = "online";
         found = true;
-        break;
+        // Pas de break : on marque TOUS les membres avec cet email (inscriptions groupées)
       }
     }
 
