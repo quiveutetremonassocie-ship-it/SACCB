@@ -46,6 +46,18 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
     setGalleryIndex((i) => (i - 1 + currentModalImages.length) % currentModalImages.length);
   }, [currentModalImages.length]);
 
+  // Navigation entre actualités dans le modal
+  const modalNext = useCallback(() => {
+    if (modalIndex === null) return;
+    setModalIndex((i) => ((i as number) + 1) % n);
+    setGalleryIndex(0);
+  }, [modalIndex, n]);
+  const modalPrev = useCallback(() => {
+    if (modalIndex === null) return;
+    setModalIndex((i) => ((i as number) - 1 + n) % n);
+    setGalleryIndex(0);
+  }, [modalIndex, n]);
+
   // Navigation clavier dans le modal (galerie)
   useEffect(() => {
     if (modalIndex === null) return;
@@ -57,6 +69,18 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [modalIndex, closeModal, galleryNext, galleryPrev]);
+
+  // Navigation carrousel (flèches)
+  const carouselPrev = useCallback(() => {
+    setIndex((i) => (i - 1 + n) % n);
+    setPaused(true);
+    setTimeout(() => setPaused(false), 3000);
+  }, [n]);
+  const carouselNext = useCallback(() => {
+    setIndex((i) => (i + 1) % n);
+    setPaused(true);
+    setTimeout(() => setPaused(false), 3000);
+  }, [n]);
 
   if (n === 0) return null;
 
@@ -84,10 +108,21 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
         </motion.div>
 
         <div
-          className="relative max-w-4xl mx-auto"
+          className="relative max-w-4xl mx-auto group/carousel"
           onMouseEnter={() => setPaused(true)}
           onMouseLeave={() => setPaused(false)}
         >
+          {/* Flèche gauche */}
+          {n > 1 && (
+            <button
+              onClick={carouselPrev}
+              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-black/50 hover:bg-black/75 flex items-center justify-center text-white transition opacity-0 group-hover/carousel:opacity-100 shadow-lg"
+              aria-label="Actualité précédente"
+            >
+              <ChevronLeft className="w-5 h-5" />
+            </button>
+          )}
+
           <button
             onClick={() => openModal(index)}
             className="relative block w-full aspect-[16/9] rounded-3xl overflow-hidden group shadow-2xl shadow-slate-300/40 border border-slate-200"
@@ -140,6 +175,17 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
               </motion.div>
             </AnimatePresence>
           </button>
+
+          {/* Flèche droite */}
+          {n > 1 && (
+            <button
+              onClick={carouselNext}
+              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-black/50 hover:bg-black/75 flex items-center justify-center text-white transition opacity-0 group-hover/carousel:opacity-100 shadow-lg"
+              aria-label="Actualité suivante"
+            >
+              <ChevronRight className="w-5 h-5" />
+            </button>
+          )}
 
           {/* Indicateurs */}
           {n > 1 && (
@@ -264,6 +310,29 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                   <p className="text-slate-600 text-base md:text-lg whitespace-pre-wrap leading-relaxed">
                     {actualites[modalIndex].description}
                   </p>
+
+                  {/* Navigation entre actualités */}
+                  {n > 1 && (
+                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); modalPrev(); }}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 text-sm font-medium transition"
+                      >
+                        <ChevronLeft className="w-4 h-4" />
+                        Actu précédente
+                      </button>
+                      <span className="text-xs text-slate-400 font-medium">
+                        {modalIndex + 1} / {n}
+                      </span>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); modalNext(); }}
+                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 text-sm font-medium transition"
+                      >
+                        Actu suivante
+                        <ChevronRight className="w-4 h-4" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </motion.div>
             </motion.div>
