@@ -13,12 +13,12 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
 
   const n = actualites.length;
 
-  // Auto-rotation toutes les 5 secondes
+  // Auto-rotation toutes les 2,5 secondes
   useEffect(() => {
     if (n < 2 || paused || modalIndex !== null) return;
     const id = setInterval(() => {
       setIndex((i) => (i + 1) % n);
-    }, 5000);
+    }, 2500);
     return () => clearInterval(id);
   }, [n, paused, modalIndex]);
 
