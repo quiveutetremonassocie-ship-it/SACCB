@@ -109,6 +109,21 @@ export async function verifyMembre(
   return res.json();
 }
 
+// ─── Vérification session membre (existe encore en DB ?) ───
+export async function checkMemberSession(email: string, membreId: string): Promise<boolean> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId }),
+    });
+    const data = await res.json();
+    return data.ok === true;
+  } catch {
+    return true; // En cas d'erreur réseau, on laisse passer pour ne pas bloquer l'accès
+  }
+}
+
 // ─── Notifier les adhérents par email (via Edge Function) ───
 export async function notifyMembres(
   tournoiId: string,

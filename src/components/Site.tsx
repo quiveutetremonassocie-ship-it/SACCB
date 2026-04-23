@@ -2,9 +2,9 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember } from "@/lib/db";
+import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
-import { getMemberSession, MemberSession } from "@/lib/useMemberSession";
+import { getMemberSession, clearMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Presentation from "./Presentation";
@@ -148,9 +148,22 @@ export default function Site() {
     await refreshAdmin();
   };
 
-  const onMemberButtonClick = () => {
-    if (memberSession) setMemberPanelOpen(true);
-    else setMemberLoginOpen(true);
+  const onMemberButtonClick = async () => {
+    if (memberSession) {
+      // Re-vérifier que le membre existe toujours en DB (cas suppression par admin)
+      if (!memberSession.isAdmin) {
+        const valid = await checkMemberSession(memberSession.email, memberSession.membreId);
+        if (!valid) {
+          clearMemberSession();
+          setMemberSession(null);
+          setMemberLoginOpen(true);
+          return;
+        }
+      }
+      setMemberPanelOpen(true);
+    } else {
+      setMemberLoginOpen(true);
+    }
   };
 
   const onMemberLoginSuccess = async (session: MemberSession, adminCode?: string) => {

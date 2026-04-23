@@ -1333,6 +1333,33 @@ Deno.serve(async (req) => {
     return json({ ok: true, removed, kept: kept.length });
   }
 
+  // ─── ACTION: Vérifier qu'une session membre est toujours valide ───
+  if (action === "check_session") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const membreId = String(body.membreId || "");
+
+    if (!email || !membreId) return json({ ok: false });
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: true }); // Erreur serveur : on laisse passer
+
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
+
+    // Vérifier si c'est un admin credential (pas un adhérent normal)
+    const isAdminCred = adminCredentials.some((c) => String(c.email || "").toLowerCase() === email);
+    if (isAdminCred) return json({ ok: true });
+
+    // Vérifier si le membre existe encore par email + id
+    const membre = membres.find(
+      (m) => String(m.email || "").toLowerCase() === email && String(m.id || "") === membreId
+    );
+
+    if (!membre) return json({ ok: false, reason: "Session expirée ou compte supprimé." });
+    return json({ ok: true, paid: membre.ok === true });
+  }
+
   // ─── ACTION: Upload image via admin (contourne RLS via service_role) ───
   if (action === "upload_image") {
     const email = sanitize(String(body.email || "")).toLowerCase();
