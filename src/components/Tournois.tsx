@@ -324,6 +324,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
           </div>
           {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
           {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermées</span>}
+          {!isFull && !inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold uppercase flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Inscriptions ouvertes</span>}
         </div>
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
           {memberSession ? (
