@@ -919,12 +919,6 @@ Deno.serve(async (req) => {
                   <p style="margin: 8px 0 0; color: #64748b;">📅 Date limite : <strong>${dateFormatted}</strong></p>
                   ${t.type ? `<p style="margin: 4px 0 0; color: #64748b;">Type : Double ${t.type}</p>` : ""}
                 </div>
-                <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                  <p style="margin: 0; color: #92400e; font-size: 14px;">
-                    💬 <strong>Vous souhaitez participer à ce tournoi ?</strong><br/>
-                    Contactez <strong>Hernan</strong> ou un membre du bureau — il est peut-être encore possible de vous inscrire même après la date limite.
-                  </p>
-                </div>
                 <a href="https://saccb.fr/#tournois" style="display: inline-block; background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                   Voir les tournois →
                 </a>

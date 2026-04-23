@@ -350,7 +350,13 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
             </div>
           )}
         </div>
-        {!isFull && !inscriptionsClosed && (
+        {inscriptionsClosed ? (
+          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+            <p className="text-amber-800 text-sm">
+              💬 <strong>Vous souhaitez participer à ce tournoi ?</strong> Contactez <strong>Hernan</strong> ou un membre du bureau — il est peut-être encore possible de vous inscrire.
+            </p>
+          </div>
+        ) : !isFull && (
           memberSession ? (
             <form onSubmit={regT} className="space-y-3">
               <div className="grid sm:grid-cols-2 gap-3">
