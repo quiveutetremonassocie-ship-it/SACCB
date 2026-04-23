@@ -92,8 +92,11 @@ Deno.serve(async (req) => {
   // HelloAsso envoie un payload avec eventType, pas de champ "action"
   if (body.eventType === "Payment" || body.eventType === "Order") {
     // Vérifier que l'appel vient bien de HelloAsso (IP whitelist)
-    const helloassoIP = "51.138.206.200";
+    const allowedIPs = ["51.138.206.200"];
     const callerIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
+    if (!allowedIPs.includes(callerIP)) {
+      return json({ ok: false, reason: "IP non autorisée." }, 403);
+    }
 
     // Extraire l'email du payeur
     const paymentData = body.data as Record<string, unknown> | undefined;
