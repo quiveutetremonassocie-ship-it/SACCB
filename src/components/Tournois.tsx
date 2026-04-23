@@ -309,21 +309,21 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className={`glass-sport overflow-hidden ${inscriptionsClosed ? "opacity-60 grayscale-[30%]" : ""}`}>
-      <div className={`relative p-7 border-l-4 ${inscriptionsClosed ? "border-slate-300" : "border-emerald-500"}`}>
-        <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl ${inscriptionsClosed ? "from-slate-100/40" : "from-emerald-100/40"} to-transparent rounded-full blur-2xl pointer-events-none`} />
+    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className={`glass-sport overflow-hidden ${inscriptionsClosed ? "opacity-75" : ""}`}>
+      <div className={`relative p-7 border-l-4 ${inscriptionsClosed ? "border-red-400" : "border-emerald-500"}`}>
+        <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl ${inscriptionsClosed ? "from-red-100/40" : "from-emerald-100/40"} to-transparent rounded-full blur-2xl pointer-events-none`} />
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
           <div>
-            <h3 className={`font-display text-3xl tracking-wider ${inscriptionsClosed ? "text-slate-400" : "text-slate-800"}`}>{t.name}</h3>
+            <h3 className="font-display text-3xl text-slate-800 tracking-wider">{t.name}</h3>
             <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500">
               <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {t.date}</span>
-              {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-slate-100 text-slate-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
-              {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-slate-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
+              {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-red-50 text-red-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
+              {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-red-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
             </div>
             {t.dateLimit && !inscriptionsClosed && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
           </div>
           {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
-          {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-slate-100 text-slate-500 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermées</span>}
+          {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermées</span>}
         </div>
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
           {memberSession ? (
