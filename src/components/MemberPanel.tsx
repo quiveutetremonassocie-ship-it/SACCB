@@ -29,6 +29,15 @@ export default function MemberPanel({
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
+  const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
+
+  function toggleTournoi(id: string) {
+    setOpenTournois(prev => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [oldCode, setOldCode] = useState("");
   const [newCode, setNewCode] = useState("");
@@ -301,32 +310,46 @@ export default function MemberPanel({
                   </div>
                 )}
 
-                {/* Résultats par tournoi */}
-                {classement.parTournoi.map(({ tournoi, inscrits }) => (
-                  <div key={tournoi.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 bg-slate-100 border-b border-slate-200">
-                      🏸 {tournoi.name}
-                    </p>
-                    <div className="divide-y divide-slate-100">
-                      {inscrits.map((insc, idx) => (
-                        <div key={insc.joueurs} className="flex items-center justify-between px-3 py-2">
-                          <span className="text-sm text-slate-700 flex items-center gap-2">
-                            <span className="text-slate-400 font-mono text-xs w-5 text-right">{insc.rank}.</span>
-                            {insc.joueurs}
-                          </span>
-                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
-                            insc.rank === 1 ? "bg-yellow-100 text-yellow-700" :
-                            insc.rank === 2 ? "bg-slate-200 text-slate-600" :
-                            insc.rank === 3 ? "bg-amber-100 text-amber-700" :
-                            "bg-slate-100 text-slate-500"
-                          }`}>
-                            {insc.rank === 1 ? "🥇" : insc.rank === 2 ? "🥈" : insc.rank === 3 ? "🥉" : ""} {insc.rank}e/{insc.total}
-                          </span>
+                {/* Résultats par tournoi (accordéon) */}
+                {classement.parTournoi.map(({ tournoi, inscrits }) => {
+                  const isOpen = openTournois.has(tournoi.id);
+                  return (
+                    <div key={tournoi.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                      <button
+                        onClick={() => toggleTournoi(tournoi.id)}
+                        className="w-full flex items-center justify-between px-3 py-2.5 bg-slate-100 hover:bg-slate-200 transition text-left"
+                      >
+                        <span className="text-xs font-semibold text-slate-600 uppercase tracking-widest">
+                          🏸 {tournoi.name}
+                        </span>
+                        <span className="flex items-center gap-2 text-xs text-slate-400 shrink-0">
+                          {inscrits.length} équipe{inscrits.length > 1 ? "s" : ""}
+                          {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                        </span>
+                      </button>
+                      {isOpen && (
+                        <div className="divide-y divide-slate-100">
+                          {inscrits.map((insc) => (
+                            <div key={insc.joueurs} className="flex items-center justify-between px-3 py-2">
+                              <span className="text-sm text-slate-700 flex items-center gap-2">
+                                <span className="text-slate-400 font-mono text-xs w-5 text-right">{insc.rank}.</span>
+                                {insc.joueurs}
+                              </span>
+                              <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                                insc.rank === 1 ? "bg-yellow-100 text-yellow-700" :
+                                insc.rank === 2 ? "bg-slate-200 text-slate-600" :
+                                insc.rank === 3 ? "bg-amber-100 text-amber-700" :
+                                "bg-slate-100 text-slate-500"
+                              }`}>
+                                {insc.rank === 1 ? "🥇" : insc.rank === 2 ? "🥈" : insc.rank === 3 ? "🥉" : ""} {insc.rank}e/{insc.total}
+                              </span>
+                            </div>
+                          ))}
                         </div>
-                      ))}
+                      )}
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
