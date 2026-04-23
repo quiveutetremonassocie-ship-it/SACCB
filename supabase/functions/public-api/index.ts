@@ -824,10 +824,13 @@ Deno.serve(async (req) => {
 
     const results: Record<string, unknown> = {};
 
-    // ── Rappels fermeture des inscriptions saison (J-30 / J-15) ──
-    if (daysLeft === 30 || daysLeft === 15) {
+    // ── Rappels fermeture des inscriptions saison (J-30 / J-15 / J-5 / J-1) ──
+    if (daysLeft === 30 || daysLeft === 15 || daysLeft === 5 || daysLeft === 1) {
       if (newsEmails.length > 0) {
         const closeFormatted = new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+        const isUrgent = daysLeft <= 5;
+        const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour s'inscrire au SACCB !" : `⏰ Plus que ${daysLeft} jours pour s'inscrire au SACCB !`;
+        const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
         fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -835,19 +838,22 @@ Deno.serve(async (req) => {
             from: "SACCB <contact@saccb.fr>",
             to: ["contact@saccb.fr"],
             bcc: newsEmails,
-            subject: `⏰ Plus que ${daysLeft} jours pour s'inscrire au SACCB !`,
+            subject: subjectLabel,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+                <div style="background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0;">
                   <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
                   <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                  <h2 style="color: #1e3a5f; margin-top: 0;">⏰ Plus que ${daysLeft} jours !</h2>
+                  <h2 style="color: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${headingLabel}</h2>
                   <p style="color: #475569;">Les inscriptions pour la saison ${d.y1}–${d.y2} ferment le <strong>${closeFormatted}</strong>.</p>
-                  <p style="color: #475569;">Faites passer le mot autour de vous — il reste encore de la place !</p>
-                  <a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
-                    Voir les inscriptions →
+                  ${daysLeft === 1
+                    ? `<p style="color: #b91c1c; font-weight: bold;">C'est votre dernière chance ! Les inscriptions ferment demain définitivement.</p>`
+                    : `<p style="color: #475569;">Faites passer le mot autour de vous — il reste encore de la place !</p>`
+                  }
+                  <a href="https://saccb.fr/#inscription" style="display: inline-block; background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                    S'inscrire maintenant →
                   </a>
                   <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
                 </div>
@@ -871,7 +877,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    // ── Rappels tournois (J-30 / J-15 avant dateLimit) ──
+    // ── Rappels tournois (J-30 / J-15 / J-5 / J-1 avant dateLimit) ──
     const tournois = (d.config_tournois || []) as Record<string, unknown>[];
     const tournoiRemindersSent: string[] = [];
     for (const t of tournois) {
@@ -881,10 +887,16 @@ Deno.serve(async (req) => {
         ? dateLimit.split("/").reverse().join("-")
         : dateLimit).getTime();
       const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
-      if (tDaysLeft !== 30 && tDaysLeft !== 15) continue;
+      if (tDaysLeft !== 30 && tDaysLeft !== 15 && tDaysLeft !== 5 && tDaysLeft !== 1) continue;
       if (newsEmails.length === 0) continue;
 
       const dateFormatted = new Date(tTs).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+      const tIsUrgent = tDaysLeft <= 5;
+      const tSubject = tDaysLeft === 1
+        ? `🚨 Tournoi "${t.name}" — plus que 24H pour s'inscrire !`
+        : `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`;
+      const tHeading = tDaysLeft === 1 ? `🚨 Dernière chance — plus que 24H !` : `🏸 Plus que ${tDaysLeft} jours !`;
+
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -892,23 +904,28 @@ Deno.serve(async (req) => {
           from: "SACCB <contact@saccb.fr>",
           to: ["contact@saccb.fr"],
           bcc: newsEmails,
-          subject: `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`,
+          subject: tSubject,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+              <div style="background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0;">
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
                 <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                <h2 style="color: #1e3a5f; margin-top: 0;">🏸 Plus que ${tDaysLeft} jours !</h2>
+                <h2 style="color: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${tHeading}</h2>
                 <p style="color: #475569;">La date limite d'inscription pour le tournoi <strong>${t.name}</strong> approche !</p>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
                   <p style="margin: 0; font-size: 18px; font-weight: bold; color: #1e3a5f;">${t.name}</p>
                   <p style="margin: 8px 0 0; color: #64748b;">📅 Date limite : <strong>${dateFormatted}</strong></p>
                   ${t.type ? `<p style="margin: 4px 0 0; color: #64748b;">Type : Double ${t.type}</p>` : ""}
                 </div>
-                <p style="color: #475569;">Connectez-vous à votre espace membre pour inscrire votre binôme.</p>
-                <a href="https://saccb.fr/#tournois" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                  <p style="margin: 0; color: #92400e; font-size: 14px;">
+                    💬 <strong>Vous souhaitez participer à ce tournoi ?</strong><br/>
+                    Contactez <strong>Hernan</strong> ou un membre du bureau — il est peut-être encore possible de vous inscrire même après la date limite.
+                  </p>
+                </div>
+                <a href="https://saccb.fr/#tournois" style="display: inline-block; background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                   Voir les tournois →
                 </a>
                 <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
@@ -920,6 +937,26 @@ Deno.serve(async (req) => {
       tournoiRemindersSent.push(String(t.name));
     }
     if (tournoiRemindersSent.length > 0) results.tournoi_reminders = tournoiRemindersSent;
+
+    // ── Fermeture automatique des tournois dont la date limite est dépassée ──
+    let tournoisUpdated = false;
+    for (const t of tournois) {
+      const dateLimit = String(t.dateLimit || t.date || "");
+      if (!dateLimit || t.closed) continue;
+      const tTs = new Date(dateLimit.includes("/")
+        ? dateLimit.split("/").reverse().join("-")
+        : dateLimit).getTime();
+      const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
+      if (tDaysLeft < 0) {
+        t.closed = true;
+        tournoisUpdated = true;
+      }
+    }
+    if (tournoisUpdated) {
+      d.config_tournois = tournois;
+      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      results.tournois_closed = tournois.filter((t) => t.closed).map((t) => t.name);
+    }
 
     return json({ ok: true, ...results });
   }

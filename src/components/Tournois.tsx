@@ -292,7 +292,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
   const isFull = !!(t.quota && inscrits.length >= t.quota);
   const [submitting, setSubmitting] = useState(false);
   const daysLeft = getDaysLeft(t.dateLimit);
-  const inscriptionsClosed = daysLeft !== null && daysLeft < 0;
+  const inscriptionsClosed = t.closed === true || (daysLeft !== null && daysLeft < 0);
 
   async function regT(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -323,6 +323,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
             {t.dateLimit && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
           </div>
           {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
+          {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-slate-100 text-slate-500 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermées</span>}
         </div>
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
           {memberSession ? (

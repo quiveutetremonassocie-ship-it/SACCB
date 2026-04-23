@@ -34,6 +34,7 @@ export type Tournoi = {
   type?: string | null;
   quota?: number | null;
   saison?: string; // ex: "2024-2025", auto-renseigné à la création
+  closed?: boolean; // fermé automatiquement quand la date limite est dépassée
 };
 
 export type InscritTournoi = {
