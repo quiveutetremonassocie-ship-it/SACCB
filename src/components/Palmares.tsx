@@ -1,9 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, Medal, Star, ChevronDown, ChevronUp } from "lucide-react";
+import { Trophy, Medal, Star, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import { useState } from "react";
 import { DB, SeasonArchive, InscritTournoi, Tournoi } from "@/lib/types";
+import { MemberSession } from "@/lib/useMemberSession";
 
 // ─── Helpers ────────────────────────────────────────────
 
@@ -207,7 +208,11 @@ function SeasonBlock({
 
 // ─── Composant principal ─────────────────────────────────
 
-export default function Palmares({ db }: { db: DB }) {
+export default function Palmares({ db, memberSession, onLoginRequest }: {
+  db: DB;
+  memberSession: MemberSession | null;
+  onLoginRequest?: () => void;
+}) {
   const currentResults = buildResults(db.config_tournois ?? [], db.inscrits_tournoi ?? []);
   const archives = db.archives ?? [];
 
@@ -236,26 +241,43 @@ export default function Palmares({ db }: { db: DB }) {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
         >
-          {/* Saison en cours */}
-          {currentResults.length > 0 && (
-            <SeasonBlock
-              label={`Saison ${db.y1}–${db.y2} (en cours)`}
-              config_tournois={db.config_tournois ?? []}
-              inscrits_tournoi={db.inscrits_tournoi ?? []}
-              defaultOpen={true}
-            />
-          )}
+          {!memberSession ? (
+            <div className="glass-strong p-10 text-center max-w-md mx-auto">
+              <Lock className="w-12 h-12 text-slate-300 mx-auto mb-4" />
+              <h3 className="font-display text-xl text-slate-700 tracking-wider mb-2">Réservé aux membres</h3>
+              <p className="text-slate-500 text-sm mb-6">
+                Le palmarès et les classements sont accessibles aux adhérents connectés uniquement.
+              </p>
+              {onLoginRequest && (
+                <button onClick={onLoginRequest} className="btn-primary !px-8">
+                  Se connecter
+                </button>
+              )}
+            </div>
+          ) : (
+            <>
+              {/* Saison en cours */}
+              {currentResults.length > 0 && (
+                <SeasonBlock
+                  label={`Saison ${db.y1}–${db.y2} (en cours)`}
+                  config_tournois={db.config_tournois ?? []}
+                  inscrits_tournoi={db.inscrits_tournoi ?? []}
+                  defaultOpen={true}
+                />
+              )}
 
-          {/* Saisons archivées */}
-          {[...archives].reverse().map((archive, i) => (
-            <SeasonBlock
-              key={i}
-              label={`Saison ${archive.y1}–${archive.y2}`}
-              config_tournois={archive.config_tournois}
-              inscrits_tournoi={archive.inscrits_tournoi}
-              defaultOpen={false}
-            />
-          ))}
+              {/* Saisons archivées */}
+              {[...archives].reverse().map((archive, i) => (
+                <SeasonBlock
+                  key={i}
+                  label={`Saison ${archive.y1}–${archive.y2}`}
+                  config_tournois={archive.config_tournois}
+                  inscrits_tournoi={archive.inscrits_tournoi}
+                  defaultOpen={false}
+                />
+              ))}
+            </>
+          )}
         </motion.div>
       </div>
     </section>

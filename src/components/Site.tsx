@@ -207,7 +207,7 @@ export default function Site() {
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
         />
-        <Palmares db={db} />
+        <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
         <Inscription
           db={db}
           membresCount={membresCount}

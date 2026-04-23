@@ -76,7 +76,7 @@ export default function Tournois({
               <div className="space-y-4">
                 {done.map((t) => {
                   const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
-                  return <TournoiTermineCard key={t.id} t={t} inscrits={inscrits} />;
+                  return <TournoiTermineCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />;
                 })}
               </div>
             )}
@@ -110,24 +110,32 @@ export default function Tournois({
                     </button>
                     {isOpen && (
                       <div className="px-6 pb-6 border-t border-slate-100">
-                        {/* Tournois de la saison */}
-                        {hasTournois && (
-                          <div className="mt-4 space-y-3">
-                            {archive.config_tournois.map((t) => {
-                              const inscrits = (archive.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
-                              return <TournoiTermineCard key={t.id} t={t} inscrits={inscrits} />;
-                            })}
+                        {!memberSession ? (
+                          <div className="mt-4 flex flex-col items-center gap-3 py-6 text-center">
+                            <Lock className="w-8 h-8 text-slate-300" />
+                            <p className="text-slate-500 text-sm">Connectez-vous pour voir les détails de cette saison.</p>
+                            <button onClick={onLoginRequest} className="btn-primary !px-5 !py-2 !text-sm">Se connecter</button>
                           </div>
+                        ) : (
+                          <>
+                            {hasTournois && (
+                              <div className="mt-4 space-y-3">
+                                {archive.config_tournois.map((t) => {
+                                  const inscrits = (archive.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
+                                  return <TournoiTermineCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />;
+                                })}
+                              </div>
+                            )}
+                            {hasResults && (
+                              <PalmaresSection
+                                config_tournois={archive.config_tournois ?? []}
+                                inscrits_tournoi={archive.inscrits_tournoi ?? []}
+                                saison={`${archive.y1}–${archive.y2}`}
+                              />
+                            )}
+                            {!hasTournois && <p className="text-slate-400 text-sm mt-4">Aucun tournoi enregistré pour cette saison.</p>}
+                          </>
                         )}
-                        {/* Classement général de la saison */}
-                        {hasResults && (
-                          <PalmaresSection
-                            config_tournois={archive.config_tournois ?? []}
-                            inscrits_tournoi={archive.inscrits_tournoi ?? []}
-                            saison={`${archive.y1}–${archive.y2}`}
-                          />
-                        )}
-                        {!hasTournois && <p className="text-slate-400 text-sm mt-4">Aucun tournoi enregistré pour cette saison.</p>}
                       </div>
                     )}
                   </div>
@@ -142,7 +150,11 @@ export default function Tournois({
 }
 
 // ── Carte tournoi terminé ──────────────────────────────────────
-function TournoiTermineCard({ t, inscrits }: { t: Tournoi; inscrits: InscritTournoi[] }) {
+function TournoiTermineCard({ t, inscrits, memberSession, onLoginRequest }: {
+  t: Tournoi; inscrits: InscritTournoi[];
+  memberSession: MemberSession | null;
+  onLoginRequest: () => void;
+}) {
   const withResults = inscrits.filter((i) => i.resultat).sort((a, b) => {
     const ra = parseInt(a.resultat?.split("/")[0] ?? "99");
     const rb = parseInt(b.resultat?.split("/")[0] ?? "99");
@@ -167,7 +179,12 @@ function TournoiTermineCard({ t, inscrits }: { t: Tournoi; inscrits: InscritTour
             </div>
           </div>
         </div>
-        {withResults.length > 0 ? (
+        {!memberSession ? (
+          <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
+            <span className="text-sm text-slate-400 flex items-center gap-2"><Lock className="w-4 h-4" /> Résultats réservés aux membres</span>
+            <button onClick={onLoginRequest} className="text-xs text-blue-600 hover:underline font-semibold">Se connecter</button>
+          </div>
+        ) : withResults.length > 0 ? (
           <div className="bg-slate-50 rounded-xl p-3">
             <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Classement</p>
             <div className="space-y-1">
@@ -308,11 +325,28 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
           {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
         </div>
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
-          <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Binômes inscrits</p>
-          {inscrits.length === 0 ? <p className="text-slate-400 text-sm">Aucun pour le moment</p> : (
-            <ul className="space-y-1">
-              {inscrits.map((i) => <li key={i.id} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {i.joueurs}</li>)}
-            </ul>
+          {memberSession ? (
+            <>
+              <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Binômes inscrits</p>
+              {inscrits.length === 0 ? <p className="text-slate-400 text-sm">Aucun pour le moment</p> : (
+                <ul className="space-y-1">
+                  {inscrits.map((i) => <li key={i.id} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {i.joueurs}</li>)}
+                </ul>
+              )}
+            </>
+          ) : (
+            <div className="flex items-center gap-3 text-sm text-slate-400">
+              <Lock className="w-4 h-4 shrink-0" />
+              <span>
+                {isFull
+                  ? <strong className="text-red-500">Complet</strong>
+                  : t.quota
+                  ? <>{inscrits.length} / {t.quota} places prises</>
+                  : <>{inscrits.length} binôme{inscrits.length > 1 ? "s" : ""} inscrit{inscrits.length > 1 ? "s" : ""}</>
+                }
+                {" — "}liste réservée aux membres
+              </span>
+            </div>
           )}
         </div>
         {!isFull && !inscriptionsClosed && (
