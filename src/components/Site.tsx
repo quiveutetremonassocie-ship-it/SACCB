@@ -66,20 +66,30 @@ export default function Site() {
   // Restaurer la session membre depuis localStorage + code admin depuis sessionStorage
   useEffect(() => {
     const session = getMemberSession();
-    if (session) {
-      setMemberSession(session);
-      // Si la session est admin, restaurer le code depuis sessionStorage
-      if (session.isAdmin) {
-        const savedCode = sessionStorage.getItem("saccb_admin_code");
-        if (savedCode) {
-          memberAdminCode.current = savedCode;
-          setIsMemberAdmin(true);
-          // Recharger les données admin en arrière-plan
-          fetchAdminDBByMember(session.email, savedCode).then((data) => {
-            if (data) { setDb(data); setMembresCount(data.membres.length); }
-          });
-        }
+    if (!session) return;
+
+    // Afficher d'abord la session (UX instantanée), puis vérifier en arrière-plan
+    setMemberSession(session);
+
+    if (session.isAdmin) {
+      // Admin membre : restaurer le code depuis sessionStorage
+      const savedCode = sessionStorage.getItem("saccb_admin_code");
+      if (savedCode) {
+        memberAdminCode.current = savedCode;
+        setIsMemberAdmin(true);
+        fetchAdminDBByMember(session.email, savedCode).then((data) => {
+          if (data) { setDb(data); setMembresCount(data.membres.length); }
+        });
       }
+    } else {
+      // Membre normal : vérifier en arrière-plan que le compte existe toujours en DB
+      // Si supprimé par l'admin, la session est effacée dès la prochaine visite
+      checkMemberSession(session.email, session.membreId).then((valid) => {
+        if (!valid) {
+          clearMemberSession();
+          setMemberSession(null);
+        }
+      });
     }
   }, []);
 
