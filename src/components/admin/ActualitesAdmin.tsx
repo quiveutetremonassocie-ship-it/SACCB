@@ -12,15 +12,19 @@ import {
   X,
 } from "lucide-react";
 import { DB, Actualite, ActualiteImage, actualiteImages } from "@/lib/types";
-import { supabaseClient, ACTU_BUCKET } from "@/lib/supabase";
+import { supabaseClient, ACTU_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import Actualites from "../Actualites";
 
 export default function ActualitesAdmin({
   db,
   onPersist,
+  adminEmail,
+  adminCode,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -32,6 +36,11 @@ export default function ActualitesAdmin({
   const list = db.actualites || [];
 
   async function uploadOne(id: string, file: File): Promise<ActualiteImage | null> {
+    // Si admin via espace membre (pas de JWT Supabase), on passe par l'Edge Function
+    if (adminEmail && adminCode) {
+      return uploadOneViaEdge(id, file);
+    }
+    // Admin Supabase Auth : upload direct (JWT valide)
     const path = `${id}/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
     const { error } = await supabaseClient.storage
       .from(ACTU_BUCKET)
@@ -42,6 +51,37 @@ export default function ActualitesAdmin({
     }
     const { data } = supabaseClient.storage.from(ACTU_BUCKET).getPublicUrl(path);
     return { url: data.publicUrl, path };
+  }
+
+  async function uploadOneViaEdge(id: string, file: File): Promise<ActualiteImage | null> {
+    // Convertir le fichier en base64
+    const arrayBuffer = await file.arrayBuffer();
+    const bytes = new Uint8Array(arrayBuffer);
+    let binary = "";
+    for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+    const base64 = btoa(binary);
+
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({
+        action: "upload_image",
+        email: adminEmail,
+        code: adminCode,
+        fileData: base64,
+        fileName: file.name.replace(/[^a-zA-Z0-9._-]/g, "_"),
+        contentType: file.type || "image/jpeg",
+        bucket: ACTU_BUCKET,
+        pathPrefix: id,
+      }),
+    });
+
+    const result = await res.json();
+    if (!result.ok) {
+      alert("Erreur upload image : " + (result.reason || "Erreur inconnue"));
+      return null;
+    }
+    return { url: result.url, path: result.path };
   }
 
   async function uploadMany(id: string, files: File[]): Promise<ActualiteImage[]> {

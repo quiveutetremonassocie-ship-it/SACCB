@@ -21,12 +21,14 @@ export default function AdminPanel({
   onPersist,
   onRefresh,
   adminEmail,
+  adminCode,
 }: {
   db: DB;
   onClose: () => void;
   onPersist: (db: DB) => Promise<void>;
   onRefresh: () => Promise<void>;
   adminEmail?: string;
+  adminCode?: string;
 }) {
   const [recuMembre, setRecuMembre] = useState<Membre | null>(null);
   const [emargementOpen, setEmargementOpen] = useState(false);
@@ -117,7 +119,7 @@ export default function AdminPanel({
           <HelloAssoQR />
 
           <div className="lg:col-span-2">
-            <ActualitesAdmin db={db} onPersist={onPersist} />
+            <ActualitesAdmin db={db} onPersist={onPersist} adminEmail={adminEmail} adminCode={adminCode} />
           </div>
           <div className="lg:col-span-2">
             <TournoisAdmin db={db} onPersist={onPersist} />

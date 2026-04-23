@@ -1330,5 +1330,67 @@ Deno.serve(async (req) => {
     return json({ ok: true, removed, kept: kept.length });
   }
 
+  // ─── ACTION: Upload image via admin (contourne RLS via service_role) ───
+  if (action === "upload_image") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const fileData = String(body.fileData || ""); // base64 (avec ou sans préfixe data:...)
+    const fileName = String(body.fileName || "file").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 200);
+    const contentType = String(body.contentType || "image/jpeg").slice(0, 100);
+    const bucket = String(body.bucket || "actualities");
+    const pathPrefix = String(body.pathPrefix || "").replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 50);
+
+    if (!email || !code) return json({ ok: false, reason: "Identifiants manquants." }, 400);
+    if (!fileData) return json({ ok: false, reason: "Données fichier manquantes." }, 400);
+
+    // Buckets autorisés
+    const allowedBuckets = ["actualities", "factures"];
+    if (!allowedBuckets.includes(bucket)) return json({ ok: false, reason: "Bucket non autorisé." }, 400);
+
+    // Vérifier les credentials admin
+    const { data: dbDataImg, error: dbErrorImg } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (dbErrorImg || !dbDataImg) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const dImg = dbDataImg.data as Record<string, unknown>;
+    const membresImg = (dImg.membres || []) as Record<string, unknown>[];
+    const adminEmailsImg = ((dImg.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const adminCredentialsImg = ((dImg.adminCredentials || []) as { email: string; code: string }[]);
+
+    const validAdminCredImg = adminCredentialsImg.find(
+      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code
+    );
+    const validMembreImg = membresImg.find(
+      (m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code
+    );
+
+    if (!validAdminCredImg && !validMembreImg) return json({ ok: false, reason: "Identifiants incorrects." }, 401);
+    if (!adminEmailsImg.includes(email) && !validAdminCredImg) return json({ ok: false, reason: "Accès non autorisé." }, 403);
+
+    // Décoder le base64 (retirer le préfixe data:... si présent)
+    const base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData;
+    let bytes: Uint8Array;
+    try {
+      const binaryStr = atob(base64Data);
+      bytes = new Uint8Array(binaryStr.length);
+      for (let i = 0; i < binaryStr.length; i++) {
+        bytes[i] = binaryStr.charCodeAt(i);
+      }
+    } catch {
+      return json({ ok: false, reason: "Données fichier invalides." }, 400);
+    }
+
+    const prefix = pathPrefix ? `${pathPrefix}/` : "";
+    const path = `${prefix}${Date.now()}-${fileName}`;
+
+    const { error: uploadError } = await supabaseAdmin.storage
+      .from(bucket)
+      .upload(path, bytes, { contentType, upsert: false });
+
+    if (uploadError) return json({ ok: false, reason: "Erreur upload : " + uploadError.message }, 500);
+
+    const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);
+    return json({ ok: true, url: urlData.publicUrl, path });
+  }
+
   return json({ error: "Action inconnue" }, 400);
 });

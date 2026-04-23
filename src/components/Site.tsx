@@ -245,6 +245,7 @@ export default function Site() {
           onPersist={persist}
           onRefresh={refreshAdmin}
           adminEmail={isMemberAdmin ? memberSession?.email : supabaseAdminEmail}
+          adminCode={isMemberAdmin ? (memberAdminCode.current ?? undefined) : undefined}
         />
       )}
     </>
