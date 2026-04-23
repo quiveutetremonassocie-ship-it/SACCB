@@ -32,6 +32,11 @@ export default function TournoisAdmin({
   const [editingResultat, setEditingResultat] = useState<{ archiveKey: string; inscritId: string } | null>(null);
   const [editResultatVal, setEditResultatVal] = useState("");
 
+  // Inscrits saison courante
+  const [currentInscritOpen, setCurrentInscritOpen] = useState<string | null>(null);
+  const [editingCurrentResultat, setEditingCurrentResultat] = useState<{ tournoiId: string; inscritId: string } | null>(null);
+  const [editCurrentResultatVal, setEditCurrentResultatVal] = useState("");
+
   const [notifying, setNotifying] = useState<string | null>(null);
 
   async function add() {
@@ -148,6 +153,20 @@ export default function TournoisAdmin({
     await onPersist({ ...db, archives: newArchives });
   }
 
+  async function saveCurrentResultat(tournoiId: string, inscritId: string) {
+    const next = {
+      ...db,
+      inscrits_tournoi: db.inscrits_tournoi.map((i) =>
+        i.id === inscritId && i.tournoiId === tournoiId
+          ? { ...i, resultat: editCurrentResultatVal || null }
+          : i
+      ),
+    };
+    await onPersist(next);
+    setEditingCurrentResultat(null);
+    setEditCurrentResultatVal("");
+  }
+
   async function saveResultat(archiveKey: string, inscritId: string) {
     const [y1, y2] = archiveKey.split("-").map(Number);
     const newArchives = (db.archives ?? []).map((a) => {
@@ -213,21 +232,80 @@ export default function TournoisAdmin({
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2">
-                <div>
-                  <p className="text-slate-800 font-semibold">{t.name}</p>
-                  <p className="text-xs text-slate-400">{t.date}</p>
-                  {t.dateLimit && <p className="text-xs text-amber-600">Limite : {t.dateLimit}</p>}
-                  {t.type && <p className="text-xs text-blue-500">{t.type}</p>}
+              <div>
+                <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2">
+                  <div>
+                    <p className="text-slate-800 font-semibold">{t.name}</p>
+                    <p className="text-xs text-slate-400">{t.date}</p>
+                    {t.dateLimit && <p className="text-xs text-amber-600">Limite : {t.dateLimit}</p>}
+                    {t.type && <p className="text-xs text-blue-500">{t.type}</p>}
+                  </div>
+                  <div className="flex gap-1.5 flex-wrap">
+                    <button onClick={() => startEdit(t)} className="btn-primary !px-2.5 !py-1.5 !text-xs" title="Modifier"><Pencil className="w-3.5 h-3.5" /></button>
+                    <button onClick={() => notify(t.id, t.name)} disabled={notifying === t.id} className="btn-primary !px-2.5 !py-1.5 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500" title="Prévenir les adhérents">
+                      <Bell className="w-3.5 h-3.5" />
+                      <span className="hidden sm:inline ml-1">{notifying === t.id ? "Envoi..." : "Prévenir"}</span>
+                    </button>
+                    <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
+                  </div>
                 </div>
-                <div className="flex gap-1.5 flex-wrap">
-                  <button onClick={() => startEdit(t)} className="btn-primary !px-2.5 !py-1.5 !text-xs" title="Modifier"><Pencil className="w-3.5 h-3.5" /></button>
-                  <button onClick={() => notify(t.id, t.name)} disabled={notifying === t.id} className="btn-primary !px-2.5 !py-1.5 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500" title="Prévenir les adhérents">
-                    <Bell className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline ml-1">{notifying === t.id ? "Envoi..." : "Prévenir"}</span>
-                  </button>
-                  <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
-                </div>
+                {/* Inscrits + résultats saison courante */}
+                {(() => {
+                  const inscrits = (db.inscrits_tournoi || []).filter((i) => i.tournoiId === t.id);
+                  if (inscrits.length === 0) return null;
+                  const isOpen = currentInscritOpen === t.id;
+                  return (
+                    <div className="border-t border-slate-100">
+                      <button
+                        onClick={() => setCurrentInscritOpen(isOpen ? null : t.id)}
+                        className="w-full flex items-center justify-between px-4 py-2 text-xs text-slate-500 hover:bg-slate-50 transition"
+                      >
+                        <span>🎾 {inscrits.length} binôme{inscrits.length > 1 ? "s" : ""} inscrit{inscrits.length > 1 ? "s" : ""}</span>
+                        {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                      {isOpen && (
+                        <div className="px-3 pb-3 space-y-1">
+                          {inscrits.map((inscrit) => {
+                            const isEditingRes = editingCurrentResultat?.tournoiId === t.id && editingCurrentResultat?.inscritId === inscrit.id;
+                            return (
+                              <div key={inscrit.id} className="flex items-center justify-between gap-2 bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
+                                <span className="text-slate-600 truncate">🎾 {inscrit.joueurs}</span>
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {isEditingRes ? (
+                                    <>
+                                      <input
+                                        className="input !text-xs !py-0.5 !px-2 w-20"
+                                        value={editCurrentResultatVal}
+                                        onChange={(e) => setEditCurrentResultatVal(e.target.value)}
+                                        placeholder="ex: 3/25"
+                                        autoFocus
+                                      />
+                                      <button onClick={() => saveCurrentResultat(t.id, inscrit.id)} className="text-emerald-600 hover:text-emerald-700"><Check className="w-3.5 h-3.5" /></button>
+                                      <button onClick={() => setEditingCurrentResultat(null)} className="text-slate-400 hover:text-slate-600"><X className="w-3.5 h-3.5" /></button>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className={`font-semibold ${inscrit.resultat ? "text-slate-700" : "text-slate-300"}`}>
+                                        {inscrit.resultat || "—"}
+                                      </span>
+                                      <button
+                                        onClick={() => { setEditingCurrentResultat({ tournoiId: t.id, inscritId: inscrit.id }); setEditCurrentResultatVal(inscrit.resultat || ""); }}
+                                        className="text-slate-400 hover:text-slate-600"
+                                        title="Saisir le résultat"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      )}
+                    </div>
+                  );
+                })()}
               </div>
             )}
           </div>

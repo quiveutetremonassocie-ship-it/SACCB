@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal, X } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal, X, Star } from "lucide-react";
 import { useState, useMemo } from "react";
 import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode } from "@/lib/db";
@@ -28,6 +28,7 @@ export default function MemberPanel({
   onBack?: () => void;
 }) {
   const [histOpen, setHistOpen] = useState(false);
+  const [classementOpen, setClassementOpen] = useState(false);
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [oldCode, setOldCode] = useState("");
   const [newCode, setNewCode] = useState("");
@@ -66,6 +67,49 @@ export default function MemberPanel({
   }, [archives, configTournois, inscritsTournoi, y1, y2, today, session.nom]);
 
   const totalPast = allSeasons.reduce((s, a) => s + a.tournois.length, 0);
+
+  // Classement binômes saison courante
+  const classement = useMemo(() => {
+    const withResults = inscritsTournoi.filter((i) => i.resultat && /^\d+\/\d+$/.test(i.resultat.trim()));
+    if (withResults.length === 0) return null;
+
+    // Par tournoi
+    const parTournoi = configTournois
+      .map((t) => {
+        const inscrits = withResults
+          .filter((i) => i.tournoiId === t.id)
+          .map((i) => {
+            const [r, tot] = i.resultat!.trim().split("/").map(Number);
+            return { joueurs: i.joueurs, rank: r, total: tot };
+          })
+          .sort((a, b) => a.rank - b.rank);
+        return inscrits.length > 0 ? { tournoi: t, inscrits } : null;
+      })
+      .filter(Boolean) as { tournoi: Tournoi; inscrits: { joueurs: string; rank: number; total: number }[] }[];
+
+    // Stats globales par binôme
+    const duoMap = new Map<string, { joueurs: string; participations: number; podiums: number; scoreTotal: number }>();
+    for (const t of parTournoi) {
+      for (const i of t.inscrits) {
+        const key = i.joueurs;
+        const existing = duoMap.get(key);
+        // Score : plus le rang est bas et le total élevé, meilleur c'est
+        const score = i.total - i.rank + 1;
+        if (!existing) {
+          duoMap.set(key, { joueurs: key, participations: 1, podiums: i.rank <= 3 ? 1 : 0, scoreTotal: score });
+        } else {
+          existing.participations++;
+          if (i.rank <= 3) existing.podiums++;
+          existing.scoreTotal += score;
+        }
+      }
+    }
+    const duos = Array.from(duoMap.values()).sort((a, b) =>
+      b.podiums - a.podiums || b.scoreTotal - a.scoreTotal || b.participations - a.participations
+    );
+
+    return { parTournoi, duos };
+  }, [inscritsTournoi, configTournois]);
 
   function logout() {
     clearMemberSession();
@@ -216,6 +260,77 @@ export default function MemberPanel({
             </form>
           )}
         </div>
+
+        {/* Classement de la saison */}
+        {classement && (
+          <div className="mb-4">
+            <button
+              onClick={() => setClassementOpen(!classementOpen)}
+              className="flex items-center justify-between w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
+            >
+              <span className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500" />
+                Classement de la saison
+              </span>
+              {classementOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            </button>
+            {classementOpen && (
+              <div className="mt-2 space-y-4">
+                {/* Meilleur binôme */}
+                {classement.duos.length > 0 && (
+                  <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border border-amber-200 rounded-xl p-4">
+                    <p className="text-xs uppercase tracking-widest text-amber-600 font-semibold mb-3 flex items-center gap-1">
+                      <Trophy className="w-3.5 h-3.5" /> Meilleur binôme de la saison
+                    </p>
+                    <div className="space-y-2">
+                      {classement.duos.slice(0, 3).map((duo, i) => (
+                        <div key={duo.joueurs} className="flex items-center justify-between bg-white/70 rounded-lg px-3 py-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-base">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</span>
+                            <div>
+                              <p className="text-sm font-semibold text-slate-800">{duo.joueurs}</p>
+                              <p className="text-xs text-slate-400">
+                                {duo.participations} tournoi{duo.participations > 1 ? "s" : ""}
+                                {duo.podiums > 0 && ` · ${duo.podiums} podium${duo.podiums > 1 ? "s" : ""}`}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Résultats par tournoi */}
+                {classement.parTournoi.map(({ tournoi, inscrits }) => (
+                  <div key={tournoi.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest px-3 py-2 bg-slate-100 border-b border-slate-200">
+                      🏸 {tournoi.name}
+                    </p>
+                    <div className="divide-y divide-slate-100">
+                      {inscrits.map((insc, idx) => (
+                        <div key={insc.joueurs} className="flex items-center justify-between px-3 py-2">
+                          <span className="text-sm text-slate-700 flex items-center gap-2">
+                            <span className="text-slate-400 font-mono text-xs w-5 text-right">{insc.rank}.</span>
+                            {insc.joueurs}
+                          </span>
+                          <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
+                            insc.rank === 1 ? "bg-yellow-100 text-yellow-700" :
+                            insc.rank === 2 ? "bg-slate-200 text-slate-600" :
+                            insc.rank === 3 ? "bg-amber-100 text-amber-700" :
+                            "bg-slate-100 text-slate-500"
+                          }`}>
+                            {insc.rank === 1 ? "🥇" : insc.rank === 2 ? "🥈" : insc.rank === 3 ? "🥉" : ""} {insc.rank}e/{insc.total}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         {/* Historique des tournois */}
         {totalPast > 0 && (
