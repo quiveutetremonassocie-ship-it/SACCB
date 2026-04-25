@@ -90,11 +90,20 @@ export type DB = {
   whatsappLink?: string; // lien d'invitation groupe WhatsApp
   insc_close_date?: string; // date de fermeture des inscriptions (YYYY-MM-DD) pour les rappels
   archives?: SeasonArchive[]; // historique des saisons précédentes
-  adminEmails?: { email: string; readOnly?: boolean }[]; // emails ayant accès au panneau admin via l'espace membre
-  adminCredentials?: { email: string; code: string; readOnly?: boolean }[]; // codes admin indépendants des adhérents
+  adminEmails?: { email: string; readOnly?: boolean; permissions?: string[] }[]; // emails ayant accès au panneau admin via l'espace membre
+  adminCredentials?: { email: string; code: string; readOnly?: boolean; permissions?: string[] }[]; // codes admin indépendants des adhérents
   contactEmails?: string[]; // emails recevant les messages du formulaire de contact
   reportPrecedent?: number; // report de trésorerie des saisons précédentes
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
 export const QUOTA_DEFAULT = 65;
+
+export const ADMIN_SECTIONS = [
+  { key: "membres",      label: "Membres",             emoji: "👥" },
+  { key: "comptabilite", label: "Comptabilité",         emoji: "💰" },
+  { key: "tournois",     label: "Tournois",             emoji: "🏸" },
+  { key: "actualites",   label: "Actualités",           emoji: "📰" },
+  { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
+  { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
+] as const;

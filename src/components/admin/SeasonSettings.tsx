@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound } from "lucide-react";
-import { DB, QUOTA_DEFAULT, SeasonArchive } from "@/lib/types";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings } from "lucide-react";
+import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
 const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
@@ -12,11 +12,13 @@ export default function SeasonSettings({
   onPersist,
   onRefresh,
   adminEmail,
+  readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   onRefresh: () => Promise<void>;
   adminEmail?: string;
+  readOnly?: boolean;
 }) {
   const isSuperAdmin = SUPER_ADMINS.includes(adminEmail?.toLowerCase() ?? "");
   const [y1, setY1] = useState(db.y1);
@@ -30,6 +32,10 @@ export default function SeasonSettings({
   const [credEmail, setCredEmail] = useState("");
   const [credCode, setCredCode] = useState("");
   const [credReadOnly, setCredReadOnly] = useState(false);
+
+  // Expanded permissions panels
+  const [expandedAdminEmail, setExpandedAdminEmail] = useState<string | null>(null);
+  const [expandedAdminCred, setExpandedAdminCred] = useState<string | null>(null);
 
   // Edition archive
   const [editingArchiveIdx, setEditingArchiveIdx] = useState<number | null>(null);
@@ -155,15 +161,21 @@ export default function SeasonSettings({
         <h3 className="font-display text-2xl tracking-wider text-slate-800">Paramètres saison</h3>
       </div>
 
+      {readOnly && (
+        <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 text-sm text-amber-700 font-medium">
+          Accès en lecture seule pour cette section.
+        </div>
+      )}
+
       <div className="grid grid-cols-2 gap-3 mb-3">
-        <input type="number" className="input" value={y1} onChange={(e) => setY1(Number(e.target.value))} placeholder="Année 1" />
-        <input type="number" className="input" value={y2} onChange={(e) => setY2(Number(e.target.value))} placeholder="Année 2" />
+        <input type="number" className="input" value={y1} onChange={(e) => setY1(Number(e.target.value))} placeholder="Année 1" disabled={readOnly} />
+        <input type="number" className="input" value={y2} onChange={(e) => setY2(Number(e.target.value))} placeholder="Année 2" disabled={readOnly} />
       </div>
 
       <div className="mb-3">
         <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 block">Places disponibles</label>
         <div className="flex items-center gap-3">
-          <input type="number" className="input flex-1" value={quota} min={db.membres.length} onChange={(e) => setQuota(Number(e.target.value))} />
+          <input type="number" className="input flex-1" value={quota} min={db.membres.length} onChange={(e) => setQuota(Number(e.target.value))} disabled={readOnly} />
           <span className="text-slate-400 text-sm whitespace-nowrap">{db.membres.length} / {quota} inscrits</span>
         </div>
         {db.membres.length >= currentQuota && (
@@ -177,7 +189,7 @@ export default function SeasonSettings({
         <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
           📅 Date limite d&apos;inscription
         </label>
-        <input type="date" className="input w-full" value={inscCloseDate} onChange={(e) => setInscCloseDate(e.target.value)} />
+        <input type="date" className="input w-full" value={inscCloseDate} onChange={(e) => setInscCloseDate(e.target.value)} disabled={readOnly} />
         <p className="text-xs text-slate-400 mt-1">Des rappels automatiques seront envoyés aux abonnés aux news à J-30 et J-15.</p>
       </div>
 
@@ -185,27 +197,29 @@ export default function SeasonSettings({
         <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
           <MessageCircle className="w-3 h-3" /> Lien groupe WhatsApp
         </label>
-        <input type="url" className="input w-full" placeholder="https://chat.whatsapp.com/..." value={whatsappLink} onChange={(e) => setWhatsappLink(e.target.value)} />
+        <input type="url" className="input w-full" placeholder="https://chat.whatsapp.com/..." value={whatsappLink} onChange={(e) => setWhatsappLink(e.target.value)} disabled={readOnly} />
         <p className="text-xs text-slate-400 mt-1">Affiché après paiement et dans l&apos;espace membre.</p>
       </div>
 
-      <div className="space-y-3">
-        <button onClick={toggle} className={db.insc_open ? "btn-danger w-full" : "btn-accent w-full"}>
-          {db.insc_open ? <><Lock className="w-4 h-4" /> Fermer les inscriptions</> : <><Unlock className="w-4 h-4" /> Ouvrir les inscriptions</>}
-        </button>
-        <button onClick={update} className="btn-accent w-full">
-          <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
-        </button>
-        <button onClick={archiveSeason} className="btn-ghost w-full">
-          <Archive className="w-4 h-4" /> Archiver cette saison
-        </button>
-        <button onClick={newSeason} className="btn-accent w-full">
-          <Sparkles className="w-4 h-4" /> Démarrer une nouvelle saison
-        </button>
-        <button onClick={reset} className="btn-danger w-full">
-          Réinitialiser les adhérents
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="space-y-3">
+          <button onClick={toggle} className={db.insc_open ? "btn-danger w-full" : "btn-accent w-full"}>
+            {db.insc_open ? <><Lock className="w-4 h-4" /> Fermer les inscriptions</> : <><Unlock className="w-4 h-4" /> Ouvrir les inscriptions</>}
+          </button>
+          <button onClick={update} className="btn-accent w-full">
+            <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
+          </button>
+          <button onClick={archiveSeason} className="btn-ghost w-full">
+            <Archive className="w-4 h-4" /> Archiver cette saison
+          </button>
+          <button onClick={newSeason} className="btn-accent w-full">
+            <Sparkles className="w-4 h-4" /> Démarrer une nouvelle saison
+          </button>
+          <button onClick={reset} className="btn-danger w-full">
+            Réinitialiser les adhérents
+          </button>
+        </div>
+      )}
 
       {/* Gestion des archives */}
       {db.archives && db.archives.length > 0 && (
@@ -280,40 +294,111 @@ export default function SeasonSettings({
           {(db.adminEmails ?? []).length === 0 && (
             <p className="text-xs text-slate-300 italic">Aucun email admin configuré.</p>
           )}
-          {(db.adminEmails ?? []).map((entry) => (
-            <div key={entry.email} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
-              <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
-                <input
-                  type="checkbox"
-                  checked={entry.readOnly === true}
-                  onChange={async (e) => {
-                    const newEmails = (db.adminEmails ?? []).map((x) =>
-                      x.email === entry.email ? { ...x, readOnly: e.target.checked } : x
-                    );
-                    await onPersist({ ...db, adminEmails: newEmails });
-                  }}
-                  className="w-3.5 h-3.5 accent-amber-500 shrink-0"
-                  title="Lecture seule"
-                />
-                <span className="text-sm text-slate-700 truncate">{entry.email}</span>
-                {entry.readOnly && (
-                  <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-semibold shrink-0">Lecture seule</span>
+          {(db.adminEmails ?? []).map((entry) => {
+            const perms = entry.permissions ?? [];
+            const isExpanded = expandedAdminEmail === entry.email;
+            const permLabel = entry.readOnly
+              ? "Lecture seule"
+              : perms.length === 0
+                ? "Accès complet"
+                : `${perms.length}/${ADMIN_SECTIONS.length} sections`;
+            return (
+              <div key={entry.email} className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2">
+                  <span className="text-sm text-slate-700 truncate flex-1 min-w-0">{entry.email}</span>
+                  <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${entry.readOnly ? "bg-amber-100 text-amber-600" : perms.length === 0 ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>
+                      {permLabel}
+                    </span>
+                    <button
+                      onClick={() => setExpandedAdminEmail(isExpanded ? null : entry.email)}
+                      className="p-1 rounded text-slate-500 hover:bg-slate-200 transition"
+                      title="Gérer les permissions"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const conf = prompt(`Tapez CONFIRMER pour retirer ${entry.email} des admins :`);
+                        if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
+                        const newEmails = (db.adminEmails ?? []).filter((x) => x.email !== entry.email);
+                        await onPersist({ ...db, adminEmails: newEmails });
+                      }}
+                      className="text-red-400 hover:text-red-600 transition"
+                      title="Retirer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                </div>
+                {isExpanded && (
+                  <div className="border-t border-slate-200 bg-white px-3 py-3 space-y-2">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Sections autorisées en modification</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {ADMIN_SECTIONS.map((s) => {
+                        const checked = !entry.readOnly && perms.includes(s.key);
+                        return (
+                          <label key={s.key} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 transition">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={async (e) => {
+                                const newPerms = e.target.checked
+                                  ? [...perms, s.key]
+                                  : perms.filter((p) => p !== s.key);
+                                const newEmails = (db.adminEmails ?? []).map((x) =>
+                                  x.email === entry.email ? { ...x, readOnly: false, permissions: newPerms } : x
+                                );
+                                await onPersist({ ...db, adminEmails: newEmails });
+                              }}
+                              className="w-3.5 h-3.5 accent-blue-500 shrink-0"
+                            />
+                            <span>{s.emoji} {s.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={async () => {
+                          const newEmails = (db.adminEmails ?? []).map((x) =>
+                            x.email === entry.email ? { ...x, readOnly: false, permissions: ADMIN_SECTIONS.map((s) => s.key) } : x
+                          );
+                          await onPersist({ ...db, adminEmails: newEmails });
+                        }}
+                        className="btn-ghost !px-3 !py-1 !text-xs"
+                      >
+                        Tout cocher
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const newEmails = (db.adminEmails ?? []).map((x) =>
+                            x.email === entry.email ? { ...x, readOnly: false, permissions: [] } : x
+                          );
+                          await onPersist({ ...db, adminEmails: newEmails });
+                        }}
+                        className="btn-ghost !px-3 !py-1 !text-xs"
+                      >
+                        Tout décocher
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const newEmails = (db.adminEmails ?? []).map((x) =>
+                            x.email === entry.email ? { ...x, readOnly: true, permissions: [] } : x
+                          );
+                          await onPersist({ ...db, adminEmails: newEmails });
+                        }}
+                        className="btn-ghost !px-3 !py-1 !text-xs text-amber-600 border-amber-300 hover:bg-amber-50"
+                      >
+                        <Lock className="w-3 h-3 mr-1" /> Lecture seule
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400">Sans sections cochées = accès complet (toutes sections modifiables)</p>
+                  </div>
                 )}
-              </label>
-              <button
-                onClick={async () => {
-                  const conf = prompt(`Tapez CONFIRMER pour retirer ${entry.email} des admins :`);
-                  if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
-                  const newEmails = (db.adminEmails ?? []).filter((x) => x.email !== entry.email);
-                  await onPersist({ ...db, adminEmails: newEmails });
-                }}
-                className="text-red-400 hover:text-red-600 transition ml-2 shrink-0"
-                title="Retirer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+              </div>
+            );
+          })}
         </div>
         <div className="flex gap-2">
           <input
@@ -352,8 +437,8 @@ export default function SeasonSettings({
             <Plus className="w-4 h-4" />
           </button>
         </div>
-        <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
-          Cocher = lecture seule (voit l'admin mais ne peut pas modifier)
+        <p className="text-xs text-slate-400 mt-1.5">
+          Cliquez sur ⚙️ pour configurer les permissions de chaque admin.
         </p>
       </div>}
 
@@ -369,31 +454,114 @@ export default function SeasonSettings({
           {(db.adminCredentials ?? []).length === 0 && (
             <p className="text-xs text-slate-300 italic">Aucun code admin configuré.</p>
           )}
-          {(db.adminCredentials ?? []).map((cred) => (
-            <div key={cred.email} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
-              <div>
-                <div className="flex items-center gap-2">
-                  <p className="text-sm font-medium text-slate-700">{cred.email}</p>
-                  {cred.readOnly && (
-                    <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-semibold">Lecture seule</span>
-                  )}
+          {(db.adminCredentials ?? []).map((cred) => {
+            const perms = cred.permissions ?? [];
+            const isExpanded = expandedAdminCred === cred.email;
+            const permLabel = cred.readOnly
+              ? "Lecture seule"
+              : perms.length === 0
+                ? "Accès complet"
+                : `${perms.length}/${ADMIN_SECTIONS.length} sections`;
+            return (
+              <div key={cred.email} className="bg-amber-50 rounded-lg border border-amber-200 overflow-hidden">
+                <div className="flex items-center justify-between px-3 py-2">
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-medium text-slate-700 truncate">{cred.email}</p>
+                    <p className="text-xs text-slate-400">Code : {cred.code}</p>
+                  </div>
+                  <div className="flex items-center gap-1.5 ml-2 shrink-0">
+                    <span className={`text-[10px] px-1.5 py-0.5 rounded font-semibold ${cred.readOnly ? "bg-amber-100 text-amber-600" : perms.length === 0 ? "bg-emerald-100 text-emerald-700" : "bg-blue-100 text-blue-700"}`}>
+                      {permLabel}
+                    </span>
+                    <button
+                      onClick={() => setExpandedAdminCred(isExpanded ? null : cred.email)}
+                      className="p-1 rounded text-slate-500 hover:bg-amber-100 transition"
+                      title="Gérer les permissions"
+                    >
+                      <Settings className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={async () => {
+                        const conf = prompt(`Tapez CONFIRMER pour supprimer le code admin de ${cred.email} :`);
+                        if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
+                        const newCreds = (db.adminCredentials ?? []).filter((c) => c.email !== cred.email);
+                        await onPersist({ ...db, adminCredentials: newCreds });
+                      }}
+                      className="text-red-400 hover:text-red-600 transition"
+                      title="Supprimer"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400">Code : {cred.code}</p>
+                {isExpanded && (
+                  <div className="border-t border-amber-200 bg-white px-3 py-3 space-y-2">
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Sections autorisées en modification</p>
+                    <div className="grid grid-cols-2 gap-1.5">
+                      {ADMIN_SECTIONS.map((s) => {
+                        const checked = !cred.readOnly && perms.includes(s.key);
+                        return (
+                          <label key={s.key} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 transition">
+                            <input
+                              type="checkbox"
+                              checked={checked}
+                              onChange={async (e) => {
+                                const newPerms = e.target.checked
+                                  ? [...perms, s.key]
+                                  : perms.filter((p) => p !== s.key);
+                                const newCreds = (db.adminCredentials ?? []).map((c) =>
+                                  c.email === cred.email ? { ...c, readOnly: false, permissions: newPerms } : c
+                                );
+                                await onPersist({ ...db, adminCredentials: newCreds });
+                              }}
+                              className="w-3.5 h-3.5 accent-blue-500 shrink-0"
+                            />
+                            <span>{s.emoji} {s.label}</span>
+                          </label>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-2 pt-1">
+                      <button
+                        onClick={async () => {
+                          const newCreds = (db.adminCredentials ?? []).map((c) =>
+                            c.email === cred.email ? { ...c, readOnly: false, permissions: ADMIN_SECTIONS.map((s) => s.key) } : c
+                          );
+                          await onPersist({ ...db, adminCredentials: newCreds });
+                        }}
+                        className="btn-ghost !px-3 !py-1 !text-xs"
+                      >
+                        Tout cocher
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const newCreds = (db.adminCredentials ?? []).map((c) =>
+                            c.email === cred.email ? { ...c, readOnly: false, permissions: [] } : c
+                          );
+                          await onPersist({ ...db, adminCredentials: newCreds });
+                        }}
+                        className="btn-ghost !px-3 !py-1 !text-xs"
+                      >
+                        Tout décocher
+                      </button>
+                      <button
+                        onClick={async () => {
+                          const newCreds = (db.adminCredentials ?? []).map((c) =>
+                            c.email === cred.email ? { ...c, readOnly: true, permissions: [] } : c
+                          );
+                          await onPersist({ ...db, adminCredentials: newCreds });
+                        }}
+                        className="btn-ghost !px-3 !py-1 !text-xs text-amber-600 border-amber-300 hover:bg-amber-50"
+                      >
+                        <Lock className="w-3 h-3 mr-1" /> Lecture seule
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400">Sans sections cochées = accès complet (toutes sections modifiables)</p>
+                  </div>
+                )}
               </div>
-              <button
-                onClick={async () => {
-                  const conf = prompt(`Tapez CONFIRMER pour supprimer le code admin de ${cred.email} :`);
-                  if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
-                  const newCreds = (db.adminCredentials ?? []).filter((c) => c.email !== cred.email);
-                  await onPersist({ ...db, adminCredentials: newCreds });
-                }}
-                className="text-red-400 hover:text-red-600 transition"
-                title="Supprimer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-          ))}
+            );
+          })}
         </div>
         <div className="flex gap-2">
           <input

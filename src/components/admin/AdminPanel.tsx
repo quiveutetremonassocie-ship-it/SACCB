@@ -23,6 +23,7 @@ export default function AdminPanel({
   adminEmail,
   adminCode,
   readOnly,
+  permissions,
 }: {
   db: DB;
   onClose: () => void;
@@ -31,6 +32,7 @@ export default function AdminPanel({
   adminEmail?: string;
   adminCode?: string;
   readOnly?: boolean;
+  permissions?: string[];
 }) {
   const [recuMembre, setRecuMembre] = useState<Membre | null>(null);
   const [emargementOpen, setEmargementOpen] = useState(false);
@@ -40,6 +42,12 @@ export default function AdminPanel({
   const safePersist = readOnly
     ? async (_db: DB) => { alert("Accès en lecture seule — vous ne pouvez pas modifier les données."); }
     : onPersist;
+
+  function canEdit(section: string): boolean {
+    if (readOnly) return false;
+    if (!permissions || permissions.length === 0) return true;
+    return permissions.includes(section);
+  }
 
   const totals = useMemo(() => {
     let totalRecolte = 0,
@@ -109,10 +117,10 @@ export default function AdminPanel({
 
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
           <div className="lg:col-span-2">
-            <Accounting db={db} totals={totals} onPersist={safePersist} />
+            <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
           </div>
 
-          <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} />
+          <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} readOnly={!canEdit("saison")} />
           <StatsAdhesions totals={totals} />
           <div className="lg:col-span-2">
           </div>
@@ -132,13 +140,13 @@ export default function AdminPanel({
           <HelloAssoQR />
 
           <div className="lg:col-span-2">
-            <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} />
+            <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
           </div>
           <div className="lg:col-span-2">
-            <TournoisAdmin db={db} onPersist={safePersist} />
+            <TournoisAdmin db={db} onPersist={safePersist} readOnly={!canEdit("tournois")} />
           </div>
           <div className="lg:col-span-2">
-            <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} />
+            <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
           </div>
           <div className="lg:col-span-2">
             <MembresAdmin
@@ -146,6 +154,7 @@ export default function AdminPanel({
               onPersist={safePersist}
               onEdit={setEditMembre}
               onRecu={setRecuMembre}
+              readOnly={!canEdit("membres")}
             />
           </div>
         </div>

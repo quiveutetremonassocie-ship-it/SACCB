@@ -183,7 +183,7 @@ export async function adminSendConfirmation(membreId: string): Promise<{ ok: boo
 }
 
 // ─── Admin via espace membre (email+code comme credentials) ───
-export async function fetchAdminDBByMember(email: string, code: string): Promise<{ db: DB; readOnly: boolean } | null> {
+export async function fetchAdminDBByMember(email: string, code: string): Promise<{ db: DB; readOnly: boolean; permissions?: string[] } | null> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -194,6 +194,7 @@ export async function fetchAdminDBByMember(email: string, code: string): Promise
   return {
     db: { ...r.data, factures: r.data.factures ?? [], actualites: r.data.actualites ?? [], insc_open: r.data.insc_open ?? true },
     readOnly: r.readOnly === true,
+    permissions: Array.isArray(r.permissions) ? r.permissions : undefined,
   };
 }
 

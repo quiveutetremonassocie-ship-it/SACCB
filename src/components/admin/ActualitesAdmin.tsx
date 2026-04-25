@@ -22,11 +22,13 @@ export default function ActualitesAdmin({
   onPersist,
   adminEmail,
   adminCode,
+  readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   adminEmail?: string;
   adminCode?: string;
+  readOnly?: boolean;
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -249,7 +251,7 @@ export default function ActualitesAdmin({
       </div>
 
       {/* AJOUT */}
-      <div className="bg-slate-50 rounded-2xl p-5 mb-5 border border-slate-200">
+      {!readOnly && <div className="bg-slate-50 rounded-2xl p-5 mb-5 border border-slate-200">
         <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
           Nouvelle actualité
         </h4>
@@ -325,7 +327,7 @@ export default function ActualitesAdmin({
             <Plus className="w-4 h-4" /> Ajouter l'actualité
           </button>
         </div>
-      </div>
+      </div>}
 
       {/* LISTE */}
       <div className="space-y-4 mb-5">
@@ -364,40 +366,48 @@ export default function ActualitesAdmin({
                     onChange={(e) => updateField(a.id, "description", e.target.value)}
                   />
                   <div className="flex items-center gap-2 flex-wrap">
-                    <button
-                      onClick={() => move(a.id, -1)}
-                      disabled={i === 0}
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Monter"
-                    >
-                      <ArrowUp className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => move(a.id, 1)}
-                      disabled={i === list.length - 1}
-                      className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
-                      title="Descendre"
-                    >
-                      <ArrowDown className="w-3.5 h-3.5" />
-                    </button>
-                    <button
-                      onClick={() => updatePrivate(a.id, !a.private)}
-                      className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
-                        a.private
-                          ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200"
-                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
-                      }`}
-                      title={a.private ? "Rendre public" : "Rendre privé (membres uniquement)"}
-                    >
-                      {a.private ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
-                      {a.private ? "Membres" : "Public"}
-                    </button>
-                    <button
-                      onClick={() => delActualite(a.id)}
-                      className="btn-danger !px-3 !py-1.5 !text-xs ml-auto"
-                    >
-                      <Trash2 className="w-3.5 h-3.5" /> Supprimer
-                    </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => move(a.id, -1)}
+                        disabled={i === 0}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Monter"
+                      >
+                        <ArrowUp className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button
+                        onClick={() => move(a.id, 1)}
+                        disabled={i === list.length - 1}
+                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                        title="Descendre"
+                      >
+                        <ArrowDown className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button
+                        onClick={() => updatePrivate(a.id, !a.private)}
+                        className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
+                          a.private
+                            ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                        title={a.private ? "Rendre public" : "Rendre privé (membres uniquement)"}
+                      >
+                        {a.private ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                        {a.private ? "Membres" : "Public"}
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button
+                        onClick={() => delActualite(a.id)}
+                        className="btn-danger !px-3 !py-1.5 !text-xs ml-auto"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" /> Supprimer
+                      </button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -408,16 +418,18 @@ export default function ActualitesAdmin({
                   <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
                     Galerie ({imgs.length})
                   </p>
-                  <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
-                    <Upload className="w-3 h-3" /> Ajouter des images
-                    <input
-                      type="file"
-                      accept="image/*"
-                      multiple
-                      className="hidden"
-                      onChange={(e) => addImagesTo(a.id, e.target.files)}
-                    />
-                  </label>
+                  {!readOnly && (
+                    <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                      <Upload className="w-3 h-3" /> Ajouter des images
+                      <input
+                        type="file"
+                        accept="image/*"
+                        multiple
+                        className="hidden"
+                        onChange={(e) => addImagesTo(a.id, e.target.files)}
+                      />
+                    </label>
+                  )}
                 </div>
                 <div className="flex gap-2 flex-wrap">
                   {imgs.map((img, idx) => (

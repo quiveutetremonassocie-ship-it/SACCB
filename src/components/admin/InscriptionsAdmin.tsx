@@ -8,10 +8,12 @@ export default function InscriptionsAdmin({
   db,
   onPersist,
   onEditBin,
+  readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   onEditBin: (b: { id: string; joueurs: string }) => void;
+  readOnly?: boolean;
 }) {
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const [p1, setP1] = useState("");
@@ -69,17 +71,19 @@ export default function InscriptionsAdmin({
                 {t.name}
                 <span className="ml-2 font-normal text-blue-500 text-xs">({inscrits.length} binôme{inscrits.length > 1 ? "s" : ""})</span>
               </p>
-              <button
-                onClick={() => {
-                  setAddingFor(addingFor === t.id ? null : t.id);
-                  setP1("");
-                  setP2("");
-                }}
-                className="btn-primary !px-3 !py-1.5 !text-xs shrink-0"
-                title="Ajouter un binôme"
-              >
-                <Plus className="w-3.5 h-3.5" /> Ajouter
-              </button>
+              {!readOnly && (
+                <button
+                  onClick={() => {
+                    setAddingFor(addingFor === t.id ? null : t.id);
+                    setP1("");
+                    setP2("");
+                  }}
+                  className="btn-primary !px-3 !py-1.5 !text-xs shrink-0"
+                  title="Ajouter un binôme"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Ajouter
+                </button>
+              )}
             </div>
 
             {/* Formulaire d'ajout manuel */}
@@ -122,17 +126,19 @@ export default function InscriptionsAdmin({
                   >
                     <div className="flex items-center justify-between">
                       <span className="text-slate-700 text-sm font-medium">{i.joueurs}</span>
-                      <div className="flex gap-1">
-                        <button
-                          onClick={() => onEditBin({ id: i.id, joueurs: i.joueurs })}
-                          className="btn-primary !px-2 !py-1 !text-xs"
-                        >
-                          <Pencil className="w-3 h-3" />
-                        </button>
-                        <button onClick={() => del(i.id)} className="btn-danger !px-2 !py-1 !text-xs">
-                          <Trash2 className="w-3 h-3" />
-                        </button>
-                      </div>
+                      {!readOnly && (
+                        <div className="flex gap-1">
+                          <button
+                            onClick={() => onEditBin({ id: i.id, joueurs: i.joueurs })}
+                            className="btn-primary !px-2 !py-1 !text-xs"
+                          >
+                            <Pencil className="w-3 h-3" />
+                          </button>
+                          <button onClick={() => del(i.id)} className="btn-danger !px-2 !py-1 !text-xs">
+                            <Trash2 className="w-3 h-3" />
+                          </button>
+                        </div>
+                      )}
                     </div>
                     <div className="flex items-center gap-2 mt-1">
                       <span className="text-xs text-slate-400 shrink-0">Résultat :</span>

@@ -8,9 +8,11 @@ import { notifyMembres } from "@/lib/db";
 export default function TournoisAdmin({
   db,
   onPersist,
+  readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
+  readOnly?: boolean;
 }) {
   // Formulaire nouveau tournoi
   const [n, setN] = useState("");
@@ -241,12 +243,12 @@ export default function TournoisAdmin({
                     {t.type && <p className="text-xs text-blue-500">{t.type}</p>}
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
-                    <button onClick={() => startEdit(t)} className="btn-primary !px-2.5 !py-1.5 !text-xs" title="Modifier"><Pencil className="w-3.5 h-3.5" /></button>
+                    {!readOnly && <button onClick={() => startEdit(t)} className="btn-primary !px-2.5 !py-1.5 !text-xs" title="Modifier"><Pencil className="w-3.5 h-3.5" /></button>}
                     <button onClick={() => notify(t.id, t.name)} disabled={notifying === t.id} className="btn-primary !px-2.5 !py-1.5 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500" title="Prévenir les adhérents">
                       <Bell className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline ml-1">{notifying === t.id ? "Envoi..." : "Prévenir"}</span>
                     </button>
-                    <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>
+                    {!readOnly && <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                   </div>
                 </div>
                 {/* Inscrits + résultats saison courante */}
@@ -316,28 +318,32 @@ export default function TournoisAdmin({
       </div>
 
       {/* ── Nouveau tournoi ── */}
-      <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">Nouveau tournoi</h4>
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
-        <input className="input" value={n} onChange={(e) => setN(e.target.value)} placeholder="Nom du tournoi" />
-        <div>
-          <label className="text-xs text-slate-400 mb-1 block">Date du tournoi</label>
-          <input className="input" value={d} onChange={(e) => setD(e.target.value)} placeholder="ex: 25 mai 2025" />
-        </div>
-        <div>
-          <label className="text-xs text-slate-400 mb-1 block">Date limite d&apos;inscription</label>
-          <input className="input" type="date" value={dateLimit} onChange={(e) => setDateLimit(e.target.value)} />
-        </div>
-        <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
-          <option value="">Type de double (optionnel)</option>
-          <option value="Mixte">👫 Double Mixte</option>
-          <option value="Hommes">👬 Double Hommes</option>
-          <option value="Femmes">👭 Double Femmes</option>
-        </select>
-        <input className="input" type="number" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Quota max doubles (vide = illimité)" />
-      </div>
-      <button onClick={add} className="btn-primary w-full mb-8">
-        <Plus className="w-4 h-4" /> Publier
-      </button>
+      {!readOnly && (
+        <>
+          <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">Nouveau tournoi</h4>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-3">
+            <input className="input" value={n} onChange={(e) => setN(e.target.value)} placeholder="Nom du tournoi" />
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Date du tournoi</label>
+              <input className="input" value={d} onChange={(e) => setD(e.target.value)} placeholder="ex: 25 mai 2025" />
+            </div>
+            <div>
+              <label className="text-xs text-slate-400 mb-1 block">Date limite d&apos;inscription</label>
+              <input className="input" type="date" value={dateLimit} onChange={(e) => setDateLimit(e.target.value)} />
+            </div>
+            <select className="input" value={type} onChange={(e) => setType(e.target.value)}>
+              <option value="">Type de double (optionnel)</option>
+              <option value="Mixte">👫 Double Mixte</option>
+              <option value="Hommes">👬 Double Hommes</option>
+              <option value="Femmes">👭 Double Femmes</option>
+            </select>
+            <input className="input" type="number" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Quota max doubles (vide = illimité)" />
+          </div>
+          <button onClick={add} className="btn-primary w-full mb-8">
+            <Plus className="w-4 h-4" /> Publier
+          </button>
+        </>
+      )}
 
       {/* ── Tournois archivés ── */}
       {(db.archives ?? []).filter((a) => (a.config_tournois?.length ?? 0) > 0).length > 0 && (
@@ -399,10 +405,12 @@ export default function TournoisAdmin({
                                       <p className="text-xs text-slate-400">{t.date}</p>
                                       {t.type && <p className="text-xs text-blue-500">{t.type}</p>}
                                     </div>
-                                    <div className="flex gap-1 shrink-0">
-                                      <button onClick={() => startEditArchive(key, t)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier"><Pencil className="w-3 h-3" /></button>
-                                      <button onClick={() => delArchiveTournoi(key, t.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
-                                    </div>
+                                    {!readOnly && (
+                                      <div className="flex gap-1 shrink-0">
+                                        <button onClick={() => startEditArchive(key, t)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier"><Pencil className="w-3 h-3" /></button>
+                                        <button onClick={() => delArchiveTournoi(key, t.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
+                                      </div>
+                                    )}
                                   </div>
 
                                   {/* Inscrits + résultats */}
@@ -441,7 +449,7 @@ export default function TournoisAdmin({
                                                   >
                                                     <Pencil className="w-3 h-3" />
                                                   </button>
-                                                  <button onClick={() => delArchiveInscrit(key, inscrit.id)} className="text-red-400 hover:text-red-600" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
+                                                  {!readOnly && <button onClick={() => delArchiveInscrit(key, inscrit.id)} className="text-red-400 hover:text-red-600" title="Supprimer"><Trash2 className="w-3 h-3" /></button>}
                                                 </>
                                               )}
                                             </div>

@@ -52,12 +52,16 @@ function isValidPhone(tel: string): boolean {
   return /^\+?\d{8,15}$/.test(cleaned);
 }
 
-// Helper : normalise adminEmails (ancien format string[] ou nouveau format {email,readOnly}[])
-function parseAdminEmails(arr: unknown[]): { email: string; readOnly: boolean }[] {
+// Helper : normalise adminEmails (ancien format string[] ou nouveau format {email,readOnly,permissions}[])
+function parseAdminEmails(arr: unknown[]): { email: string; readOnly: boolean; permissions?: string[] }[] {
   return arr.map((e) =>
     typeof e === "string"
-      ? { email: e.toLowerCase(), readOnly: false }
-      : { email: String((e as { email: string }).email || "").toLowerCase(), readOnly: (e as { readOnly?: boolean }).readOnly === true }
+      ? { email: e.toLowerCase(), readOnly: false, permissions: undefined }
+      : {
+          email: String((e as { email: string }).email || "").toLowerCase(),
+          readOnly: (e as { readOnly?: boolean }).readOnly === true,
+          permissions: (e as { permissions?: string[] }).permissions,
+        }
   );
 }
 
@@ -399,7 +403,7 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
     const adminEmailEntries = parseAdminEmails(d.adminEmails as unknown[] || []);
     const adminEmails = adminEmailEntries.map((e) => e.email);
-    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string; readOnly?: boolean }[]);
+    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string; readOnly?: boolean; permissions?: string[] }[]);
 
     // Vérifier via adminCredentials (admin sans adhérent) OU via membres
     const validAdminCred = adminCredentials.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
@@ -410,7 +414,8 @@ Deno.serve(async (req) => {
 
     const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
     const isReadOnly = validAdminCred?.readOnly === true || adminEmailEntry?.readOnly === true;
-    return json({ ok: true, data: d, readOnly: isReadOnly });
+    const permissions = validAdminCred?.permissions ?? adminEmailEntry?.permissions ?? undefined;
+    return json({ ok: true, data: d, readOnly: isReadOnly, permissions });
   }
 
   // ─── ACTION: Sauvegarder la DB en tant qu'admin membre ───

@@ -9,10 +9,12 @@ export default function Accounting({
   db,
   totals,
   onPersist,
+  readOnly,
 }: {
   db: DB;
   totals: { totalRecolte: number; totalDepenses: number; solde: number };
   onPersist: (db: DB) => Promise<void>;
+  readOnly?: boolean;
 }) {
   const [desc, setDesc] = useState("");
   const [montant, setMontant] = useState("");
@@ -157,78 +159,82 @@ export default function Accounting({
       </div>
 
       {/* Report saison précédente */}
-      <div className="bg-violet-50 rounded-2xl p-4 mb-5 border border-violet-200">
-        <h4 className="text-sm font-semibold text-violet-800 mb-2 uppercase tracking-widest">
-          Report de trésorerie (saisons précédentes)
-        </h4>
-        <div className="flex gap-2 items-center">
-          <input
-            className="input flex-1"
-            type="number"
-            min="0"
-            placeholder="Montant en €"
-            value={reportInput}
-            onChange={(e) => setReportInput(e.target.value)}
-          />
-          <button onClick={saveReport} disabled={reportBusy} className="btn-primary !bg-gradient-to-r !from-violet-500 !to-purple-500 whitespace-nowrap">
-            {reportBusy ? "Sauvegarde..." : "Enregistrer"}
-          </button>
-          {(db.reportPrecedent ?? 0) > 0 && (
-            <button
-              onClick={resetReport}
-              disabled={reportBusy}
-              className="btn-danger !px-3 !py-2 whitespace-nowrap"
-              title="Remettre à 0"
-            >
-              <Trash2 className="w-4 h-4" />
+      {!readOnly && (
+        <div className="bg-violet-50 rounded-2xl p-4 mb-5 border border-violet-200">
+          <h4 className="text-sm font-semibold text-violet-800 mb-2 uppercase tracking-widest">
+            Report de trésorerie (saisons précédentes)
+          </h4>
+          <div className="flex gap-2 items-center">
+            <input
+              className="input flex-1"
+              type="number"
+              min="0"
+              placeholder="Montant en €"
+              value={reportInput}
+              onChange={(e) => setReportInput(e.target.value)}
+            />
+            <button onClick={saveReport} disabled={reportBusy} className="btn-primary !bg-gradient-to-r !from-violet-500 !to-purple-500 whitespace-nowrap">
+              {reportBusy ? "Sauvegarde..." : "Enregistrer"}
             </button>
-          )}
-        </div>
-        <p className="text-xs text-violet-500 mt-2">
-          Modifiez le montant et cliquez sur <strong>Enregistrer</strong> pour le corriger, ou 🗑️ pour le supprimer.
-        </p>
-      </div>
-
-      <div className="bg-slate-50 rounded-2xl p-4 md:p-5 mb-5 border border-slate-200">
-        <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
-          Ajouter une dépense / facture
-        </h4>
-        <div className="flex flex-col sm:grid sm:grid-cols-[1fr_120px_auto] gap-2 mb-3">
-          <input
-            className="input"
-            placeholder="Désignation (ex: Volants)"
-            value={desc}
-            onChange={(e) => setDesc(e.target.value)}
-          />
-          <input
-            className="input"
-            type="number"
-            placeholder="Montant €"
-            value={montant}
-            onChange={(e) => setMontant(e.target.value)}
-          />
-          <button onClick={addFacture} disabled={busy} className="btn-primary">
-            <Plus className="w-4 h-4" /> Ajouter
-          </button>
-        </div>
-        <label className="flex items-center gap-3 text-sm text-slate-500 cursor-pointer hover:text-slate-700 transition">
-          <Upload className="w-4 h-4" />
-          <span>
-            Joindre PDF / images (factures, justificatifs)
-            {pendingFiles.length > 0 && (
-              <span className="ml-2 text-blue-600 font-semibold">{pendingFiles.length} fichier(s)</span>
+            {(db.reportPrecedent ?? 0) > 0 && (
+              <button
+                onClick={resetReport}
+                disabled={reportBusy}
+                className="btn-danger !px-3 !py-2 whitespace-nowrap"
+                title="Remettre à 0"
+              >
+                <Trash2 className="w-4 h-4" />
+              </button>
             )}
-          </span>
-          <input
-            ref={fileInput}
-            type="file"
-            multiple
-            accept=".pdf,image/*"
-            className="hidden"
-            onChange={(e) => setPendingFiles(Array.from(e.target.files || []))}
-          />
-        </label>
-      </div>
+          </div>
+          <p className="text-xs text-violet-500 mt-2">
+            Modifiez le montant et cliquez sur <strong>Enregistrer</strong> pour le corriger, ou 🗑️ pour le supprimer.
+          </p>
+        </div>
+      )}
+
+      {!readOnly && (
+        <div className="bg-slate-50 rounded-2xl p-4 md:p-5 mb-5 border border-slate-200">
+          <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
+            Ajouter une dépense / facture
+          </h4>
+          <div className="flex flex-col sm:grid sm:grid-cols-[1fr_120px_auto] gap-2 mb-3">
+            <input
+              className="input"
+              placeholder="Désignation (ex: Volants)"
+              value={desc}
+              onChange={(e) => setDesc(e.target.value)}
+            />
+            <input
+              className="input"
+              type="number"
+              placeholder="Montant €"
+              value={montant}
+              onChange={(e) => setMontant(e.target.value)}
+            />
+            <button onClick={addFacture} disabled={busy} className="btn-primary">
+              <Plus className="w-4 h-4" /> Ajouter
+            </button>
+          </div>
+          <label className="flex items-center gap-3 text-sm text-slate-500 cursor-pointer hover:text-slate-700 transition">
+            <Upload className="w-4 h-4" />
+            <span>
+              Joindre PDF / images (factures, justificatifs)
+              {pendingFiles.length > 0 && (
+                <span className="ml-2 text-blue-600 font-semibold">{pendingFiles.length} fichier(s)</span>
+              )}
+            </span>
+            <input
+              ref={fileInput}
+              type="file"
+              multiple
+              accept=".pdf,image/*"
+              className="hidden"
+              onChange={(e) => setPendingFiles(Array.from(e.target.files || []))}
+            />
+          </label>
+        </div>
+      )}
 
       {/* Factures : cartes */}
       <div className="max-h-[400px] overflow-y-auto space-y-2 pr-1">
@@ -241,9 +247,11 @@ export default function Accounting({
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <span className="font-semibold text-red-500 text-sm">{f.montant}€</span>
-                <button onClick={() => delFacture(f.id)} className="btn-danger !px-2 !py-1 !text-xs">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!readOnly && (
+                  <button onClick={() => delFacture(f.id)} className="btn-danger !px-2 !py-1 !text-xs">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
             {(f.files || []).length > 0 && (
@@ -258,18 +266,22 @@ export default function Accounting({
                     <button onClick={() => downloadFile(file)} className="text-slate-400 hover:text-slate-700" title="Télécharger">
                       <Download className="w-3.5 h-3.5" />
                     </button>
-                    <button onClick={() => removeFile(f.id, file)} className="text-red-400 hover:text-red-500" title="Supprimer">
-                      <Trash2 className="w-3.5 h-3.5" />
-                    </button>
+                    {!readOnly && (
+                      <button onClick={() => removeFile(f.id, file)} className="text-red-400 hover:text-red-500" title="Supprimer">
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
                 ))}
               </div>
             )}
-            <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer mt-1">
-              <Upload className="w-3 h-3" /> Ajouter fichier
-              <input type="file" multiple accept=".pdf,image/*" className="hidden"
-                onChange={(e) => addFilesToExisting(f.id, e.target.files)} />
-            </label>
+            {!readOnly && (
+              <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer mt-1">
+                <Upload className="w-3 h-3" /> Ajouter fichier
+                <input type="file" multiple accept=".pdf,image/*" className="hidden"
+                  onChange={(e) => addFilesToExisting(f.id, e.target.files)} />
+              </label>
+            )}
           </div>
         ))}
         {(!db.factures || db.factures.length === 0) && (

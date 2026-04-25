@@ -10,11 +10,13 @@ export default function MembresAdmin({
   onPersist,
   onEdit,
   onRecu,
+  readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   onEdit: (m: Membre) => void;
   onRecu: (m: Membre) => void;
+  readOnly?: boolean;
 }) {
   const [autoSendEmail, setAutoSendEmail] = useState(true);
   const [search, setSearch] = useState("");
@@ -132,18 +134,20 @@ export default function MembresAdmin({
         </div>
       </div>
 
-      <div className="flex items-center justify-between mb-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
-        <span className="flex items-center gap-2 text-sm text-slate-600">
-          <Send className="w-3.5 h-3.5 text-emerald-500" />
-          Envoyer l'email de confirmation lors de la validation
-        </span>
-        <button
-          onClick={() => setAutoSendEmail(v => !v)}
-          className={`relative w-11 h-6 rounded-full transition-colors ${autoSendEmail ? "bg-emerald-500" : "bg-slate-300"}`}
-        >
-          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${autoSendEmail ? "translate-x-5" : "translate-x-0"}`} />
-        </button>
-      </div>
+      {!readOnly && (
+        <div className="flex items-center justify-between mb-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+          <span className="flex items-center gap-2 text-sm text-slate-600">
+            <Send className="w-3.5 h-3.5 text-emerald-500" />
+            Envoyer l'email de confirmation lors de la validation
+          </span>
+          <button
+            onClick={() => setAutoSendEmail(v => !v)}
+            className={`relative w-11 h-6 rounded-full transition-colors ${autoSendEmail ? "bg-emerald-500" : "bg-slate-300"}`}
+          >
+            <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${autoSendEmail ? "translate-x-5" : "translate-x-0"}`} />
+          </button>
+        </div>
+      )}
 
       <div className="flex gap-2 mb-4">
         <div className="relative flex-1">
@@ -167,10 +171,12 @@ export default function MembresAdmin({
           <Mail className="w-4 h-4" />
           <span className="hidden sm:inline ml-1">Emails</span>
         </button>
-        <button onClick={openAddForm} className="btn-accent !px-3 shrink-0" title="Ajouter un adhérent">
-          <UserPlus className="w-4 h-4" />
-          <span className="hidden sm:inline ml-1">Ajouter</span>
-        </button>
+        {!readOnly && (
+          <button onClick={openAddForm} className="btn-accent !px-3 shrink-0" title="Ajouter un adhérent">
+            <UserPlus className="w-4 h-4" />
+            <span className="hidden sm:inline ml-1">Ajouter</span>
+          </button>
+        )}
       </div>
 
       {/* Formulaire ajout manuel */}
@@ -260,25 +266,31 @@ export default function MembresAdmin({
               </div>
             </div>
             <div className="flex items-center justify-between">
-              <label className="flex items-center gap-2 cursor-pointer">
-                <input
-                  type="checkbox"
-                  checked={!!m.ok}
-                  onChange={(e) => togglePaiement(m.id, e.target.checked)}
-                  className="w-4 h-4"
-                />
-                {m.ok ? (
-                  <span className="text-emerald-600 text-xs flex items-center gap-1">
-                    <CheckCircle2 className="w-3.5 h-3.5" /> Payé
-                  </span>
-                ) : (
-                  <span className="text-red-500 text-xs flex items-center gap-1">
-                    <Clock className="w-3.5 h-3.5" /> En attente
-                  </span>
-                )}
-              </label>
+              {!readOnly ? (
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={!!m.ok}
+                    onChange={(e) => togglePaiement(m.id, e.target.checked)}
+                    className="w-4 h-4"
+                  />
+                  {m.ok ? (
+                    <span className="text-emerald-600 text-xs flex items-center gap-1">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Payé
+                    </span>
+                  ) : (
+                    <span className="text-red-500 text-xs flex items-center gap-1">
+                      <Clock className="w-3.5 h-3.5" /> En attente
+                    </span>
+                  )}
+                </label>
+              ) : (
+                <span className={`text-xs flex items-center gap-1 ${m.ok ? "text-emerald-600" : "text-red-500"}`}>
+                  {m.ok ? <><CheckCircle2 className="w-3.5 h-3.5" /> Payé</> : <><Clock className="w-3.5 h-3.5" /> En attente</>}
+                </span>
+              )}
               <div className="flex gap-1">
-                {m.ok && (
+                {!readOnly && m.ok && (
                   <button
                     onClick={() => sendEmail(m)}
                     disabled={sendingEmail === m.id}
@@ -291,12 +303,16 @@ export default function MembresAdmin({
                 <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
-                <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
-                  <Pencil className="w-3.5 h-3.5" />
-                </button>
-                <button onClick={() => del(m.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer">
-                  <Trash2 className="w-3.5 h-3.5" />
-                </button>
+                {!readOnly && (
+                  <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {!readOnly && (
+                  <button onClick={() => del(m.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer">
+                    <Trash2 className="w-3.5 h-3.5" />
+                  </button>
+                )}
               </div>
             </div>
           </div>
@@ -353,22 +369,28 @@ export default function MembresAdmin({
                   )}
                 </td>
                 <td className="p-3">
-                  <label className="flex items-center gap-2 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={!!m.ok}
-                      onChange={(e) => togglePaiement(m.id, e.target.checked)}
-                    />
-                    {m.ok ? (
-                      <span className="text-emerald-600 text-xs">Payé</span>
-                    ) : (
-                      <span className="text-red-500 text-xs">En attente</span>
-                    )}
-                  </label>
+                  {!readOnly ? (
+                    <label className="flex items-center gap-2 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={!!m.ok}
+                        onChange={(e) => togglePaiement(m.id, e.target.checked)}
+                      />
+                      {m.ok ? (
+                        <span className="text-emerald-600 text-xs">Payé</span>
+                      ) : (
+                        <span className="text-red-500 text-xs">En attente</span>
+                      )}
+                    </label>
+                  ) : (
+                    <span className={`text-xs ${m.ok ? "text-emerald-600" : "text-red-500"}`}>
+                      {m.ok ? "Payé" : "En attente"}
+                    </span>
+                  )}
                 </td>
                 <td className="p-3">
                   <div className="flex gap-1">
-                    {m.ok && (
+                    {!readOnly && m.ok && (
                       <button
                         onClick={() => sendEmail(m)}
                         disabled={sendingEmail === m.id}
@@ -381,12 +403,16 @@ export default function MembresAdmin({
                     <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                       <Receipt className="w-3 h-3" />
                     </button>
-                    <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
-                      <Pencil className="w-3 h-3" />
-                    </button>
-                    <button onClick={() => del(m.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer">
-                      <Trash2 className="w-3 h-3" />
-                    </button>
+                    {!readOnly && (
+                      <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
+                        <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button onClick={() => del(m.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer">
+                        <Trash2 className="w-3 h-3" />
+                      </button>
+                    )}
                   </div>
                 </td>
               </tr>
