@@ -16,6 +16,7 @@ export default function MembresAdmin({
   onEdit: (m: Membre) => void;
   onRecu: (m: Membre) => void;
 }) {
+  const [autoSendEmail, setAutoSendEmail] = useState(true);
   const [search, setSearch] = useState("");
   const [filterNoPhoto, setFilterNoPhoto] = useState(false);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
@@ -55,13 +56,9 @@ export default function MembresAdmin({
   }, [db.membres, search, filterNoPhoto]);
 
   async function togglePaiement(id: string, val: boolean) {
-    const next = {
-      ...db,
-      membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)),
-    };
+    const next = { ...db, membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)) };
     await onPersist(next);
-    // Envoie l'email de confirmation automatiquement quand on valide le paiement
-    if (val) {
+    if (val && autoSendEmail) {
       adminSendConfirmation(id).catch(() => {});
     }
   }
@@ -133,6 +130,19 @@ export default function MembresAdmin({
             {db.membres.length} adhérent{db.membres.length > 1 ? "s" : ""}
           </span>
         </div>
+      </div>
+
+      <div className="flex items-center justify-between mb-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+        <span className="flex items-center gap-2 text-sm text-slate-600">
+          <Send className="w-3.5 h-3.5 text-emerald-500" />
+          Envoyer l'email de confirmation lors de la validation
+        </span>
+        <button
+          onClick={() => setAutoSendEmail(v => !v)}
+          className={`relative w-11 h-6 rounded-full transition-colors ${autoSendEmail ? "bg-emerald-500" : "bg-slate-300"}`}
+        >
+          <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${autoSendEmail ? "translate-x-5" : "translate-x-0"}`} />
+        </button>
       </div>
 
       <div className="flex gap-2 mb-4">

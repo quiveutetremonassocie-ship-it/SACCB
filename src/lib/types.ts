@@ -91,7 +91,7 @@ export type DB = {
   insc_close_date?: string; // date de fermeture des inscriptions (YYYY-MM-DD) pour les rappels
   archives?: SeasonArchive[]; // historique des saisons précédentes
   adminEmails?: string[]; // emails ayant accès au panneau admin via l'espace membre
-  adminCredentials?: { email: string; code: string }[]; // codes admin indépendants des adhérents
+  adminCredentials?: { email: string; code: string; readOnly?: boolean }[]; // codes admin indépendants des adhérents
   contactEmails?: string[]; // emails recevant les messages du formulaire de contact
   reportPrecedent?: number; // report de trésorerie des saisons précédentes
 };

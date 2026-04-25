@@ -29,6 +29,7 @@ export default function SeasonSettings({
   const [contactEmailInput, setContactEmailInput] = useState("");
   const [credEmail, setCredEmail] = useState("");
   const [credCode, setCredCode] = useState("");
+  const [credReadOnly, setCredReadOnly] = useState(false);
 
   // Edition archive
   const [editingArchiveIdx, setEditingArchiveIdx] = useState<number | null>(null);
@@ -351,7 +352,12 @@ export default function SeasonSettings({
           {(db.adminCredentials ?? []).map((cred) => (
             <div key={cred.email} className="flex items-center justify-between bg-amber-50 rounded-lg px-3 py-2 border border-amber-200">
               <div>
-                <p className="text-sm font-medium text-slate-700">{cred.email}</p>
+                <div className="flex items-center gap-2">
+                  <p className="text-sm font-medium text-slate-700">{cred.email}</p>
+                  {cred.readOnly && (
+                    <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-semibold">Lecture seule</span>
+                  )}
+                </div>
                 <p className="text-xs text-slate-400">Code : {cred.code}</p>
               </div>
               <button
@@ -392,14 +398,23 @@ export default function SeasonSettings({
               if (!email || !code) { alert("Email et code requis."); return; }
               const current = db.adminCredentials ?? [];
               const newCreds = current.filter((c) => c.email !== email);
-              await onPersist({ ...db, adminCredentials: [...newCreds, { email, code }] });
-              setCredEmail(""); setCredCode("");
+              await onPersist({ ...db, adminCredentials: [...newCreds, { email, code, readOnly: credReadOnly }] });
+              setCredEmail(""); setCredCode(""); setCredReadOnly(false);
             }}
             className="btn-primary !px-3"
           >
             <Plus className="w-4 h-4" />
           </button>
         </div>
+        <label className="flex items-center gap-2 text-xs text-slate-600 cursor-pointer mt-1">
+          <input
+            type="checkbox"
+            checked={credReadOnly}
+            onChange={(e) => setCredReadOnly(e.target.checked)}
+            className="w-3.5 h-3.5"
+          />
+          Lecture seule (voit l'admin mais ne peut pas modifier)
+        </label>
       </div>}
 
       {/* Emails recevant les messages du formulaire de contact — visible uniquement par les super-admins */}

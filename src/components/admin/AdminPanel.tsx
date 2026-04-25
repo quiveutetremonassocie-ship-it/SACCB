@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
@@ -22,6 +22,7 @@ export default function AdminPanel({
   onRefresh,
   adminEmail,
   adminCode,
+  readOnly,
 }: {
   db: DB;
   onClose: () => void;
@@ -29,11 +30,16 @@ export default function AdminPanel({
   onRefresh: () => Promise<void>;
   adminEmail?: string;
   adminCode?: string;
+  readOnly?: boolean;
 }) {
   const [recuMembre, setRecuMembre] = useState<Membre | null>(null);
   const [emargementOpen, setEmargementOpen] = useState(false);
   const [editMembre, setEditMembre] = useState<Membre | null>(null);
   const [editBin, setEditBin] = useState<{ id: string; joueurs: string } | null>(null);
+
+  const safePersist = readOnly
+    ? async (_db: DB) => { alert("Accès en lecture seule — vous ne pouvez pas modifier les données."); }
+    : onPersist;
 
   const totals = useMemo(() => {
     let totalRecolte = 0,
@@ -94,12 +100,19 @@ export default function AdminPanel({
           </button>
         </div>
 
+        {readOnly && (
+          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
+            <Eye className="w-4 h-4 text-amber-600 shrink-0" />
+            <p className="text-sm text-amber-700 font-medium">Mode lecture seule — les modifications ne sont pas autorisées.</p>
+          </div>
+        )}
+
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
           <div className="lg:col-span-2">
-            <Accounting db={db} totals={totals} onPersist={onPersist} />
+            <Accounting db={db} totals={totals} onPersist={safePersist} />
           </div>
 
-          <SeasonSettings db={db} onPersist={onPersist} onRefresh={onRefresh} adminEmail={adminEmail} />
+          <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} />
           <StatsAdhesions totals={totals} />
           <div className="lg:col-span-2">
           </div>
@@ -119,18 +132,18 @@ export default function AdminPanel({
           <HelloAssoQR />
 
           <div className="lg:col-span-2">
-            <ActualitesAdmin db={db} onPersist={onPersist} adminEmail={adminEmail} adminCode={adminCode} />
+            <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} />
           </div>
           <div className="lg:col-span-2">
-            <TournoisAdmin db={db} onPersist={onPersist} />
+            <TournoisAdmin db={db} onPersist={safePersist} />
           </div>
           <div className="lg:col-span-2">
-            <InscriptionsAdmin db={db} onPersist={onPersist} onEditBin={setEditBin} />
+            <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} />
           </div>
           <div className="lg:col-span-2">
             <MembresAdmin
               db={db}
-              onPersist={onPersist}
+              onPersist={safePersist}
               onEdit={setEditMembre}
               onRecu={setRecuMembre}
             />
@@ -146,7 +159,7 @@ export default function AdminPanel({
           onClose={() => setEditMembre(null)}
           onSave={async (m) => {
             const next = { ...db, membres: db.membres.map((x) => (x.id === m.id ? m : x)) };
-            await onPersist(next);
+            await safePersist(next);
             setEditMembre(null);
           }}
         />
@@ -162,7 +175,7 @@ export default function AdminPanel({
                 i.id === b.id ? { ...i, joueurs: b.joueurs } : i
               ),
             };
-            await onPersist(next);
+            await safePersist(next);
             setEditBin(null);
           }}
         />

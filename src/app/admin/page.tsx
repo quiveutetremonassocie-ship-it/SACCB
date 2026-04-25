@@ -31,7 +31,7 @@ export default function AdminPage() {
       setMemberSessionState(session);
       fetchAdminDBByMember(session.email, savedCode).then((data) => {
         if (data) {
-          setDb(data);
+          setDb(data.db);
           setAdminReady(true);
         }
       });
@@ -48,7 +48,7 @@ export default function AdminPage() {
   const refresh = useCallback(async () => {
     if (memberSession && memberAdminCode.current) {
       const data = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
-      if (data) setDb(data);
+      if (data) setDb(data.db);
     }
   }, [memberSession]);
 
@@ -84,7 +84,7 @@ export default function AdminPage() {
 
     const data = await fetchAdminDBByMember(sess.email, code.trim());
     if (data) {
-      setDb(data);
+      setDb(data.db);
       setAdminReady(true);
     } else {
       setError("Impossible de charger les données admin.");

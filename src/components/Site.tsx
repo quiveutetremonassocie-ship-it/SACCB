@@ -34,6 +34,7 @@ export default function Site() {
   // Credentials admin via espace membre (stockés en mémoire uniquement, jamais en localStorage)
   const memberAdminCode = useRef<string | null>(null);
   const [isMemberAdmin, setIsMemberAdmin] = useState(false); // true = admin via membre (pas Supabase Auth)
+  const [isReadOnlyAdmin, setIsReadOnlyAdmin] = useState(false);
   const [supabaseAdminEmail, setSupabaseAdminEmail] = useState<string | undefined>(undefined);
 
   const refreshPublic = useCallback(async () => {
@@ -46,8 +47,8 @@ export default function Site() {
 
   const refreshAdmin = useCallback(async () => {
     if (isMemberAdmin && memberSession && memberAdminCode.current) {
-      const data = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
-      if (data) { setDb(data); setMembresCount(data.membres.length); }
+      const result = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
+      if (result) { setDb(result.db); setMembresCount(result.db.membres.length); setIsReadOnlyAdmin(result.readOnly); }
     } else {
       const data = await fetchAdminDB();
       if (data) { setDb(data); setMembresCount(data.membres.length); }
@@ -80,8 +81,8 @@ export default function Site() {
         // Remettre à jour localStorage pour compatibilité
         localStorage.setItem("saccb_admin_code", savedCode);
         setIsMemberAdmin(true);
-        fetchAdminDBByMember(session.email, savedCode).then((data) => {
-          if (data) { setDb(data); setMembresCount(data.membres.length); }
+        fetchAdminDBByMember(session.email, savedCode).then((result) => {
+          if (result) { setDb(result.db); setMembresCount(result.db.membres.length); setIsReadOnlyAdmin(result.readOnly); }
         });
       }
     } else {
@@ -161,6 +162,7 @@ export default function Site() {
       await supabaseClient.auth.signOut();
       setIsMemberAdmin(false);
       setSupabaseAdminEmail(undefined);
+      setIsReadOnlyAdmin(false);
       memberAdminCode.current = null;
       localStorage.removeItem("saccb_admin_code");
       setDb((d) => ({ ...d, membres: [], factures: [] }));
@@ -201,10 +203,11 @@ export default function Site() {
       memberAdminCode.current = adminCode;
       localStorage.setItem("saccb_admin_code", adminCode);
       setIsMemberAdmin(true);
-      const data = await fetchAdminDBByMember(session.email, adminCode);
-      if (data) {
-        setDb(data);
-        setMembresCount(data.membres.length);
+      const result = await fetchAdminDBByMember(session.email, adminCode);
+      if (result) {
+        setDb(result.db);
+        setMembresCount(result.db.membres.length);
+        setIsReadOnlyAdmin(result.readOnly);
         setAdminOpen(true);
       } else {
         // Fallback : ouvrir l'espace membre normalement
@@ -219,6 +222,7 @@ export default function Site() {
     setMemberSession(null);
     setMemberPanelOpen(false);
     setIsMemberAdmin(false);
+    setIsReadOnlyAdmin(false);
     memberAdminCode.current = null;
     localStorage.removeItem("saccb_admin_code");
     sessionStorage.removeItem("saccb_member_code");
@@ -288,6 +292,7 @@ export default function Site() {
           onRefresh={refreshAdmin}
           adminEmail={isMemberAdmin ? memberSession?.email : supabaseAdminEmail}
           adminCode={isMemberAdmin ? (memberAdminCode.current ?? undefined) : undefined}
+          readOnly={isMemberAdmin ? isReadOnlyAdmin : false}
         />
       )}
     </>

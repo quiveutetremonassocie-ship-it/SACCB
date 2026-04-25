@@ -397,7 +397,8 @@ Deno.serve(async (req) => {
     if (!validAdminCred && !validMembre) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
 
-    return json({ ok: true, data: d });
+    const isReadOnly = validAdminCred?.readOnly === true;
+    return json({ ok: true, data: d, readOnly: isReadOnly });
   }
 
   // ─── ACTION: Sauvegarder la DB en tant qu'admin membre ───
