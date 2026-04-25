@@ -10,6 +10,8 @@ import {
   ArrowDown,
   Eye,
   X,
+  Lock,
+  Globe,
 } from "lucide-react";
 import { DB, Actualite, ActualiteImage, actualiteImages } from "@/lib/types";
 import { supabaseClient, ACTU_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
@@ -28,6 +30,7 @@ export default function ActualitesAdmin({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [isPrivate, setIsPrivate] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
   const [showPreview, setShowPreview] = useState(true);
@@ -111,11 +114,13 @@ export default function ActualitesAdmin({
       description,
       images,
       createdAt: new Date().toISOString(),
+      private: isPrivate,
     };
     const next = { ...db, actualites: [...list, a] };
     await onPersist(next);
     setTitle("");
     setDescription("");
+    setIsPrivate(false);
     setPendingFiles([]);
     if (fileInput.current) fileInput.current.value = "";
     setBusy(false);
@@ -218,6 +223,14 @@ export default function ActualitesAdmin({
     await onPersist({ ...db, actualites: copy });
   }
 
+  async function updatePrivate(id: string, isPrivate: boolean) {
+    const next = {
+      ...db,
+      actualites: list.map((x) => (x.id === id ? { ...x, private: isPrivate } : x)),
+    };
+    await onPersist(next);
+  }
+
   return (
     <div className="glass p-6 border border-amber-200">
       <div className="flex items-center justify-between mb-5 flex-wrap gap-3">
@@ -253,6 +266,17 @@ export default function ActualitesAdmin({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          <label className="flex items-center gap-2 cursor-pointer select-none">
+            <input
+              type="checkbox"
+              checked={isPrivate}
+              onChange={(e) => setIsPrivate(e.target.checked)}
+              className="w-4 h-4 accent-purple-500"
+            />
+            <span className="text-sm text-slate-600">
+              🔒 <strong>Membres uniquement</strong> — visible uniquement par les adhérents connectés
+            </span>
+          </label>
           <label className="flex items-center gap-3 text-sm text-slate-500 cursor-pointer hover:text-slate-700 transition">
             <Upload className="w-4 h-4" />
             <span>
@@ -355,6 +379,18 @@ export default function ActualitesAdmin({
                       title="Descendre"
                     >
                       <ArrowDown className="w-3.5 h-3.5" />
+                    </button>
+                    <button
+                      onClick={() => updatePrivate(a.id, !a.private)}
+                      className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
+                        a.private
+                          ? "bg-purple-100 text-purple-700 hover:bg-purple-200 border border-purple-200"
+                          : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                      }`}
+                      title={a.private ? "Rendre public" : "Rendre privé (membres uniquement)"}
+                    >
+                      {a.private ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
+                      {a.private ? "Membres" : "Public"}
                     </button>
                     <button
                       onClick={() => delActualite(a.id)}

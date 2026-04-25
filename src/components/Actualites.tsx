@@ -2,10 +2,11 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Newspaper, Images } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Newspaper, Images, Lock } from "lucide-react";
 import { Actualite, actualiteImages } from "@/lib/types";
+import { MemberSession } from "@/lib/useMemberSession";
 
-export default function Actualites({ actualites }: { actualites: Actualite[] }) {
+export default function Actualites({ actualites, memberSession }: { actualites: Actualite[]; memberSession?: MemberSession | null }) {
   const [index, setIndex] = useState(0);
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
@@ -153,6 +154,14 @@ export default function Actualites({ actualites }: { actualites: Actualite[] }) 
                         Actualité
                       </span>
                     </div>
+                    {current.private && (
+                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 backdrop-blur">
+                        <Lock className="w-3.5 h-3.5 text-purple-300" />
+                        <span className="text-[10px] uppercase tracking-widest text-purple-200 font-semibold">
+                          Membres
+                        </span>
+                      </div>
+                    )}
                     {actualiteImages(current).length > 1 && (
                       <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur">
                         <Images className="w-3.5 h-3.5 text-blue-300" />

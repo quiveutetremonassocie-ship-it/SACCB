@@ -76,6 +76,7 @@ export async function publicAddMembre(membre: {
   paymentMethod?: "online" | "virement";
   code?: string;
   newsOptIn?: boolean;
+  photoConsent?: boolean;
   grouped?: boolean; // true = inscription groupée, ne pas écraser les autres membres du même email
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
@@ -219,6 +220,26 @@ export async function adminSendWelcome(membreId: string): Promise<{ ok: boolean;
     body: JSON.stringify({ action: "send_welcome", membreId }),
   });
   return res.json();
+}
+
+// ─── Actualités privées (membres authentifiés) ───
+export async function fetchPrivateActualites(
+  email: string,
+  code: string,
+  membreId: string
+): Promise<import("./types").Actualite[]> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "fetch_private_actualites", email: email.toLowerCase().trim(), code, membreId }),
+    });
+    const data = await res.json();
+    if (!data.ok) return [];
+    return data.actualites ?? [];
+  } catch {
+    return [];
+  }
 }
 
 // ─── Marquer payé (via Edge Function sécurisée) ───

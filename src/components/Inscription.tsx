@@ -33,6 +33,7 @@ export default function Inscription({
   const [mode, setMode] = useState<PaymentMode>("online");
   const [showCode, setShowCode] = useState(false);
   const [newsOptIn, setNewsOptIn] = useState(false);
+  const [photoConsent, setPhotoConsent] = useState(false);
   const [rgpdOk, setRgpdOk] = useState(false);
   const [personnes, setPersonnes] = useState<Personne[]>([{ prenom: "", nom: "", type: "Adulte" }]);
   const whatsappLink = db.whatsappLink || null;
@@ -145,6 +146,7 @@ export default function Inscription({
         paymentMethod: mode,
         code,
         newsOptIn,
+        photoConsent,
         grouped: isGrouped,
       });
       results.push(r);
@@ -457,6 +459,23 @@ export default function Inscription({
                   <span className="font-medium text-slate-800">Recevoir les news du club</span>
                   <br />
                   <span className="text-xs text-slate-400">Nouveaux tournois, rappels d&apos;inscription, infos club</span>
+                </span>
+              </label>
+
+              {/* Droit à l'image */}
+              <label className="flex items-start gap-3 cursor-pointer select-none">
+                <div className="relative mt-0.5 shrink-0">
+                  <input type="checkbox" checked={photoConsent} onChange={e => setPhotoConsent(e.target.checked)} className="sr-only" />
+                  <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${photoConsent ? "bg-violet-500 border-violet-500" : "border-slate-300 bg-white"}`}>
+                    {photoConsent && <CheckCircle2 className="w-3 h-3 text-white" />}
+                  </div>
+                </div>
+                <span className="text-sm text-slate-600 leading-snug">
+                  <span className="font-medium text-slate-800">Droit à l&apos;image</span>
+                  <br />
+                  <span className="text-xs text-slate-400">
+                    J&apos;autorise le SACCB à utiliser les photos et vidéos prises lors des événements du club (tournois, entraînements) à des fins de communication.
+                  </span>
                 </span>
               </label>
 

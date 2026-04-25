@@ -237,11 +237,54 @@ Deno.serve(async (req) => {
       quota: d.quota ?? 65,
       config_tournois: d.config_tournois ?? [],
       inscrits_tournoi: d.inscrits_tournoi ?? [],
-      actualites: d.actualites ?? [],
+      actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private),
       archives: d.archives ?? [],
       whatsappLink: d.whatsappLink ?? null,
       membresCount: ((d.membres as unknown[]) || []).length,
     });
+  }
+
+  // ─── ACTION: Récupérer les actualités privées (membres authentifiés) ───
+  if (action === "fetch_private_actualites") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+
+    if (!email || !code) return json({ ok: false, reason: "Auth requise." }, 401);
+
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
+
+    // Vérifier que le membre existe et que le code est correct
+    const membre = membres.find(
+      (m) =>
+        String(m.email || "").toLowerCase() === email &&
+        String(m.id || "") === membreId &&
+        String(m.code || "") === code &&
+        m.ok === true
+    );
+    const isAdmin = adminCredentials.some(
+      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code
+    );
+
+    if (!membre && !isAdmin) {
+      return json({ ok: false, reason: "Non autorisé." }, 403);
+    }
+
+    const privateActualites = ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter(
+      (a: Record<string,unknown>) => a.private === true
+    );
+
+    return json({ ok: true, actualites: privateActualites });
   }
 
   // ─── ACTION: Vérification membre (connexion espace membre) ───
@@ -370,6 +413,7 @@ Deno.serve(async (req) => {
     const paymentMethod = body.paymentMethod === "virement" ? "virement" : "online";
     const code = sanitize(String(body.code || ""));
     const newsOptIn = body.newsOptIn === true || body.newsOptIn === "true";
+    const photoConsent = body.photoConsent === true || body.photoConsent === "true";
     const grouped = body.grouped === true; // inscription groupée = ne pas écraser les autres membres du même email
 
     // Validation
@@ -409,6 +453,7 @@ Deno.serve(async (req) => {
           paymentMethod,
           code: code || existing.code,
           newsOptIn,
+          photoConsent,
           ok: false,
         };
         currentData.membres = membres;
@@ -445,6 +490,7 @@ Deno.serve(async (req) => {
       paymentMethod,
       code,
       newsOptIn,
+      photoConsent,
     };
 
     membres.push(newMembre);

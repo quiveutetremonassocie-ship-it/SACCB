@@ -9,6 +9,7 @@ export type Membre = {
   paymentDate?: string;
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
+  photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
 };
 
 export type FactureFile = {
@@ -58,6 +59,7 @@ export type Actualite = {
   imageUrl?: string;
   imagePath?: string;
   createdAt: string;
+  private?: boolean;
 };
 
 // Helper pour récupérer la liste normalisée des images d'une actualité

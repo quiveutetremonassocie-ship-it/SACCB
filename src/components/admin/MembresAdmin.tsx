@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X } from "lucide-react";
+import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
 import { adminSendConfirmation, adminSendWelcome } from "@/lib/db";
 
@@ -17,6 +17,7 @@ export default function MembresAdmin({
   onRecu: (m: Membre) => void;
 }) {
   const [search, setSearch] = useState("");
+  const [filterNoPhoto, setFilterNoPhoto] = useState(false);
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -38,17 +39,20 @@ export default function MembresAdmin({
     setShowAddForm(true);
   }
 
+  const noPhotoCount = db.membres.filter((m) => m.photoConsent !== true).length;
+
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
     return [...db.membres]
       .filter(
         (m) =>
-          m.nom.toLowerCase().includes(s) ||
+          (m.nom.toLowerCase().includes(s) ||
           m.email.toLowerCase().includes(s) ||
-          (m.tel && m.tel.includes(s))
+          (m.tel && m.tel.includes(s))) &&
+          (!filterNoPhoto || m.photoConsent !== true)
       )
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
-  }, [db.membres, search]);
+  }, [db.membres, search, filterNoPhoto]);
 
   async function togglePaiement(id: string, val: boolean) {
     const next = {
@@ -117,8 +121,10 @@ export default function MembresAdmin({
           </div>
           <div>
             <h3 className="font-display text-xl md:text-2xl tracking-wider text-slate-800">Adhérents</h3>
-            <p className="text-xs text-slate-400 flex items-center gap-1">
-              <Bell className="w-3 h-3" /> {newsCount} abonné{newsCount > 1 ? "s" : ""} aux news
+            <p className="text-xs text-slate-400 flex items-center gap-2">
+              <Bell className="w-3 h-3" /> {newsCount} aux news
+              <span className="text-slate-300">·</span>
+              <CameraOff className="w-3 h-3 text-orange-400" /> {noPhotoCount} sans droit photo
             </p>
           </div>
         </div>
@@ -139,6 +145,14 @@ export default function MembresAdmin({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        <button
+          onClick={() => setFilterNoPhoto((v) => !v)}
+          className={`btn-primary !px-3 shrink-0 ${filterNoPhoto ? "!bg-gradient-to-r !from-orange-500 !to-amber-500" : "!bg-gradient-to-r !from-slate-400 !to-slate-500"}`}
+          title={filterNoPhoto ? "Afficher tous les adhérents" : "Voir uniquement sans droit à l'image"}
+        >
+          <CameraOff className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1">{filterNoPhoto ? `Sans photo (${noPhotoCount})` : "Sans photo"}</span>
+        </button>
         <button onClick={copyEmails} className="btn-primary !px-3 shrink-0" title="Copier les emails">
           <Mail className="w-4 h-4" />
           <span className="hidden sm:inline ml-1">Emails</span>
@@ -217,6 +231,11 @@ export default function MembresAdmin({
                   ) : (
                     <BellOff className="w-3 h-3 text-slate-300 shrink-0" aria-label="Non abonné aux news" />
                   )}
+                  {m.photoConsent === true ? (
+                    <Camera className="w-3 h-3 text-violet-500 shrink-0" aria-label="Droit à l'image accordé" />
+                  ) : (
+                    <CameraOff className="w-3 h-3 text-orange-400 shrink-0" aria-label="Pas de droit à l'image" />
+                  )}
                 </div>
                 <p className="text-xs text-slate-500 truncate">{m.email}</p>
                 {m.tel && <p className="text-xs text-slate-400">{m.tel}</p>}
@@ -288,6 +307,7 @@ export default function MembresAdmin({
               <th className="p-3">Type</th>
               <th className="p-3">Mode</th>
               <th className="p-3">News</th>
+              <th className="p-3">Photo</th>
               <th className="p-3">Paiement</th>
               <th className="p-3">Actions</th>
             </tr>
@@ -313,6 +333,13 @@ export default function MembresAdmin({
                     <span className="flex items-center gap-1 text-emerald-600 text-xs"><Bell className="w-3 h-3" /> Oui</span>
                   ) : (
                     <span className="flex items-center gap-1 text-slate-300 text-xs"><BellOff className="w-3 h-3" /> Non</span>
+                  )}
+                </td>
+                <td className="p-3">
+                  {m.photoConsent === true ? (
+                    <span className="flex items-center gap-1 text-violet-600 text-xs"><Camera className="w-3 h-3" /> Oui</span>
+                  ) : (
+                    <span className="flex items-center gap-1 text-orange-400 text-xs"><CameraOff className="w-3 h-3" /> Non</span>
                   )}
                 </td>
                 <td className="p-3">
@@ -356,7 +383,7 @@ export default function MembresAdmin({
             ))}
             {filtered.length === 0 && (
               <tr>
-                <td colSpan={8} className="p-6 text-center text-slate-400">Aucun adhérent.</td>
+                <td colSpan={9} className="p-6 text-center text-slate-400">Aucun adhérent.</td>
               </tr>
             )}
           </tbody>

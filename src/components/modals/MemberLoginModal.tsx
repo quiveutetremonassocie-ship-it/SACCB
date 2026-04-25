@@ -44,6 +44,8 @@ export default function MemberLoginModal({
     }
     const sess = { membreId: r.membre.id, nom: r.membre.nom, type: r.membre.type, email: r.membre.email, paid: r.paid !== false, isAdmin: r.isAdmin === true };
     setMemberSession(sess);
+    // Stocker le code en sessionStorage pour charger les actus privées
+    if (!r.isAdmin) sessionStorage.setItem("saccb_member_code", code);
     onSuccess({ ...sess, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, r.isAdmin ? code : undefined);
     setEmail("");
     setCode("");

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession } from "@/lib/db";
+import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import { getMemberSession, clearMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
@@ -29,6 +29,7 @@ export default function Site() {
   const [memberLoginOpen, setMemberLoginOpen] = useState(false);
   const [memberPanelOpen, setMemberPanelOpen] = useState(false);
   const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
+  const [privateActualites, setPrivateActualites] = useState<import("@/lib/types").Actualite[]>([]);
 
   // Credentials admin via espace membre (stockés en mémoire uniquement, jamais en localStorage)
   const memberAdminCode = useRef<string | null>(null);
@@ -124,6 +125,19 @@ export default function Site() {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [adminOpen]);
 
+  // Charger les actualités privées quand un membre est connecté
+  useEffect(() => {
+    if (!memberSession || memberSession.isAdmin) {
+      setPrivateActualites([]);
+      return;
+    }
+    const savedCode = sessionStorage.getItem("saccb_member_code");
+    if (!savedCode) return;
+    fetchPrivateActualites(memberSession.email, savedCode, memberSession.membreId)
+      .then(setPrivateActualites)
+      .catch(() => {});
+  }, [memberSession]);
+
   // Bloque le scroll quand admin est ouvert
   useEffect(() => {
     if (typeof document === "undefined") return;
@@ -205,6 +219,8 @@ export default function Site() {
     setIsMemberAdmin(false);
     memberAdminCode.current = null;
     sessionStorage.removeItem("saccb_admin_code");
+    sessionStorage.removeItem("saccb_member_code");
+    setPrivateActualites([]);
   };
 
   // Fermer le panneau sans se déconnecter
@@ -224,7 +240,7 @@ export default function Site() {
       <main>
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />
         <Presentation />
-        <Actualites actualites={db.actualites || []} />
+        <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
         <Horaires />
         <Tournois
           db={db}
