@@ -101,7 +101,7 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
 export async function verifyMembre(
   email: string,
   code: string
-): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; membre?: { id: string; nom: string; type: string; email: string }; reason?: string }> {
+): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
