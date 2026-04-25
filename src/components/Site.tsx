@@ -64,7 +64,7 @@ export default function Site() {
     }
   }, [isMemberAdmin, memberSession]);
 
-  // Restaurer la session membre depuis localStorage + code admin depuis sessionStorage
+  // Restaurer la session membre depuis localStorage + code admin depuis localStorage
   useEffect(() => {
     const session = getMemberSession();
     if (!session) return;
@@ -73,8 +73,8 @@ export default function Site() {
     setMemberSession(session);
 
     if (session.isAdmin) {
-      // Admin membre : restaurer le code depuis sessionStorage
-      const savedCode = sessionStorage.getItem("saccb_admin_code");
+      // Admin membre : restaurer le code depuis localStorage (persiste après fermeture navigateur)
+      const savedCode = localStorage.getItem("saccb_admin_code");
       if (savedCode) {
         memberAdminCode.current = savedCode;
         setIsMemberAdmin(true);
@@ -160,10 +160,10 @@ export default function Site() {
       setIsMemberAdmin(false);
       setSupabaseAdminEmail(undefined);
       memberAdminCode.current = null;
-      sessionStorage.removeItem("saccb_admin_code");
+      localStorage.removeItem("saccb_admin_code");
       setDb((d) => ({ ...d, membres: [], factures: [] }));
     }
-    // Admin via membre : on garde le code en mémoire + sessionStorage, bouton Admin reste visible
+    // Admin via membre : on garde le code en mémoire + localStorage, bouton Admin reste visible
     setAdminOpen(false);
   };
 
@@ -197,7 +197,7 @@ export default function Site() {
     if (session.isAdmin && adminCode) {
       // Admin via espace membre : stocker le code en mémoire + sessionStorage, ouvrir l'admin
       memberAdminCode.current = adminCode;
-      sessionStorage.setItem("saccb_admin_code", adminCode);
+      localStorage.setItem("saccb_admin_code", adminCode);
       setIsMemberAdmin(true);
       const data = await fetchAdminDBByMember(session.email, adminCode);
       if (data) {
@@ -218,7 +218,7 @@ export default function Site() {
     setMemberPanelOpen(false);
     setIsMemberAdmin(false);
     memberAdminCode.current = null;
-    sessionStorage.removeItem("saccb_admin_code");
+    localStorage.removeItem("saccb_admin_code");
     sessionStorage.removeItem("saccb_member_code");
     setPrivateActualites([]);
   };
