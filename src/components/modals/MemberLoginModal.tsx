@@ -42,9 +42,17 @@ export default function MemberLoginModal({
       setError("Votre adhésion n'est pas encore active. Si vous avez choisi le paiement par virement, patientez la validation de l'administrateur. Vous recevrez un email de confirmation.");
       return;
     }
-    const sess = { membreId: r.membre.id, nom: r.membre.nom, type: r.membre.type, email: r.membre.email, paid: r.paid !== false, isAdmin: r.isAdmin === true };
-    setMemberSession(sess);
-    // Stocker le code en sessionStorage pour charger les actus privées
+    const sess = {
+      membreId: r.membre.id,
+      nom: r.membre.nom,
+      type: r.membre.type,
+      email: r.membre.email,
+      paid: r.paid !== false,
+      isAdmin: r.isAdmin === true,
+      adminCode: r.isAdmin ? code : undefined, // stocké dans la session pour survie au rechargement
+    };
+    setMemberSession(sess); // sauvegarde en localStorage (inclut adminCode)
+    // Stocker le code pour charger les actus privées (membres normaux)
     if (!r.isAdmin) sessionStorage.setItem("saccb_member_code", code);
     onSuccess({ ...sess, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, r.isAdmin ? code : undefined);
     setEmail("");

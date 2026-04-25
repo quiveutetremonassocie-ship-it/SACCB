@@ -73,10 +73,12 @@ export default function Site() {
     setMemberSession(session);
 
     if (session.isAdmin) {
-      // Admin membre : restaurer le code depuis localStorage (persiste après fermeture navigateur)
-      const savedCode = localStorage.getItem("saccb_admin_code");
+      // Admin membre : lire le code depuis la session (priorité) ou localStorage (fallback)
+      const savedCode = session.adminCode || localStorage.getItem("saccb_admin_code");
       if (savedCode) {
         memberAdminCode.current = savedCode;
+        // Remettre à jour localStorage pour compatibilité
+        localStorage.setItem("saccb_admin_code", savedCode);
         setIsMemberAdmin(true);
         fetchAdminDBByMember(session.email, savedCode).then((data) => {
           if (data) { setDb(data); setMembresCount(data.membres.length); }
