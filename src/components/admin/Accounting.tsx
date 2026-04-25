@@ -1,6 +1,6 @@
 "use client";
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet } from "lucide-react";
 import { DB, Facture, FactureFile } from "@/lib/types";
 import { supabaseClient, FACTURE_BUCKET } from "@/lib/supabase";
@@ -24,10 +24,22 @@ export default function Accounting({
   const [reportInput, setReportInput] = useState(String(db.reportPrecedent ?? ""));
   const [reportBusy, setReportBusy] = useState(false);
 
+  // Synchroniser le champ si db change depuis l'extérieur
+  useEffect(() => {
+    setReportInput(String(db.reportPrecedent ?? ""));
+  }, [db.reportPrecedent]);
+
   async function saveReport() {
     setReportBusy(true);
     const val = parseFloat(reportInput) || 0;
     await onPersist({ ...db, reportPrecedent: val });
+    setReportBusy(false);
+  }
+
+  async function resetReport() {
+    setReportInput("0");
+    setReportBusy(true);
+    await onPersist({ ...db, reportPrecedent: 0 });
     setReportBusy(false);
   }
 
@@ -153,6 +165,7 @@ export default function Accounting({
           <input
             className="input flex-1"
             type="number"
+            min="0"
             placeholder="Montant en €"
             value={reportInput}
             onChange={(e) => setReportInput(e.target.value)}
@@ -160,9 +173,19 @@ export default function Accounting({
           <button onClick={saveReport} disabled={reportBusy} className="btn-primary !bg-gradient-to-r !from-violet-500 !to-purple-500 whitespace-nowrap">
             {reportBusy ? "Sauvegarde..." : "Enregistrer"}
           </button>
+          {(db.reportPrecedent ?? 0) > 0 && (
+            <button
+              onClick={resetReport}
+              disabled={reportBusy}
+              className="btn-danger !px-3 !py-2 whitespace-nowrap"
+              title="Remettre à 0"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
         </div>
         <p className="text-xs text-violet-500 mt-2">
-          Ce montant est ajouté au solde de la saison en cours (ex. : excédent des saisons passées).
+          Modifiez le montant et cliquez sur <strong>Enregistrer</strong> pour le corriger, ou 🗑️ pour le supprimer.
         </p>
       </div>
 
