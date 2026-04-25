@@ -49,7 +49,8 @@ export default function MemberLoginModal({
       email: r.membre.email,
       paid: r.paid !== false,
       isAdmin: r.isAdmin === true,
-      adminCode: r.isAdmin ? code : undefined, // stocké dans la session pour survie au rechargement
+      adminCode: r.isAdmin ? code : undefined,
+      newsOptIn: r.membre.newsOptIn !== false, // true par défaut
     };
     setMemberSession(sess); // sauvegarde en localStorage (inclut adminCode)
     // Stocker le code pour charger les actus privées (membres normaux)

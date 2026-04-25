@@ -1,9 +1,9 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, Medal, X, Star } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff } from "lucide-react";
 import { useState, useMemo } from "react";
-import { MemberSession, clearMemberSession } from "@/lib/useMemberSession";
-import { memberChangeCode } from "@/lib/db";
+import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
+import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 
 export default function MemberPanel({
@@ -46,6 +46,30 @@ export default function MemberPanel({
   const [showNew, setShowNew] = useState(false);
   const [codeMsg, setCodeMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [codeLoading, setCodeLoading] = useState(false);
+
+  // Préférence news
+  const [newsOptIn, setNewsOptIn] = useState(session.newsOptIn !== false);
+  const [newsLoading, setNewsLoading] = useState(false);
+  const [newsMsg, setNewsMsg] = useState<string | null>(null);
+
+  async function toggleNews() {
+    const next = !newsOptIn;
+    setNewsLoading(true);
+    setNewsMsg(null);
+    // On a besoin du code — stocké dans adminCode pour les admins, sinon via sessionStorage
+    const code = session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    const r = await memberUpdateNewsOptIn(session.email, code, session.membreId, next);
+    setNewsLoading(false);
+    if (r.ok) {
+      setNewsOptIn(next);
+      // Mettre à jour la session en localStorage
+      setMemberSession({ ...session, newsOptIn: next });
+      setNewsMsg(next ? "Vous recevrez les news du club." : "Vous ne recevrez plus les news.");
+      setTimeout(() => setNewsMsg(null), 3000);
+    } else {
+      setNewsMsg("Erreur, réessayez.");
+    }
+  }
 
   // Historique : fusionner saison courante + archives, garder tournois passés
   const today = new Date().toISOString().slice(0, 10);
@@ -267,6 +291,34 @@ export default function MemberPanel({
                 {codeLoading ? "Enregistrement..." : "Enregistrer le nouveau code"}
               </button>
             </form>
+          )}
+        </div>
+
+        {/* Préférences news */}
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {newsOptIn
+                ? <Bell className="w-4 h-4 text-emerald-500 shrink-0" />
+                : <BellOff className="w-4 h-4 text-slate-400 shrink-0" />}
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-700">News du club</p>
+                <p className="text-xs text-slate-400 truncate">
+                  {newsOptIn ? "Activées — tournois, rappels, infos" : "Désactivées"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleNews}
+              disabled={newsLoading}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${newsOptIn ? "bg-emerald-500" : "bg-slate-300"}`}
+              title={newsOptIn ? "Désactiver les news" : "Activer les news"}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${newsOptIn ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+          </div>
+          {newsMsg && (
+            <p className="text-xs text-slate-500 mt-2 text-center">{newsMsg}</p>
           )}
         </div>
 

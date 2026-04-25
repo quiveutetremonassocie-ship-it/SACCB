@@ -242,6 +242,21 @@ export async function fetchPrivateActualites(
   }
 }
 
+// ─── Mettre à jour la préférence news d'un membre ───
+export async function memberUpdateNewsOptIn(
+  email: string,
+  code: string,
+  membreId: string,
+  newsOptIn: boolean
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "update_news_optin", email: email.toLowerCase().trim(), code, membreId, newsOptIn }),
+  });
+  return res.json();
+}
+
 // ─── Marquer payé (via Edge Function sécurisée) ───
 export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }> {
   const res = await fetch(EDGE_FUNCTION_URL, {

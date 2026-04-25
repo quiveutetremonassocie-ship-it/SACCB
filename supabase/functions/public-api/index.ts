@@ -342,8 +342,38 @@ Deno.serve(async (req) => {
         nom: membre.nom,
         type: membre.type,
         email: membre.email,
+        newsOptIn: membre.newsOptIn !== false, // true par défaut pour les anciens comptes
       },
     });
+  }
+
+  // ─── ACTION: Mettre à jour les préférences news d'un membre ───
+  if (action === "update_news_optin") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const newsOptIn = body.newsOptIn === true;
+
+    if (!email || !code || !membreId) return json({ ok: false, reason: "Paramètres manquants." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+
+    const idx = membres.findIndex(
+      (m) => String(m.email || "").toLowerCase() === email &&
+             String(m.id || "") === membreId &&
+             String(m.code || "") === code
+    );
+    if (idx === -1) return json({ ok: false, reason: "Membre introuvable ou code incorrect." }, 403);
+
+    membres[idx] = { ...membres[idx], newsOptIn };
+    d.membres = membres;
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
   }
 
   // ─── ACTION: Récupérer toute la DB en tant qu'admin membre ───
