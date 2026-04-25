@@ -9,11 +9,13 @@ export default function Navbar({
   isMember,
   isAdmin,
   onAdmin,
+  onAdminLogin,
 }: {
   onMember: () => void;
   isMember: boolean;
   isAdmin?: boolean;
   onAdmin?: () => void;
+  onAdminLogin?: () => void;
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -72,6 +74,15 @@ export default function Navbar({
               Admin
             </button>
           )}
+          {!isAdmin && isMember && onAdminLogin && (
+            <button
+              onClick={onAdminLogin}
+              className="text-slate-300 hover:text-amber-500 transition p-1"
+              title="Accès admin"
+            >
+              <ShieldCheck className="w-4 h-4" />
+            </button>
+          )}
           <button
             onClick={onMember}
             className={`btn-ghost !px-4 !py-2.5 !text-xs flex items-center gap-1.5 ${isMember ? "!border-emerald-400 !text-emerald-700" : ""}`}
@@ -109,6 +120,15 @@ export default function Navbar({
             >
               <ShieldCheck className="w-4 h-4" />
               Panneau Admin
+            </button>
+          )}
+          {!isAdmin && isMember && onAdminLogin && (
+            <button
+              onClick={() => { setOpen(false); onAdminLogin(); }}
+              className="btn-ghost w-full !border-slate-200 !text-slate-400"
+            >
+              <ShieldCheck className="w-4 h-4" />
+              Connexion Admin
             </button>
           )}
           <button

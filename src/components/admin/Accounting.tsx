@@ -20,6 +20,17 @@ export default function Accounting({
   const [busy, setBusy] = useState(false);
   const fileInput = useRef<HTMLInputElement>(null);
 
+  // Report de trésorerie saisons précédentes
+  const [reportInput, setReportInput] = useState(String(db.reportPrecedent ?? ""));
+  const [reportBusy, setReportBusy] = useState(false);
+
+  async function saveReport() {
+    setReportBusy(true);
+    const val = parseFloat(reportInput) || 0;
+    await onPersist({ ...db, reportPrecedent: val });
+    setReportBusy(false);
+  }
+
   async function uploadFiles(factureId: string, files: File[]): Promise<FactureFile[]> {
     const out: FactureFile[] = [];
     for (const f of files) {
@@ -126,10 +137,33 @@ export default function Accounting({
         <h3 className="font-display text-xl md:text-2xl tracking-wider text-slate-800">Comptabilité & Trésorerie</h3>
       </div>
 
-      <div className="grid grid-cols-3 gap-2 md:gap-3 mb-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-5">
         <Stat label="Adhésions" value={`${totals.totalRecolte}€`} accent="text-emerald-600" />
+        <Stat label="Report N-1" value={`${db.reportPrecedent ?? 0}€`} accent="text-violet-600" />
         <Stat label="Dépenses" value={`${totals.totalDepenses}€`} accent="text-red-500" />
-        <Stat label="Solde" value={`${totals.solde}€`} accent="text-blue-600" />
+        <Stat label="Solde" value={`${totals.solde}€`} accent={totals.solde >= 0 ? "text-blue-600" : "text-red-600"} />
+      </div>
+
+      {/* Report saison précédente */}
+      <div className="bg-violet-50 rounded-2xl p-4 mb-5 border border-violet-200">
+        <h4 className="text-sm font-semibold text-violet-800 mb-2 uppercase tracking-widest">
+          Report de trésorerie (saisons précédentes)
+        </h4>
+        <div className="flex gap-2 items-center">
+          <input
+            className="input flex-1"
+            type="number"
+            placeholder="Montant en €"
+            value={reportInput}
+            onChange={(e) => setReportInput(e.target.value)}
+          />
+          <button onClick={saveReport} disabled={reportBusy} className="btn-primary !bg-gradient-to-r !from-violet-500 !to-purple-500 whitespace-nowrap">
+            {reportBusy ? "Sauvegarde..." : "Enregistrer"}
+          </button>
+        </div>
+        <p className="text-xs text-violet-500 mt-2">
+          Ce montant est ajouté au solde de la saison en cours (ex. : excédent des saisons passées).
+        </p>
       </div>
 
       <div className="bg-slate-50 rounded-2xl p-4 md:p-5 mb-5 border border-slate-200">

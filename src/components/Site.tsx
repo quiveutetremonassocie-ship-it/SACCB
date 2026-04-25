@@ -219,6 +219,7 @@ export default function Site() {
         isMember={!!memberSession}
         isAdmin={isMemberAdmin}
         onAdmin={onReopenAdmin}
+        onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
       />
       <main>
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />

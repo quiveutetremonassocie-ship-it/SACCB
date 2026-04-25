@@ -63,7 +63,7 @@ export default function AdminPanel({
       ePayes,
       eTotal,
       totalDepenses,
-      solde: totalRecolte - totalDepenses,
+      solde: totalRecolte + (db.reportPrecedent || 0) - totalDepenses,
     };
   }, [db]);
 

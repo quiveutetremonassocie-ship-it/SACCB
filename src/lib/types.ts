@@ -91,6 +91,7 @@ export type DB = {
   adminEmails?: string[]; // emails ayant accès au panneau admin via l'espace membre
   adminCredentials?: { email: string; code: string }[]; // codes admin indépendants des adhérents
   contactEmails?: string[]; // emails recevant les messages du formulaire de contact
+  reportPrecedent?: number; // report de trésorerie des saisons précédentes
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;

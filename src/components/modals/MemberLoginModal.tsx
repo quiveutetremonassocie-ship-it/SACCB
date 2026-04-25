@@ -97,7 +97,7 @@ export default function MemberLoginModal({
                 type="password"
                 className="input w-full"
                 placeholder="Votre code personnel"
-                inputMode="numeric"
+                inputMode="text"
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
