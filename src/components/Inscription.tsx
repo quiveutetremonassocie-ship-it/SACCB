@@ -474,7 +474,7 @@ export default function Inscription({
                   <span className="font-medium text-slate-800">Droit à l&apos;image</span>
                   <br />
                   <span className="text-xs text-slate-400">
-                    J&apos;autorise le SACCB à utiliser les photos et vidéos prises lors des événements du club (tournois, entraînements) à des fins de communication.
+                    J&apos;autorise le SACCB à utiliser les photos et vidéos prises lors des événements du club (tournois, entraînements) à des fins de communication. Les photos publiées seront accessibles <strong>uniquement aux adhérents connectés</strong> à leur espace membre.
                   </span>
                 </span>
               </label>

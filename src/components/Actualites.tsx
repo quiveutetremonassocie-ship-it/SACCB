@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Newspaper, Images, Lock } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Newspaper, Images, Lock, Download } from "lucide-react";
 import { Actualite, actualiteImages } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
 
@@ -32,6 +32,27 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
     setGalleryIndex(0);
   }, []);
   const closeModal = useCallback(() => setModalIndex(null), []);
+
+  // Télécharger la photo courante (membres uniquement)
+  const downloadCurrentPhoto = useCallback(async () => {
+    if (modalIndex === null) return;
+    const imgs = actualiteImages(actualites[modalIndex]);
+    const img = imgs[galleryIndex];
+    if (!img?.url) return;
+    try {
+      const res = await fetch(img.url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = img.url.split(".").pop()?.split("?")[0] || "jpg";
+      a.download = `saccb-${actualites[modalIndex].title.replace(/[^a-zA-Z0-9]/g, "-")}-${galleryIndex + 1}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(img.url, "_blank");
+    }
+  }, [modalIndex, galleryIndex, actualites]);
 
   const currentModalImages = useMemo(
     () => (modalIndex !== null ? actualiteImages(actualites[modalIndex]) : []),
@@ -256,6 +277,17 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
                       />
                     )}
                   </AnimatePresence>
+
+                  {/* Bouton téléchargement — membres connectés uniquement */}
+                  {memberSession && currentModalImages[galleryIndex] && (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); downloadCurrentPhoto(); }}
+                      className="absolute top-3 left-3 w-9 h-9 rounded-full bg-black/60 hover:bg-emerald-600 flex items-center justify-center text-white transition"
+                      title="Télécharger cette photo"
+                    >
+                      <Download className="w-4 h-4" />
+                    </button>
+                  )}
 
                   {currentModalImages.length > 1 && (
                     <>
