@@ -280,17 +280,34 @@ export default function SeasonSettings({
           {(db.adminEmails ?? []).length === 0 && (
             <p className="text-xs text-slate-300 italic">Aucun email admin configuré.</p>
           )}
-          {(db.adminEmails ?? []).map((email) => (
-            <div key={email} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
-              <span className="text-sm text-slate-700">{email}</span>
+          {(db.adminEmails ?? []).map((entry) => (
+            <div key={entry.email} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 border border-slate-200">
+              <label className="flex items-center gap-2.5 cursor-pointer flex-1 min-w-0">
+                <input
+                  type="checkbox"
+                  checked={entry.readOnly === true}
+                  onChange={async (e) => {
+                    const newEmails = (db.adminEmails ?? []).map((x) =>
+                      x.email === entry.email ? { ...x, readOnly: e.target.checked } : x
+                    );
+                    await onPersist({ ...db, adminEmails: newEmails });
+                  }}
+                  className="w-3.5 h-3.5 accent-amber-500 shrink-0"
+                  title="Lecture seule"
+                />
+                <span className="text-sm text-slate-700 truncate">{entry.email}</span>
+                {entry.readOnly && (
+                  <span className="text-[10px] bg-amber-100 text-amber-600 px-1.5 py-0.5 rounded font-semibold shrink-0">Lecture seule</span>
+                )}
+              </label>
               <button
                 onClick={async () => {
-                  const conf = prompt(`Tapez CONFIRMER pour retirer ${email} des admins :`);
+                  const conf = prompt(`Tapez CONFIRMER pour retirer ${entry.email} des admins :`);
                   if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
-                  const newEmails = (db.adminEmails ?? []).filter((e) => e !== email);
+                  const newEmails = (db.adminEmails ?? []).filter((x) => x.email !== entry.email);
                   await onPersist({ ...db, adminEmails: newEmails });
                 }}
-                className="text-red-400 hover:text-red-600 transition"
+                className="text-red-400 hover:text-red-600 transition ml-2 shrink-0"
                 title="Retirer"
               >
                 <X className="w-4 h-4" />
@@ -308,26 +325,26 @@ export default function SeasonSettings({
             onKeyDown={async (e) => {
               if (e.key === "Enter") {
                 e.preventDefault();
-                const email = adminEmailInput.trim().toLowerCase();
-                if (!email) return;
+                const em = adminEmailInput.trim().toLowerCase();
+                if (!em) return;
                 const current = db.adminEmails ?? [];
-                if (current.includes(email)) { alert("Cet email est déjà admin."); return; }
-                const conf = prompt(`Tapez CONFIRMER pour donner l'accès admin à ${email} :`);
+                if (current.some((x) => x.email === em)) { alert("Cet email est déjà admin."); return; }
+                const conf = prompt(`Tapez CONFIRMER pour donner l'accès admin à ${em} :`);
                 if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
-                await onPersist({ ...db, adminEmails: [...current, email] });
+                await onPersist({ ...db, adminEmails: [...current, { email: em, readOnly: false }] });
                 setAdminEmailInput("");
               }
             }}
           />
           <button
             onClick={async () => {
-              const email = adminEmailInput.trim().toLowerCase();
-              if (!email) return;
+              const em = adminEmailInput.trim().toLowerCase();
+              if (!em) return;
               const current = db.adminEmails ?? [];
-              if (current.includes(email)) { alert("Cet email est déjà admin."); return; }
-              const conf = prompt(`Tapez CONFIRMER pour donner l'accès admin à ${email} :`);
+              if (current.some((x) => x.email === em)) { alert("Cet email est déjà admin."); return; }
+              const conf = prompt(`Tapez CONFIRMER pour donner l'accès admin à ${em} :`);
               if (conf?.trim().toUpperCase() !== "CONFIRMER") { alert("Action annulée."); return; }
-              await onPersist({ ...db, adminEmails: [...current, email] });
+              await onPersist({ ...db, adminEmails: [...current, { email: em, readOnly: false }] });
               setAdminEmailInput("");
             }}
             className="btn-primary !px-3"
@@ -335,6 +352,9 @@ export default function SeasonSettings({
             <Plus className="w-4 h-4" />
           </button>
         </div>
+        <p className="text-xs text-slate-400 mt-1.5 flex items-center gap-1">
+          Cocher = lecture seule (voit l'admin mais ne peut pas modifier)
+        </p>
       </div>}
 
       {/* Codes admin indépendants (sans être adhérent) */}

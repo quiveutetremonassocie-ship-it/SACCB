@@ -52,6 +52,15 @@ function isValidPhone(tel: string): boolean {
   return /^\+?\d{8,15}$/.test(cleaned);
 }
 
+// Helper : normalise adminEmails (ancien format string[] ou nouveau format {email,readOnly}[])
+function parseAdminEmails(arr: unknown[]): { email: string; readOnly: boolean }[] {
+  return arr.map((e) =>
+    typeof e === "string"
+      ? { email: e.toLowerCase(), readOnly: false }
+      : { email: String((e as { email: string }).email || "").toLowerCase(), readOnly: (e as { readOnly?: boolean }).readOnly === true }
+  );
+}
+
 function json(data: unknown, status = 200) {
   return new Response(JSON.stringify(data), {
     status,
@@ -305,7 +314,8 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
     const adminCredentials = ((currentData.adminCredentials || []) as { email: string; code: string }[]);
-    const adminEmails = ((currentData.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const adminEmailEntries = parseAdminEmails(currentData.adminEmails as unknown[] || []);
+    const adminEmails = adminEmailEntries.map((e) => e.email);
 
     // Vérifier d'abord les credentials admin indépendants (pas besoin d'être adhérent)
     const adminCred = adminCredentials.find(
@@ -387,8 +397,9 @@ Deno.serve(async (req) => {
 
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
-    const adminEmails = ((d.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
-    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
+    const adminEmailEntries = parseAdminEmails(d.adminEmails as unknown[] || []);
+    const adminEmails = adminEmailEntries.map((e) => e.email);
+    const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string; readOnly?: boolean }[]);
 
     // Vérifier via adminCredentials (admin sans adhérent) OU via membres
     const validAdminCred = adminCredentials.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
@@ -397,7 +408,8 @@ Deno.serve(async (req) => {
     if (!validAdminCred && !validMembre) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
 
-    const isReadOnly = validAdminCred?.readOnly === true;
+    const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
+    const isReadOnly = validAdminCred?.readOnly === true || adminEmailEntry?.readOnly === true;
     return json({ ok: true, data: d, readOnly: isReadOnly });
   }
 
@@ -413,7 +425,8 @@ Deno.serve(async (req) => {
 
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
-    const adminEmails = ((d.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const adminEmailEntries = parseAdminEmails(d.adminEmails as unknown[] || []);
+    const adminEmails = adminEmailEntries.map((e) => e.email);
     const adminCredentialsCheck = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
     const validAdminCredSave = adminCredentialsCheck.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
@@ -422,11 +435,11 @@ Deno.serve(async (req) => {
     if (!validAdminCredSave && !validMembreSave) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
 
-    // Seuls les super-admins peuvent modifier la liste adminEmails
+    // Seuls les super-admins peuvent modifier la liste adminEmails (ajout/suppression)
     const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
-    const currentAdminEmails = JSON.stringify([...(d.adminEmails || [])].map((e: string) => String(e).toLowerCase()).sort());
-    const newAdminEmails = JSON.stringify([...((newData.adminEmails || []) as string[])].map((e: string) => String(e).toLowerCase()).sort());
-    if (currentAdminEmails !== newAdminEmails && !SUPER_ADMINS.includes(email)) {
+    const currentAdminEmailSet = JSON.stringify(adminEmailEntries.map((e) => e.email).sort());
+    const newAdminEmailSet = JSON.stringify(parseAdminEmails((newData.adminEmails as unknown[] || [])).map((e) => e.email).sort());
+    if (currentAdminEmailSet !== newAdminEmailSet && !SUPER_ADMINS.includes(email)) {
       return json({ ok: false, reason: "Seul un super-administrateur peut modifier la liste des admins." }, 403);
     }
 
@@ -1491,7 +1504,7 @@ Deno.serve(async (req) => {
 
     const dImg = dbDataImg.data as Record<string, unknown>;
     const membresImg = (dImg.membres || []) as Record<string, unknown>[];
-    const adminEmailsImg = ((dImg.adminEmails || []) as string[]).map((e: string) => e.toLowerCase());
+    const adminEmailsImg = parseAdminEmails(dImg.adminEmails as unknown[] || []).map((e) => e.email);
     const adminCredentialsImg = ((dImg.adminCredentials || []) as { email: string; code: string }[]);
 
     const validAdminCredImg = adminCredentialsImg.find(
