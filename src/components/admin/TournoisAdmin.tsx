@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive } from "lucide-react";
+import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive, PackageCheck } from "lucide-react";
 import { DB, Tournoi, InscritTournoi } from "@/lib/types";
 import { notifyMembres } from "@/lib/db";
+
+const today = new Date().toISOString().slice(0, 10);
 
 export default function TournoisAdmin({
   db,
@@ -110,6 +112,42 @@ export default function TournoisAdmin({
     }
   }
 
+  async function archivePastTournois() {
+    const past = (db.config_tournois || []).filter((t) => t.date < today);
+    if (past.length === 0) { alert("Aucun tournoi passé à archiver pour le moment."); return; }
+    if (!confirm(`Archiver ${past.length} tournoi${past.length > 1 ? "s" : ""} terminé${past.length > 1 ? "s" : ""} ?\nIls seront déplacés vers l'historique de la saison ${db.y1}–${db.y2}.`)) return;
+
+    const pastIds = new Set(past.map((t) => t.id));
+    const pastInscrits = (db.inscrits_tournoi || []).filter((i) => pastIds.has(i.tournoiId));
+
+    // Créer ou fusionner avec l'archive de la saison courante
+    const existingIdx = (db.archives || []).findIndex((a) => a.y1 === db.y1 && a.y2 === db.y2);
+    const newArchives = [...(db.archives || [])];
+    if (existingIdx >= 0) {
+      const existing = newArchives[existingIdx];
+      newArchives[existingIdx] = {
+        ...existing,
+        config_tournois: [...existing.config_tournois, ...past],
+        inscrits_tournoi: [...existing.inscrits_tournoi, ...pastInscrits],
+      };
+    } else {
+      newArchives.push({
+        y1: db.y1, y2: db.y2,
+        membresCount: db.membres.filter((m) => m.ok).length,
+        config_tournois: past,
+        inscrits_tournoi: pastInscrits,
+      });
+    }
+
+    await onPersist({
+      ...db,
+      config_tournois: (db.config_tournois || []).filter((t) => !pastIds.has(t.id)),
+      inscrits_tournoi: (db.inscrits_tournoi || []).filter((i) => !pastIds.has(i.tournoiId)),
+      archives: newArchives,
+    });
+    alert(`✅ ${past.length} tournoi${past.length > 1 ? "s" : ""} archivé${past.length > 1 ? "s" : ""} !`);
+  }
+
   // ── Fonctions archive ──
 
   function startEditArchive(archiveKey: string, t: Tournoi) {
@@ -200,11 +238,23 @@ export default function TournoisAdmin({
 
   return (
     <div className="glass p-4 md:p-6">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-          <Trophy className="w-5 h-5 text-slate-800" />
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+            <Trophy className="w-5 h-5 text-slate-800" />
+          </div>
+          <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
+        {!readOnly && (db.config_tournois || []).some((t) => t.date < today) && (
+          <button
+            onClick={archivePastTournois}
+            className="btn-ghost !px-3 !py-2 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50 flex items-center gap-1.5"
+            title="Déplacer les tournois terminés vers l'historique"
+          >
+            <PackageCheck className="w-4 h-4" />
+            Archiver les tournois passés
+          </button>
+        )}
       </div>
 
       {/* ── Saison courante ── */}
