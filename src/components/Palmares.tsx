@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Trophy, Medal, Star, ChevronDown, ChevronUp, Lock } from "lucide-react";
+import { Trophy, Medal, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import { useState } from "react";
 import { DB, SeasonArchive, InscritTournoi, Tournoi } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
@@ -31,14 +31,6 @@ type TournoiResult = {
   total: number;
 };
 
-type PlayerStat = {
-  nom: string;
-  tournaments: number;
-  bestRank: number;
-  bestTotal: number;
-  podiums: number;
-};
-
 function buildResults(
   config_tournois: Tournoi[],
   inscrits_tournoi: InscritTournoi[]
@@ -62,34 +54,6 @@ function buildResults(
   return results.sort((a, b) => a.rank - b.rank);
 }
 
-function buildPlayerStats(results: TournoiResult[]): PlayerStat[] {
-  const map = new Map<string, PlayerStat>();
-  for (const r of results) {
-    // "Joueur1 / Joueur2" → deux joueurs
-    const players = r.joueurs.split("/").map((p) => p.trim()).filter(Boolean);
-    for (const nom of players) {
-      const existing = map.get(nom);
-      if (!existing) {
-        map.set(nom, {
-          nom,
-          tournaments: 1,
-          bestRank: r.rank,
-          bestTotal: r.total,
-          podiums: r.rank <= 3 ? 1 : 0,
-        });
-      } else {
-        existing.tournaments++;
-        if (r.rank < existing.bestRank || (r.rank === existing.bestRank && r.total > existing.bestTotal)) {
-          existing.bestRank = r.rank;
-          existing.bestTotal = r.total;
-        }
-        if (r.rank <= 3) existing.podiums++;
-      }
-    }
-  }
-  return Array.from(map.values()).sort((a, b) => a.bestRank - b.bestRank || b.podiums - a.podiums);
-}
-
 // ─── Composants ─────────────────────────────────────────
 
 function SeasonBlock({
@@ -105,7 +69,6 @@ function SeasonBlock({
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
   const results = buildResults(config_tournois, inscrits_tournoi);
-  const stats = buildPlayerStats(results);
   const hasData = results.length > 0;
 
   if (!hasData) return null;
@@ -173,33 +136,6 @@ function SeasonBlock({
             </div>
           </div>
 
-          {/* Stats par joueur */}
-          {stats.length > 0 && (
-            <div>
-              <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
-                <Star className="w-3.5 h-3.5" /> Stats par joueur
-              </p>
-              <div className="grid sm:grid-cols-2 gap-2">
-                {stats.map((s) => (
-                  <div key={s.nom} className="bg-slate-50 rounded-xl px-4 py-3 flex items-center justify-between">
-                    <div>
-                      <p className="text-slate-800 font-semibold text-sm">{s.nom}</p>
-                      <p className="text-xs text-slate-400">
-                        {s.tournaments} tournoi{s.tournaments > 1 ? "s" : ""} joué{s.tournaments > 1 ? "s" : ""}
-                        {s.podiums > 0 && ` · ${s.podiums} podium${s.podiums > 1 ? "s" : ""}`}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-xs text-slate-400">Meilleur</p>
-                      <span className={`text-sm font-bold ${s.bestRank <= 3 ? "text-amber-600" : "text-slate-600"}`}>
-                        {getMedal(s.bestRank) || ""} {s.bestRank}e/{s.bestTotal}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
         </div>
       )}
     </div>
