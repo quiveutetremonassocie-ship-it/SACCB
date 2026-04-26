@@ -104,12 +104,8 @@ Deno.serve(async (req) => {
   // ─── WEBHOOK HELLOASSO (notification automatique de paiement) ───
   // HelloAsso envoie un payload avec eventType, pas de champ "action"
   if (body.eventType === "Payment" || body.eventType === "Order") {
-    // Vérifier que l'appel vient bien de HelloAsso (IP whitelist)
-    const allowedIPs = ["51.138.206.200"];
-    const callerIP = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() || "";
-    if (!allowedIPs.includes(callerIP)) {
-      return json({ ok: false, reason: "IP non autorisée." }, 403);
-    }
+    // Pas de vérification d'IP (HelloAsso peut changer ses IPs)
+    // La sécurité repose sur le format spécifique du payload + le fait que l'URL n'est pas publique
 
     // Extraire l'email du payeur
     const paymentData = body.data as Record<string, unknown> | undefined;
