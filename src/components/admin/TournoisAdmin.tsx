@@ -245,7 +245,7 @@ export default function TournoisAdmin({
           </div>
           <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
         </div>
-        {!readOnly && (db.config_tournois || []).some((t) => t.date < today) && (
+        {!readOnly && (
           <button
             onClick={archivePastTournois}
             className="btn-ghost !px-3 !py-2 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50 flex items-center gap-1.5"
