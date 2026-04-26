@@ -251,13 +251,32 @@ export default function TournoisAdmin({
                     {!readOnly && <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                   </div>
                 </div>
-                {/* Nb inscrits (sans détail) */}
+                {/* Inscrits saison courante — déroulant */}
                 {(() => {
                   const inscrits = (db.inscrits_tournoi || []).filter((i) => i.tournoiId === t.id);
                   if (inscrits.length === 0) return null;
+                  const isOpen = currentInscritOpen === t.id;
                   return (
-                    <div className="border-t border-slate-100 px-4 py-1.5">
-                      <span className="text-xs text-slate-400">🎾 {inscrits.length} binôme{inscrits.length > 1 ? "s" : ""} inscrit{inscrits.length > 1 ? "s" : ""}</span>
+                    <div className="border-t border-slate-100">
+                      <button
+                        onClick={() => setCurrentInscritOpen(isOpen ? null : t.id)}
+                        className="w-full flex items-center justify-between px-4 py-2 text-xs text-slate-500 hover:bg-slate-50 transition"
+                      >
+                        <span>🎾 {inscrits.length} binôme{inscrits.length > 1 ? "s" : ""} inscrit{inscrits.length > 1 ? "s" : ""}</span>
+                        {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
+                      </button>
+                      {isOpen && (
+                        <div className="px-3 pb-3 space-y-1">
+                          {inscrits.map((inscrit) => (
+                            <div key={inscrit.id} className="flex items-center gap-2 bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
+                              <span className="text-slate-600 truncate">🎾 {inscrit.joueurs}</span>
+                              {inscrit.resultat && (
+                                <span className="ml-auto font-semibold text-slate-700 shrink-0">{inscrit.resultat}</span>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })()}
