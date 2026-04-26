@@ -411,7 +411,9 @@ Deno.serve(async (req) => {
     const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
     const isReadOnly = validAdminCred?.readOnly === true || adminEmailEntry?.readOnly === true;
     const permissions = validAdminCred?.permissions ?? adminEmailEntry?.permissions ?? undefined;
-    return json({ ok: true, data: d, readOnly: isReadOnly, permissions });
+    // Normalise adminEmails en format objet (compat ancien format string[])
+    const normalizedData = { ...d, adminEmails: adminEmailEntries };
+    return json({ ok: true, data: normalizedData, readOnly: isReadOnly, permissions });
   }
 
   // ─── ACTION: Sauvegarder la DB en tant qu'admin membre ───
