@@ -112,13 +112,12 @@ export default function TournoisAdmin({
     }
   }
 
-  async function archivePastTournois() {
-    const past = (db.config_tournois || []).filter((t) => t.date < today);
-    if (past.length === 0) { alert("Aucun tournoi passé à archiver pour le moment."); return; }
-    if (!confirm(`Archiver ${past.length} tournoi${past.length > 1 ? "s" : ""} terminé${past.length > 1 ? "s" : ""} ?\nIls seront déplacés vers l'historique de la saison ${db.y1}–${db.y2}.`)) return;
+  async function archiveTournoi(tournoiId: string, name: string) {
+    if (!confirm(`Archiver "${name}" ?\nIl sera déplacé vers l'historique de la saison ${db.y1}–${db.y2}.`)) return;
 
-    const pastIds = new Set(past.map((t) => t.id));
-    const pastInscrits = (db.inscrits_tournoi || []).filter((i) => pastIds.has(i.tournoiId));
+    const tournoi = (db.config_tournois || []).find((t) => t.id === tournoiId);
+    if (!tournoi) return;
+    const inscrits = (db.inscrits_tournoi || []).filter((i) => i.tournoiId === tournoiId);
 
     // Créer ou fusionner avec l'archive de la saison courante
     const existingIdx = (db.archives || []).findIndex((a) => a.y1 === db.y1 && a.y2 === db.y2);
@@ -127,25 +126,24 @@ export default function TournoisAdmin({
       const existing = newArchives[existingIdx];
       newArchives[existingIdx] = {
         ...existing,
-        config_tournois: [...existing.config_tournois, ...past],
-        inscrits_tournoi: [...existing.inscrits_tournoi, ...pastInscrits],
+        config_tournois: [...existing.config_tournois, tournoi],
+        inscrits_tournoi: [...existing.inscrits_tournoi, ...inscrits],
       };
     } else {
       newArchives.push({
         y1: db.y1, y2: db.y2,
         membresCount: db.membres.filter((m) => m.ok).length,
-        config_tournois: past,
-        inscrits_tournoi: pastInscrits,
+        config_tournois: [tournoi],
+        inscrits_tournoi: inscrits,
       });
     }
 
     await onPersist({
       ...db,
-      config_tournois: (db.config_tournois || []).filter((t) => !pastIds.has(t.id)),
-      inscrits_tournoi: (db.inscrits_tournoi || []).filter((i) => !pastIds.has(i.tournoiId)),
+      config_tournois: (db.config_tournois || []).filter((t) => t.id !== tournoiId),
+      inscrits_tournoi: (db.inscrits_tournoi || []).filter((i) => i.tournoiId !== tournoiId),
       archives: newArchives,
     });
-    alert(`✅ ${past.length} tournoi${past.length > 1 ? "s" : ""} archivé${past.length > 1 ? "s" : ""} !`);
   }
 
   // ── Fonctions archive ──
@@ -238,23 +236,11 @@ export default function TournoisAdmin({
 
   return (
     <div className="glass p-4 md:p-6">
-      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
-        <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-            <Trophy className="w-5 h-5 text-slate-800" />
-          </div>
-          <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
+      <div className="flex items-center gap-3 mb-5">
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+          <Trophy className="w-5 h-5 text-slate-800" />
         </div>
-        {!readOnly && (
-          <button
-            onClick={archivePastTournois}
-            className="btn-ghost !px-3 !py-2 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50 flex items-center gap-1.5"
-            title="Déplacer les tournois terminés vers l'historique"
-          >
-            <PackageCheck className="w-4 h-4" />
-            Archiver les tournois passés
-          </button>
-        )}
+        <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
       </div>
 
       {/* ── Saison courante ── */}
@@ -298,6 +284,7 @@ export default function TournoisAdmin({
                       <Bell className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline ml-1">{notifying === t.id ? "Envoi..." : "Prévenir"}</span>
                     </button>
+                    {!readOnly && <button onClick={() => archiveTournoi(t.id, t.name)} className="btn-ghost !px-2.5 !py-1.5 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50" title="Archiver ce tournoi"><PackageCheck className="w-3.5 h-3.5" /></button>}
                     {!readOnly && <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                   </div>
                 </div>

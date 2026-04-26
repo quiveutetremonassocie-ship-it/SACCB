@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, Medal } from "lucide-react";
+import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
 import { useState } from "react";
 import { DB, Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import { publicRegisterTournoi } from "@/lib/db";
@@ -161,13 +161,6 @@ export default function Tournois({
                                 })}
                               </div>
                             )}
-                            {hasResults && (
-                              <PalmaresSection
-                                config_tournois={archive.config_tournois ?? []}
-                                inscrits_tournoi={archive.inscrits_tournoi ?? []}
-                                saison={`${archive.y1}–${archive.y2}`}
-                              />
-                            )}
                             {!hasTournois && <p className="text-slate-400 text-sm mt-4">Aucun tournoi enregistré pour cette saison.</p>}
                           </>
                         )}
@@ -250,48 +243,6 @@ function TournoiTermineCard({ t, inscrits, memberSession, onLoginRequest }: {
   );
 }
 
-// ── Palmares d'une saison ──────────────────────────────────────
-function PalmaresSection({ config_tournois, inscrits_tournoi, saison }: {
-  config_tournois: Tournoi[];
-  inscrits_tournoi: InscritTournoi[];
-  saison: string;
-}) {
-  const stats: Record<string, { nom: string; podiums: number; bestRank: number; count: number }> = {};
-  for (const insc of inscrits_tournoi) {
-    if (!insc.resultat) continue;
-    const rank = parseInt(insc.resultat.split("/")[0]);
-    if (isNaN(rank)) continue;
-    const noms = insc.joueurs.split("/").map((n) => n.trim());
-    for (const nom of noms) {
-      if (!stats[nom]) stats[nom] = { nom, podiums: 0, bestRank: 999, count: 0 };
-      stats[nom].count++;
-      if (rank <= 3) stats[nom].podiums++;
-      if (rank < stats[nom].bestRank) stats[nom].bestRank = rank;
-    }
-  }
-  const sorted = Object.values(stats).sort((a, b) => a.bestRank - b.bestRank || b.podiums - a.podiums);
-  if (sorted.length === 0) return null;
-
-  return (
-    <div className="mt-5">
-      <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
-        <Medal className="w-3.5 h-3.5" /> Classement saison {saison}
-      </p>
-      <div className="space-y-1.5">
-        {sorted.map((p, idx) => (
-          <div key={p.nom} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 border border-slate-100 text-sm">
-            <span className="w-6 text-center font-bold text-slate-500">
-              {idx === 0 ? "🥇" : idx === 1 ? "🥈" : idx === 2 ? "🥉" : `${idx + 1}.`}
-            </span>
-            <span className="flex-1 text-slate-700 font-medium">{p.nom}</span>
-            <span className="text-xs text-slate-400">{p.count} tournoi{p.count > 1 ? "s" : ""}</span>
-            {p.podiums > 0 && <span className="text-xs text-amber-600 font-semibold">{p.podiums} podium{p.podiums > 1 ? "s" : ""}</span>}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
-}
 
 // ── Carte tournoi à venir ──────────────────────────────────────
 function getDaysLeft(dateLimit: string | null | undefined): number | null {
