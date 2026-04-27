@@ -910,6 +910,14 @@ Deno.serve(async (req) => {
     const daysLeft = Math.round((closeTs - todayTs) / (1000 * 60 * 60 * 24));
 
     const membres = (d.membres || []) as Record<string, unknown>[];
+
+    // Membres non payés (inscrits mais pas encore réglé) — destinataires des rappels de réinscription
+    const unpaidEmails = membres
+      .filter((m) => m.ok !== true)
+      .map((m) => String(m.email || ""))
+      .filter(Boolean);
+
+    // Membres payés ayant accepté les news — destinataires des rappels tournois
     const newsEmails = membres
       .filter((m) => m.ok === true && m.newsOptIn !== false)
       .map((m) => String(m.email || ""))
@@ -918,11 +926,12 @@ Deno.serve(async (req) => {
     const results: Record<string, unknown> = {};
 
     // ── Rappels fermeture des inscriptions saison (J-30 / J-15 / J-5 / J-1) ──
+    // → envoyé aux membres NON PAYÉS pour les inciter à régler avant la date limite
     if (daysLeft === 30 || daysLeft === 15 || daysLeft === 5 || daysLeft === 1) {
-      if (newsEmails.length > 0) {
+      if (unpaidEmails.length > 0) {
         const closeFormatted = new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
         const isUrgent = daysLeft <= 5;
-        const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour s'inscrire au SACCB !" : `⏰ Plus que ${daysLeft} jours pour s'inscrire au SACCB !`;
+        const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour finaliser votre adhésion SACCB !" : `⏰ Plus que ${daysLeft} jours pour finaliser votre adhésion SACCB !`;
         const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
         fetch("https://api.resend.com/emails", {
           method: "POST",
@@ -930,7 +939,7 @@ Deno.serve(async (req) => {
           body: JSON.stringify({
             from: "SACCB <contact@saccb.fr>",
             to: ["contact@saccb.fr"],
-            bcc: newsEmails,
+            bcc: unpaidEmails,
             subject: subjectLabel,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -940,21 +949,22 @@ Deno.serve(async (req) => {
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                   <h2 style="color: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${headingLabel}</h2>
-                  <p style="color: #475569;">Les inscriptions pour la saison ${d.y1}–${d.y2} ferment le <strong>${closeFormatted}</strong>.</p>
+                  <p style="color: #475569;">Votre adhésion au SACCB pour la saison ${d.y1}–${d.y2} n'est pas encore finalisée.</p>
+                  <p style="color: #475569;">La date limite de paiement est le <strong>${closeFormatted}</strong>. Passé cette date, votre inscription sera annulée automatiquement.</p>
                   ${daysLeft === 1
-                    ? `<p style="color: #b91c1c; font-weight: bold;">C'est votre dernière chance ! Les inscriptions ferment demain définitivement.</p>`
-                    : `<p style="color: #475569;">Faites passer le mot autour de vous — il reste encore de la place !</p>`
+                    ? `<p style="color: #b91c1c; font-weight: bold;">⚠️ C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui.</p>`
+                    : `<p style="color: #475569;">Rapprochez-vous de <strong>Hernan</strong> au prochain entraînement pour régler votre cotisation.</p>`
                   }
                   <a href="https://saccb.fr/#inscription" style="display: inline-block; background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
-                    S'inscrire maintenant →
+                    Finaliser mon adhésion →
                   </a>
-                  <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
+                  <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez une inscription en attente de paiement au SACCB.</p>
                 </div>
               </div>
             `,
           }),
         }).catch(() => {});
-        results.season_reminder = { sent: newsEmails.length, daysLeft };
+        results.season_reminder = { sent: unpaidEmails.length, daysLeft };
       }
     }
 

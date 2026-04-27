@@ -10,7 +10,7 @@ jobs:
   remind:
     runs-on: ubuntu-latest
     steps:
-      - name: Vérifier rappels J-30 / J-15
+      - name: Vérifier rappels J-30 / J-15 / J-5 / J-1 (saison + tournois)
         run: |
           curl -s -X POST "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/public-api" \
             -H "Content-Type: application/json" \
