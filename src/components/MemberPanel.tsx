@@ -11,6 +11,7 @@ export default function MemberPanel({
   y1,
   y2,
   whatsappLink,
+  inscCloseDate,
   configTournois = [],
   inscritsTournoi = [],
   archives = [],
@@ -21,6 +22,7 @@ export default function MemberPanel({
   y1: number;
   y2: number;
   whatsappLink?: string | null;
+  inscCloseDate?: string;
   configTournois?: Tournoi[];
   inscritsTournoi?: InscritTournoi[];
   archives?: SeasonArchive[];
@@ -156,6 +158,17 @@ export default function MemberPanel({
     return { parTournoi, duos };
   }, [inscritsTournoi, configTournois]);
 
+  // Calcul du nombre de jours avant la date limite d'inscription (uniquement si non payé)
+  const deadlineBanner = useMemo(() => {
+    if (session.paid === true || !inscCloseDate) return null;
+    const closeTs = new Date(inscCloseDate).getTime();
+    const todayTs = new Date(new Date().toISOString().slice(0, 10)).getTime();
+    const daysLeft = Math.round((closeTs - todayTs) / (1000 * 60 * 60 * 24));
+    if (daysLeft < 0 || daysLeft > 30) return null;
+    const dateFormatted = new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+    return { daysLeft, dateFormatted, urgent: daysLeft <= 5 };
+  }, [session.paid, inscCloseDate]);
+
   function logout() {
     clearMemberSession();
     onClose();
@@ -231,6 +244,19 @@ export default function MemberPanel({
               <RefreshCw className="w-4 h-4" />
               Renouveler mon adhésion
             </a>
+          </div>
+        )}
+
+        {/* Bandeau deadline — uniquement si non payé et deadline dans les 30 jours */}
+        {deadlineBanner && (
+          <div className={`mb-4 rounded-xl p-4 border ${deadlineBanner.urgent ? "bg-red-50 border-red-200" : "bg-orange-50 border-orange-200"}`}>
+            <p className={`font-semibold text-sm mb-1 ${deadlineBanner.urgent ? "text-red-800" : "text-orange-800"}`}>
+              {deadlineBanner.daysLeft === 1 ? "🚨 Dernière chance — plus que 24h !" : `⏰ Plus que ${deadlineBanner.daysLeft} jour${deadlineBanner.daysLeft > 1 ? "s" : ""} !`}
+            </p>
+            <p className={`text-xs ${deadlineBanner.urgent ? "text-red-700" : "text-orange-700"}`}>
+              Votre adhésion doit être finalisée avant le <strong>{deadlineBanner.dateFormatted}</strong>.
+              Passé cette date, votre inscription sera annulée.
+            </p>
           </div>
         )}
 

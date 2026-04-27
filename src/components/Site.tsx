@@ -281,6 +281,7 @@ export default function Site() {
           y1={db.y1}
           y2={db.y2}
           whatsappLink={db.whatsappLink}
+          inscCloseDate={db.insc_close_date}
           configTournois={db.config_tournois ?? []}
           inscritsTournoi={db.inscrits_tournoi ?? []}
           archives={db.archives ?? []}
