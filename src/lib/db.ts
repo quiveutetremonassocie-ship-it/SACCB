@@ -198,12 +198,28 @@ export async function fetchAdminDBByMember(email: string, code: string): Promise
   };
 }
 
-export async function saveDBByMember(email: string, code: string, db: DB): Promise<void> {
-  await fetch(EDGE_FUNCTION_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "admin_save", email: email.toLowerCase().trim(), code, data: db }),
-  });
+export async function saveDBByMember(email: string, code: string, db: DB): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_save", email: email.toLowerCase().trim(), code, data: db }),
+    });
+    if (!res.ok) {
+      const text = await res.text().catch(() => "");
+      console.error("[saveDBByMember] HTTP", res.status, text);
+      return { ok: false, reason: `Erreur serveur (${res.status})` };
+    }
+    const json = await res.json().catch(() => ({}));
+    if (!json.ok) {
+      console.error("[saveDBByMember] API error:", json);
+      return { ok: false, reason: json.reason || "Erreur de sauvegarde" };
+    }
+    return { ok: true };
+  } catch (e) {
+    console.error("[saveDBByMember] Network error:", e);
+    return { ok: false, reason: "Erreur réseau" };
+  }
 }
 
 // ─── Formulaire de contact public ───

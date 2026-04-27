@@ -127,7 +127,7 @@ export default function TournoisAdmin({
       newArchives[existingIdx] = {
         ...existing,
         config_tournois: [...existing.config_tournois, tournoi],
-        inscrits_tournoi: [...existing.inscrits_tournoi, ...inscrits],
+        inscrits_tournoi: [...(existing.inscrits_tournoi ?? []), ...inscrits],
       };
     } else {
       newArchives.push({

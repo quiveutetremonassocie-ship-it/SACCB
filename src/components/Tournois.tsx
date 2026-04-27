@@ -9,8 +9,22 @@ import { MemberSession } from "@/lib/useMemberSession";
 
 const today = new Date().toISOString().slice(0, 10);
 
+function parseTournoiDate(dateStr: string): string | null {
+  if (!dateStr) return null;
+  // Format ISO YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  // Autre format : tentative de parsing natif
+  const d = new Date(dateStr);
+  if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10);
+  return null;
+}
+
 function isTermine(t: Tournoi) {
-  return t.date < today;
+  const parsed = parseTournoiDate(t.date);
+  // Si la date est parsable, comparer avec aujourd'hui
+  if (parsed) return parsed < today;
+  // Date en texte libre non parsable → on ne sait pas, on considère "à venir" par défaut
+  return false;
 }
 
 export default function Tournois({

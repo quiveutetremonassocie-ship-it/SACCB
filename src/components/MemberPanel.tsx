@@ -73,6 +73,18 @@ export default function MemberPanel({
 
   // Historique : fusionner saison courante + archives, garder tournois passés
   const today = new Date().toISOString().slice(0, 10);
+
+  function isDatePast(dateStr: string): boolean {
+    if (!dateStr) return false;
+    // Format ISO YYYY-MM-DD : comparaison lexicographique fiable
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr <= today;
+    // Autre format : on tente un parsing natif
+    const d = new Date(dateStr);
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10) <= today;
+    // Date en texte libre non parsable → on l'inclut dans l'historique par défaut
+    return true;
+  }
+
   const allSeasons = useMemo(() => {
     const current = {
       y1, y2,
@@ -82,7 +94,7 @@ export default function MemberPanel({
     };
     return [...(archives ?? []), current]
       .map((s) => {
-        const past = (s.config_tournois ?? []).filter((t) => t.date <= today);
+        const past = (s.config_tournois ?? []).filter((t) => isDatePast(t.date));
         if (past.length === 0) return null;
         return {
           label: `${s.y1}–${s.y2}`,
@@ -431,7 +443,7 @@ export default function MemberPanel({
                           <div className="flex items-start justify-between gap-2">
                             <div className="min-w-0">
                               <p className="text-sm font-medium text-slate-800 truncate">{tournoi.name}</p>
-                              <p className="text-xs text-slate-400">{new Date(tournoi.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</p>
+                              <p className="text-xs text-slate-400">{tournoi.date}</p>
                               {myEntry && (
                                 <p className="text-xs text-slate-500 mt-0.5 truncate">
                                   🎾 {myEntry.joueurs}
@@ -458,8 +470,8 @@ export default function MemberPanel({
           </div>
         )}
 
-        {/* WhatsApp */}
-        {whatsappLink ? (
+        {/* WhatsApp — uniquement pour les membres ayant payé */}
+        {whatsappLink && session.paid === true ? (
           <a
             href={whatsappLink}
             target="_blank"
@@ -469,6 +481,10 @@ export default function MemberPanel({
             <MessageCircle className="w-5 h-5" />
             Rejoindre le groupe WhatsApp
           </a>
+        ) : whatsappLink && session.paid !== true ? (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500 text-center">
+            🔒 Le lien du groupe WhatsApp vous sera transmis une fois votre paiement validé.
+          </div>
         ) : (
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
             <MessageCircle className="w-6 h-6 text-slate-300 mx-auto mb-1" />
