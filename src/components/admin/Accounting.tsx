@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet } from "lucide-react";
-import { DB, Facture, FactureFile } from "@/lib/types";
+import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet, FileDown } from "lucide-react";
+import { DB, Facture, FactureFile, PRIX } from "@/lib/types";
 import { supabaseClient, FACTURE_BUCKET } from "@/lib/supabase";
 
 export default function Accounting({
@@ -142,13 +142,112 @@ export default function Accounting({
     await onPersist(next);
   }
 
+  function exportBilan() {
+    // Calcul des stats membres
+    let aPayes = 0, ePayes = 0, aTotal = 0, eTotal = 0;
+    db.membres.forEach((m) => {
+      if (m.type === "Adulte") { aTotal++; if (m.ok) aPayes++; }
+      else { eTotal++; if (m.ok) ePayes++; }
+    });
+    const recetteAdultes = aPayes * PRIX.Adulte;
+    const recetteEtudiants = ePayes * PRIX.Etudiant;
+    const report = db.reportPrecedent ?? 0;
+    const totalRecettes = recetteAdultes + recetteEtudiants + report;
+    const totalDepenses = (db.factures || []).reduce((s, f) => s + f.montant, 0);
+    const solde = totalRecettes - totalDepenses;
+    const today = new Date().toLocaleDateString("fr-FR");
+
+    const facturesRows = [...(db.factures || [])].sort((a, b) => a.date.localeCompare(b.date)).map((f) => `
+      <tr>
+        <td>${f.date}</td>
+        <td>${f.desc}</td>
+        <td class="montant red">${f.montant.toFixed(2)} €</td>
+      </tr>`).join("");
+
+    const html = `<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <title>Bilan financier ${db.y1}–${db.y2}</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; padding: 32px; }
+    h1 { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
+    .subtitle { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+    h2 { font-size: 14px; font-weight: bold; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
+    th { background: #f1f5f9; text-align: left; padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; }
+    td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }
+    .montant { text-align: right; font-weight: 600; }
+    .green { color: #16a34a; }
+    .red { color: #dc2626; }
+    .blue { color: #2563eb; }
+    .total-row td { font-weight: bold; background: #f8fafc; border-top: 2px solid #cbd5e1; }
+    .solde-box { margin-top: 20px; padding: 16px 20px; border-radius: 8px; display: flex; justify-content: space-between; align-items: center; }
+    .solde-box.pos { background: #f0fdf4; border: 2px solid #86efac; }
+    .solde-box.neg { background: #fef2f2; border: 2px solid #fca5a5; }
+    .solde-label { font-size: 14px; font-weight: bold; color: #1e293b; }
+    .solde-value { font-size: 24px; font-weight: bold; }
+    .footer { margin-top: 32px; font-size: 11px; color: #94a3b8; text-align: center; }
+    @media print { body { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <h1>Bilan financier — Saison ${db.y1}–${db.y2}</h1>
+  <p class="subtitle">Club SACCB &nbsp;|&nbsp; Généré le ${today}</p>
+
+  <h2>Recettes</h2>
+  <table>
+    <thead><tr><th>Catégorie</th><th>Détail</th><th class="montant">Montant</th></tr></thead>
+    <tbody>
+      <tr><td>Adhésions adultes</td><td>${aPayes} payé(s) sur ${aTotal} (${PRIX.Adulte} € × ${aPayes})</td><td class="montant green">${recetteAdultes.toFixed(2)} €</td></tr>
+      <tr><td>Adhésions étudiants</td><td>${ePayes} payé(s) sur ${eTotal} (${PRIX.Etudiant} € × ${ePayes})</td><td class="montant green">${recetteEtudiants.toFixed(2)} €</td></tr>
+      ${report > 0 ? `<tr><td>Report saison précédente</td><td>Trésorerie reportée</td><td class="montant blue">${report.toFixed(2)} €</td></tr>` : ""}
+      <tr class="total-row"><td colspan="2">TOTAL RECETTES</td><td class="montant green">${totalRecettes.toFixed(2)} €</td></tr>
+    </tbody>
+  </table>
+
+  <h2>Dépenses</h2>
+  <table>
+    <thead><tr><th>Date</th><th>Désignation</th><th class="montant">Montant</th></tr></thead>
+    <tbody>
+      ${facturesRows || `<tr><td colspan="3" style="color:#94a3b8;text-align:center">Aucune dépense enregistrée</td></tr>`}
+      <tr class="total-row"><td colspan="2">TOTAL DÉPENSES</td><td class="montant red">${totalDepenses.toFixed(2)} €</td></tr>
+    </tbody>
+  </table>
+
+  <div class="solde-box ${solde >= 0 ? "pos" : "neg"}">
+    <span class="solde-label">SOLDE FINAL (Recettes − Dépenses)</span>
+    <span class="solde-value ${solde >= 0 ? "green" : "red"}">${solde >= 0 ? "+" : ""}${solde.toFixed(2)} €</span>
+  </div>
+
+  <p class="footer">Document généré automatiquement par le panneau d'administration SACCB</p>
+
+  <script>window.onload = () => window.print();</script>
+</body>
+</html>`;
+
+    const win = window.open("", "_blank");
+    if (win) { win.document.write(html); win.document.close(); }
+  }
+
   return (
     <div className="glass p-4 md:p-6 border border-blue-200">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shrink-0">
-          <Wallet className="w-5 h-5 text-white" />
+      <div className="flex items-center justify-between gap-3 mb-5">
+        <div className="flex items-center gap-3 min-w-0">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-emerald-500 flex items-center justify-center shrink-0">
+            <Wallet className="w-5 h-5 text-white" />
+          </div>
+          <h3 className="font-display text-xl md:text-2xl tracking-wider text-slate-800">Comptabilité & Trésorerie</h3>
         </div>
-        <h3 className="font-display text-xl md:text-2xl tracking-wider text-slate-800">Comptabilité & Trésorerie</h3>
+        <button
+          onClick={exportBilan}
+          className="btn-ghost !px-3 !py-2 !text-xs shrink-0 flex items-center gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-50"
+          title="Télécharger le bilan PDF"
+        >
+          <FileDown className="w-4 h-4" />
+          <span className="hidden sm:inline">Bilan PDF</span>
+        </button>
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-5">

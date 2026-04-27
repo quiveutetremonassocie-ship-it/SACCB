@@ -283,11 +283,9 @@ export default function Inscription({
                   Pensez à faire une capture d&apos;écran de votre badge.
                 </p>
                 {whatsappLink && (
-                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold px-5 py-3 rounded-xl transition">
-                    <MessageCircle className="w-5 h-5" />
-                    Rejoindre le groupe WhatsApp
-                  </a>
+                  <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500">
+                    🔒 Le lien du groupe WhatsApp vous sera transmis une fois votre paiement validé par le bureau.
+                  </div>
                 )}
               </div>
             )
