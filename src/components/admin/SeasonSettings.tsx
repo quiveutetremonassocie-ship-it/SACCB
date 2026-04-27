@@ -138,20 +138,6 @@ export default function SeasonSettings({
     }
   }
 
-  async function archiveSeason() {
-    if (!confirm(`Archiver la saison ${db.y1}–${db.y2} ?`)) return;
-    const archive = {
-      y1: db.y1, y2: db.y2,
-      membresCount: db.membres.length,
-      config_tournois: db.config_tournois,
-      inscrits_tournoi: db.inscrits_tournoi,
-    };
-    const prevArchives = db.archives ?? [];
-    const filtered = prevArchives.filter((a) => !(a.y1 === db.y1 && a.y2 === db.y2));
-    await onPersist({ ...db, archives: [...filtered, archive] });
-    alert(`✅ Saison ${db.y1}–${db.y2} archivée !`);
-  }
-
   return (
     <div className="glass p-4 md:p-6 border border-emerald-200">
       <div className="flex items-center gap-3 mb-5">
@@ -208,9 +194,6 @@ export default function SeasonSettings({
           </button>
           <button onClick={update} className="btn-accent w-full">
             <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
-          </button>
-          <button onClick={archiveSeason} className="btn-ghost w-full">
-            <Archive className="w-4 h-4" /> Archiver cette saison
           </button>
           <button onClick={newSeason} className="btn-accent w-full">
             <Sparkles className="w-4 h-4" /> Démarrer une nouvelle saison
