@@ -13,7 +13,13 @@ const HELLOASSO_URL = `${HELLOASSO_BASE_URL}?backUrl=${encodeURIComponent("https
 
 type PaymentMode = "online" | "virement";
 type PersonType = "Adulte" | "Etudiant";
-type Personne = { prenom: string; nom: string; type: PersonType };
+type Personne = {
+  prenom: string;
+  nom: string;
+  type: PersonType;
+  email?: string; // utilisé seulement si sameAccount = false
+  code?: string;  // utilisé seulement si sameAccount = false
+};
 
 export default function Inscription({
   db,
@@ -32,10 +38,17 @@ export default function Inscription({
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
   const [showCode, setShowCode] = useState(false);
+  const [showCodePerso, setShowCodePerso] = useState<Record<number, boolean>>({});
   const [newsOptIn, setNewsOptIn] = useState(false);
   const [photoConsent, setPhotoConsent] = useState(false);
   const [rgpdOk, setRgpdOk] = useState(false);
   const [personnes, setPersonnes] = useState<Personne[]>([{ prenom: "", nom: "", type: "Adulte" }]);
+  // Email + mot de passe partagés (utilisés par défaut)
+  const [sharedEmail, setSharedEmail] = useState("");
+  const [sharedTel, setSharedTel] = useState("");
+  const [sharedCode, setSharedCode] = useState("");
+  // Si décoché : chaque personne a son propre email + mot de passe
+  const [sameAccount, setSameAccount] = useState(true);
   const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
@@ -48,7 +61,7 @@ export default function Inscription({
 
   function addPersonne() {
     if (personnes.length >= 5) return;
-    setPersonnes(prev => [...prev, { prenom: "", nom: "", type: "Adulte" }]);
+    setPersonnes(prev => [...prev, { prenom: "", nom: "", type: "Adulte", email: "", code: "" }]);
   }
 
   function removePersonne(idx: number) {
@@ -104,10 +117,7 @@ export default function Inscription({
     e.preventDefault();
     if (!db.insc_open) return;
 
-    const fd = new FormData(e.currentTarget);
-    const email = String(fd.get("email") || "").trim();
-    const tel = String(fd.get("tel") || "").trim();
-    const code = String(fd.get("code") || "").trim();
+    const tel = sharedTel.trim();
 
     if (!rgpdOk) {
       alert("Vous devez accepter les CGU et la politique de confidentialité.");
@@ -121,30 +131,77 @@ export default function Inscription({
       }
     }
 
+    // Validation des emails/codes selon le mode
+    const useSharedAccount = sameAccount || personnes.length === 1;
+    if (useSharedAccount) {
+      if (!sharedEmail.trim() || !/\S+@\S+\.\S+/.test(sharedEmail.trim())) {
+        alert("Email invalide.");
+        return;
+      }
+      if (sharedCode.length < 4) {
+        alert("Le mot de passe doit contenir au moins 4 caractères.");
+        return;
+      }
+      if (/^(.)\1+$/.test(sharedCode)) {
+        alert("Le mot de passe ne peut pas être composé uniquement du même caractère.");
+        return;
+      }
+    } else {
+      // Comptes séparés : chaque personne doit avoir email + mdp
+      for (let i = 0; i < personnes.length; i++) {
+        const p = personnes[i];
+        const email = (p.email || "").trim();
+        const code = (p.code || "").trim();
+        if (!email || !/\S+@\S+\.\S+/.test(email)) {
+          alert(`Email invalide pour la personne ${i + 1} (${p.prenom || "?"}).`);
+          return;
+        }
+        if (code.length < 4) {
+          alert(`Le mot de passe de la personne ${i + 1} (${p.prenom || "?"}) doit faire au moins 4 caractères.`);
+          return;
+        }
+        if (/^(.)\1+$/.test(code)) {
+          alert(`Le mot de passe de la personne ${i + 1} ne peut pas être composé uniquement du même caractère.`);
+          return;
+        }
+      }
+      // Détecter doublons d'emails entre les personnes
+      const emails = personnes.map((p) => (p.email || "").trim().toLowerCase());
+      const uniqueEmails = new Set(emails);
+      if (uniqueEmails.size !== emails.length) {
+        alert("Chaque personne doit avoir une adresse email différente. Si vous voulez utiliser la même adresse, cochez « Mêmes identifiants pour tous ».");
+        return;
+      }
+    }
+
     if (membresCount + personnes.length > quota) {
       alert(`Il ne reste que ${remaining} place${remaining > 1 ? "s" : ""} disponible${remaining > 1 ? "s" : ""} pour ${personnes.length} personne${personnes.length > 1 ? "s" : ""}.`);
       return;
     }
 
-    if (/^(.)\1+$/.test(code)) {
-      alert("Le mot de passe ne peut pas être composé uniquement du même caractère. Choisissez un mot de passe plus sécurisé.");
+    if (!tel || tel.length < 8) {
+      alert("Téléphone invalide.");
       return;
     }
 
     setLoading(true);
 
-    const isGrouped = personnes.length > 1;
+    // Si comptes séparés : pas "grouped" car chaque email est unique
+    // Si compte partagé et plusieurs personnes : "grouped" (même email)
+    const isGrouped = useSharedAccount && personnes.length > 1;
     const results: { ok: boolean; reason?: string; membreId?: string }[] = [];
 
-    // Séquentiel pour éviter les collisions en DB (pas de Promise.all)
+    // Séquentiel pour éviter les collisions en DB
     for (const p of personnes) {
+      const personEmail = useSharedAccount ? sharedEmail.trim() : (p.email || "").trim();
+      const personCode = useSharedAccount ? sharedCode : (p.code || "");
       const r = await publicAddMembre({
         nom: `${p.prenom.trim()} ${p.nom.trim()}`.trim(),
-        email,
+        email: personEmail,
         tel,
         type: p.type,
         paymentMethod: mode,
-        code,
+        code: personCode,
         newsOptIn,
         photoConsent,
         grouped: isGrouped,
@@ -339,6 +396,42 @@ export default function Inscription({
                         <option value="Adulte">Adulte ({prix.Adulte}€)</option>
                         <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
                       </select>
+
+                      {/* Email + mdp individuels (uniquement si comptes séparés et plusieurs personnes) */}
+                      {!sameAccount && personnes.length > 1 && (
+                        <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
+                          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
+                            Identifiants de connexion
+                          </p>
+                          <input
+                            className="input !text-sm"
+                            type="email"
+                            placeholder="Email pour cette personne"
+                            value={p.email || ""}
+                            onChange={(e) => updatePersonne(idx, "email", e.target.value)}
+                            required
+                          />
+                          <div className="relative">
+                            <input
+                              className="input !text-sm pr-10"
+                              type={showCodePerso[idx] ? "text" : "password"}
+                              placeholder="Mot de passe (min. 4 caractères)"
+                              minLength={4}
+                              value={p.code || ""}
+                              onChange={(e) => updatePersonne(idx, "code", e.target.value)}
+                              required
+                            />
+                            <button
+                              type="button"
+                              onClick={() => setShowCodePerso({ ...showCodePerso, [idx]: !showCodePerso[idx] })}
+                              className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                              tabIndex={-1}
+                            >
+                              {showCodePerso[idx] ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -362,44 +455,83 @@ export default function Inscription({
                 )}
               </div>
 
-              {/* ── Coordonnées partagées ── */}
+              {/* ── Choix mode compte unique / séparé ── */}
+              {personnes.length > 1 && (
+                <label className="flex items-start gap-3 cursor-pointer select-none bg-slate-50 border border-slate-200 rounded-xl p-3">
+                  <div className="relative mt-0.5 shrink-0">
+                    <input
+                      type="checkbox"
+                      checked={sameAccount}
+                      onChange={(e) => setSameAccount(e.target.checked)}
+                      className="sr-only"
+                    />
+                    <div className={`w-5 h-5 rounded border-2 transition-all flex items-center justify-center ${sameAccount ? "bg-blue-500 border-blue-500" : "border-slate-300 bg-white"}`}>
+                      {sameAccount && <CheckCircle2 className="w-3 h-3 text-white" />}
+                    </div>
+                  </div>
+                  <span className="text-sm text-slate-600 leading-snug">
+                    <span className="font-medium text-slate-800">Mêmes identifiants pour tous</span>
+                    <br />
+                    <span className="text-xs text-slate-500">
+                      Toutes les personnes utilisent le même email et le même mot de passe pour se connecter à leur espace membre. Décochez pour que chaque personne ait son propre compte.
+                    </span>
+                  </span>
+                </label>
+              )}
+
+              {/* ── Téléphone (toujours partagé) ── */}
               <div className="space-y-3">
-                {personnes.length > 1 && (
-                  <p className="text-xs uppercase tracking-widest text-slate-500">Coordonnées partagées</p>
-                )}
-                <input className="input" name="email" type="email" placeholder="Email" required />
-                <input className="input" name="tel" type="tel" placeholder="Téléphone" required />
+                <input
+                  className="input"
+                  type="tel"
+                  placeholder="Téléphone (contact)"
+                  value={sharedTel}
+                  onChange={(e) => setSharedTel(e.target.value)}
+                  required
+                />
               </div>
 
-              {/* ── Mot de passe ── */}
-              <div>
-                <label className="block text-xs uppercase tracking-widest text-slate-500 mb-1">
-                  Mot de passe personnel
-                </label>
-                <div className="relative">
+              {/* ── Email + mot de passe partagés (si compte unique ou 1 seule personne) ── */}
+              {(sameAccount || personnes.length === 1) && (
+                <div className="space-y-3">
                   <input
-                    className="input pr-10"
-                    name="code"
-                    type={showCode ? "text" : "password"}
-                    placeholder="Minimum 4 caractères"
-                    minLength={4}
-                    title="Le mot de passe doit contenir au moins 4 caractères"
+                    className="input"
+                    type="email"
+                    placeholder="Email"
+                    value={sharedEmail}
+                    onChange={(e) => setSharedEmail(e.target.value)}
                     required
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowCode(!showCode)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
-                    tabIndex={-1}
-                  >
-                    {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
+                  <div>
+                    <label className="block text-xs uppercase tracking-widest text-slate-500 mb-1">
+                      Mot de passe personnel
+                    </label>
+                    <div className="relative">
+                      <input
+                        className="input pr-10"
+                        type={showCode ? "text" : "password"}
+                        placeholder="Minimum 4 caractères"
+                        minLength={4}
+                        value={sharedCode}
+                        onChange={(e) => setSharedCode(e.target.value)}
+                        required
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowCode(!showCode)}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                        tabIndex={-1}
+                      >
+                        {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">
+                      Ce mot de passe vous permettra de vous connecter à votre espace membre.
+                      {personnes.length > 1 && " Partagé entre toutes les personnes inscrites."}
+                    </p>
+                  </div>
                 </div>
-                <p className="text-xs text-slate-400 mt-1">
-                  Ce mot de passe vous permettra de vous connecter à votre espace membre.
-                  {personnes.length > 1 && " Partagé entre toutes les personnes inscrites."}
-                </p>
-              </div>
+              )}
 
               {/* ── Mode de paiement ── */}
               <div className="pt-2">
