@@ -118,6 +118,10 @@ export default function SeasonSettings({
       membresCount: db.membres.filter((m) => m.ok).length,
       config_tournois: db.config_tournois,
       inscrits_tournoi: db.inscrits_tournoi,
+      // Engagement archivé avec la saison (sondages, questions AG, comptes-rendus)
+      polls: db.polls ?? [],
+      agItems: db.agItems ?? [],
+      reunionReports: db.reunionReports ?? [],
     };
     const prevArchives = db.archives ?? [];
     const filtered = prevArchives.filter((a) => !(a.y1 === db.y1 && a.y2 === db.y2));
@@ -130,6 +134,10 @@ export default function SeasonSettings({
       membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
       insc_open: true,
       insc_close_date: undefined,
+      // Reset engagement pour la nouvelle saison
+      polls: [],
+      agItems: [],
+      reunionReports: [],
     });
     alert(`✅ Nouvelle saison ${newY1}–${newY2} démarrée !`);
 
@@ -241,6 +249,8 @@ export default function SeasonSettings({
                       <p className="text-sm font-semibold text-slate-700">Saison {archive.y1}–{archive.y2}</p>
                       <p className="text-xs text-slate-400">
                         {archive.membresCount} adhérents · {archive.config_tournois?.length ?? 0} tournoi{(archive.config_tournois?.length ?? 0) > 1 ? "s" : ""}
+                        {(archive.reunionReports?.length ?? 0) > 0 && ` · ${archive.reunionReports?.length} compte-rendu${(archive.reunionReports?.length ?? 0) > 1 ? "s" : ""}`}
+                        {(archive.polls?.length ?? 0) > 0 && ` · ${archive.polls?.length} sondage${(archive.polls?.length ?? 0) > 1 ? "s" : ""}`}
                       </p>
                     </div>
                     <div className="flex gap-1.5">

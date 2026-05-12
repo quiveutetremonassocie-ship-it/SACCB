@@ -10,6 +10,7 @@ import TournoisAdmin from "./TournoisAdmin";
 import InscriptionsAdmin from "./InscriptionsAdmin";
 import MembresAdmin from "./MembresAdmin";
 import ActualitesAdmin from "./ActualitesAdmin";
+import EngagementAdmin from "./EngagementAdmin";
 import RecuModal from "./RecuModal";
 import EmargementModal from "./EmargementModal";
 import EditMembreModal from "./EditMembreModal";
@@ -139,6 +140,9 @@ export default function AdminPanel({
 
           <div className="lg:col-span-2">
             <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
+          </div>
+          <div className="lg:col-span-2">
+            <EngagementAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} />
           </div>
           <div className="lg:col-span-2">
             <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />

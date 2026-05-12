@@ -19,6 +19,7 @@ import ResetPasswordModal from "./modals/ResetPasswordModal";
 import AdminPanel from "./admin/AdminPanel";
 import MemberPanel from "./MemberPanel";
 import Palmares from "./Palmares";
+import Engagement from "./Engagement";
 
 export default function Site() {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -251,6 +252,14 @@ export default function Site() {
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />
         <Presentation />
         <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
+        <Engagement
+          polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
+          agItems={db.agItems ?? []}
+          reunionReports={db.reunionReports ?? []}
+          memberSession={memberSession}
+          onLoginRequest={() => setMemberLoginOpen(true)}
+          onRefresh={async () => { await refreshPublic(); }}
+        />
         <Horaires />
         <Tournois
           db={db}

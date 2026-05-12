@@ -439,6 +439,24 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // On ne renvoie JAMAIS les données sensibles (emails, tels, factures)
+    // 🔒 Pour les sondages : on retire les votes individuels (juste les compteurs côté client)
+    // 🔒 Pour les questions AG : on retire les noms si anonyme
+    const polls = ((d.polls as Record<string, unknown>[] | undefined) ?? []).map((p) => ({
+      ...p,
+      // Renvoyer juste l'agrégat des votes (compteurs par option) — pas les membreId
+      voteCounts: ((p.votes as { optionIdx: number }[]) ?? []).reduce((acc: Record<number, number>, v) => {
+        acc[v.optionIdx] = (acc[v.optionIdx] || 0) + 1;
+        return acc;
+      }, {}),
+      totalVotes: ((p.votes as unknown[]) ?? []).length,
+      votes: undefined, // ne pas exposer les votes individuels
+    }));
+    const agItems = ((d.agItems as Record<string, unknown>[] | undefined) ?? []).map((q) => ({
+      ...q,
+      authorMembreId: q.anonymous ? null : q.authorMembreId,
+      authorNom: q.anonymous ? null : q.authorNom,
+    }));
+
     return json({
       insc_open: d.insc_open ?? true,
       y1: d.y1 ?? 2024,
@@ -450,6 +468,9 @@ Deno.serve(async (req) => {
       archives: d.archives ?? [],
       whatsappLink: d.whatsappLink ?? null,
       membresCount: ((d.membres as unknown[]) || []).length,
+      polls,
+      agItems,
+      reunionReports: d.reunionReports ?? [],
     });
   }
 
@@ -1826,6 +1847,130 @@ Deno.serve(async (req) => {
 
     const { data: urlData } = supabaseAdmin.storage.from(bucket).getPublicUrl(path);
     return json({ ok: true, url: urlData.publicUrl, path });
+  }
+
+  // ─── ACTION: Voter à un sondage (membre authentifié) ───
+  if (action === "vote_poll") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const pollId = sanitize(String(body.pollId || ""));
+    const optionIdx = Number(body.optionIdx);
+
+    if (!email || !code || !membreId || !pollId || isNaN(optionIdx)) {
+      return json({ ok: false, reason: "Paramètres manquants." }, 400);
+    }
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+
+    // Vérifier auth membre + paiement
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId || membre.ok !== true) {
+      return json({ ok: false, reason: "Adhérent non autorisé à voter." }, 403);
+    }
+
+    const polls = (d.polls || []) as Record<string, unknown>[];
+    const poll = polls.find((p) => p.id === pollId);
+    if (!poll) return json({ ok: false, reason: "Sondage introuvable." });
+    if (poll.closed === true) return json({ ok: false, reason: "Sondage fermé." });
+
+    const options = (poll.options as string[]) || [];
+    if (optionIdx < 0 || optionIdx >= options.length) {
+      return json({ ok: false, reason: "Option invalide." }, 400);
+    }
+
+    const votes = (poll.votes || []) as { membreId: string; optionIdx: number; date: string }[];
+    const multiple = poll.multipleChoice === true;
+
+    if (multiple) {
+      // Toggle : si déjà voté pour cette option → retirer, sinon ajouter
+      const existingIdx = votes.findIndex((v) => v.membreId === membreId && v.optionIdx === optionIdx);
+      if (existingIdx !== -1) votes.splice(existingIdx, 1);
+      else votes.push({ membreId, optionIdx, date: new Date().toISOString() });
+    } else {
+      // Choix unique : supprimer ancien vote du membre s'il existe, puis ajouter
+      const filtered = votes.filter((v) => v.membreId !== membreId);
+      filtered.push({ membreId, optionIdx, date: new Date().toISOString() });
+      poll.votes = filtered;
+    }
+    if (multiple) poll.votes = votes;
+
+    d.polls = polls;
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
+  }
+
+  // ─── ACTION: Soumettre une question/idée à l'AG (membre authentifié) ───
+  if (action === "submit_ag_item") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const text = String(body.text || "").slice(0, 2000).replace(/[<>]/g, "");
+    const itemType = body.type === "amelioration" ? "amelioration" : "question";
+    const anonymous = body.anonymous === true;
+
+    if (!email || !code || !membreId) return json({ ok: false, reason: "Auth requise." }, 401);
+    if (!text || text.trim().length < 5) return json({ ok: false, reason: "Texte trop court." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId || membre.ok !== true) {
+      return json({ ok: false, reason: "Adhérent non autorisé." }, 403);
+    }
+
+    const agItems = (d.agItems || []) as Record<string, unknown>[];
+    agItems.push({
+      id: Date.now().toString(),
+      type: itemType,
+      text: text.trim(),
+      anonymous,
+      authorMembreId: anonymous ? null : membreId,
+      authorNom: anonymous ? null : String(membre.nom || ""),
+      createdAt: new Date().toISOString(),
+      saison: `${d.y1}-${d.y2}`,
+      resolved: false,
+      reponse: null,
+    });
+    d.agItems = agItems;
+
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
+  }
+
+  // ─── ACTION: Récupérer les votes d'un membre (pour afficher ce qu'il a voté) ───
+  if (action === "fetch_my_votes") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+
+    if (!email || !code || !membreId) return json({ ok: false }, 401);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId) return json({ ok: false }, 403);
+
+    const polls = (d.polls || []) as Record<string, unknown>[];
+    const myVotes: Record<string, number[]> = {};
+    for (const p of polls) {
+      const votes = ((p.votes as { membreId: string; optionIdx: number }[]) || []).filter((v) => v.membreId === membreId);
+      if (votes.length > 0) {
+        myVotes[String(p.id)] = votes.map((v) => v.optionIdx);
+      }
+    }
+    return json({ ok: true, myVotes });
   }
 
   return json({ error: "Action inconnue" }, 400);

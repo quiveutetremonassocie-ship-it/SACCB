@@ -31,6 +31,9 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     archives: d.archives ?? [],
     whatsappLink: d.whatsappLink,
     membresCount: d.membresCount ?? 0,
+    polls: d.polls ?? [],
+    agItems: d.agItems ?? [],
+    reunionReports: d.reunionReports ?? [],
   };
 }
 
@@ -274,6 +277,57 @@ export async function memberUpdateNewsOptIn(
     body: JSON.stringify({ action: "update_news_optin", email: email.toLowerCase().trim(), code, membreId, newsOptIn }),
   });
   return res.json();
+}
+
+// ─── Engagement adhérents : votes sondages, questions AG ───
+
+export async function memberVotePoll(
+  email: string,
+  code: string,
+  membreId: string,
+  pollId: string,
+  optionIdx: number
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "vote_poll", email: email.toLowerCase().trim(), code, membreId, pollId, optionIdx }),
+  });
+  return res.json();
+}
+
+export async function memberSubmitAGItem(
+  email: string,
+  code: string,
+  membreId: string,
+  text: string,
+  type: "question" | "amelioration",
+  anonymous: boolean
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "submit_ag_item", email: email.toLowerCase().trim(), code, membreId, text, type, anonymous }),
+  });
+  return res.json();
+}
+
+export async function fetchMyVotes(
+  email: string,
+  code: string,
+  membreId: string
+): Promise<Record<string, number[]>> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "fetch_my_votes", email: email.toLowerCase().trim(), code, membreId }),
+    });
+    const j = await res.json();
+    return j.ok ? j.myVotes ?? {} : {};
+  } catch {
+    return {};
+  }
 }
 
 // ─── Marquer payé (via Edge Function sécurisée) ───

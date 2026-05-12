@@ -69,12 +69,53 @@ export function actualiteImages(a: Actualite): ActualiteImage[] {
   return [];
 }
 
+// ─── Engagement adhérents : sondages, questions AG, comptes-rendus ───
+
+export type Poll = {
+  id: string;
+  question: string;
+  options: string[]; // ex: ["Oui", "Non", "Peut-être"] ou dates ["20 sept", "27 sept"]
+  votes: { membreId: string; optionIdx: number; date: string }[]; // 1 vote par membre
+  createdAt: string;
+  closed?: boolean;
+  multipleChoice?: boolean; // si true, le membre peut voter pour plusieurs options
+  saison?: string; // pour archivage
+};
+
+export type AGItem = {
+  id: string;
+  type: "question" | "amelioration"; // question à l'AG ou idée d'amélioration
+  text: string;
+  anonymous: boolean;
+  authorMembreId?: string | null;
+  authorNom?: string | null;
+  createdAt: string;
+  saison?: string;
+  reponse?: string | null; // réponse du bureau
+  reponseDate?: string;
+  resolved?: boolean;
+};
+
+export type ReunionReport = {
+  id: string;
+  title: string;
+  type: "debut_saison" | "fin_saison" | "ag" | "autre";
+  date: string; // YYYY-MM-DD
+  content: string; // texte libre, supporte les retours à la ligne
+  saison?: string;
+  createdAt: string;
+};
+
 export type SeasonArchive = {
   y1: number;
   y2: number;
   membresCount: number;
   config_tournois: Tournoi[];
   inscrits_tournoi: InscritTournoi[];
+  // Engagement archivé avec la saison
+  polls?: Poll[];
+  agItems?: AGItem[];
+  reunionReports?: ReunionReport[];
 };
 
 export type DB = {
@@ -94,6 +135,10 @@ export type DB = {
   adminCredentials?: { email: string; code: string; readOnly?: boolean; permissions?: string[] }[]; // codes admin indépendants des adhérents
   contactEmails?: string[]; // emails recevant les messages du formulaire de contact
   reportPrecedent?: number; // report de trésorerie des saisons précédentes
+  // Engagement adhérents (saison courante, archivés dans SeasonArchive lors du changement de saison)
+  polls?: Poll[];
+  agItems?: AGItem[];
+  reunionReports?: ReunionReport[];
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
@@ -105,5 +150,6 @@ export const ADMIN_SECTIONS = [
   { key: "tournois",     label: "Tournois",             emoji: "🏸" },
   { key: "actualites",   label: "Actualités",           emoji: "📰" },
   { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
+  { key: "engagement",   label: "Sondages & AG",        emoji: "📣" },
   { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
 ] as const;
