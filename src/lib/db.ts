@@ -333,6 +333,33 @@ export async function fetchMyVotes(
   }
 }
 
+// ─── Envoi d'un email personnalisé aux adhérents (avec pièces jointes) — AUTH ADMIN ───
+export async function adminSendEmail(args: {
+  adminEmail: string;
+  adminCode: string;
+  subject: string;
+  htmlBody: string;
+  targetMode: "all" | "paid" | "unpaid" | "news" | "custom";
+  customEmails?: string[];
+  attachments?: { filename: string; content: string; contentType?: string }[];
+}): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string; errors?: string[] }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({
+      action: "admin_send_email",
+      adminEmail: args.adminEmail,
+      adminCode: args.adminCode,
+      subject: args.subject,
+      htmlBody: args.htmlBody,
+      targetMode: args.targetMode,
+      customEmails: args.customEmails ?? [],
+      attachments: args.attachments ?? [],
+    }),
+  });
+  return res.json();
+}
+
 // ─── Marquer payé (via Edge Function sécurisée) ───
 export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }> {
   const res = await fetch(EDGE_FUNCTION_URL, {

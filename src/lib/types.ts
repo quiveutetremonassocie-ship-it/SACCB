@@ -160,5 +160,6 @@ export const ADMIN_SECTIONS = [
   { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
   { key: "engagement",   label: "Sondages & AG",        emoji: "📣" },
   { key: "rules",        label: "Règles du club",       emoji: "📜" },
+  { key: "emailing",     label: "Envoi d'emails",       emoji: "📧" },
   { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
 ] as const;

@@ -1982,5 +1982,129 @@ Deno.serve(async (req) => {
     return json({ ok: true, myVotes });
   }
 
+  // ─── ACTION: Envoi d'un email personnalisé aux adhérents (avec pièces jointes) ───
+  if (action === "admin_send_email") {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    // 🔒 SÉCURITÉ : Auth admin obligatoire
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const subject = String(body.subject || "").slice(0, 300).replace(/[\r\n]/g, " ");
+    const htmlBody = String(body.htmlBody || "").slice(0, 100_000);
+    const targetMode = String(body.targetMode || "all"); // all | paid | unpaid | news | custom
+    const customEmails = Array.isArray(body.customEmails) ? body.customEmails as string[] : [];
+    const attachments = Array.isArray(body.attachments) ? body.attachments as { filename: string; content: string; contentType?: string }[] : [];
+
+    if (!subject.trim() || subject.trim().length < 3) {
+      return json({ ok: false, reason: "Le sujet est requis (min. 3 caractères)." }, 400);
+    }
+    if (!htmlBody.trim() || htmlBody.trim().length < 5) {
+      return json({ ok: false, reason: "Le corps de l'email est requis (min. 5 caractères)." }, 400);
+    }
+
+    // Calcul des destinataires
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    let recipientEmails: string[] = [];
+    if (targetMode === "all") {
+      recipientEmails = membres.map((m) => String(m.email || "")).filter(Boolean);
+    } else if (targetMode === "paid") {
+      recipientEmails = membres.filter((m) => m.ok === true).map((m) => String(m.email || "")).filter(Boolean);
+    } else if (targetMode === "unpaid") {
+      recipientEmails = membres.filter((m) => m.ok !== true).map((m) => String(m.email || "")).filter(Boolean);
+    } else if (targetMode === "news") {
+      recipientEmails = membres.filter((m) => m.ok === true && m.newsOptIn !== false).map((m) => String(m.email || "")).filter(Boolean);
+    } else if (targetMode === "custom") {
+      recipientEmails = customEmails
+        .map((e) => String(e || "").toLowerCase().trim())
+        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    } else {
+      return json({ ok: false, reason: "Mode de destinataires invalide." }, 400);
+    }
+
+    // Dédoublonner
+    recipientEmails = Array.from(new Set(recipientEmails.map((e) => e.toLowerCase().trim()))).filter(Boolean);
+
+    if (recipientEmails.length === 0) {
+      return json({ ok: false, reason: "Aucun destinataire correspondant." });
+    }
+
+    // 🔒 Validation des pièces jointes (taille totale max ~25 Mo en base64)
+    let totalAttachmentSize = 0;
+    for (const att of attachments) {
+      if (!att.filename || !att.content) continue;
+      totalAttachmentSize += att.content.length;
+    }
+    if (totalAttachmentSize > 35_000_000) {
+      return json({ ok: false, reason: "Pièces jointes trop volumineuses (25 Mo max au total)." }, 413);
+    }
+
+    // Construction du payload Resend (avec attachments si présents)
+    const resendAttachments = attachments
+      .filter((a) => a.filename && a.content)
+      .map((a) => ({
+        filename: String(a.filename).slice(0, 200).replace(/[^a-zA-Z0-9._-]/g, "_"),
+        content: String(a.content), // déjà en base64
+      }));
+
+    // Resend BCC max 50 destinataires par appel → on découpe en batches
+    const BATCH_SIZE = 50;
+    const batches: string[][] = [];
+    for (let i = 0; i < recipientEmails.length; i += BATCH_SIZE) {
+      batches.push(recipientEmails.slice(i, i + BATCH_SIZE));
+    }
+
+    let totalSent = 0;
+    const errors: string[] = [];
+    for (const batch of batches) {
+      const sendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          to: ["contact@saccb.fr"],
+          bcc: batch,
+          subject: subject.trim(),
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
+              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
+                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
+                  SACCB — Sainte-Adresse, Le Havre · saccb.fr
+                </p>
+              </div>
+            </div>
+          `,
+          ...(resendAttachments.length > 0 ? { attachments: resendAttachments } : {}),
+        }),
+      });
+      if (!sendRes.ok) {
+        const t = await sendRes.text().catch(() => "");
+        errors.push(`Batch ${batches.indexOf(batch) + 1}: ${sendRes.status} ${t.slice(0, 200)}`);
+      } else {
+        totalSent += batch.length;
+      }
+    }
+
+    if (errors.length > 0 && totalSent === 0) {
+      return json({ ok: false, reason: "Aucun email envoyé. Erreurs : " + errors.join(" | ") });
+    }
+    return json({
+      ok: true,
+      sent: totalSent,
+      total: recipientEmails.length,
+      errors: errors.length > 0 ? errors : undefined,
+    });
+  }
+
   return json({ error: "Action inconnue" }, 400);
 });
