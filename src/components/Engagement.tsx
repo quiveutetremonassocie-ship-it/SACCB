@@ -110,7 +110,8 @@ export default function Engagement({
   const questions = useMemo(() => agItems.filter((i) => i.type === "question"), [agItems]);
   const ameliorations = useMemo(() => agItems.filter((i) => i.type === "amelioration"), [agItems]);
 
-  const hasContent = polls.length > 0 || reunionReports.length > 0 || agItems.length > 0 || memberSession;
+  const isLoggedIn = !!memberSession;
+  const hasContent = polls.length > 0 || reunionReports.length > 0 || agItems.length > 0 || isLoggedIn;
 
   if (!hasContent) return null;
 
@@ -134,20 +135,30 @@ export default function Engagement({
           </p>
         </motion.div>
 
-        {/* Si non-membre/non-payé : message */}
-        {(!memberSession || memberSession.paid !== true) && (
-          <div className="max-w-2xl mx-auto mb-8 bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
-            <Lock className="w-8 h-8 text-slate-400 mx-auto mb-3" />
-            <p className="text-slate-600 font-medium mb-1">Réservé aux adhérents</p>
-            <p className="text-slate-500 text-sm mb-4">
-              Connectez-vous à votre espace membre pour voter aux sondages et soumettre vos questions.
+        {/* 🔒 Section entièrement réservée aux membres connectés */}
+        {!isLoggedIn ? (
+          <div className="max-w-2xl mx-auto bg-slate-50 border border-slate-200 rounded-2xl p-8 text-center">
+            <Lock className="w-10 h-10 text-slate-400 mx-auto mb-4" />
+            <p className="text-slate-700 font-semibold text-lg mb-2">Espace réservé aux adhérents</p>
+            <p className="text-slate-500 text-sm mb-5 max-w-md mx-auto">
+              Connectez-vous à votre espace membre pour accéder aux sondages, aux questions de l'AG et aux comptes-rendus de réunions.
             </p>
             <button
               onClick={onLoginRequest}
-              className="btn-primary !text-sm"
+              className="btn-primary"
             >
-              <Lock className="w-4 h-4" /> Se connecter à l'espace membre
+              <Lock className="w-4 h-4" /> Se connecter
             </button>
+          </div>
+        ) : (
+          <>
+        {/* Si connecté mais pas payé : avertissement participation */}
+        {memberSession && memberSession.paid !== true && (
+          <div className="max-w-2xl mx-auto mb-8 bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+            <Lock className="w-6 h-6 text-amber-500 mx-auto mb-2" />
+            <p className="text-amber-800 text-sm font-medium">
+              Adhésion non finalisée — vous pouvez consulter mais pas voter ni soumettre de questions tant que votre paiement n'est pas validé.
+            </p>
           </div>
         )}
 
@@ -336,6 +347,8 @@ export default function Engagement({
               ))}
             </div>
           </div>
+        )}
+          </>
         )}
       </div>
     </section>
