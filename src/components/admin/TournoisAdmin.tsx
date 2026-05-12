@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive, PackageCheck } from "lucide-react";
+import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive, PackageCheck, Lock, Unlock } from "lucide-react";
 import { DB, Tournoi, InscritTournoi } from "@/lib/types";
 import { notifyMembres } from "@/lib/db";
 
@@ -118,6 +118,18 @@ export default function TournoisAdmin({
     } else {
       alert("Erreur : " + (r.reason || "Inconnue"));
     }
+  }
+
+  async function toggleClosed(id: string, name: string, currentClosed: boolean) {
+    const action = currentClosed ? "rouvrir" : "fermer";
+    if (!confirm(`${currentClosed ? "Rouvrir" : "Fermer"} les inscriptions du tournoi "${name}" ?`)) return;
+    const next = {
+      ...db,
+      config_tournois: (db.config_tournois || []).map((t) =>
+        t.id === id ? { ...t, closed: !currentClosed } : t
+      ),
+    };
+    await onPersist(next);
   }
 
   async function archiveTournoi(tournoiId: string, name: string) {
@@ -281,7 +293,14 @@ export default function TournoisAdmin({
               <div>
                 <div className="flex items-center justify-between px-4 py-3 flex-wrap gap-2">
                   <div>
-                    <p className="text-slate-800 font-semibold">{t.name}</p>
+                    <p className="text-slate-800 font-semibold flex items-center gap-2">
+                      {t.name}
+                      {t.closed && (
+                        <span className="text-[10px] uppercase tracking-widest bg-red-100 text-red-700 px-2 py-0.5 rounded-full font-bold">
+                          🔒 Fermé
+                        </span>
+                      )}
+                    </p>
                     <p className="text-xs text-slate-400">{t.date}</p>
                     {t.dateLimit && <p className="text-xs text-amber-600">Limite : {t.dateLimit}</p>}
                     {t.type && <p className="text-xs text-blue-500">{t.type}</p>}
@@ -292,6 +311,15 @@ export default function TournoisAdmin({
                       <Bell className="w-3.5 h-3.5" />
                       <span className="hidden sm:inline ml-1">{notifying === t.id ? "Envoi..." : "Prévenir"}</span>
                     </button>
+                    {!readOnly && (
+                      <button
+                        onClick={() => toggleClosed(t.id, t.name, t.closed === true)}
+                        className={`btn-ghost !px-2.5 !py-1.5 !text-xs ${t.closed ? "text-emerald-700 border-emerald-300 hover:bg-emerald-50" : "text-red-700 border-red-300 hover:bg-red-50"}`}
+                        title={t.closed ? "Rouvrir les inscriptions" : "Fermer les inscriptions"}
+                      >
+                        {t.closed ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />}
+                      </button>
+                    )}
                     {!readOnly && <button onClick={() => archiveTournoi(t.id, t.name)} className="btn-ghost !px-2.5 !py-1.5 !text-xs text-amber-700 border-amber-300 hover:bg-amber-50" title="Archiver ce tournoi"><PackageCheck className="w-3.5 h-3.5" /></button>}
                     {!readOnly && <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                   </div>

@@ -722,6 +722,16 @@ Deno.serve(async (req) => {
 
     const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+
+    // 🔄 Sync Google Sheets en temps réel après chaque modification admin (fire and forget)
+    const sheetsWebhookSync = Deno.env.get("SHEETS_WEBHOOK");
+    if (sheetsWebhookSync) {
+      fetch(sheetsWebhookSync, {
+        method: "POST",
+        body: JSON.stringify(newData),
+      }).catch((e) => console.warn("[admin_save] Sheets sync failed:", e));
+    }
+
     return json({ ok: true });
   }
 
@@ -1749,11 +1759,11 @@ Deno.serve(async (req) => {
     if (!email || !code) return json({ ok: false, reason: "Identifiants manquants." }, 400);
     if (!fileData) return json({ ok: false, reason: "Données fichier manquantes." }, 400);
 
-    // Buckets autorisés
-    const allowedBuckets = ["actualities", "factures"];
+    // Buckets autorisés (reports = comptes-rendus de réunion en PDF)
+    const allowedBuckets = ["actualities", "factures", "reports"];
     if (!allowedBuckets.includes(bucket)) return json({ ok: false, reason: "Bucket non autorisé." }, 400);
 
-    // Vérifier les credentials admin
+    // Vérifier les credentials admin (avec verifyCode pour gérer hash + clair)
     const { data: dbDataImg, error: dbErrorImg } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
     if (dbErrorImg || !dbDataImg) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -1762,21 +1772,17 @@ Deno.serve(async (req) => {
     const adminEmailsImg = parseAdminEmails(dImg.adminEmails as unknown[] || []).map((e) => e.email);
     const adminCredentialsImg = ((dImg.adminCredentials || []) as { email: string; code: string }[]);
 
-    const validAdminCredImg = adminCredentialsImg.find(
-      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code
-    );
-    const validMembreImg = membresImg.find(
-      (m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code
-    );
+    const validAdminCredImg = await findAdminCredByCredentials(adminCredentialsImg, email, code);
+    const validMembreImg = await findMembreByCredentials(membresImg, email, code);
 
     if (!validAdminCredImg && !validMembreImg) return json({ ok: false, reason: "Identifiants incorrects." }, 401);
     if (!adminEmailsImg.includes(email) && !validAdminCredImg) return json({ ok: false, reason: "Accès non autorisé." }, 403);
 
-    // 🔒 SÉCURITÉ : limite la taille du base64 à ~6.7MB (= ~5MB de fichier décodé)
-    const MAX_BASE64_LENGTH = 6_700_000;
+    // 🔒 SÉCURITÉ : limite la taille du base64 à ~27MB (= ~20MB de fichier décodé)
+    const MAX_BASE64_LENGTH = 27_000_000;
     const base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData;
     if (base64Data.length > MAX_BASE64_LENGTH) {
-      return json({ ok: false, reason: "Fichier trop volumineux (5 Mo max)." }, 413);
+      return json({ ok: false, reason: "Fichier trop volumineux (20 Mo max)." }, 413);
     }
 
     // 🔒 SÉCURITÉ : whitelist des types MIME acceptés
@@ -1800,9 +1806,9 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Données fichier invalides." }, 400);
     }
 
-    // 🔒 SÉCURITÉ : double-check sur la taille décodée (5 Mo max)
-    if (bytes.length > 5_000_000) {
-      return json({ ok: false, reason: "Fichier trop volumineux (5 Mo max)." }, 413);
+    // 🔒 SÉCURITÉ : double-check sur la taille décodée (20 Mo max)
+    if (bytes.length > 20_000_000) {
+      return json({ ok: false, reason: "Fichier trop volumineux (20 Mo max)." }, 413);
     }
 
     // 🔒 SÉCURITÉ : validation des "magic bytes" pour confirmer le vrai type de fichier

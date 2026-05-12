@@ -7,6 +7,7 @@ export const EDGE_FUNCTION_URL = `${SUPA_URL}/functions/v1/public-api`;
 
 export const FACTURE_BUCKET = "factures";
 export const ACTU_BUCKET = "actualities";
+export const REPORTS_BUCKET = "reports";
 
 export const supabaseClient = createClient(SUPA_URL, SUPA_KEY, {
   auth: {

@@ -3,7 +3,7 @@
 import { useRef, useState } from "react";
 import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
-import { supabaseClient, FACTURE_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
+import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 
 export default function EngagementAdmin({
   db,
@@ -413,8 +413,8 @@ function ReportsTab({
       alert("Seuls les fichiers PDF sont acceptés.");
       return;
     }
-    if (file.size > 5_000_000) {
-      alert("Le fichier dépasse 5 Mo.");
+    if (file.size > 20_000_000) {
+      alert("Le fichier dépasse 20 Mo.");
       return;
     }
     setUploading(true);
@@ -436,8 +436,8 @@ function ReportsTab({
             fileData: base64,
             fileName: file.name.replace(/[^a-zA-Z0-9._-]/g, "_"),
             contentType: "application/pdf",
-            bucket: FACTURE_BUCKET, // bucket "factures" accepte les PDF
-            pathPrefix: "reports",
+            bucket: REPORTS_BUCKET, // bucket dédié aux comptes-rendus (public)
+            pathPrefix: "",
           }),
         });
         const result = await res.json();
@@ -448,15 +448,15 @@ function ReportsTab({
         setForm((f) => ({ ...f, pdfUrl: result.url, pdfPath: result.path, pdfName: file.name }));
       } else {
         // Admin Supabase Auth direct
-        const path = `reports/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const path = `${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
         const { error } = await supabaseClient.storage
-          .from(FACTURE_BUCKET)
+          .from(REPORTS_BUCKET)
           .upload(path, file, { upsert: false, contentType: "application/pdf" });
         if (error) {
           alert("Erreur upload PDF : " + error.message);
           return;
         }
-        const { data } = supabaseClient.storage.from(FACTURE_BUCKET).getPublicUrl(path);
+        const { data } = supabaseClient.storage.from(REPORTS_BUCKET).getPublicUrl(path);
         setForm((f) => ({ ...f, pdfUrl: data.publicUrl, pdfPath: path, pdfName: file.name }));
       }
     } finally {
@@ -472,7 +472,7 @@ function ReportsTab({
     }
     // Supprimer du storage si admin Supabase Auth (RLS), sinon on laisse le fichier orphelin
     if (!adminEmail || !adminCode) {
-      await supabaseClient.storage.from(FACTURE_BUCKET).remove([form.pdfPath]).catch(() => {});
+      await supabaseClient.storage.from(REPORTS_BUCKET).remove([form.pdfPath]).catch(() => {});
     }
     setForm((f) => ({ ...f, pdfUrl: undefined, pdfPath: undefined, pdfName: undefined }));
   }
@@ -507,7 +507,7 @@ function ReportsTab({
     const report = reports.find((r) => r.id === id);
     // Supprimer le PDF du storage si présent (mode admin Supabase direct)
     if (report?.pdfPath && (!adminEmail || !adminCode)) {
-      await supabaseClient.storage.from(FACTURE_BUCKET).remove([report.pdfPath]).catch(() => {});
+      await supabaseClient.storage.from(REPORTS_BUCKET).remove([report.pdfPath]).catch(() => {});
     }
     await onPersist({ ...db, reunionReports: reports.filter((r) => r.id !== id) });
   }
@@ -565,7 +565,7 @@ function ReportsTab({
           {/* Upload PDF (optionnel) */}
           <div className="border border-slate-200 rounded-xl p-3 bg-white">
             <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2">
-              Fichier PDF (optionnel — 5 Mo max)
+              Fichier PDF (optionnel — 20 Mo max)
             </p>
             {form.pdfUrl ? (
               <div className="flex items-center justify-between gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
