@@ -142,8 +142,11 @@ export type DB = {
   polls?: Poll[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
-  // Règles du club (texte libre, NON archivé avec les saisons — reste permanent)
+  // Règles du club (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
+  clubRulesPdfUrl?: string;
+  clubRulesPdfPath?: string;
+  clubRulesPdfName?: string;
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;

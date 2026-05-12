@@ -263,6 +263,8 @@ export default function Site() {
         />
         <Rules
           clubRules={db.clubRules ?? ""}
+          clubRulesPdfUrl={db.clubRulesPdfUrl}
+          clubRulesPdfName={db.clubRulesPdfName}
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
         />

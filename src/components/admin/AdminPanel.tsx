@@ -146,7 +146,7 @@ export default function AdminPanel({
             <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
           </div>
           <div className="lg:col-span-2">
-            <RulesAdmin db={db} onPersist={safePersist} readOnly={!canEdit("rules")} />
+            <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
           </div>
           <div className="lg:col-span-2">
             <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />

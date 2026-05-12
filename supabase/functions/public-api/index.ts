@@ -472,6 +472,8 @@ Deno.serve(async (req) => {
       agItems,
       reunionReports: d.reunionReports ?? [],
       clubRules: d.clubRules ?? "",
+      clubRulesPdfUrl: d.clubRulesPdfUrl ?? null,
+      clubRulesPdfName: d.clubRulesPdfName ?? null,
     });
   }
 

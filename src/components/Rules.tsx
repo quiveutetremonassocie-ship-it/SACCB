@@ -1,21 +1,23 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ScrollText, Lock } from "lucide-react";
+import { ScrollText, Lock, FileDown } from "lucide-react";
 import { MemberSession } from "@/lib/useMemberSession";
 
 export default function Rules({
   clubRules = "",
+  clubRulesPdfUrl,
+  clubRulesPdfName,
   memberSession,
   onLoginRequest,
 }: {
   clubRules?: string;
+  clubRulesPdfUrl?: string;
+  clubRulesPdfName?: string;
   memberSession: MemberSession | null;
   onLoginRequest: () => void;
 }) {
-  // N'afficher la section que si on a des règles OU si l'utilisateur est connecté
-  // (les visiteurs non connectés voient quand même un bandeau si des règles existent)
-  const hasRules = !!clubRules.trim();
+  const hasRules = !!clubRules.trim() || !!clubRulesPdfUrl;
   const isLoggedIn = !!memberSession;
 
   if (!hasRules && !isLoggedIn) return null;
@@ -58,15 +60,34 @@ export default function Rules({
           </div>
         ) : (
           <div className="max-w-3xl mx-auto bg-white border border-slate-200 rounded-2xl shadow-sm p-6 md:p-8">
-            <div className="flex items-center gap-2 mb-4 pb-3 border-b border-slate-100">
-              <ScrollText className="w-5 h-5 text-slate-600" />
-              <span className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
-                Règlement intérieur
-              </span>
+            <div className="flex items-center justify-between gap-3 mb-4 pb-3 border-b border-slate-100 flex-wrap">
+              <div className="flex items-center gap-2">
+                <ScrollText className="w-5 h-5 text-slate-600" />
+                <span className="text-xs uppercase tracking-widest text-slate-500 font-semibold">
+                  Règlement intérieur
+                </span>
+              </div>
+              {clubRulesPdfUrl && (
+                <a
+                  href={clubRulesPdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center gap-2 px-3 py-1.5 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-xs font-semibold transition"
+                >
+                  <FileDown className="w-3.5 h-3.5" />
+                  {clubRulesPdfName || "Télécharger le PDF"}
+                </a>
+              )}
             </div>
-            <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed font-sans">
-              {clubRules}
-            </p>
+            {clubRules.trim() ? (
+              <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap leading-relaxed font-sans">
+                {clubRules}
+              </p>
+            ) : (
+              <p className="text-sm text-slate-500 italic">
+                Le règlement complet est disponible dans le PDF ci-dessus.
+              </p>
+            )}
           </div>
         )}
       </div>
