@@ -18,9 +18,13 @@ export default function RecuModal({
   return (
     <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/95 p-4 overflow-y-auto">
       <div className="printable bg-white text-black rounded-md max-w-2xl w-full p-10 shadow-2xl my-8">
-        <div className="text-center border-b-2 border-blue-500 pb-3 mb-6">
-          <h1 className="text-2xl text-blue-600 font-bold">SACCB - SAINTE ADRESSE</h1>
-          <p className="text-xs">Club de Badminton — Salle Paul Vatine</p>
+        <div className="flex items-center gap-4 border-b-2 border-blue-500 pb-3 mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Logo SACCB" className="w-20 h-20 object-contain shrink-0" />
+          <div className="text-center flex-1">
+            <h1 className="text-2xl text-blue-600 font-bold">SACCB - SAINTE ADRESSE</h1>
+            <p className="text-xs">Club de Badminton — Salle Paul Vatine</p>
+          </div>
         </div>
         <h2 className="text-center underline font-bold text-lg mb-8">REÇU DE COTISATION</h2>
         <p className="mb-4">

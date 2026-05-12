@@ -46,8 +46,9 @@ export default function Navbar({
     >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         <a href="#" className="flex items-center gap-2 group">
-          <span className="relative w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center shadow-lg shadow-[#1e3a5f]/40 group-hover:scale-110 group-hover:rotate-3 transition">
-            <Shuttlecock className="w-6 h-6 text-white" color="white" />
+          <span className="relative w-12 h-12 rounded-xl bg-white shadow-lg shadow-slate-300/40 group-hover:scale-110 transition overflow-hidden border border-slate-200">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="Logo SACCB" className="w-full h-full object-contain" />
           </span>
           <span className="font-display text-2xl tracking-widest text-[#1e3a5f]">
             SACCB

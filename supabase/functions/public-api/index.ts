@@ -373,9 +373,12 @@ Deno.serve(async (req) => {
             subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                  <div>
+                    <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  </div>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                   <h2 style="color: #16a34a; margin-top: 0;">✅ Paiement confirmé !</h2>
@@ -1013,9 +1016,12 @@ Deno.serve(async (req) => {
         subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+              <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+              <div>
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
               <h2 style="color: #1e3a5f; margin-top: 0;">🏸 Nouveau tournoi disponible !</h2>
@@ -1085,9 +1091,12 @@ Deno.serve(async (req) => {
         subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+              <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+              <div>
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
               <h2 style="color: #1e3a5f; margin-top: 0;">🎉 La nouvelle saison est lancée !</h2>
@@ -1176,9 +1185,12 @@ Deno.serve(async (req) => {
             subject: subjectLabel,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                <div style="background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0;">
-                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <div style="background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                  <div>
+                    <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  </div>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                   <h2 style="color: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${headingLabel}</h2>
@@ -1243,9 +1255,12 @@ Deno.serve(async (req) => {
           subject: tSubject,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              <div style="background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                <div>
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <h2 style="color: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${tHeading}</h2>
@@ -1338,9 +1353,12 @@ Deno.serve(async (req) => {
           subject: "🔑 Votre code personnel SACCB",
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                <div>
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <h2 style="color: #1e3a5f; margin-top: 0;">Réinitialisation de code</h2>
@@ -1453,9 +1471,12 @@ Deno.serve(async (req) => {
         subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+              <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+              <div>
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
               <h2 style="color: #16a34a; margin-top: 0;">✅ Paiement confirmé !</h2>
@@ -1596,9 +1617,12 @@ Deno.serve(async (req) => {
         subject: "🏸 Bienvenue au SACCB — Votre accès espace membre",
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+              <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+              <div>
+                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
               <h2 style="color: #1e3a5f; margin-top: 0;">🎉 Bienvenue au club, ${membre.nom} !</h2>
@@ -2072,9 +2096,12 @@ Deno.serve(async (req) => {
           subject: subject.trim(),
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                <div>
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>

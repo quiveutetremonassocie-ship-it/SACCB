@@ -193,8 +193,13 @@ export default function Accounting({
   </style>
 </head>
 <body>
-  <h1>Bilan financier — Saison ${db.y1}–${db.y2}</h1>
-  <p class="subtitle">Club SACCB &nbsp;|&nbsp; Généré le ${today}</p>
+  <div style="display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 20px;">
+    <img src="/logo.png" alt="Logo SACCB" style="width: 70px; height: 70px; object-fit: contain;" />
+    <div>
+      <h1 style="margin: 0;">Bilan financier — Saison ${db.y1}–${db.y2}</h1>
+      <p class="subtitle" style="margin: 4px 0 0;">Club SACCB &nbsp;|&nbsp; Généré le ${today}</p>
+    </div>
+  </div>
 
   <h2>Recettes</h2>
   <table>
