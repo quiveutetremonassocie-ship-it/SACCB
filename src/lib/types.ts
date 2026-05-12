@@ -142,6 +142,8 @@ export type DB = {
   polls?: Poll[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
+  // Règles du club (texte libre, NON archivé avec les saisons — reste permanent)
+  clubRules?: string;
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
@@ -154,5 +156,6 @@ export const ADMIN_SECTIONS = [
   { key: "actualites",   label: "Actualités",           emoji: "📰" },
   { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
   { key: "engagement",   label: "Sondages & AG",        emoji: "📣" },
+  { key: "rules",        label: "Règles du club",       emoji: "📜" },
   { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
 ] as const;

@@ -34,6 +34,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     polls: d.polls ?? [],
     agItems: d.agItems ?? [],
     reunionReports: d.reunionReports ?? [],
+    clubRules: d.clubRules ?? "",
   };
 }
 

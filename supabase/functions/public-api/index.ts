@@ -471,6 +471,7 @@ Deno.serve(async (req) => {
       polls,
       agItems,
       reunionReports: d.reunionReports ?? [],
+      clubRules: d.clubRules ?? "",
     });
   }
 

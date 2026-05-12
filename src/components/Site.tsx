@@ -20,6 +20,7 @@ import AdminPanel from "./admin/AdminPanel";
 import MemberPanel from "./MemberPanel";
 import Palmares from "./Palmares";
 import Engagement from "./Engagement";
+import Rules from "./Rules";
 
 export default function Site() {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -259,6 +260,11 @@ export default function Site() {
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
           onRefresh={async () => { await refreshPublic(); }}
+        />
+        <Rules
+          clubRules={db.clubRules ?? ""}
+          memberSession={memberSession}
+          onLoginRequest={() => setMemberLoginOpen(true)}
         />
         <Horaires />
         <Tournois
