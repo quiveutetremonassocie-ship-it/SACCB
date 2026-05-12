@@ -36,6 +36,34 @@ function isContactRateLimited(ip: string): boolean {
   return entry.count > 3; // max 3 messages par heure
 }
 
+// Rate limiting spécifique forgot_code (max 5 par heure par IP) - empêche l'énumération d'emails
+const forgotLimitMap = new Map<string, { count: number; reset: number }>();
+
+function isForgotRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = forgotLimitMap.get(ip);
+  if (!entry || now > entry.reset) {
+    forgotLimitMap.set(ip, { count: 1, reset: now + 3_600_000 }); // 1 heure
+    return false;
+  }
+  entry.count++;
+  return entry.count > 5;
+}
+
+// Rate limiting login (max 10 tentatives par 15 min par IP) - protection brute force
+const loginLimitMap = new Map<string, { count: number; reset: number }>();
+
+function isLoginRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = loginLimitMap.get(ip);
+  if (!entry || now > entry.reset) {
+    loginLimitMap.set(ip, { count: 1, reset: now + 900_000 }); // 15 min
+    return false;
+  }
+  entry.count++;
+  return entry.count > 10;
+}
+
 function sanitize(str: string): string {
   return str
     .replace(/[<>]/g, "") // pas de balises HTML
@@ -50,6 +78,101 @@ function isValidEmail(email: string): boolean {
 function isValidPhone(tel: string): boolean {
   const cleaned = tel.replace(/[\s.\-()]/g, "");
   return /^\+?\d{8,15}$/.test(cleaned);
+}
+
+// 🔒 Hash des codes : SHA-256 + salt aléatoire
+// Format stocké : "h$<salt32>$<hash64>"
+// Migration douce : si le code stocké n'est pas hashé, on le compare en clair (pour rétrocompat)
+async function sha256Hex(text: string): Promise<string> {
+  const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(text));
+  return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+async function hashCode(plain: string): Promise<string> {
+  const salt = crypto.randomUUID().replace(/-/g, "");
+  const hash = await sha256Hex(salt + plain);
+  return `h$${salt}$${hash}`;
+}
+
+async function verifyCode(stored: string | undefined | null, input: string): Promise<boolean> {
+  if (!stored || !input) return false;
+  if (stored.startsWith("h$")) {
+    const parts = stored.split("$");
+    if (parts.length !== 3) return false;
+    const [, salt, hash] = parts;
+    const computed = await sha256Hex(salt + input);
+    // Comparaison constante en temps (réduit le risque de timing attacks)
+    if (computed.length !== hash.length) return false;
+    let diff = 0;
+    for (let i = 0; i < computed.length; i++) {
+      diff |= computed.charCodeAt(i) ^ hash.charCodeAt(i);
+    }
+    return diff === 0;
+  }
+  // Ancien format en clair (pour rétrocompat — sera migré au prochain login)
+  return stored === input;
+}
+
+function isHashedCode(stored: string | undefined | null): boolean {
+  return typeof stored === "string" && stored.startsWith("h$");
+}
+
+// Helper async pour find par credentials (membres)
+async function findMembreByCredentials(
+  membres: Record<string, unknown>[],
+  email: string,
+  code: string
+): Promise<Record<string, unknown> | undefined> {
+  const lowerEmail = email.toLowerCase();
+  for (const m of membres) {
+    if (String(m.email || "").toLowerCase() !== lowerEmail) continue;
+    if (await verifyCode(String(m.code || ""), code)) return m;
+  }
+  return undefined;
+}
+
+// Helper async pour find par credentials (admin credentials)
+async function findAdminCredByCredentials(
+  creds: { email: string; code: string; readOnly?: boolean; permissions?: string[] }[],
+  email: string,
+  code: string
+): Promise<{ email: string; code: string; readOnly?: boolean; permissions?: string[] } | undefined> {
+  const lowerEmail = email.toLowerCase();
+  for (const c of creds) {
+    if (String(c.email || "").toLowerCase() !== lowerEmail) continue;
+    if (await verifyCode(c.code, code)) return c;
+  }
+  return undefined;
+}
+
+// Migration douce : si le code stocké est en clair, on le hash et on update la DB
+async function migrateCodeIfNeeded(
+  supabaseAdmin: ReturnType<typeof createClient>,
+  d: Record<string, unknown>,
+  target: { type: "membre"; id: string; plainCode: string } | { type: "adminCred"; email: string; plainCode: string }
+): Promise<void> {
+  try {
+    const hashed = await hashCode(target.plainCode);
+    if (target.type === "membre") {
+      const membres = (d.membres || []) as Record<string, unknown>[];
+      const m = membres.find((x) => x.id === target.id);
+      if (m && !isHashedCode(String(m.code || ""))) {
+        m.code = hashed;
+        d.membres = membres;
+        await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      }
+    } else {
+      const creds = (d.adminCredentials || []) as { email: string; code: string }[];
+      const c = creds.find((x) => String(x.email || "").toLowerCase() === target.email.toLowerCase());
+      if (c && !isHashedCode(c.code)) {
+        c.code = hashed;
+        d.adminCredentials = creds;
+        await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      }
+    }
+  } catch (e) {
+    console.warn("[migrateCodeIfNeeded] Failed:", e);
+  }
 }
 
 // Helper : normalise adminEmails (ancien format string[] ou nouveau format {email,readOnly,permissions}[])
@@ -70,6 +193,33 @@ function json(data: unknown, status = 200) {
     status,
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
+}
+
+// Helper : vérifie que email+code correspond à un admin valide (admin credentials OU membre admin)
+// Retourne null si OK, sinon une Response d'erreur à retourner immédiatement
+async function checkAdminAuth(
+  body: Record<string, unknown>,
+  d: Record<string, unknown>
+): Promise<Response | null> {
+  const email = String(body.adminEmail || body.email || "").toLowerCase().trim();
+  const code = String(body.adminCode || body.code || "").trim();
+  if (!email || !code) return json({ ok: false, reason: "Authentification admin requise." }, 401);
+
+  const membres = (d.membres || []) as Record<string, unknown>[];
+  const adminEmailEntries = parseAdminEmails((d.adminEmails as unknown[]) || []);
+  const adminEmails = adminEmailEntries.map((e) => e.email);
+  const adminCredentials = (d.adminCredentials || []) as { email: string; code: string }[];
+
+  const validAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
+  const validMembre = await findMembreByCredentials(membres, email, code);
+
+  if (!validAdminCred && !validMembre) {
+    return json({ ok: false, reason: "Identifiants invalides." }, 401);
+  }
+  if (!adminEmails.includes(email) && !validAdminCred) {
+    return json({ ok: false, reason: "Accès non autorisé." }, 403);
+  }
+  return null;
 }
 
 Deno.serve(async (req) => {
@@ -104,8 +254,23 @@ Deno.serve(async (req) => {
   // ─── WEBHOOK HELLOASSO (notification automatique de paiement) ───
   // HelloAsso envoie un payload avec eventType, pas de champ "action"
   if (body.eventType === "Payment" || body.eventType === "Order") {
-    // Pas de vérification d'IP (HelloAsso peut changer ses IPs)
-    // La sécurité repose sur le format spécifique du payload + le fait que l'URL n'est pas publique
+    // 🔒 SÉCURITÉ : exiger un secret partagé en query param ou header
+    // Configurer côté HelloAsso : URL = https://....functions/v1/public-api?secret=XXX
+    // Et côté Supabase : variable d'env HELLOASSO_WEBHOOK_SECRET = XXX
+    const expectedSecret = Deno.env.get("HELLOASSO_WEBHOOK_SECRET");
+    if (!expectedSecret) {
+      console.error("[HelloAsso webhook] HELLOASSO_WEBHOOK_SECRET non configuré — webhook refusé");
+      return json({ ok: false, reason: "Webhook non configuré." }, 503);
+    }
+    const url = new URL(req.url);
+    const providedSecret =
+      url.searchParams.get("secret") ||
+      req.headers.get("x-helloasso-secret") ||
+      "";
+    if (providedSecret !== expectedSecret) {
+      console.warn("[HelloAsso webhook] Secret invalide depuis IP", ip);
+      return json({ ok: false, reason: "Non autorisé." }, 401);
+    }
 
     // Extraire l'email du payeur
     const paymentData = body.data as Record<string, unknown> | undefined;
@@ -187,9 +352,8 @@ Deno.serve(async (req) => {
                     <p style="margin: 4px 0; color: #1e293b;"><strong>Montant réglé :</strong> ${prix}€</p>
                   </div>
                   <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                    <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code personnel</p>
-                    <p style="margin: 0 0 8px; color: #92400e; font-size: 13px;">Conservez-le précieusement pour vous connecter à votre espace membre sur saccb.fr :</p>
-                    <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e3a5f; text-align: center;">${membreCode}</p>
+                    <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Connexion à votre espace membre</p>
+                    <p style="margin: 0; color: #92400e; font-size: 13px;">Utilisez le code personnel que vous avez choisi à l'inscription pour vous connecter sur saccb.fr. Si vous l'avez oublié, cliquez sur « Code oublié ? » sur la page de connexion.</p>
                   </div>
                   ${currentData.whatsappLink ? `
                   <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
@@ -274,16 +438,10 @@ Deno.serve(async (req) => {
     const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
     // Vérifier que le membre existe et que le code est correct
-    const membre = membres.find(
-      (m) =>
-        String(m.email || "").toLowerCase() === email &&
-        String(m.id || "") === membreId &&
-        String(m.code || "") === code &&
-        m.ok === true
-    );
-    const isAdmin = adminCredentials.some(
-      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code
-    );
+    const matchedMembre = await findMembreByCredentials(membres, email, code);
+    const membre = matchedMembre && String(matchedMembre.id || "") === membreId && matchedMembre.ok === true ? matchedMembre : undefined;
+    const matchedAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
+    const isAdmin = !!matchedAdminCred;
 
     if (!membre && !isAdmin) {
       return json({ ok: false, reason: "Non autorisé." }, 403);
@@ -298,6 +456,11 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Vérification membre (connexion espace membre) ───
   if (action === "verify_membre") {
+    // 🔒 SÉCURITÉ : rate limit pour empêcher le brute force des codes
+    if (isLoginRateLimited(ip)) {
+      return json({ ok: false, reason: "Trop de tentatives de connexion. Réessayez dans 15 minutes." }, 429);
+    }
+
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));
 
@@ -318,10 +481,12 @@ Deno.serve(async (req) => {
     const adminEmails = adminEmailEntries.map((e) => e.email);
 
     // Vérifier d'abord les credentials admin indépendants (pas besoin d'être adhérent)
-    const adminCred = adminCredentials.find(
-      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code
-    );
+    const adminCred = await findAdminCredByCredentials(adminCredentials, email, code);
     if (adminCred) {
+      // Migration douce du code en clair → hashé
+      if (!isHashedCode(adminCred.code)) {
+        await migrateCodeIfNeeded(supabaseAdmin, currentData, { type: "adminCred", email, plainCode: code });
+      }
       return json({
         ok: true,
         paid: true,
@@ -331,14 +496,15 @@ Deno.serve(async (req) => {
     }
 
     // Sinon vérifier dans les adhérents normaux
-    const membre = membres.find(
-      (m) =>
-        String(m.email || "").toLowerCase() === email &&
-        String(m.code || "") === code
-    );
+    const membre = await findMembreByCredentials(membres, email, code);
 
     if (!membre) {
       return json({ ok: false, reason: "Email ou code incorrect." });
+    }
+
+    // Migration douce du code en clair → hashé
+    if (!isHashedCode(String(membre.code || ""))) {
+      await migrateCodeIfNeeded(supabaseAdmin, currentData, { type: "membre", id: String(membre.id), plainCode: code });
     }
 
     const isAdmin = adminEmails.includes(email);
@@ -372,11 +538,8 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    const idx = membres.findIndex(
-      (m) => String(m.email || "").toLowerCase() === email &&
-             String(m.id || "") === membreId &&
-             String(m.code || "") === code
-    );
+    const matched = await findMembreByCredentials(membres, email, code);
+    const idx = matched ? membres.findIndex((m) => m.id === matched.id && String(m.id || "") === membreId) : -1;
     if (idx === -1) return json({ ok: false, reason: "Membre introuvable ou code incorrect." }, 403);
 
     membres[idx] = { ...membres[idx], newsOptIn };
@@ -402,8 +565,8 @@ Deno.serve(async (req) => {
     const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string; readOnly?: boolean; permissions?: string[] }[]);
 
     // Vérifier via adminCredentials (admin sans adhérent) OU via membres
-    const validAdminCred = adminCredentials.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
-    const validMembre = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
+    const validAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
+    const validMembre = await findMembreByCredentials(membres, email, code);
 
     if (!validAdminCred && !validMembre) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
@@ -411,8 +574,27 @@ Deno.serve(async (req) => {
     const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
     const isReadOnly = validAdminCred?.readOnly === true || adminEmailEntry?.readOnly === true;
     const permissions = validAdminCred?.permissions ?? adminEmailEntry?.permissions ?? undefined;
+
+    // 🔒 SÉCURITÉ : masquer les codes hashés dans la réponse admin (l'admin n'a pas besoin de les voir)
+    // Les codes en clair restent visibles (legacy, l'admin doit pouvoir les transmettre aux membres)
+    const maskedMembres = (membres as Record<string, unknown>[]).map((m) => ({
+      ...m,
+      code: isHashedCode(String(m.code || "")) ? "" : m.code,
+      _codeHashed: isHashedCode(String(m.code || "")),
+    }));
+    const maskedAdminCreds = (adminCredentials as { email: string; code: string }[]).map((c) => ({
+      ...c,
+      code: isHashedCode(c.code) ? "" : c.code,
+      _codeHashed: isHashedCode(c.code),
+    }));
+
     // Normalise adminEmails en format objet (compat ancien format string[])
-    const normalizedData = { ...d, adminEmails: adminEmailEntries };
+    const normalizedData = {
+      ...d,
+      adminEmails: adminEmailEntries,
+      membres: maskedMembres,
+      adminCredentials: maskedAdminCreds,
+    };
     return json({ ok: true, data: normalizedData, readOnly: isReadOnly, permissions });
   }
 
@@ -432,8 +614,8 @@ Deno.serve(async (req) => {
     const adminEmails = adminEmailEntries.map((e) => e.email);
     const adminCredentialsCheck = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
-    const validAdminCredSave = adminCredentialsCheck.find((c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === code);
-    const validMembreSave = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === code);
+    const validAdminCredSave = await findAdminCredByCredentials(adminCredentialsCheck, email, code);
+    const validMembreSave = await findMembreByCredentials(membres, email, code);
 
     if (!validAdminCredSave && !validMembreSave) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
@@ -444,6 +626,41 @@ Deno.serve(async (req) => {
     const newAdminEmailSet = JSON.stringify(parseAdminEmails((newData.adminEmails as unknown[] || [])).map((e) => e.email).sort());
     if (currentAdminEmailSet !== newAdminEmailSet && !SUPER_ADMINS.includes(email)) {
       return json({ ok: false, reason: "Seul un super-administrateur peut modifier la liste des admins." }, 403);
+    }
+
+    // 🔒 SÉCURITÉ : préserver les codes hashés et hasher les nouveaux codes en clair
+    // Si le code envoyé est vide (= masqué côté admin) → garder l'ancien code de la DB
+    // Si le code envoyé est nouveau et en clair → le hasher avant sauvegarde
+    const oldMembresMap = new Map<string, Record<string, unknown>>();
+    membres.forEach((m) => oldMembresMap.set(String(m.id || ""), m));
+    const newMembres = (newData.membres || []) as Record<string, unknown>[];
+    for (const m of newMembres) {
+      // Nettoyer le flag de masquage (si présent) avant de sauvegarder
+      delete (m as Record<string, unknown>)._codeHashed;
+      const c = String(m.code || "");
+      if (!c) {
+        // Code masqué côté admin → restaurer l'ancien code (hashé) depuis la DB
+        const old = oldMembresMap.get(String(m.id || ""));
+        if (old) m.code = old.code;
+      } else if (!isHashedCode(c)) {
+        // Nouveau code en clair → hasher avant sauvegarde
+        m.code = await hashCode(c);
+      }
+      // Sinon : code déjà hashé, on garde tel quel
+    }
+
+    const oldAdminCredsMap = new Map<string, { email: string; code: string }>();
+    adminCredentialsCheck.forEach((c) => oldAdminCredsMap.set(String(c.email || "").toLowerCase(), c));
+    const newAdminCreds = (newData.adminCredentials || []) as { email: string; code: string }[];
+    for (const c of newAdminCreds) {
+      delete (c as Record<string, unknown>)._codeHashed;
+      const v = String(c.code || "");
+      if (!v) {
+        const old = oldAdminCredsMap.get(String(c.email || "").toLowerCase());
+        if (old) c.code = old.code;
+      } else if (!isHashedCode(v)) {
+        c.code = await hashCode(v);
+      }
     }
 
     const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
@@ -483,6 +700,9 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
+    // 🔒 SÉCURITÉ : hasher le code avant stockage
+    const hashedCode = await hashCode(code);
+
     // Renouvellement uniquement si inscription individuelle (pas groupée)
     if (!grouped) {
       const existingIdx = membres.findIndex((m) => String(m.email || "").toLowerCase() === email);
@@ -498,7 +718,7 @@ Deno.serve(async (req) => {
           tel: tel || existing.tel,
           type,
           paymentMethod,
-          code: code || existing.code,
+          code: code ? hashedCode : existing.code,
           newsOptIn,
           photoConsent,
           ok: false,
@@ -535,7 +755,7 @@ Deno.serve(async (req) => {
       type,
       ok: false,
       paymentMethod,
-      code,
+      code: hashedCode, // 🔒 Code hashé en base
       newsOptIn,
       photoConsent,
     };
@@ -562,7 +782,11 @@ Deno.serve(async (req) => {
     return json({ ok: true, membreId: newMembre.id });
   }
 
-  // ─── ACTION: Marquer un membre comme payé (retour HelloAsso) ───
+  // ─── ACTION: Vérifier le statut de paiement d'un membre (retour HelloAsso) ───
+  // ⚠️ SÉCURITÉ : cette action ne marque PLUS le paiement (l'ancienne version permettait
+  // à n'importe qui de marquer un membre comme payé). Le paiement est uniquement validé
+  // via le webhook HelloAsso (avec secret) ou manuellement par l'admin.
+  // Cette action sert juste à vérifier l'état pour l'UX du retour HelloAsso.
   if (action === "mark_paid") {
     const membreId = String(body.membreId || "");
     if (!membreId) return json({ ok: false }, 400);
@@ -578,95 +802,23 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
-    let found = false;
-    for (const m of membres) {
-      if (m.id === membreId && !m.ok) {
-        m.ok = true;
-        m.paymentDate = new Date().toISOString();
-        found = true;
-        break;
-      }
-    }
+    // On retourne juste le statut actuel (déjà payé ou pas), sans modification
+    const membre = membres.find((m) => m.id === membreId);
+    if (!membre) return json({ ok: false, reason: "Membre introuvable." });
 
-    if (!found) return json({ ok: false });
-
-    currentData.membres = membres;
-    const { error: updateError } = await supabaseAdmin
-      .from("saccb_db")
-      .update({ data: currentData })
-      .eq("id", 1);
-
-    if (updateError) return json({ ok: false }, 500);
-
-    // Email de confirmation de paiement (fire and forget)
-    const paidMembre = membres.find((m) => m.id === membreId);
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (resendKey && paidMembre) {
-      const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
-      const prix = prixMap[String(paidMembre.type)] ?? 50;
-      const membreCode = String(paidMembre.code || "");
-      fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "SACCB <contact@saccb.fr>",
-          to: [String(paidMembre.email)],
-          subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
-                <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
-              </div>
-              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                <h2 style="color: #16a34a; margin-top: 0;">✅ Paiement confirmé !</h2>
-                <p style="color: #475569;">Bonjour <strong>${paidMembre.nom}</strong>,</p>
-                <p style="color: #475569;">Votre paiement a bien été reçu. Votre adhésion au SACCB pour la saison ${currentData.y1}–${currentData.y2} est désormais <strong>validée</strong>.</p>
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                  <p style="margin: 0 0 8px; color: #64748b; font-size: 13px;">RÉCAPITULATIF</p>
-                  <p style="margin: 4px 0; color: #1e293b;"><strong>Nom :</strong> ${paidMembre.nom}</p>
-                  <p style="margin: 4px 0; color: #1e293b;"><strong>Type :</strong> ${paidMembre.type}</p>
-                  <p style="margin: 4px 0; color: #1e293b;"><strong>Montant réglé :</strong> ${prix}€</p>
-                </div>
-                <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                  <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code personnel</p>
-                  <p style="margin: 0 0 8px; color: #92400e; font-size: 13px;">Conservez-le précieusement pour vous connecter à votre espace membre sur saccb.fr :</p>
-                  <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e3a5f; text-align: center;">${membreCode}</p>
-                </div>
-                <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold;">
-                  Accéder à mon espace membre →
-                </a>
-                ${currentData.whatsappLink ? `
-                <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
-                  <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club pour rester informé des entraînements et tournois :</p>
-                  <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
-                    💬 Rejoindre le groupe WhatsApp
-                  </a>
-                </div>
-                ` : ""}
-                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
-                  SACCB — Sainte-Adresse, Le Havre
-                </p>
-              </div>
-            </div>
-          `,
-        }),
-      }).catch(() => {});
-    }
-
-    const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
-    if (sheetsWebhook) {
-      fetch(sheetsWebhook, {
-        method: "POST",
-        body: JSON.stringify(currentData),
-      }).catch(() => {});
-    }
-
-    return json({ ok: true });
+    return json({ ok: true, paid: membre.ok === true });
   }
+
 
   // ─── ACTION: Sync Google Sheets (appelé depuis l'admin après saveDB) ───
   if (action === "sync_sheets") {
+    // 🔒 SÉCURITÉ : Auth admin obligatoire (sinon n'importe qui peut spammer le webhook Sheets)
+    const { data: dbDataSync } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!dbDataSync) return json({ ok: false }, 500);
+    const dSync = dbDataSync.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, dSync);
+    if (authError) return authError;
+
     const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
     if (sheetsWebhook && body.data) {
       fetch(sheetsWebhook, {
@@ -751,6 +903,11 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const currentData = data.data as Record<string, unknown>;
+
+    // 🔒 SÉCURITÉ : Auth admin obligatoire pour empêcher le spam de masse
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+
     const membres = (currentData.membres || []) as Record<string, unknown>[];
     const tournois = (currentData.config_tournois || []) as Record<string, unknown>[];
 
@@ -834,6 +991,11 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const d = data.data as Record<string, unknown>;
+
+    // 🔒 SÉCURITÉ : Auth admin obligatoire pour empêcher le spam de masse
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     // Envoyer à tous les membres (anciens adhérents), peu importe newsOptIn
@@ -1058,8 +1220,13 @@ Deno.serve(async (req) => {
     return json({ ok: true, ...results });
   }
 
-  // ─── ACTION: Code oublié — envoyer le code par email ───
+  // ─── ACTION: Code oublié — RÉINITIALISE le code (ne le récupère plus, car hashé en base) ───
   if (action === "forgot_code") {
+    // 🔒 SÉCURITÉ : rate limit strict pour empêcher l'énumération d'emails
+    if (isForgotRateLimited(ip)) {
+      return json({ ok: false, reason: "Trop de demandes. Réessayez dans une heure." }, 429);
+    }
+
     const email = sanitize(String(body.email || "")).toLowerCase();
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
 
@@ -1077,12 +1244,21 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
-    const membre = membres.find(
+    const membreIdx = membres.findIndex(
       (m) => String(m.email || "").toLowerCase() === email && m.ok === true
     );
+    const membre = membreIdx !== -1 ? membres[membreIdx] : undefined;
 
     // On répond toujours ok:true pour ne pas révéler si l'email existe
-    if (membre && membre.code) {
+    if (membre) {
+      // 🔒 SÉCURITÉ : on génère un NOUVEAU code aléatoire, on le hash en base, on l'envoie en clair
+      // Plus jamais de récupération de l'ancien code (impossible car hashé)
+      const newPlainCode = String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres
+      membres[membreIdx] = { ...membre, code: await hashCode(newPlainCode) };
+      currentData.membres = membres;
+      await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+      // Remplacement pour le template HTML ci-dessous
+      (membre as Record<string, unknown>).code = newPlainCode;
       fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1097,14 +1273,14 @@ Deno.serve(async (req) => {
                 <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                <h2 style="color: #1e3a5f; margin-top: 0;">Récupération de code</h2>
+                <h2 style="color: #1e3a5f; margin-top: 0;">Réinitialisation de code</h2>
                 <p style="color: #475569;">Bonjour <strong>${membre.nom}</strong>,</p>
-                <p style="color: #475569;">Vous avez demandé à récupérer votre code personnel. Le voici :</p>
+                <p style="color: #475569;">Vous avez demandé à réinitialiser votre code personnel. Voici votre <strong>nouveau code</strong> :</p>
                 <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 16px 0; text-align: center;">
-                  <p style="margin: 0 0 8px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code personnel</p>
+                  <p style="margin: 0 0 8px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre nouveau code personnel</p>
                   <p style="margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1e3a5f;">${membre.code}</p>
                 </div>
-                <p style="color: #64748b; font-size: 13px;">Utilisez ce code avec votre email pour vous connecter à votre espace membre sur saccb.fr.</p>
+                <p style="color: #64748b; font-size: 13px;">Utilisez ce nouveau code avec votre email pour vous connecter à votre espace membre sur saccb.fr. Vous pourrez le modifier ensuite depuis votre espace.</p>
                 <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                   Se connecter →
                 </a>
@@ -1142,21 +1318,17 @@ Deno.serve(async (req) => {
     const membres = (currentData.membres || []) as Record<string, unknown>[];
     const adminCredentials = ((currentData.adminCredentials || []) as { email: string; code: string }[]);
 
-    // Vérifier d'abord dans adminCredentials
-    const adminCred = adminCredentials.find(
-      (c) => String(c.email || "").toLowerCase() === email && String(c.code || "") === oldCode
-    );
-
+    // Vérifier d'abord dans adminCredentials (avec verifyCode pour gérer hash + clair)
+    const adminCred = await findAdminCredByCredentials(adminCredentials, email, oldCode);
     // Vérifier ensuite dans les adhérents
-    const membre = membres.find(
-      (m) => String(m.email || "").toLowerCase() === email && String(m.code || "") === oldCode
-    );
+    const membre = await findMembreByCredentials(membres, email, oldCode);
 
     if (!adminCred && !membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
 
-    // Mettre à jour dans les deux endroits si besoin
-    if (membre) membre.code = newCode;
-    if (adminCred) adminCred.code = newCode;
+    // 🔒 SÉCURITÉ : hasher le nouveau code avant stockage
+    const hashedNew = await hashCode(newCode);
+    if (membre) membre.code = hashedNew;
+    if (adminCred) adminCred.code = hashedNew;
 
     currentData.membres = membres;
     currentData.adminCredentials = adminCredentials;
@@ -1188,6 +1360,11 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const currentData = data.data as Record<string, unknown>;
+
+    // 🔒 SÉCURITÉ : Auth admin obligatoire
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+
     const membres = (currentData.membres || []) as Record<string, unknown>[];
     const membre = membres.find((m) => m.id === membreId && m.ok === true);
 
@@ -1195,7 +1372,7 @@ Deno.serve(async (req) => {
 
     const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
     const prix = prixMap[String(membre.type)] ?? 50;
-    const membreCode = String(membre.code || "");
+    const membreCode = ""; // Codes hashés en base : on n'affiche plus le code dans l'email
 
     const sendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -1221,9 +1398,8 @@ Deno.serve(async (req) => {
                 <p style="margin: 4px 0; color: #1e293b;"><strong>Montant réglé :</strong> ${prix}€</p>
               </div>
               <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre code personnel</p>
-                <p style="margin: 0 0 8px; color: #92400e; font-size: 13px;">Conservez-le précieusement pour vous connecter à votre espace membre sur saccb.fr :</p>
-                <p style="margin: 0; font-size: 28px; font-weight: bold; letter-spacing: 6px; color: #1e3a5f; text-align: center;">${membreCode}</p>
+                <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Connexion à votre espace membre</p>
+                <p style="margin: 0; color: #92400e; font-size: 13px;">Utilisez le code personnel que vous avez choisi à l'inscription pour vous connecter sur saccb.fr. Si vous l'avez oublié, cliquez sur « Code oublié ? » sur la page de connexion.</p>
               </div>
               ${currentData.whatsappLink ? `
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
@@ -1324,13 +1500,22 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const currentData = data.data as Record<string, unknown>;
+
+    // 🔒 SÉCURITÉ : Auth admin obligatoire
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+
     const membres = (currentData.membres || []) as Record<string, unknown>[];
-    const membre = membres.find((m) => m.id === membreId);
+    const membreIdx = membres.findIndex((m) => m.id === membreId);
+    if (membreIdx === -1) return json({ ok: false, reason: "Membre introuvable." });
+    const membre = membres[membreIdx];
 
-    if (!membre) return json({ ok: false, reason: "Membre introuvable." });
-
-    const membreCode = String(membre.code || "");
-    if (!membreCode) return json({ ok: false, reason: "Ce membre n'a pas de code." });
+    // 🔒 SÉCURITÉ : on génère TOUJOURS un nouveau code aléatoire pour l'envoi de bienvenue
+    // (les codes en base sont hashés, on ne peut plus les récupérer)
+    const membreCode = String(Math.floor(100000 + Math.random() * 900000));
+    membres[membreIdx] = { ...membre, code: await hashCode(membreCode) };
+    currentData.membres = membres;
+    await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
 
     const sendRes = await fetch("https://api.resend.com/emails", {
       method: "POST",
@@ -1530,8 +1715,23 @@ Deno.serve(async (req) => {
     if (!validAdminCredImg && !validMembreImg) return json({ ok: false, reason: "Identifiants incorrects." }, 401);
     if (!adminEmailsImg.includes(email) && !validAdminCredImg) return json({ ok: false, reason: "Accès non autorisé." }, 403);
 
-    // Décoder le base64 (retirer le préfixe data:... si présent)
+    // 🔒 SÉCURITÉ : limite la taille du base64 à ~6.7MB (= ~5MB de fichier décodé)
+    const MAX_BASE64_LENGTH = 6_700_000;
     const base64Data = fileData.includes(",") ? fileData.split(",")[1] : fileData;
+    if (base64Data.length > MAX_BASE64_LENGTH) {
+      return json({ ok: false, reason: "Fichier trop volumineux (5 Mo max)." }, 413);
+    }
+
+    // 🔒 SÉCURITÉ : whitelist des types MIME acceptés
+    const allowedTypes = [
+      "image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif",
+      "application/pdf", // factures
+    ];
+    if (!allowedTypes.includes(contentType.toLowerCase())) {
+      return json({ ok: false, reason: "Type de fichier non autorisé." }, 400);
+    }
+
+    // Décoder le base64
     let bytes: Uint8Array;
     try {
       const binaryStr = atob(base64Data);
@@ -1541,6 +1741,42 @@ Deno.serve(async (req) => {
       }
     } catch {
       return json({ ok: false, reason: "Données fichier invalides." }, 400);
+    }
+
+    // 🔒 SÉCURITÉ : double-check sur la taille décodée (5 Mo max)
+    if (bytes.length > 5_000_000) {
+      return json({ ok: false, reason: "Fichier trop volumineux (5 Mo max)." }, 413);
+    }
+
+    // 🔒 SÉCURITÉ : validation des "magic bytes" pour confirmer le vrai type de fichier
+    // (empêche d'envoyer un script en se faisant passer pour une image)
+    const isValidMagicBytes = (bytes: Uint8Array, declared: string): boolean => {
+      if (bytes.length < 4) return false;
+      const t = declared.toLowerCase();
+      // JPEG: FF D8 FF
+      if (t === "image/jpeg" || t === "image/jpg") {
+        return bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff;
+      }
+      // PNG: 89 50 4E 47
+      if (t === "image/png") {
+        return bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47;
+      }
+      // GIF: 47 49 46 38
+      if (t === "image/gif") {
+        return bytes[0] === 0x47 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x38;
+      }
+      // WEBP: RIFF....WEBP
+      if (t === "image/webp") {
+        return bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46;
+      }
+      // PDF: %PDF
+      if (t === "application/pdf") {
+        return bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46;
+      }
+      return false;
+    };
+    if (!isValidMagicBytes(bytes, contentType)) {
+      return json({ ok: false, reason: "Le contenu du fichier ne correspond pas au type déclaré." }, 400);
     }
 
     const prefix = pathPrefix ? `${pathPrefix}/` : "";

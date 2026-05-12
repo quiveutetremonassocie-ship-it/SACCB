@@ -10,10 +10,14 @@ const today = new Date().toISOString().slice(0, 10);
 export default function TournoisAdmin({
   db,
   onPersist,
+  adminEmail,
+  adminCode,
   readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
   readOnly?: boolean;
 }) {
   // Formulaire nouveau tournoi
@@ -101,9 +105,13 @@ export default function TournoisAdmin({
   }
 
   async function notify(id: string, name: string) {
+    if (!adminEmail || !adminCode) {
+      alert("Vous devez être connecté en tant qu'admin pour envoyer des notifications.");
+      return;
+    }
     if (!confirm(`Envoyer un email à tous les adhérents pour le tournoi "${name}" ?`)) return;
     setNotifying(id);
-    const r = await notifyMembres(id, name);
+    const r = await notifyMembres(id, name, adminEmail, adminCode);
     setNotifying(null);
     if (r.ok) {
       alert(`✅ Email envoyé à ${r.sent} adhérent(s) !`);

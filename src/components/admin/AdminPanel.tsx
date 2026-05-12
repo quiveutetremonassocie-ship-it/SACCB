@@ -120,7 +120,7 @@ export default function AdminPanel({
             <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
           </div>
 
-          <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} readOnly={!canEdit("saison")} />
+          <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
           <StatsAdhesions totals={totals} />
 
           <div className="lg:col-span-2 glass p-4 md:p-6">
@@ -141,7 +141,7 @@ export default function AdminPanel({
             <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
           </div>
           <div className="lg:col-span-2">
-            <TournoisAdmin db={db} onPersist={safePersist} readOnly={!canEdit("tournois")} />
+            <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
           </div>
           <div className="lg:col-span-2">
             <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
@@ -152,6 +152,8 @@ export default function AdminPanel({
               onPersist={safePersist}
               onEdit={setEditMembre}
               onRecu={setRecuMembre}
+              adminEmail={adminEmail}
+              adminCode={adminCode}
               readOnly={!canEdit("membres")}
             />
           </div>

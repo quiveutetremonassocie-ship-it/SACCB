@@ -10,12 +10,16 @@ export default function MembresAdmin({
   onPersist,
   onEdit,
   onRecu,
+  adminEmail,
+  adminCode,
   readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   onEdit: (m: Membre) => void;
   onRecu: (m: Membre) => void;
+  adminEmail?: string;
+  adminCode?: string;
   readOnly?: boolean;
 }) {
   const [autoSendEmail, setAutoSendEmail] = useState(true);
@@ -60,14 +64,18 @@ export default function MembresAdmin({
   async function togglePaiement(id: string, val: boolean) {
     const next = { ...db, membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)) };
     await onPersist(next);
-    if (val && autoSendEmail) {
-      adminSendConfirmation(id).catch(() => {});
+    if (val && autoSendEmail && adminEmail && adminCode) {
+      adminSendConfirmation(id, adminEmail, adminCode).catch(() => {});
     }
   }
 
   async function sendEmail(m: Membre) {
+    if (!adminEmail || !adminCode) {
+      alert("Identifiants admin manquants pour envoyer l'email.");
+      return;
+    }
     setSendingEmail(m.id);
-    await adminSendConfirmation(m.id);
+    await adminSendConfirmation(m.id, adminEmail, adminCode);
     setSendingEmail(null);
   }
 
@@ -100,8 +108,8 @@ export default function MembresAdmin({
     await onPersist({ ...db, membres: [...db.membres, newMembre] });
 
     // Envoyer l'email de bienvenue si demandé
-    if (addForm.sendWelcome) {
-      adminSendWelcome(newMembre.id).catch(() => {});
+    if (addForm.sendWelcome && adminEmail && adminCode) {
+      adminSendWelcome(newMembre.id, adminEmail, adminCode).catch(() => {});
     }
 
     setAddForm({ nom: "", email: "", tel: "", type: "Adulte", paymentMethod: "virement", code: genCode(), ok: true, sendWelcome: true });

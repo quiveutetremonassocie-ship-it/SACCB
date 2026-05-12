@@ -12,12 +12,14 @@ export default function SeasonSettings({
   onPersist,
   onRefresh,
   adminEmail,
+  adminCode,
   readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   onRefresh: () => Promise<void>;
   adminEmail?: string;
+  adminCode?: string;
   readOnly?: boolean;
 }) {
   const isSuperAdmin = SUPER_ADMINS.includes(adminEmail?.toLowerCase() ?? "");
@@ -132,7 +134,11 @@ export default function SeasonSettings({
     alert(`✅ Nouvelle saison ${newY1}–${newY2} démarrée !`);
 
     if (confirm(`Envoyer un email à tous les ${db.membres.length} adhérents pour les prévenir que la nouvelle saison est ouverte ?`)) {
-      const r = await adminNotifyNewSeason();
+      if (!adminEmail || !adminCode) {
+        alert("Identifiants admin manquants pour envoyer les emails.");
+        return;
+      }
+      const r = await adminNotifyNewSeason(adminEmail, adminCode);
       if (r.ok) alert(`✅ Email envoyé à ${r.sent} adhérent${(r.sent ?? 0) > 1 ? "s" : ""} !`);
       else alert("Erreur lors de l'envoi : " + r.reason);
     }

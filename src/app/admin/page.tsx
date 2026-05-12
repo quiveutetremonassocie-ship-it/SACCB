@@ -107,6 +107,7 @@ export default function AdminPage() {
         onPersist={persist}
         onRefresh={refresh}
         adminEmail={memberSession.email}
+        adminCode={memberAdminCode.current ?? undefined}
       />
     );
   }

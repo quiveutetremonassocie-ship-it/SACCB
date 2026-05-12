@@ -59,12 +59,9 @@ export async function saveDB(db: DB): Promise<void> {
   if (error) {
     await supabaseClient.from("saccb_db").insert([{ id: 1, data: db }]);
   }
-  // Synchroniser Google Sheets via Edge Function
-  fetch(EDGE_FUNCTION_URL, {
-    method: "POST",
-    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "sync_sheets", data: db }),
-  }).catch(() => {});
+  // Note: la sync Google Sheets se fait directement via l'Edge Function (admin_save côté serveur)
+  // ou via un appel séparé authentifié. On ne sync pas ici car sync_sheets requiert maintenant
+  // une auth admin et cette fonction est appelée depuis l'auth Supabase RLS, pas l'admin via espace membre.
 }
 
 // ─── Inscription publique (via Edge Function sécurisée) ───
@@ -125,25 +122,27 @@ export async function checkMemberSession(email: string, membreId: string): Promi
   }
 }
 
-// ─── Notifier les adhérents par email (via Edge Function) ───
+// ─── Notifier les adhérents par email (via Edge Function) — AUTH ADMIN REQUISE ───
 export async function notifyMembres(
   tournoiId: string,
-  tournoiName: string
+  tournoiName: string,
+  adminEmail: string,
+  adminCode: string
 ): Promise<{ ok: boolean; sent?: number; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "notify_membres", tournoiId, tournoiName }),
+    body: JSON.stringify({ action: "notify_membres", tournoiId, tournoiName, adminEmail, adminCode }),
   });
   return res.json();
 }
 
-// ─── Notifier tous les anciens adhérents du début de nouvelle saison ───
-export async function adminNotifyNewSeason(): Promise<{ ok: boolean; sent?: number; reason?: string }> {
+// ─── Notifier tous les anciens adhérents du début de nouvelle saison — AUTH ADMIN REQUISE ───
+export async function adminNotifyNewSeason(adminEmail: string, adminCode: string): Promise<{ ok: boolean; sent?: number; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "notify_new_season" }),
+    body: JSON.stringify({ action: "notify_new_season", adminEmail, adminCode }),
   });
   return res.json();
 }
@@ -172,12 +171,12 @@ export async function memberChangeCode(
   return res.json();
 }
 
-// ─── Envoyer email de confirmation (virement validé par admin) ───
-export async function adminSendConfirmation(membreId: string): Promise<{ ok: boolean; reason?: string }> {
+// ─── Envoyer email de confirmation (virement validé par admin) — AUTH ADMIN REQUISE ───
+export async function adminSendConfirmation(membreId: string, adminEmail: string, adminCode: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "send_confirmation", membreId }),
+    body: JSON.stringify({ action: "send_confirmation", membreId, adminEmail, adminCode }),
   });
   return res.json();
 }
@@ -232,12 +231,12 @@ export async function publicContact(name: string, email: string, message: string
   return res.json();
 }
 
-// ─── Envoyer email de bienvenue (ajout manuel par admin) ───
-export async function adminSendWelcome(membreId: string): Promise<{ ok: boolean; reason?: string }> {
+// ─── Envoyer email de bienvenue (ajout manuel par admin) — AUTH ADMIN REQUISE ───
+export async function adminSendWelcome(membreId: string, adminEmail: string, adminCode: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "send_welcome", membreId }),
+    body: JSON.stringify({ action: "send_welcome", membreId, adminEmail, adminCode }),
   });
   return res.json();
 }
