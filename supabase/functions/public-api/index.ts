@@ -405,7 +405,22 @@ Deno.serve(async (req) => {
                   <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
                     Accéder à mon espace membre →
                   </a>
-                  <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">SACCB — Sainte-Adresse, Le Havre</p>
+                  <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                    <tr><td>
+                      <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                      <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                      <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                      <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                      <table cellpadding="0" cellspacing="0" border="0"><tr>
+                        <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                          <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                          <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                        </td>
+                      </tr></table>
+                    </td></tr>
+                  </table>
                 </div>
               </div>
             `,
@@ -1036,9 +1051,23 @@ Deno.serve(async (req) => {
               <a href="https://saccb.fr/#tournois" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                 Voir les tournois →
               </a>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
-                Vous recevez cet email car vous êtes membre du SACCB.
-              </p>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                <tr><td>
+                  <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                  <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                  <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                  <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                  <table cellpadding="0" cellspacing="0" border="0"><tr>
+                    <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr></table>
+                  <p style="margin: 14px 0 0; color: #cbd5e1; font-size: 10px;">Vous recevez cet email car vous êtes membre du SACCB.</p>
+                </td></tr>
+              </table>
             </div>
           </div>
         `,
@@ -1112,9 +1141,22 @@ Deno.serve(async (req) => {
               <a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
                 🏸 Je renouvelle mon adhésion →
               </a>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
-                SACCB — Sainte-Adresse, Le Havre
-              </p>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                <tr><td>
+                  <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                  <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                  <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                  <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                  <table cellpadding="0" cellspacing="0" border="0"><tr>
+                    <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr></table>
+                </td></tr>
+              </table>
             </div>
           </div>
         `,
@@ -1203,7 +1245,23 @@ Deno.serve(async (req) => {
                   <a href="https://saccb.fr/#inscription" style="display: inline-block; background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                     Finaliser mon adhésion →
                   </a>
-                  <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez une inscription en attente de paiement au SACCB.</p>
+                  <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                    <tr><td>
+                      <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                      <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                      <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                      <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                      <table cellpadding="0" cellspacing="0" border="0"><tr>
+                        <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                        <td style="vertical-align: middle;">
+                          <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                          <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                          <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                        </td>
+                      </tr></table>
+                      <p style="margin: 14px 0 0; color: #cbd5e1; font-size: 10px;">Vous recevez cet email car vous avez une inscription en attente de paiement au SACCB.</p>
+                    </td></tr>
+                  </table>
                 </div>
               </div>
             `,
@@ -1273,7 +1331,23 @@ Deno.serve(async (req) => {
                 <a href="https://saccb.fr/#tournois" style="display: inline-block; background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                   Voir les tournois →
                 </a>
-                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                  <tr><td>
+                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                      <td style="vertical-align: middle;">
+                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                      </td>
+                    </tr></table>
+                    <p style="margin: 14px 0 0; color: #cbd5e1; font-size: 10px;">Vous recevez cet email car vous avez accepté les news du SACCB.</p>
+                  </td></tr>
+                </table>
               </div>
             </div>
           `,
@@ -1372,9 +1446,23 @@ Deno.serve(async (req) => {
                 <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                   Se connecter →
                 </a>
-                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
-                  Si vous n'êtes pas à l'origine de cette demande, ignorez cet email.
-                </p>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                  <tr><td>
+                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                      <td style="vertical-align: middle;">
+                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                      </td>
+                    </tr></table>
+                    <p style="margin: 14px 0 0; color: #cbd5e1; font-size: 10px;">Si vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email.</p>
+                  </td></tr>
+                </table>
               </div>
             </div>
           `,
@@ -1503,9 +1591,22 @@ Deno.serve(async (req) => {
               <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
                 Accéder à mon espace membre →
               </a>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">
-                SACCB — Sainte-Adresse, Le Havre
-              </p>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                <tr><td>
+                  <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                  <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                  <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                  <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                  <table cellpadding="0" cellspacing="0" border="0"><tr>
+                    <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr></table>
+                </td></tr>
+              </table>
             </div>
           </div>
         `,
@@ -1672,7 +1773,22 @@ Deno.serve(async (req) => {
               <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
                 Accéder au site →
               </a>
-              <p style="color: #94a3b8; font-size: 12px; margin-top: 24px;">SACCB — Sainte-Adresse, Le Havre</p>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                <tr><td>
+                  <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                  <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                  <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                  <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                  <table cellpadding="0" cellspacing="0" border="0"><tr>
+                    <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr></table>
+                </td></tr>
+              </table>
             </div>
           </div>
         `,
@@ -2105,9 +2221,22 @@ Deno.serve(async (req) => {
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
-                <p style="color: #94a3b8; font-size: 12px; margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 12px;">
-                  SACCB — Sainte-Adresse, Le Havre · saccb.fr
-                </p>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                  <tr><td>
+                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                      <td style="vertical-align: middle;">
+                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                      </td>
+                    </tr></table>
+                  </td></tr>
+                </table>
               </div>
             </div>
           `,
