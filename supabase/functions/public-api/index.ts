@@ -117,6 +117,42 @@ function isHashedCode(stored: string | undefined | null): boolean {
   return typeof stored === "string" && stored.startsWith("h$");
 }
 
+// Parse une date dans plusieurs formats : ISO YYYY-MM-DD, DD/MM/YYYY, ou texte libre français ("31 mai 2026")
+// Retourne null si non parsable.
+function parseFlexibleDate(input: string): Date | null {
+  if (!input) return null;
+  const s = input.trim();
+  // Format ISO YYYY-MM-DD
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Format DD/MM/YYYY
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+    const [dd, mm, yyyy] = s.split("/");
+    const d = new Date(`${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  // Texte libre français : "31 mai 2026", "1er juin 2026", "12 janvier 2027 (8h30)"
+  const monthMap: Record<string, number> = {
+    janvier: 1, fevrier: 2, février: 2, mars: 3, avril: 4, mai: 5, juin: 6,
+    juillet: 7, aout: 8, août: 8, septembre: 9, octobre: 10, novembre: 11, decembre: 12, décembre: 12,
+  };
+  const m = s.toLowerCase().match(/(\d{1,2})(?:er|e|ème)?\s+([a-zéû]+)\s+(\d{4})/i);
+  if (m) {
+    const day = parseInt(m[1]);
+    const month = monthMap[m[2]];
+    const year = parseInt(m[3]);
+    if (month) {
+      const d = new Date(year, month - 1, day);
+      return isNaN(d.getTime()) ? null : d;
+    }
+  }
+  // Dernier recours : essayer le parser natif
+  const d = new Date(s);
+  return isNaN(d.getTime()) ? null : d;
+}
+
 // Helper async pour find par credentials (membres)
 async function findMembreByCredentials(
   membres: Record<string, unknown>[],
@@ -1065,11 +1101,11 @@ Deno.serve(async (req) => {
 
     const d = data.data as Record<string, unknown>;
     const inscCloseDate = String(d.insc_close_date || "");
-    if (!inscCloseDate) return json({ ok: true, skipped: "Pas de date de fermeture configurée." });
-
-    const closeTs = new Date(inscCloseDate).getTime();
+    // ⚠️ Ne pas return ici : même sans date de fermeture saison, les rappels tournois doivent partir
     const todayTs = new Date(new Date().toISOString().slice(0, 10)).getTime();
-    const daysLeft = Math.round((closeTs - todayTs) / (1000 * 60 * 60 * 24));
+    const parsedClose = inscCloseDate ? parseFlexibleDate(inscCloseDate) : null;
+    const closeTs = parsedClose ? parsedClose.getTime() : NaN;
+    const daysLeft = !isNaN(closeTs) ? Math.round((closeTs - todayTs) / (1000 * 60 * 60 * 24)) : NaN;
 
     const membres = (d.membres || []) as Record<string, unknown>[];
 
@@ -1089,9 +1125,10 @@ Deno.serve(async (req) => {
 
     // ── Rappels fermeture des inscriptions saison (J-30 / J-15 / J-5 / J-1) ──
     // → envoyé aux membres NON PAYÉS pour les inciter à régler avant la date limite
-    if (daysLeft === 30 || daysLeft === 15 || daysLeft === 5 || daysLeft === 1) {
+    // (skippé si pas de date de fermeture configurée)
+    if (!isNaN(daysLeft) && (daysLeft === 30 || daysLeft === 15 || daysLeft === 5 || daysLeft === 1)) {
       if (unpaidEmails.length > 0) {
-        const closeFormatted = new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+        const closeFormatted = parsedClose ? parsedClose.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : inscCloseDate;
         const isUrgent = daysLeft <= 5;
         const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour finaliser votre adhésion SACCB !" : `⏰ Plus que ${daysLeft} jours pour finaliser votre adhésion SACCB !`;
         const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
@@ -1131,7 +1168,7 @@ Deno.serve(async (req) => {
     }
 
     // ── Suppression des non-payés après fermeture ──
-    if (daysLeft < 0) {
+    if (!isNaN(daysLeft) && daysLeft < 0) {
       const before = membres.length;
       const kept = membres.filter((m) => m.ok === true);
       if (kept.length < before) {
@@ -1148,14 +1185,14 @@ Deno.serve(async (req) => {
     for (const t of tournois) {
       const dateLimit = String(t.dateLimit || t.date || "");
       if (!dateLimit) continue;
-      const tTs = new Date(dateLimit.includes("/")
-        ? dateLimit.split("/").reverse().join("-")
-        : dateLimit).getTime();
+      const parsedT = parseFlexibleDate(dateLimit);
+      if (!parsedT) continue; // date non parsable → on skip ce tournoi
+      const tTs = parsedT.getTime();
       const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
       if (tDaysLeft !== 30 && tDaysLeft !== 15 && tDaysLeft !== 5 && tDaysLeft !== 1) continue;
       if (newsEmails.length === 0) continue;
 
-      const dateFormatted = new Date(tTs).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+      const dateFormatted = parsedT.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
       const tIsUrgent = tDaysLeft <= 5;
       const tSubject = tDaysLeft === 1
         ? `🚨 Tournoi "${t.name}" — plus que 24H pour s'inscrire !`
@@ -1202,10 +1239,9 @@ Deno.serve(async (req) => {
     for (const t of tournois) {
       const dateLimit = String(t.dateLimit || t.date || "");
       if (!dateLimit || t.closed) continue;
-      const tTs = new Date(dateLimit.includes("/")
-        ? dateLimit.split("/").reverse().join("-")
-        : dateLimit).getTime();
-      const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
+      const parsedT = parseFlexibleDate(dateLimit);
+      if (!parsedT) continue;
+      const tDaysLeft = Math.round((parsedT.getTime() - todayTs) / (1000 * 60 * 60 * 24));
       if (tDaysLeft < 0) {
         t.closed = true;
         tournoisUpdated = true;
