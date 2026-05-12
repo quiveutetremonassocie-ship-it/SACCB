@@ -1,16 +1,21 @@
 "use client";
 
-import { useState } from "react";
-import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp } from "lucide-react";
+import { useRef, useState } from "react";
+import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
+import { supabaseClient, FACTURE_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 
 export default function EngagementAdmin({
   db,
   onPersist,
+  adminEmail,
+  adminCode,
   readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
   readOnly?: boolean;
 }) {
   const [tab, setTab] = useState<"sondages" | "ag" | "reports">("sondages");
@@ -48,7 +53,7 @@ export default function EngagementAdmin({
 
       {tab === "sondages" && <PollsTab db={db} onPersist={onPersist} readOnly={readOnly} />}
       {tab === "ag" && <AGTab db={db} onPersist={onPersist} readOnly={readOnly} />}
-      {tab === "reports" && <ReportsTab db={db} onPersist={onPersist} readOnly={readOnly} />}
+      {tab === "reports" && <ReportsTab db={db} onPersist={onPersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />}
     </div>
   );
 }
@@ -352,13 +357,35 @@ function AGTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Pro
 }
 
 // ─── Onglet Comptes-rendus ───
-function ReportsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Promise<void>; readOnly?: boolean }) {
+function ReportsTab({
+  db,
+  onPersist,
+  adminEmail,
+  adminCode,
+  readOnly,
+}: {
+  db: DB;
+  onPersist: (db: DB) => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
+  readOnly?: boolean;
+}) {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [form, setForm] = useState<{ title: string; type: ReunionReport["type"]; date: string; content: string }>({
+  const [form, setForm] = useState<{
+    title: string;
+    type: ReunionReport["type"];
+    date: string;
+    content: string;
+    pdfUrl?: string;
+    pdfPath?: string;
+    pdfName?: string;
+  }>({
     title: "", type: "ag", date: new Date().toISOString().slice(0, 10), content: "",
   });
+  const [uploading, setUploading] = useState(false);
   const [openReport, setOpenReport] = useState<string | null>(null);
+  const pdfInputRef = useRef<HTMLInputElement>(null);
   const reports = db.reunionReports ?? [];
 
   function startNew() {
@@ -369,8 +396,85 @@ function ReportsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) =
 
   function startEdit(r: ReunionReport) {
     setEditingId(r.id);
-    setForm({ title: r.title, type: r.type, date: r.date, content: r.content });
+    setForm({
+      title: r.title,
+      type: r.type,
+      date: r.date,
+      content: r.content,
+      pdfUrl: r.pdfUrl,
+      pdfPath: r.pdfPath,
+      pdfName: r.pdfName,
+    });
     setShowForm(true);
+  }
+
+  async function uploadPdf(file: File) {
+    if (file.type !== "application/pdf") {
+      alert("Seuls les fichiers PDF sont acceptés.");
+      return;
+    }
+    if (file.size > 5_000_000) {
+      alert("Le fichier dépasse 5 Mo.");
+      return;
+    }
+    setUploading(true);
+    try {
+      // Admin via espace membre (pas de JWT) → via Edge Function
+      if (adminEmail && adminCode) {
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i++) binary += String.fromCharCode(bytes[i]);
+        const base64 = btoa(binary);
+        const res = await fetch(EDGE_FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+          body: JSON.stringify({
+            action: "upload_image",
+            email: adminEmail,
+            code: adminCode,
+            fileData: base64,
+            fileName: file.name.replace(/[^a-zA-Z0-9._-]/g, "_"),
+            contentType: "application/pdf",
+            bucket: FACTURE_BUCKET, // bucket "factures" accepte les PDF
+            pathPrefix: "reports",
+          }),
+        });
+        const result = await res.json();
+        if (!result.ok) {
+          alert("Erreur upload PDF : " + (result.reason || "Erreur inconnue"));
+          return;
+        }
+        setForm((f) => ({ ...f, pdfUrl: result.url, pdfPath: result.path, pdfName: file.name }));
+      } else {
+        // Admin Supabase Auth direct
+        const path = `reports/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const { error } = await supabaseClient.storage
+          .from(FACTURE_BUCKET)
+          .upload(path, file, { upsert: false, contentType: "application/pdf" });
+        if (error) {
+          alert("Erreur upload PDF : " + error.message);
+          return;
+        }
+        const { data } = supabaseClient.storage.from(FACTURE_BUCKET).getPublicUrl(path);
+        setForm((f) => ({ ...f, pdfUrl: data.publicUrl, pdfPath: path, pdfName: file.name }));
+      }
+    } finally {
+      setUploading(false);
+      if (pdfInputRef.current) pdfInputRef.current.value = "";
+    }
+  }
+
+  async function removePdf() {
+    if (!form.pdfPath) {
+      setForm((f) => ({ ...f, pdfUrl: undefined, pdfPath: undefined, pdfName: undefined }));
+      return;
+    }
+    // Supprimer du storage si admin Supabase Auth (RLS), sinon on laisse le fichier orphelin
+    if (!adminEmail || !adminCode) {
+      await supabaseClient.storage.from(FACTURE_BUCKET).remove([form.pdfPath]).catch(() => {});
+    }
+    setForm((f) => ({ ...f, pdfUrl: undefined, pdfPath: undefined, pdfName: undefined }));
   }
 
   async function save() {
@@ -400,6 +504,11 @@ function ReportsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) =
   async function deleteReport(id: string) {
     if (readOnly) return;
     if (!confirm("Supprimer ce compte-rendu ?")) return;
+    const report = reports.find((r) => r.id === id);
+    // Supprimer le PDF du storage si présent (mode admin Supabase direct)
+    if (report?.pdfPath && (!adminEmail || !adminCode)) {
+      await supabaseClient.storage.from(FACTURE_BUCKET).remove([report.pdfPath]).catch(() => {});
+    }
     await onPersist({ ...db, reunionReports: reports.filter((r) => r.id !== id) });
   }
 
@@ -452,7 +561,62 @@ function ReportsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) =
             value={form.content}
             onChange={(e) => setForm({ ...form, content: e.target.value })}
           />
-          <button onClick={save} className="btn-primary !text-sm w-full">
+
+          {/* Upload PDF (optionnel) */}
+          <div className="border border-slate-200 rounded-xl p-3 bg-white">
+            <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2">
+              Fichier PDF (optionnel — 5 Mo max)
+            </p>
+            {form.pdfUrl ? (
+              <div className="flex items-center justify-between gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-2">
+                <a
+                  href={form.pdfUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="flex items-center gap-2 text-sm text-blue-700 hover:text-blue-900 min-w-0 truncate"
+                >
+                  <FileText className="w-4 h-4 shrink-0" />
+                  <span className="truncate">{form.pdfName || "Voir le PDF"}</span>
+                </a>
+                <button
+                  type="button"
+                  onClick={removePdf}
+                  className="text-red-500 hover:text-red-700 p-1 rounded shrink-0"
+                  title="Retirer le PDF"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            ) : (
+              <button
+                type="button"
+                onClick={() => pdfInputRef.current?.click()}
+                disabled={uploading}
+                className="w-full flex items-center justify-center gap-2 text-sm text-slate-500 hover:text-blue-600 border border-dashed border-slate-300 hover:border-blue-400 rounded-lg py-3 transition disabled:opacity-50"
+              >
+                {uploading ? (
+                  <>Envoi en cours...</>
+                ) : (
+                  <>
+                    <Upload className="w-4 h-4" />
+                    Ajouter un PDF (compte-rendu signé, etc.)
+                  </>
+                )}
+              </button>
+            )}
+            <input
+              ref={pdfInputRef}
+              type="file"
+              accept="application/pdf,.pdf"
+              className="hidden"
+              onChange={(e) => {
+                const f = e.target.files?.[0];
+                if (f) uploadPdf(f);
+              }}
+            />
+          </div>
+
+          <button onClick={save} disabled={uploading} className="btn-primary !text-sm w-full">
             <Send className="w-4 h-4" /> {editingId ? "Mettre à jour" : "Publier"}
           </button>
         </div>
@@ -494,6 +658,17 @@ function ReportsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) =
             {openReport === r.id && (
               <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
                 <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{r.content}</p>
+                {r.pdfUrl && (
+                  <a
+                    href={r.pdfUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition"
+                  >
+                    <FileDown className="w-4 h-4" />
+                    {r.pdfName || "Télécharger le PDF"}
+                  </a>
+                )}
               </div>
             )}
           </div>

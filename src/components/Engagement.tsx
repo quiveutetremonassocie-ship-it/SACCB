@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
-import { BarChart3, MessageSquare, Lock, Send, Lightbulb, ChevronDown, ChevronUp, FileText, CheckCircle2, EyeOff, Calendar } from "lucide-react";
+import { BarChart3, MessageSquare, Lock, Send, Lightbulb, ChevronDown, ChevronUp, FileText, CheckCircle2, EyeOff, Calendar, FileDown } from "lucide-react";
 import { Poll, AGItem, ReunionReport } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
 import { memberVotePoll, memberSubmitAGItem, fetchMyVotes } from "@/lib/db";
@@ -319,6 +319,17 @@ export default function Engagement({
                   {reportOpen === r.id && (
                     <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
                       <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{r.content}</p>
+                      {r.pdfUrl && (
+                        <a
+                          href={r.pdfUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-semibold transition"
+                        >
+                          <FileDown className="w-4 h-4" />
+                          {r.pdfName || "Télécharger le PDF"}
+                        </a>
+                      )}
                     </div>
                   )}
                 </div>

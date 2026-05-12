@@ -102,6 +102,9 @@ export type ReunionReport = {
   type: "debut_saison" | "fin_saison" | "ag" | "autre";
   date: string; // YYYY-MM-DD
   content: string; // texte libre, supporte les retours à la ligne
+  pdfUrl?: string; // PDF du compte-rendu (optionnel)
+  pdfPath?: string; // chemin Supabase Storage pour suppression
+  pdfName?: string; // nom du fichier original
   saison?: string;
   createdAt: string;
 };
