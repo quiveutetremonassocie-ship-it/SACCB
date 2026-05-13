@@ -341,6 +341,7 @@ export async function adminSendEmail(args: {
   htmlBody: string;
   targetMode: "all" | "paid" | "unpaid" | "news" | "custom";
   customEmails?: string[];
+  extraEmails?: string[];
   attachments?: { filename: string; content: string; contentType?: string }[];
 }): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string; errors?: string[] }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
@@ -354,6 +355,7 @@ export async function adminSendEmail(args: {
       htmlBody: args.htmlBody,
       targetMode: args.targetMode,
       customEmails: args.customEmails ?? [],
+      extraEmails: args.extraEmails ?? [],
       attachments: args.attachments ?? [],
     }),
   });

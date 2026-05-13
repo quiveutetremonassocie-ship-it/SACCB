@@ -32,6 +32,7 @@ export default function EmailingAdmin({
   const [targetMode, setTargetMode] = useState<TargetMode>("paid");
   const [selectedMembreIds, setSelectedMembreIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
+  const [extraEmails, setExtraEmails] = useState("");
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
@@ -39,15 +40,25 @@ export default function EmailingAdmin({
 
   const membres = db.membres || [];
 
+  // Parse les emails externes saisis (séparés par virgule, point-virgule ou saut de ligne)
+  const parsedExtraEmails = useMemo(() => {
+    return extraEmails
+      .split(/[,;\n\r\s]+/)
+      .map((e) => e.trim().toLowerCase())
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+  }, [extraEmails]);
+
   // Calcul des destinataires selon le mode
   const recipientCount = useMemo(() => {
-    if (targetMode === "all") return membres.length;
-    if (targetMode === "paid") return membres.filter((m) => m.ok === true).length;
-    if (targetMode === "unpaid") return membres.filter((m) => m.ok !== true).length;
-    if (targetMode === "news") return membres.filter((m) => m.ok === true && m.newsOptIn !== false).length;
-    if (targetMode === "custom") return selectedMembreIds.size;
-    return 0;
-  }, [targetMode, membres, selectedMembreIds]);
+    let baseCount = 0;
+    if (targetMode === "all") baseCount = membres.length;
+    else if (targetMode === "paid") baseCount = membres.filter((m) => m.ok === true).length;
+    else if (targetMode === "unpaid") baseCount = membres.filter((m) => m.ok !== true).length;
+    else if (targetMode === "news") baseCount = membres.filter((m) => m.ok === true && m.newsOptIn !== false).length;
+    else if (targetMode === "custom") baseCount = selectedMembreIds.size;
+    // Ajouter les emails externes uniques (non déjà présents dans la base)
+    return baseCount + parsedExtraEmails.length;
+  }, [targetMode, membres, selectedMembreIds, parsedExtraEmails]);
 
   // Liste filtrée pour la sélection custom
   const filteredMembres = useMemo(() => {
@@ -145,7 +156,7 @@ export default function EmailingAdmin({
     setSending(true);
     setResult(null);
 
-    // Construire la liste custom
+    // Construire la liste custom (sélection manuelle d'adhérents) — uniquement en mode custom
     let customEmails: string[] = [];
     if (targetMode === "custom") {
       customEmails = Array.from(selectedMembreIds)
@@ -160,6 +171,7 @@ export default function EmailingAdmin({
       htmlBody: body.trim(),
       targetMode,
       customEmails,
+      extraEmails: parsedExtraEmails, // emails externes (ajoutés en plus dans tous les modes)
       attachments: attachments.map((a) => ({
         filename: a.filename,
         content: a.content,
@@ -260,8 +272,36 @@ export default function EmailingAdmin({
           </div>
         )}
 
-        <p className="text-sm text-slate-600 font-medium">
-          📧 <strong>{recipientCount}</strong> destinataire{recipientCount > 1 ? "s" : ""} sera{recipientCount > 1 ? "ont" : ""} contacté{recipientCount > 1 ? "s" : ""}
+        {/* Emails externes additionnels */}
+        <div className="mt-3 border border-slate-200 rounded-xl bg-slate-50 p-3">
+          <label className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1.5 block">
+            ➕ Emails supplémentaires (externes au site)
+          </label>
+          <textarea
+            className="input w-full !text-sm resize-y min-h-[60px]"
+            placeholder="exemple1@gmail.com, exemple2@hotmail.com, ...
+(séparés par virgule, point-virgule ou saut de ligne)"
+            value={extraEmails}
+            onChange={(e) => setExtraEmails(e.target.value)}
+            disabled={readOnly}
+          />
+          {parsedExtraEmails.length > 0 && (
+            <p className="text-xs text-emerald-600 mt-1.5">
+              ✅ {parsedExtraEmails.length} email{parsedExtraEmails.length > 1 ? "s" : ""} valide{parsedExtraEmails.length > 1 ? "s" : ""} ajouté{parsedExtraEmails.length > 1 ? "s" : ""}
+            </p>
+          )}
+          {extraEmails.trim() && parsedExtraEmails.length === 0 && (
+            <p className="text-xs text-amber-600 mt-1.5">
+              ⚠️ Aucun email valide détecté
+            </p>
+          )}
+          <p className="text-xs text-slate-400 mt-1">
+            Ces emails s'ajoutent à la sélection ci-dessus. Permet d'envoyer à des personnes hors club (parents, partenaires, etc.).
+          </p>
+        </div>
+
+        <p className="text-sm text-slate-600 font-medium mt-3">
+          📧 <strong>{recipientCount}</strong> destinataire{recipientCount > 1 ? "s" : ""} {recipientCount > 1 ? "seront" : "sera"} contacté{recipientCount > 1 ? "s" : ""}
         </p>
       </div>
 

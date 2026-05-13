@@ -2199,6 +2199,7 @@ Deno.serve(async (req) => {
     const htmlBody = String(body.htmlBody || "").slice(0, 100_000);
     const targetMode = String(body.targetMode || "all"); // all | paid | unpaid | news | custom
     const customEmails = Array.isArray(body.customEmails) ? body.customEmails as string[] : [];
+    const extraEmails = Array.isArray(body.extraEmails) ? body.extraEmails as string[] : [];
     const attachments = Array.isArray(body.attachments) ? body.attachments as { filename: string; content: string; contentType?: string }[] : [];
 
     if (!subject.trim() || subject.trim().length < 3) {
@@ -2226,6 +2227,12 @@ Deno.serve(async (req) => {
     } else {
       return json({ ok: false, reason: "Mode de destinataires invalide." }, 400);
     }
+
+    // Ajouter les emails externes (validés côté client mais on revérifie)
+    const validExtraEmails = extraEmails
+      .map((e) => String(e || "").toLowerCase().trim())
+      .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e));
+    recipientEmails = [...recipientEmails, ...validExtraEmails];
 
     // Dédoublonner
     recipientEmails = Array.from(new Set(recipientEmails.map((e) => e.toLowerCase().trim()))).filter(Boolean);
