@@ -1025,23 +1025,25 @@ Deno.serve(async (req) => {
       ? `Date limite d'inscription : ${tournoi.dateLimit}`
       : `Date du tournoi : ${tournoi.date}`;
 
-    // Envoi via Resend (BCC pour ne pas exposer les emails entre membres)
-    const sendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${resendKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        from: "SACCB <contact@saccb.fr>",
+    // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+    let sentCount = 0;
+    let lastError = "";
+    for (const recipientEmail of emails) {
+      const sendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
         headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          Authorization: `Bearer ${resendKey}`,
+          "Content-Type": "application/json",
         },
-        to: emails.length > 0 ? [emails[0]] : ["contact@saccb.fr"],
-        bcc: emails.length > 1 ? emails.slice(1) : undefined,
-        subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
-        html: `
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+          to: [recipientEmail],
+          subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
+          html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
@@ -1083,15 +1085,20 @@ Deno.serve(async (req) => {
             </div>
           </div>
         `,
-      }),
-    });
-
-    if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      return json({ ok: false, reason: "Erreur envoi email : " + errText });
+        }),
+      });
+      if (sendRes.ok) {
+        sentCount++;
+      } else {
+        lastError = await sendRes.text().catch(() => "");
+      }
     }
 
-    return json({ ok: true, sent: emails.length });
+    if (sentCount === 0) {
+      return json({ ok: false, reason: "Aucun email envoyé. Erreur : " + lastError.slice(0, 200) });
+    }
+
+    return json({ ok: true, sent: sentCount, total: emails.length });
   }
 
   // ─── ACTION: Notifier tous les anciens adhérents du début de nouvelle saison ───
@@ -1122,19 +1129,22 @@ Deno.serve(async (req) => {
 
     if (emails.length === 0) return json({ ok: false, reason: "Aucun adhérent trouvé." });
 
-    const sendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-        to: emails.length > 0 ? [emails[0]] : ["contact@saccb.fr"],
-        bcc: emails.length > 1 ? emails.slice(1) : undefined,
-        subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
-        html: `
+    // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+    let sentCountSeason = 0;
+    let lastErrorSeason = "";
+    for (const recipientEmail of emails) {
+      const sendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+          to: [recipientEmail],
+          subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
+          html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
@@ -1176,15 +1186,20 @@ Deno.serve(async (req) => {
             </div>
           </div>
         `,
-      }),
-    });
-
-    if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      return json({ ok: false, reason: "Erreur envoi : " + errText });
+        }),
+      });
+      if (sendRes.ok) {
+        sentCountSeason++;
+      } else {
+        lastErrorSeason = await sendRes.text().catch(() => "");
+      }
     }
 
-    return json({ ok: true, sent: emails.length });
+    if (sentCountSeason === 0) {
+      return json({ ok: false, reason: "Aucun email envoyé. Erreur : " + lastErrorSeason.slice(0, 200) });
+    }
+
+    return json({ ok: true, sent: sentCountSeason, total: emails.length });
   }
 
   // ─── ACTION: Rappels automatiques d'inscription (J-30 et J-15) ───
@@ -1233,23 +1248,20 @@ Deno.serve(async (req) => {
         const isUrgent = daysLeft <= 5;
         const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour finaliser votre adhésion SACCB !" : `⏰ Plus que ${daysLeft} jours pour finaliser votre adhésion SACCB !`;
         const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
-            from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-          headers: {
-            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
-            to: unpaidEmails.length > 0 ? [unpaidEmails[0]] : ["contact@saccb.fr"],
-            bcc: unpaidEmails.length > 1 ? unpaidEmails.slice(1) : undefined,
-            subject: subjectLabel,
-            html: `
+        // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+        for (const recipientEmail of unpaidEmails) {
+          await fetch("https://api.resend.com/emails", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              from: "SACCB <contact@saccb.fr>",
+              headers: {
+                "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+              to: [recipientEmail],
+              subject: subjectLabel,
+              html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
                   <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
@@ -1289,8 +1301,9 @@ Deno.serve(async (req) => {
                 </div>
               </div>
             `,
-          }),
-        }).catch(() => {});
+            }),
+          }).catch(() => {});
+        }
         results.season_reminder = { sent: unpaidEmails.length, daysLeft };
       }
     }
@@ -1327,23 +1340,20 @@ Deno.serve(async (req) => {
         : `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`;
       const tHeading = tDaysLeft === 1 ? `🚨 Dernière chance — plus que 24H !` : `🏸 Plus que ${tDaysLeft} jours !`;
 
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-          headers: {
-            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
-          to: newsEmails.length > 0 ? [newsEmails[0]] : ["contact@saccb.fr"],
-          bcc: newsEmails.length > 1 ? newsEmails.slice(1) : undefined,
-          subject: tSubject,
-          html: `
+      // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+      for (const recipientEmail of newsEmails) {
+        await fetch("https://api.resend.com/emails", {
+          method: "POST",
+          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+          body: JSON.stringify({
+            from: "SACCB <contact@saccb.fr>",
+            headers: {
+              "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+            to: [recipientEmail],
+            subject: tSubject,
+            html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
@@ -1383,8 +1393,9 @@ Deno.serve(async (req) => {
               </div>
             </div>
           `,
-        }),
-      }).catch(() => {});
+          }),
+        }).catch(() => {});
+      }
       tournoiRemindersSent.push(String(t.name));
     }
     if (tournoiRemindersSent.length > 0) results.tournoi_reminders = tournoiRemindersSent;
@@ -2259,31 +2270,20 @@ Deno.serve(async (req) => {
         content: String(a.content), // déjà en base64
       }));
 
-    // Resend BCC max 50 destinataires par appel → on découpe en batches
-    const BATCH_SIZE = 50;
-    const batches: string[][] = [];
-    for (let i = 0; i < recipientEmails.length; i += BATCH_SIZE) {
-      batches.push(recipientEmails.slice(i, i + BATCH_SIZE));
-    }
-
+    // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
     let totalSent = 0;
     const errors: string[] = [];
-    for (const batch of batches) {
+    for (const recipientEmail of recipientEmails) {
       const sendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
-          to: batch.length > 0 ? [batch[0]] : ["contact@saccb.fr"],
-          bcc: batch.length > 1 ? batch.slice(1) : undefined,
+          to: [recipientEmail],
           subject: subject.trim(),
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -2320,9 +2320,9 @@ Deno.serve(async (req) => {
       });
       if (!sendRes.ok) {
         const t = await sendRes.text().catch(() => "");
-        errors.push(`Batch ${batches.indexOf(batch) + 1}: ${sendRes.status} ${t.slice(0, 200)}`);
+        errors.push(`${recipientEmail}: ${sendRes.status} ${t.slice(0, 100)}`);
       } else {
-        totalSent += batch.length;
+        totalSent++;
       }
     }
 
