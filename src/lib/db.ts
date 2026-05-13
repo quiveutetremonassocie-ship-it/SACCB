@@ -282,6 +282,25 @@ export async function memberUpdateNewsOptIn(
   return res.json();
 }
 
+// ─── Historique des emails envoyés : suppression d'une entrée ou vidage ───
+export async function adminDeleteEmailLog(adminEmail: string, adminCode: string, logId: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "delete_email_log", adminEmail, adminCode, logId }),
+  });
+  return res.json();
+}
+
+export async function adminClearEmailHistory(adminEmail: string, adminCode: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "clear_email_history", adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
 // ─── Engagement adhérents : votes sondages, questions AG ───
 
 export async function memberVotePoll(

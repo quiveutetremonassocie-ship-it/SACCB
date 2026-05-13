@@ -2329,12 +2329,78 @@ Deno.serve(async (req) => {
     if (errors.length > 0 && totalSent === 0) {
       return json({ ok: false, reason: "Aucun email envoyé. Erreurs : " + errors.join(" | ") });
     }
+
+    // Enregistrer dans l'historique
+    try {
+      const adminEmailUsed = String(body.adminEmail || body.email || "").toLowerCase().trim();
+      const emailHistory = (d.emailHistory || []) as Record<string, unknown>[];
+      emailHistory.push({
+        id: Date.now().toString(),
+        date: new Date().toISOString(),
+        subject: subject.trim(),
+        body: htmlBody.slice(0, 5000), // limite à 5000 chars pour pas exploser la DB
+        recipientCount: recipientEmails.length,
+        recipientsPreview: recipientEmails.slice(0, 3),
+        targetMode,
+        sentBy: adminEmailUsed,
+        attachmentNames: resendAttachments.map((a) => a.filename),
+        status: errors.length > 0 ? "partial" : "sent",
+        sentCount: totalSent,
+        totalCount: recipientEmails.length,
+      });
+      // Garder uniquement les 100 derniers (anti-explosion DB)
+      const trimmed = emailHistory.slice(-100);
+      d.emailHistory = trimmed;
+      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    } catch (e) {
+      console.warn("[admin_send_email] Failed to log:", e);
+    }
+
     return json({
       ok: true,
       sent: totalSent,
       total: recipientEmails.length,
       errors: errors.length > 0 ? errors : undefined,
     });
+  }
+
+  // ─── ACTION: Supprimer une entrée de l'historique d'emails ───
+  if (action === "delete_email_log") {
+    const logId = String(body.logId || "");
+    if (!logId) return json({ ok: false, reason: "logId manquant." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    // 🔒 SÉCURITÉ : Auth admin obligatoire
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const emailHistory = (d.emailHistory || []) as Record<string, unknown>[];
+    const filtered = emailHistory.filter((l) => l.id !== logId);
+    if (filtered.length === emailHistory.length) {
+      return json({ ok: false, reason: "Entrée introuvable." });
+    }
+    d.emailHistory = filtered;
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
+  }
+
+  // ─── ACTION: Vider tout l'historique d'emails ───
+  if (action === "clear_email_history") {
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    d.emailHistory = [];
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
   }
 
   return json({ error: "Action inconnue" }, 400);

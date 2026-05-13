@@ -147,6 +147,23 @@ export type DB = {
   clubRulesPdfUrl?: string;
   clubRulesPdfPath?: string;
   clubRulesPdfName?: string;
+  // Historique des emails envoyés manuellement par l'admin
+  emailHistory?: EmailLog[];
+};
+
+export type EmailLog = {
+  id: string;
+  date: string; // ISO timestamp
+  subject: string;
+  body: string; // corps de l'email (pour ré-utilisation/consultation)
+  recipientCount: number;
+  recipientsPreview: string[]; // 3 premiers destinataires pour aperçu
+  targetMode: string; // all | paid | unpaid | news | custom
+  sentBy: string; // email de l'admin qui a envoyé
+  attachmentNames?: string[]; // noms des PJ (pas le contenu, pour économiser)
+  status: "sent" | "partial" | "failed";
+  sentCount?: number;
+  totalCount?: number;
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;

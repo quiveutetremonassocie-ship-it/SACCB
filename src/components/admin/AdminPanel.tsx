@@ -150,7 +150,7 @@ export default function AdminPanel({
             <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
           </div>
           <div className="lg:col-span-2">
-            <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
+            <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
           </div>
           <div className="lg:col-span-2">
             <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />

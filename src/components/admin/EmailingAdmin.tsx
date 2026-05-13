@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
-import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search } from "lucide-react";
+import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search, History, Trash2, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
 import { DB } from "@/lib/types";
-import { adminSendEmail } from "@/lib/db";
+import { adminSendEmail, adminDeleteEmailLog, adminClearEmailHistory } from "@/lib/db";
 
 type TargetMode = "all" | "paid" | "unpaid" | "news" | "custom";
 
@@ -20,11 +20,13 @@ export default function EmailingAdmin({
   db,
   adminEmail,
   adminCode,
+  onRefresh,
   readOnly,
 }: {
   db: DB;
   adminEmail?: string;
   adminCode?: string;
+  onRefresh?: () => Promise<void>;
   readOnly?: boolean;
 }) {
   const [subject, setSubject] = useState("");
@@ -36,7 +38,37 @@ export default function EmailingAdmin({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [openLogId, setOpenLogId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const history = (db.emailHistory || []).slice().reverse(); // plus récent en premier
+
+  async function deleteLog(logId: string) {
+    if (!adminEmail || !adminCode) return;
+    if (!confirm("Supprimer cette entrée de l'historique ?\n\n(L'email envoyé reste dans la boîte des destinataires, on supprime juste la trace ici.)")) return;
+    const r = await adminDeleteEmailLog(adminEmail, adminCode, logId);
+    if (r.ok && onRefresh) await onRefresh();
+    else if (!r.ok) alert("Erreur : " + (r.reason || "Inconnue"));
+  }
+
+  async function clearHistory() {
+    if (!adminEmail || !adminCode) return;
+    if (!confirm(`Vider TOUT l'historique (${history.length} entrées) ?\n\nCette action est irréversible.`)) return;
+    const r = await adminClearEmailHistory(adminEmail, adminCode);
+    if (r.ok && onRefresh) await onRefresh();
+    else if (!r.ok) alert("Erreur : " + (r.reason || "Inconnue"));
+  }
+
+  function reuseLog(log: typeof history[number]) {
+    setSubject(log.subject);
+    setBody(log.body || "");
+    setHistoryOpen(false);
+    // Scroll vers le haut du formulaire
+    setTimeout(() => {
+      document.getElementById("emailing-form-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 100);
+  }
 
   const membres = db.membres || [];
 
@@ -183,13 +215,16 @@ export default function EmailingAdmin({
     if (r.ok) {
       setResult({
         ok: true,
-        text: `✅ Email envoyé à ${r.sent} adhérent${(r.sent ?? 0) > 1 ? "s" : ""}${r.total && r.total !== r.sent ? ` (sur ${r.total} prévus)` : ""}!`,
+        text: `✅ Email envoyé à ${r.sent} destinataire${(r.sent ?? 0) > 1 ? "s" : ""}${r.total && r.total !== r.sent ? ` (sur ${r.total} prévus)` : ""}!`,
       });
       // Reset le formulaire
       setSubject("");
       setBody("");
       setAttachments([]);
       setSelectedMembreIds(new Set());
+      setExtraEmails("");
+      // Rafraîchir l'historique
+      if (onRefresh) await onRefresh();
     } else {
       setResult({ ok: false, text: "❌ " + (r.reason || "Erreur lors de l'envoi.") });
     }
@@ -198,7 +233,7 @@ export default function EmailingAdmin({
   const totalAttachmentSize = attachments.reduce((s, a) => s + a.size, 0);
 
   return (
-    <div className="glass p-4 md:p-6">
+    <div className="glass p-4 md:p-6" id="emailing-form-top">
       <div className="flex items-center gap-3 mb-5">
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-cyan-500 flex items-center justify-center">
           <Mail className="w-5 h-5 text-white" />
@@ -392,8 +427,122 @@ export default function EmailingAdmin({
           {sending ? "Envoi en cours..." : `Envoyer à ${recipientCount} destinataire${recipientCount > 1 ? "s" : ""}`}
         </button>
       )}
+
+      {/* ─── HISTORIQUE DES EMAILS ENVOYÉS ─── */}
+      {history.length > 0 && (
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <button
+            onClick={() => setHistoryOpen(!historyOpen)}
+            className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 transition"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
+              <History className="w-4 h-4 text-slate-500" />
+              Historique des emails envoyés ({history.length})
+            </span>
+            {historyOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+          </button>
+
+          {historyOpen && (
+            <div className="mt-3 space-y-2">
+              {!readOnly && history.length > 1 && (
+                <div className="flex justify-end">
+                  <button
+                    onClick={clearHistory}
+                    className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2 py-1"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Vider tout l'historique
+                  </button>
+                </div>
+              )}
+              {history.map((log) => {
+                const date = new Date(log.date);
+                const isOpen = openLogId === log.id;
+                return (
+                  <div key={log.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+                    <div className="flex items-center gap-2 p-3">
+                      <button
+                        onClick={() => setOpenLogId(isOpen ? null : log.id)}
+                        className="flex-1 flex items-center gap-3 min-w-0 text-left"
+                      >
+                        <div className={`w-2 h-2 rounded-full shrink-0 ${log.status === "sent" ? "bg-emerald-500" : log.status === "partial" ? "bg-amber-500" : "bg-red-500"}`} />
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-semibold text-slate-800 truncate">{log.subject}</p>
+                          <p className="text-xs text-slate-400">
+                            {date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} à {date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                            {" · "}
+                            <strong>{log.sentCount ?? log.recipientCount}</strong> destinataire{(log.sentCount ?? log.recipientCount) > 1 ? "s" : ""}
+                            {log.status === "partial" && <span className="text-amber-600"> (partiel)</span>}
+                            {log.status === "failed" && <span className="text-red-600"> (échec)</span>}
+                          </p>
+                        </div>
+                        {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+                      </button>
+                      {!readOnly && (
+                        <button
+                          onClick={() => deleteLog(log.id)}
+                          className="text-red-400 hover:text-red-600 p-1.5 rounded shrink-0"
+                          title="Supprimer cette entrée"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      )}
+                    </div>
+                    {isOpen && (
+                      <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 space-y-2">
+                        <div className="text-xs text-slate-500">
+                          <strong>Mode :</strong> {labelTargetMode(log.targetMode)}
+                          {log.sentBy && <> · <strong>Envoyé par :</strong> {log.sentBy}</>}
+                        </div>
+                        {log.recipientsPreview && log.recipientsPreview.length > 0 && (
+                          <div className="text-xs text-slate-500">
+                            <strong>Aperçu destinataires :</strong> {log.recipientsPreview.join(", ")}
+                            {log.recipientCount > log.recipientsPreview.length && ` … (+${log.recipientCount - log.recipientsPreview.length} autres)`}
+                          </div>
+                        )}
+                        {log.attachmentNames && log.attachmentNames.length > 0 && (
+                          <div className="text-xs text-slate-500 flex items-center gap-1">
+                            <Paperclip className="w-3 h-3" />
+                            {log.attachmentNames.join(", ")}
+                          </div>
+                        )}
+                        {log.body && (
+                          <div className="bg-white border border-slate-200 rounded-lg p-3 mt-2">
+                            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-1">Contenu</p>
+                            <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
+                              {log.body}
+                            </p>
+                          </div>
+                        )}
+                        {!readOnly && (
+                          <button
+                            onClick={() => reuseLog(log)}
+                            className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2"
+                          >
+                            ↻ Ré-utiliser ce contenu (sujet + message)
+                          </button>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
+}
+
+function labelTargetMode(mode: string): string {
+  switch (mode) {
+    case "all": return "Tous les adhérents";
+    case "paid": return "Adhérents payés";
+    case "unpaid": return "Adhérents non-payés";
+    case "news": return "Newsletter";
+    case "custom": return "Sélection manuelle";
+    default: return mode;
+  }
 }
 
 function TargetButton({
