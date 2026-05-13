@@ -369,6 +369,14 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
             to: [String(paidMembre.email)],
             subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
             html: `
@@ -1026,6 +1034,10 @@ Deno.serve(async (req) => {
       },
       body: JSON.stringify({
         from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         to: ["contact@saccb.fr"],
         bcc: emails,
         subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
@@ -1115,6 +1127,10 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         to: ["contact@saccb.fr"],
         bcc: emails,
         subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
@@ -1222,6 +1238,14 @@ Deno.serve(async (req) => {
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
             from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
             to: ["contact@saccb.fr"],
             bcc: unpaidEmails,
             subject: subjectLabel,
@@ -1308,6 +1332,14 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           to: ["contact@saccb.fr"],
           bcc: newsEmails,
           subject: tSubject,
@@ -1423,6 +1455,14 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           to: [email],
           subject: "🔑 Votre code personnel SACCB",
           html: `
@@ -1555,6 +1595,10 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         to: [String(membre.email)],
         subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
         html: `
@@ -1650,6 +1694,10 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB Site <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         to: ["contact@saccb.fr"],
         bcc: toEmails,
         reply_to: [email],
@@ -1714,6 +1762,10 @@ Deno.serve(async (req) => {
       headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
       body: JSON.stringify({
         from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
         to: [String(membre.email)],
         subject: "🏸 Bienvenue au SACCB — Votre accès espace membre",
         html: `
@@ -1844,6 +1896,14 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           to: ["gabin.binay@gmail.com", "hernancm68@hotmail.com"],
           subject: `🏸 SACCB — ${removed} adhérent(s) supprimé(s) automatiquement`,
           html: `
@@ -2207,6 +2267,14 @@ Deno.serve(async (req) => {
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
           from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
           to: ["contact@saccb.fr"],
           bcc: batch,
           subject: subject.trim(),
