@@ -1038,8 +1038,8 @@ Deno.serve(async (req) => {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
-        to: ["contact@saccb.fr"],
-        bcc: emails,
+        to: emails.length > 0 ? [emails[0]] : ["contact@saccb.fr"],
+        bcc: emails.length > 1 ? emails.slice(1) : undefined,
         subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1131,8 +1131,8 @@ Deno.serve(async (req) => {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
-        to: ["contact@saccb.fr"],
-        bcc: emails,
+        to: emails.length > 0 ? [emails[0]] : ["contact@saccb.fr"],
+        bcc: emails.length > 1 ? emails.slice(1) : undefined,
         subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1246,8 +1246,8 @@ Deno.serve(async (req) => {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
-            to: ["contact@saccb.fr"],
-            bcc: unpaidEmails,
+            to: unpaidEmails.length > 0 ? [unpaidEmails[0]] : ["contact@saccb.fr"],
+            bcc: unpaidEmails.length > 1 ? unpaidEmails.slice(1) : undefined,
             subject: subjectLabel,
             html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1340,8 +1340,8 @@ Deno.serve(async (req) => {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
-          to: ["contact@saccb.fr"],
-          bcc: newsEmails,
+          to: newsEmails.length > 0 ? [newsEmails[0]] : ["contact@saccb.fr"],
+          bcc: newsEmails.length > 1 ? newsEmails.slice(1) : undefined,
           subject: tSubject,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1698,8 +1698,8 @@ Deno.serve(async (req) => {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
-        to: ["contact@saccb.fr"],
-        bcc: toEmails,
+        to: toEmails.length > 0 ? [toEmails[0]] : ["contact@saccb.fr"],
+        bcc: toEmails.length > 1 ? toEmails.slice(1) : undefined,
         reply_to: [email],
         subject: `📩 Message de ${name} via saccb.fr`,
         html: `
@@ -2275,8 +2275,8 @@ Deno.serve(async (req) => {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
-          to: ["contact@saccb.fr"],
-          bcc: batch,
+          to: batch.length > 0 ? [batch[0]] : ["contact@saccb.fr"],
+          bcc: batch.length > 1 ? batch.slice(1) : undefined,
           subject: subject.trim(),
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
