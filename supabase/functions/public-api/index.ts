@@ -364,7 +364,7 @@ Deno.serve(async (req) => {
         const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
         const prix = prixMap[String(paidMembre.type)] ?? 50;
         const membreCode = String(paidMembre.code || "");
-        fetch("https://api.resend.com/emails", {
+        await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1233,7 +1233,7 @@ Deno.serve(async (req) => {
         const isUrgent = daysLeft <= 5;
         const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour finaliser votre adhésion SACCB !" : `⏰ Plus que ${daysLeft} jours pour finaliser votre adhésion SACCB !`;
         const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
-        fetch("https://api.resend.com/emails", {
+        await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -1327,7 +1327,7 @@ Deno.serve(async (req) => {
         : `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`;
       const tHeading = tDaysLeft === 1 ? `🚨 Dernière chance — plus que 24H !` : `🏸 Plus que ${tDaysLeft} jours !`;
 
-      fetch("https://api.resend.com/emails", {
+      await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1450,7 +1450,7 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
       // Remplacement pour le template HTML ci-dessous
       (membre as Record<string, unknown>).code = newPlainCode;
-      fetch("https://api.resend.com/emails", {
+      await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -1891,7 +1891,7 @@ Deno.serve(async (req) => {
     // Notifier les admins par email
     const resendKey = Deno.env.get("RESEND_API_KEY");
     if (resendKey) {
-      fetch("https://api.resend.com/emails", {
+      await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
         body: JSON.stringify({
