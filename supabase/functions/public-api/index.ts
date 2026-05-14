@@ -123,6 +123,25 @@ function sleep(ms: number): Promise<void> {
 }
 const RESEND_THROTTLE_MS = 600; // ~1.6 req/sec, safe sous la limite free tier de 2/sec
 
+// Extrait le prénom du nom complet (premier mot, capitalisé)
+function extractFirstName(fullName: string): string {
+  const cleaned = (fullName || "").trim();
+  if (!cleaned) return "";
+  const first = cleaned.split(/\s+/)[0] || "";
+  // Capitaliser proprement (Marie au lieu de MARIE ou marie)
+  return first.charAt(0).toUpperCase() + first.slice(1).toLowerCase();
+}
+
+// Échappe le HTML pour éviter les injections quand on insère un nom utilisateur
+function escapeHtml(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 // Parse une date dans plusieurs formats : ISO YYYY-MM-DD, DD/MM/YYYY, ou texte libre français ("31 mai 2026")
 // Retourne null si non parsable.
 function parseFlexibleDate(input: string): Date | null {
@@ -1016,12 +1035,12 @@ Deno.serve(async (req) => {
     const tournoi = tournois.find((t) => t.id === tournoiId);
     if (!tournoi) return json({ ok: false, reason: "Tournoi introuvable." });
 
-    // Récupère les emails des membres ayant payé ET abonnés aux news
-    // (les anciens membres sans le champ newsOptIn reçoivent par défaut)
-    const emails = membres
+    // Récupère les membres ayant payé ET abonnés aux news (avec prénom pour personnalisation)
+    const recipientsNotify = membres
       .filter((m) => m.ok === true && m.newsOptIn !== false)
-      .map((m) => String(m.email || ""))
-      .filter(Boolean);
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+    const emails = recipientsNotify.map((r) => r.email);
 
     if (emails.length === 0) {
       return json({ ok: false, reason: "Aucun adhérent actif trouvé." });
@@ -1031,10 +1050,13 @@ Deno.serve(async (req) => {
       ? `Date limite d'inscription : ${tournoi.dateLimit}`
       : `Date du tournoi : ${tournoi.date}`;
 
-    // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+    // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
     let sentCount = 0;
     let lastError = "";
-    for (const recipientEmail of emails) {
+    for (const recipient of recipientsNotify) {
+      const greetingN = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+      const greetingTextN = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+      const plainTextN = `${greetingTextN}\n\nUn nouveau tournoi vient d'être ajouté sur le site du club : ${tournoi.name}\n${dateStr}\n\nConnectez-vous à votre espace membre pour inscrire votre binôme : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: {
@@ -1047,8 +1069,9 @@ Deno.serve(async (req) => {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
-          to: [recipientEmail],
+          to: [recipient.email],
           subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
+          text: plainTextN,
           html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -1059,8 +1082,8 @@ Deno.serve(async (req) => {
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <p style="color: #475569; margin: 0 0 16px;">${greetingN}</p>
               <h2 style="color: #1e3a5f; margin-top: 0;">🏸 Nouveau tournoi disponible !</h2>
-              <p style="color: #475569;">Bonjour,</p>
               <p style="color: #475569;">Un nouveau tournoi vient d'être ajouté sur le site du club :</p>
               <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
                 <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1e3a5f;">${tournoi.name}</p>
@@ -1129,17 +1152,21 @@ Deno.serve(async (req) => {
 
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    // Envoyer à tous les membres (anciens adhérents), peu importe newsOptIn
-    const emails = membres
-      .map((m) => String(m.email || ""))
-      .filter(Boolean);
+    // Envoyer à tous les membres (anciens adhérents), peu importe newsOptIn (avec prénom pour personnalisation)
+    const recipientsSeason = membres
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+    const emails = recipientsSeason.map((r) => r.email);
 
     if (emails.length === 0) return json({ ok: false, reason: "Aucun adhérent trouvé." });
 
-    // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+    // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
     let sentCountSeason = 0;
     let lastErrorSeason = "";
-    for (const recipientEmail of emails) {
+    for (const recipient of recipientsSeason) {
+      const greetingS = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+      const greetingTextS = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+      const plainTextS = `${greetingTextS}\n\nLa saison ${d.y1}-${d.y2} du SACCB est maintenant ouverte !\nLes places partent vite, alors ne tardez pas à renouveler votre adhésion.\n\nVotre code personnel vous permettra de vous reconnecter directement sur le site.\nSi vous l'avez oublié, cliquez sur "Code oublié ?" sur la page de connexion.\n\nJe renouvelle mon adhésion : https://saccb.fr/#inscription\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1149,8 +1176,9 @@ Deno.serve(async (req) => {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
-          to: [recipientEmail],
+          to: [recipient.email],
           subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
+          text: plainTextS,
           html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -1161,8 +1189,8 @@ Deno.serve(async (req) => {
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <p style="color: #475569; margin: 0 0 16px;">${greetingS}</p>
               <h2 style="color: #1e3a5f; margin-top: 0;">🎉 La nouvelle saison est lancée !</h2>
-              <p style="color: #475569;">Bonjour,</p>
               <p style="color: #475569;">
                 La saison <strong>${d.y1}–${d.y2}</strong> du SACCB est maintenant ouverte !
                 Les places partent vite, alors ne tardez pas à renouveler votre adhésion.
@@ -1234,16 +1262,18 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     // Membres non payés (inscrits mais pas encore réglé) — destinataires des rappels de réinscription
-    const unpaidEmails = membres
+    const unpaidRecipients = membres
       .filter((m) => m.ok !== true)
-      .map((m) => String(m.email || ""))
-      .filter(Boolean);
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+    const unpaidEmails = unpaidRecipients.map((r) => r.email);
 
     // Membres payés ayant accepté les news — destinataires des rappels tournois
-    const newsEmails = membres
+    const newsRecipients = membres
       .filter((m) => m.ok === true && m.newsOptIn !== false)
-      .map((m) => String(m.email || ""))
-      .filter(Boolean);
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+    const newsEmails = newsRecipients.map((r) => r.email);
 
     const results: Record<string, unknown> = {};
 
@@ -1256,8 +1286,12 @@ Deno.serve(async (req) => {
         const isUrgent = daysLeft <= 5;
         const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour finaliser votre adhésion SACCB !" : `⏰ Plus que ${daysLeft} jours pour finaliser votre adhésion SACCB !`;
         const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
-        // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
-        for (const recipientEmail of unpaidEmails) {
+        // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
+        for (const recipient of unpaidRecipients) {
+          const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+          const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+          const closeFormattedSafe = closeFormatted;
+          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/#inscription\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
           await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1267,8 +1301,9 @@ Deno.serve(async (req) => {
                 "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
                 "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
               },
-              to: [recipientEmail],
+              to: [recipient.email],
               subject: subjectLabel,
+              text: plainText,
               html: `
               <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
                 <div style="background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -1279,6 +1314,7 @@ Deno.serve(async (req) => {
                   </div>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                  <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
                   <h2 style="color: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${headingLabel}</h2>
                   <p style="color: #475569;">Votre adhésion au SACCB pour la saison ${d.y1}–${d.y2} n'est pas encore finalisée.</p>
                   <p style="color: #475569;">La date limite de paiement est le <strong>${closeFormatted}</strong>. Passé cette date, votre inscription sera annulée automatiquement.</p>
@@ -1349,8 +1385,11 @@ Deno.serve(async (req) => {
         : `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`;
       const tHeading = tDaysLeft === 1 ? `🚨 Dernière chance — plus que 24H !` : `🏸 Plus que ${tDaysLeft} jours !`;
 
-      // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
-      for (const recipientEmail of newsEmails) {
+      // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
+      for (const recipient of newsRecipients) {
+        const greetingT = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+        const greetingTextT = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+        const plainTextT = `${greetingTextT}\n\nLa date limite d'inscription pour le tournoi "${t.name}" approche !\nDate limite : ${dateFormatted}\n${tDaysLeft === 1 ? "C'est votre dernière chance pour vous inscrire !" : `Plus que ${tDaysLeft} jours.`}\n\nVoir les tournois : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
         await fetch("https://api.resend.com/emails", {
           method: "POST",
           headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1360,8 +1399,9 @@ Deno.serve(async (req) => {
               "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
               "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
             },
-            to: [recipientEmail],
+            to: [recipient.email],
             subject: tSubject,
+            text: plainTextT,
             html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -1372,6 +1412,7 @@ Deno.serve(async (req) => {
                 </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <p style="color: #475569; margin: 0 0 16px;">${greetingT}</p>
                 <h2 style="color: ${tIsUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${tHeading}</h2>
                 <p style="color: #475569;">La date limite d'inscription pour le tournoi <strong>${t.name}</strong> approche !</p>
                 <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
@@ -2280,10 +2321,21 @@ Deno.serve(async (req) => {
         content: String(a.content), // déjà en base64
       }));
 
-    // 📧 Envoi INDIVIDUEL (1 email par destinataire) pour éviter le classement Gmail "Promotions"
+    // Map email → prénom pour personnalisation (uniquement pour les adhérents trouvés en base)
+    const emailToPrenom = new Map<string, string>();
+    for (const m of membres) {
+      const e = String(m.email || "").toLowerCase().trim();
+      if (e) emailToPrenom.set(e, extractFirstName(String(m.nom || "")));
+    }
+
+    // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire)
     let totalSent = 0;
     const errors: string[] = [];
     for (const recipientEmail of recipientEmails) {
+      const prenomAdmin = emailToPrenom.get(recipientEmail.toLowerCase()) || "";
+      const greetingA = prenomAdmin ? `Bonjour ${escapeHtml(prenomAdmin)},` : "Bonjour,";
+      const greetingTextA = prenomAdmin ? `Bonjour ${prenomAdmin},` : "Bonjour,";
+      const plainTextA = `${greetingTextA}\n\n${htmlBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -2295,6 +2347,7 @@ Deno.serve(async (req) => {
           },
           to: [recipientEmail],
           subject: subject.trim(),
+          text: plainTextA,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -2305,6 +2358,7 @@ Deno.serve(async (req) => {
                 </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <p style="color: #475569; margin: 0 0 16px;">${greetingA}</p>
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
                 <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                   <tr><td>
