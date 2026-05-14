@@ -2159,10 +2159,16 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    // Vérifier auth membre + paiement
+    // Vérifier auth membre + paiement (messages d'erreur précis pour debug)
     const membre = await findMembreByCredentials(membres, email, code);
-    if (!membre || String(membre.id) !== membreId || membre.ok !== true) {
-      return json({ ok: false, reason: "Adhérent non autorisé à voter." }, 403);
+    if (!membre) {
+      return json({ ok: false, reason: "Email ou code incorrect. Reconnectez-vous à votre espace membre." }, 403);
+    }
+    if (String(membre.id) !== membreId) {
+      return json({ ok: false, reason: "Session périmée. Reconnectez-vous à votre espace membre." }, 403);
+    }
+    if (membre.ok !== true) {
+      return json({ ok: false, reason: "Votre adhésion doit être validée pour voter." }, 403);
     }
 
     const polls = (d.polls || []) as Record<string, unknown>[];
@@ -2215,8 +2221,14 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     const membre = await findMembreByCredentials(membres, email, code);
-    if (!membre || String(membre.id) !== membreId || membre.ok !== true) {
-      return json({ ok: false, reason: "Adhérent non autorisé." }, 403);
+    if (!membre) {
+      return json({ ok: false, reason: "Email ou code incorrect. Reconnectez-vous à votre espace membre." }, 403);
+    }
+    if (String(membre.id) !== membreId) {
+      return json({ ok: false, reason: "Session périmée. Reconnectez-vous à votre espace membre." }, 403);
+    }
+    if (membre.ok !== true) {
+      return json({ ok: false, reason: "Votre adhésion doit être validée pour soumettre une question." }, 403);
     }
 
     const agItems = (d.agItems || []) as Record<string, unknown>[];
