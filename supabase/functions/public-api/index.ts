@@ -1070,7 +1070,9 @@ Deno.serve(async (req) => {
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
           to: [recipient.email],
-          subject: `🏸 Nouveau tournoi disponible : ${tournoi.name}`,
+          subject: recipient.prenom
+            ? `${recipient.prenom}, nouveau tournoi : ${tournoi.name}`
+            : `Nouveau tournoi : ${tournoi.name}`,
           text: plainTextN,
           html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1177,7 +1179,9 @@ Deno.serve(async (req) => {
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
           to: [recipient.email],
-          subject: `🏸 La saison ${d.y1}–${d.y2} est ouverte — inscrivez-vous vite !`,
+          subject: recipient.prenom
+            ? `${recipient.prenom}, votre adhésion SACCB ${d.y1}–${d.y2}`
+            : `Votre adhésion SACCB ${d.y1}–${d.y2}`,
           text: plainTextS,
           html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
@@ -1284,12 +1288,16 @@ Deno.serve(async (req) => {
       if (unpaidEmails.length > 0) {
         const closeFormatted = parsedClose ? parsedClose.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : inscCloseDate;
         const isUrgent = daysLeft <= 5;
-        const subjectLabel = daysLeft === 1 ? "🚨 Plus que 24H pour finaliser votre adhésion SACCB !" : `⏰ Plus que ${daysLeft} jours pour finaliser votre adhésion SACCB !`;
+        // Sujets sobres et personnels (= moins classés en Promotions par Gmail)
         const headingLabel = daysLeft === 1 ? "🚨 Dernière chance — plus que 24H !" : `⏰ Plus que ${daysLeft} jours !`;
         // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
         for (const recipient of unpaidRecipients) {
           const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
           const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+          // Sujet personnalisé : 'Marie, votre adhésion SACCB' au lieu de '⏰ Plus que X jours'
+          const subjectLabel = recipient.prenom
+            ? `${recipient.prenom}, votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`
+            : `Votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`;
           const closeFormattedSafe = closeFormatted;
           const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
           await fetch("https://api.resend.com/emails", {
@@ -1380,15 +1388,16 @@ Deno.serve(async (req) => {
 
       const dateFormatted = parsedT.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
       const tIsUrgent = tDaysLeft <= 5;
-      const tSubject = tDaysLeft === 1
-        ? `🚨 Tournoi "${t.name}" — plus que 24H pour s'inscrire !`
-        : `🏸 Tournoi "${t.name}" — plus que ${tDaysLeft} jours pour s'inscrire !`;
-      const tHeading = tDaysLeft === 1 ? `🚨 Dernière chance — plus que 24H !` : `🏸 Plus que ${tDaysLeft} jours !`;
+      const tHeading = tDaysLeft === 1 ? `Dernière chance — plus que 24H !` : `Plus que ${tDaysLeft} jours !`;
 
       // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
       for (const recipient of newsRecipients) {
         const greetingT = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
         const greetingTextT = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+        // Sujet personnalisé : 'Marie, inscription au tournoi X' au lieu de '🚨 Tournoi X — plus que 24H'
+        const tSubject = recipient.prenom
+          ? `${recipient.prenom}, inscription au tournoi ${t.name} (${tDaysLeft === 1 ? "demain" : `dans ${tDaysLeft} jours`})`
+          : `Inscription au tournoi ${t.name} (${tDaysLeft === 1 ? "demain" : `dans ${tDaysLeft} jours`})`;
         const plainTextT = `${greetingTextT}\n\nLa date limite d'inscription pour le tournoi "${t.name}" approche !\nDate limite : ${dateFormatted}\n${tDaysLeft === 1 ? "C'est votre dernière chance pour vous inscrire !" : `Plus que ${tDaysLeft} jours.`}\n\nVoir les tournois : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
         await fetch("https://api.resend.com/emails", {
           method: "POST",
