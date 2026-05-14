@@ -90,12 +90,12 @@ export async function publicAddMembre(membre: {
   return res.json();
 }
 
-// ─── Inscription tournoi (via Edge Function sécurisée) ───
-export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: string): Promise<{ ok: boolean; reason?: string }> {
+// ─── Inscription tournoi (via Edge Function sécurisée — auth membre + payé requis) ───
+export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: string, email: string, code: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "register_tournoi", tournoiId, p1, p2 }),
+    body: JSON.stringify({ action: "register_tournoi", tournoiId, p1, p2, email: email.toLowerCase().trim(), code }),
   });
   return res.json();
 }

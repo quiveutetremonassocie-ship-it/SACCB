@@ -955,9 +955,13 @@ Deno.serve(async (req) => {
     const tournoiId = sanitize(String(body.tournoiId || ""));
     const p1 = sanitize(String(body.p1 || ""));
     const p2 = sanitize(String(body.p2 || ""));
+    // 🔒 SÉCURITÉ : auth membre obligatoire pour s'inscrire à un tournoi
+    const memberEmail = sanitize(String(body.email || "")).toLowerCase();
+    const memberCode = sanitize(String(body.code || ""));
 
     if (!tournoiId || !p1 || !p2) return json({ ok: false, reason: "Champs manquants." }, 400);
     if (p1.length < 2 || p2.length < 2) return json({ ok: false, reason: "Noms trop courts." }, 400);
+    if (!memberEmail || !memberCode) return json({ ok: false, reason: "Vous devez être connecté pour vous inscrire à un tournoi." }, 401);
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -966,6 +970,13 @@ Deno.serve(async (req) => {
       .single();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    // 🔒 Vérifier que le membre existe ET qu'il a payé son adhésion
+    const dbDataReg = data.data as Record<string, unknown>;
+    const membresReg = (dbDataReg.membres || []) as Record<string, unknown>[];
+    const membreReg = await findMembreByCredentials(membresReg, memberEmail, memberCode);
+    if (!membreReg) return json({ ok: false, reason: "Identifiants incorrects." }, 401);
+    if (membreReg.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour vous inscrire à un tournoi." }, 403);
 
     const currentData = data.data as Record<string, unknown>;
     const tournois = (currentData.config_tournois || []) as Record<string, unknown>[];

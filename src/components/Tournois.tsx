@@ -296,13 +296,20 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
 
   async function regT(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    if (!memberSession) return;
     setSubmitting(true);
     const fd = new FormData(e.currentTarget);
     const p1 = String(fd.get("p1") || "").trim();
     const p2 = String(fd.get("p2") || "").trim();
     if (!p1 || !p2) { setSubmitting(false); return; }
+    const code = memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    if (!code) {
+      alert("Vous devez être connecté à votre espace membre pour vous inscrire à un tournoi.");
+      setSubmitting(false);
+      return;
+    }
     try {
-      const r = await publicRegisterTournoi(t.id, p1, p2);
+      const r = await publicRegisterTournoi(t.id, p1, p2, memberSession.email, code);
       if (r.ok) { alert(`Inscription enregistrée pour ${t.name} !`); (e.target as HTMLFormElement).reset(); window.location.reload(); }
       else alert(r.reason || "Erreur.");
     } finally { setSubmitting(false); }
@@ -358,7 +365,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
             </p>
           </div>
         ) : !isFull && (
-          memberSession ? (
+          memberSession && memberSession.paid === true ? (
             <form onSubmit={regT} className="space-y-3">
               <div className="grid sm:grid-cols-2 gap-3">
                 <input className="input" name="p1" placeholder="Joueur 1" required />
@@ -366,6 +373,18 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
               </div>
               <button type="submit" className="btn-primary w-full" disabled={submitting}>{submitting ? "Envoi..." : "S'inscrire"}</button>
             </form>
+          ) : memberSession && memberSession.paid !== true ? (
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
+              <div className="flex items-start gap-3">
+                <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-amber-800 font-semibold text-sm mb-1">Adhésion à finaliser pour s'inscrire</p>
+                  <p className="text-amber-700 text-xs">
+                    Renouvelez votre adhésion saison en cours pour pouvoir vous inscrire aux tournois. Rendez-vous dans votre espace membre.
+                  </p>
+                </div>
+              </div>
+            </div>
           ) : (
             <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
               <Lock className="w-6 h-6 text-blue-400 mx-auto mb-2" />
