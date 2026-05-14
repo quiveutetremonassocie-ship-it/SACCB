@@ -211,6 +211,41 @@ export default function TournoisAdmin({
     await onPersist({ ...db, archives: newArchives });
   }
 
+  // Form pour ajouter un inscrit manuellement à un tournoi existant
+  const [addingInscritTo, setAddingInscritTo] = useState<string | null>(null);
+  const [newInscritJoueurs, setNewInscritJoueurs] = useState("");
+  const [newInscritResultat, setNewInscritResultat] = useState("");
+
+  async function addInscritManuel(tournoiId: string) {
+    if (readOnly) return;
+    const joueurs = newInscritJoueurs.trim();
+    if (!joueurs) { alert("Saisissez le nom des joueurs (ex: 'Marie / Paul')"); return; }
+    const newInscrit = {
+      id: Date.now().toString(),
+      tournoiId,
+      joueurs,
+      resultat: newInscritResultat.trim() || null,
+    };
+    const next = {
+      ...db,
+      inscrits_tournoi: [...(db.inscrits_tournoi || []), newInscrit],
+    };
+    await onPersist(next);
+    setNewInscritJoueurs("");
+    setNewInscritResultat("");
+    setAddingInscritTo(null);
+  }
+
+  async function delInscritCourant(inscritId: string) {
+    if (readOnly) return;
+    if (!confirm("Supprimer cet inscrit ?")) return;
+    const next = {
+      ...db,
+      inscrits_tournoi: (db.inscrits_tournoi || []).filter((i) => i.id !== inscritId),
+    };
+    await onPersist(next);
+  }
+
   async function saveCurrentResultat(tournoiId: string, inscritId: string) {
     const next = {
       ...db,
@@ -324,10 +359,9 @@ export default function TournoisAdmin({
                     {!readOnly && <button onClick={() => del(t.id)} className="btn-danger !px-2.5 !py-1.5 !text-xs"><Trash2 className="w-3.5 h-3.5" /></button>}
                   </div>
                 </div>
-                {/* Inscrits saison courante — déroulant */}
+                {/* Inscrits saison courante — déroulant (toujours affiché, même si vide) */}
                 {(() => {
                   const inscrits = (db.inscrits_tournoi || []).filter((i) => i.tournoiId === t.id);
-                  if (inscrits.length === 0) return null;
                   const isOpen = currentInscritOpen === t.id;
                   return (
                     <div className="border-t border-slate-100">
@@ -339,15 +373,90 @@ export default function TournoisAdmin({
                         {isOpen ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
                       </button>
                       {isOpen && (
-                        <div className="px-3 pb-3 space-y-1">
-                          {inscrits.map((inscrit) => (
-                            <div key={inscrit.id} className="flex items-center gap-2 bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
-                              <span className="text-slate-600 truncate">🎾 {inscrit.joueurs}</span>
-                              {inscrit.resultat && (
-                                <span className="ml-auto font-semibold text-slate-700 shrink-0">{inscrit.resultat}</span>
-                              )}
+                        <div className="px-3 pb-3 space-y-1.5">
+                          {inscrits.map((inscrit) => {
+                            const isEditing = editingCurrentResultat?.tournoiId === t.id && editingCurrentResultat?.inscritId === inscrit.id;
+                            return (
+                              <div key={inscrit.id} className="bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
+                                <div className="flex items-center gap-2">
+                                  <span className="text-slate-600 truncate flex-1">🎾 {inscrit.joueurs}</span>
+                                  {!isEditing && inscrit.resultat && (
+                                    <span className="font-semibold text-slate-700 shrink-0">{inscrit.resultat}</span>
+                                  )}
+                                  {!readOnly && !isEditing && (
+                                    <>
+                                      <button
+                                        onClick={() => { setEditingCurrentResultat({ tournoiId: t.id, inscritId: inscrit.id }); setEditCurrentResultatVal(inscrit.resultat || ""); }}
+                                        className="text-blue-500 hover:text-blue-700 px-1.5 py-0.5 rounded hover:bg-blue-50"
+                                        title="Modifier le résultat"
+                                      >
+                                        <Pencil className="w-3 h-3" />
+                                      </button>
+                                      <button
+                                        onClick={() => delInscritCourant(inscrit.id)}
+                                        className="text-red-500 hover:text-red-700 px-1.5 py-0.5 rounded hover:bg-red-50"
+                                        title="Supprimer cet inscrit"
+                                      >
+                                        <Trash2 className="w-3 h-3" />
+                                      </button>
+                                    </>
+                                  )}
+                                </div>
+                                {isEditing && (
+                                  <div className="flex items-center gap-2 mt-1.5">
+                                    <input
+                                      className="input !text-xs flex-1"
+                                      placeholder="Résultat (ex: 3/16)"
+                                      value={editCurrentResultatVal}
+                                      onChange={(e) => setEditCurrentResultatVal(e.target.value)}
+                                      autoFocus
+                                    />
+                                    <button onClick={() => saveCurrentResultat(t.id, inscrit.id)} className="btn-primary !px-2 !py-1 !text-xs">
+                                      <Check className="w-3 h-3" />
+                                    </button>
+                                    <button onClick={() => setEditingCurrentResultat(null)} className="text-slate-400 px-1.5">
+                                      <X className="w-3 h-3" />
+                                    </button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
+
+                          {/* Bouton ajouter un inscrit manuellement */}
+                          {!readOnly && addingInscritTo !== t.id && (
+                            <button
+                              onClick={() => { setAddingInscritTo(t.id); setNewInscritJoueurs(""); setNewInscritResultat(""); }}
+                              className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 border border-dashed border-slate-300 hover:border-blue-400 rounded-lg py-1.5 transition mt-1"
+                            >
+                              <Plus className="w-3 h-3" /> Ajouter un binôme manuellement
+                            </button>
+                          )}
+                          {!readOnly && addingInscritTo === t.id && (
+                            <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1.5 mt-1">
+                              <input
+                                className="input !text-xs w-full"
+                                placeholder="Joueurs (ex: Marie / Paul)"
+                                value={newInscritJoueurs}
+                                onChange={(e) => setNewInscritJoueurs(e.target.value)}
+                                autoFocus
+                              />
+                              <input
+                                className="input !text-xs w-full"
+                                placeholder="Résultat (optionnel, ex: 3/16)"
+                                value={newInscritResultat}
+                                onChange={(e) => setNewInscritResultat(e.target.value)}
+                              />
+                              <div className="flex gap-2">
+                                <button onClick={() => addInscritManuel(t.id)} className="btn-primary !px-3 !py-1 !text-xs flex-1">
+                                  <Check className="w-3 h-3" /> Ajouter
+                                </button>
+                                <button onClick={() => setAddingInscritTo(null)} className="btn-ghost !px-3 !py-1 !text-xs">
+                                  <X className="w-3 h-3" />
+                                </button>
+                              </div>
                             </div>
-                          ))}
+                          )}
                         </div>
                       )}
                     </div>
