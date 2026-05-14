@@ -106,10 +106,37 @@ export default function SeasonSettings({
     const newY1 = Number(prompt(`Année de début de la nouvelle saison (actuel: ${db.y1}) :`, String(db.y1 + 1)));
     if (!newY1 || isNaN(newY1)) return;
     const newY2 = newY1 + 1;
+
+    // Demander la date limite (suggestion : 30 septembre de la nouvelle année)
+    const defaultDate = `${newY1}-09-30`;
+    const dateLimitInput = prompt(
+      `Date limite d'inscription / paiement pour cette saison ?\n\n` +
+      `Format : AAAA-MM-JJ (ex: ${defaultDate})\n\n` +
+      `Les adhérents non payés à cette date seront supprimés automatiquement.\n` +
+      `Laisser vide pour ne pas configurer de date limite.`,
+      defaultDate
+    );
+
+    let inscCloseDate: string | undefined = undefined;
+    if (dateLimitInput && dateLimitInput.trim()) {
+      const trimmed = dateLimitInput.trim();
+      // Validation basique format ISO YYYY-MM-DD
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(trimmed)) {
+        alert("Format de date invalide. Utilisez AAAA-MM-JJ (ex: 2027-09-30).\nDémarrage annulé.");
+        return;
+      }
+      inscCloseDate = trimmed;
+    }
+
+    const dateInfo = inscCloseDate
+      ? `• Date limite : ${new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
+      : `• Aucune date limite configurée (à régler plus tard)`;
+
     if (!confirm(
       `Démarrer la saison ${newY1}–${newY2} ?\n\n` +
       `• Les ${db.membres.length} adhérents sont conservés mais remis en "non payé"\n` +
       `• Ils pourront se reconnecter et renouveler leur adhésion\n` +
+      `${dateInfo}\n` +
       `• Ceux qui ne paient pas avant la date limite seront supprimés automatiquement`
     )) return;
 
@@ -133,13 +160,13 @@ export default function SeasonSettings({
       archives: [...filtered, archive],
       membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
       insc_open: true,
-      insc_close_date: undefined,
+      insc_close_date: inscCloseDate,
       // Reset engagement pour la nouvelle saison
       polls: [],
       agItems: [],
       reunionReports: [],
     });
-    alert(`✅ Nouvelle saison ${newY1}–${newY2} démarrée !`);
+    alert(`✅ Nouvelle saison ${newY1}–${newY2} démarrée !${inscCloseDate ? `\nDate limite : ${new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}` : ""}`);
 
     if (confirm(`Envoyer un email à tous les ${db.membres.length} adhérents pour les prévenir que la nouvelle saison est ouverte ?`)) {
       if (!adminEmail || !adminCode) {
