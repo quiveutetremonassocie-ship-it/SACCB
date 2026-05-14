@@ -314,6 +314,7 @@ export default function Site() {
           db={db}
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
+          membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
         />
         <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
         {/* Section inscription : cachée pour les membres connectés (ils sont déjà adhérents) */}

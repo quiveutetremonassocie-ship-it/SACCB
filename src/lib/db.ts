@@ -13,7 +13,7 @@ export const emptyDB = (): DB => ({
 });
 
 // ─── Données publiques (via Edge Function sécurisée) ───
-export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: number }> {
+export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: number; membreNoms?: string[] }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -36,6 +36,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     reunionReports: d.reunionReports ?? [],
     pollsOpen: d.pollsOpen === true,
     agOpen: d.agOpen === true,
+    membreNoms: d.membreNoms ?? [],
     clubRules: d.clubRules ?? "",
     clubRulesPdfUrl: d.clubRulesPdfUrl ?? undefined,
     clubRulesPdfName: d.clubRulesPdfName ?? undefined,

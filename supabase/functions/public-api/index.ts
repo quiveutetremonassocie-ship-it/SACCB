@@ -519,6 +519,13 @@ Deno.serve(async (req) => {
       archives: d.archives ?? [],
       whatsappLink: d.whatsappLink ?? null,
       membresCount: ((d.membres as unknown[]) || []).length,
+      // Liste des noms des adhérents PAYÉS (pour autocomplétion inscription tournoi)
+      // On expose juste le nom (pas email ni tél), car c'est déjà visible dans les inscriptions tournois
+      membreNoms: ((d.membres as Record<string, unknown>[]) || [])
+        .filter((m) => m.ok === true)
+        .map((m) => String(m.nom || ""))
+        .filter(Boolean)
+        .sort(),
       polls,
       agItems,
       reunionReports: d.reunionReports ?? [],

@@ -31,10 +31,12 @@ export default function Tournois({
   db,
   memberSession,
   onLoginRequest,
+  membreNoms = [],
 }: {
   db: DB;
   memberSession: MemberSession | null;
   onLoginRequest: () => void;
+  membreNoms?: string[];
 }) {
   const tournois = db.config_tournois ?? [];
   const upcoming = tournois.filter((t) => !isTermine(t));
@@ -106,7 +108,7 @@ export default function Tournois({
                 {upcoming.map((t) => {
                   const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
                   return (
-                    <TournoiCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />
+                    <TournoiCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} />
                   );
                 })}
               </div>
@@ -286,8 +288,8 @@ function CountdownBadge({ dateLimit }: { dateLimit?: string | null }) {
   return null;
 }
 
-function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
-  t: Tournoi; inscrits: InscritTournoi[]; memberSession: MemberSession | null; onLoginRequest: () => void;
+function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = [] }: {
+  t: Tournoi; inscrits: InscritTournoi[]; memberSession: MemberSession | null; onLoginRequest: () => void; membreNoms?: string[];
 }) {
   const isFull = !!(t.quota && inscrits.length >= t.quota);
   const [submitting, setSubmitting] = useState(false);
@@ -368,9 +370,33 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest }: {
           memberSession && memberSession.paid === true ? (
             <form onSubmit={regT} className="space-y-3">
               <div className="grid sm:grid-cols-2 gap-3">
-                <input className="input" name="p1" placeholder="Joueur 1" required />
-                <input className="input" name="p2" placeholder="Joueur 2" required />
+                <input
+                  className="input"
+                  name="p1"
+                  placeholder="Joueur 1 (votre nom)"
+                  list={`members-list-${t.id}`}
+                  defaultValue={memberSession.nom || ""}
+                  required
+                  autoComplete="off"
+                />
+                <input
+                  className="input"
+                  name="p2"
+                  placeholder="Joueur 2 (partenaire)"
+                  list={`members-list-${t.id}`}
+                  required
+                  autoComplete="off"
+                />
               </div>
+              {/* Datalist pour autocomplétion : permet de sélectionner un adhérent existant */}
+              <datalist id={`members-list-${t.id}`}>
+                {membreNoms.map((nom) => (
+                  <option key={nom} value={nom} />
+                ))}
+              </datalist>
+              <p className="text-xs text-slate-400">
+                💡 Commencez à taper le prénom pour voir la liste des adhérents et éviter les fautes de frappe.
+              </p>
               <button type="submit" className="btn-primary w-full" disabled={submitting}>{submitting ? "Envoi..." : "S'inscrire"}</button>
             </form>
           ) : memberSession && memberSession.paid !== true ? (
