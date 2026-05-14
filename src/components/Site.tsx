@@ -108,6 +108,18 @@ export default function Site() {
         supabaseClient.auth.getSession().then(() => setResetOpen(true));
         return;
       }
+      // Auto-ouverture de l'espace membre depuis un lien email (?member=1)
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("member") === "1" || params.get("member") === "true") {
+        const sess = getMemberSession();
+        if (sess) {
+          setMemberPanelOpen(true);
+        } else {
+          setMemberLoginOpen(true);
+        }
+        // Nettoyer l'URL
+        window.history.replaceState({}, "", window.location.pathname + window.location.hash);
+      }
       // Auto-restauration de session admin Supabase (fallback)
       supabaseClient.auth.getSession().then(({ data }) => {
         if (data.session) {
@@ -249,6 +261,20 @@ export default function Site() {
         onAdmin={onReopenAdmin}
         onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
       />
+      {/* Bannière de réinscription : visible uniquement aux adhérents connectés non-payés */}
+      {memberSession && memberSession.paid !== true && db.insc_open && (
+        <div className="fixed top-[72px] inset-x-0 z-40 bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg border-b border-amber-600/30 px-4 py-3 flex items-center justify-center gap-3 flex-wrap text-center">
+          <span className="text-sm md:text-base text-white font-semibold">
+            ⏳ Adhésion saison {db.y1}–{db.y2} à renouveler !
+          </span>
+          <button
+            onClick={() => setMemberPanelOpen(true)}
+            className="bg-white text-amber-700 hover:bg-amber-50 px-4 py-1.5 rounded-lg text-sm font-bold transition shadow-sm"
+          >
+            Renouveler maintenant →
+          </button>
+        </div>
+      )}
       <main>
         <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} />
         <Presentation />

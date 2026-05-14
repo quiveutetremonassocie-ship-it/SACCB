@@ -1166,7 +1166,7 @@ Deno.serve(async (req) => {
     for (const recipient of recipientsSeason) {
       const greetingS = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
       const greetingTextS = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
-      const plainTextS = `${greetingTextS}\n\nLa saison ${d.y1}-${d.y2} du SACCB est maintenant ouverte !\nLes places partent vite, alors ne tardez pas à renouveler votre adhésion.\n\nVotre code personnel vous permettra de vous reconnecter directement sur le site.\nSi vous l'avez oublié, cliquez sur "Code oublié ?" sur la page de connexion.\n\nJe renouvelle mon adhésion : https://saccb.fr/#inscription\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainTextS = `${greetingTextS}\n\nLa saison ${d.y1}-${d.y2} du SACCB est maintenant ouverte !\nLes places partent vite, alors ne tardez pas à renouveler votre adhésion.\n\nVotre code personnel vous permettra de vous reconnecter directement sur le site.\nSi vous l'avez oublié, cliquez sur "Code oublié ?" sur la page de connexion.\n\nJe renouvelle mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await fetch("https://api.resend.com/emails", {
         method: "POST",
         headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1199,7 +1199,7 @@ Deno.serve(async (req) => {
                 <p style="margin: 0 0 4px; color: #64748b; font-size: 13px;">Votre code personnel vous permettra de vous reconnecter directement sur le site.</p>
                 <p style="margin: 0; color: #64748b; font-size: 13px;">Si vous l'avez oublié, cliquez sur <strong>"Code oublié ?"</strong> sur la page de connexion.</p>
               </div>
-              <a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
+              <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
                 🏸 Je renouvelle mon adhésion →
               </a>
               <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
@@ -1291,7 +1291,7 @@ Deno.serve(async (req) => {
           const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
           const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
           const closeFormattedSafe = closeFormatted;
-          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/#inscription\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
           await fetch("https://api.resend.com/emails", {
             method: "POST",
             headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
@@ -1322,7 +1322,7 @@ Deno.serve(async (req) => {
                     ? `<p style="color: #b91c1c; font-weight: bold;">⚠️ C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui.</p>`
                     : `<p style="color: #475569;">Rapprochez-vous de <strong>Hernan</strong> au prochain entraînement pour régler votre cotisation.</p>`
                   }
-                  <a href="https://saccb.fr/#inscription" style="display: inline-block; background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                  <a href="https://saccb.fr/?member=1" style="display: inline-block; background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                     Finaliser mon adhésion →
                   </a>
                   <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">

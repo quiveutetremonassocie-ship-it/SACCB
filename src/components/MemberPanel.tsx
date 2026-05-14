@@ -233,17 +233,32 @@ export default function MemberPanel({
             <p className="text-amber-800 font-semibold text-sm mb-1">⏳ Adhésion à renouveler</p>
             <p className="text-amber-700 text-xs mb-3">
               Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore réglée.
-              Renouvelez-la pour conserver votre accès.
+              Choisissez votre mode de paiement :
             </p>
-            <a
-              href="https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="flex items-center justify-center gap-2 bg-amber-500 hover:bg-amber-600 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm w-full"
-            >
-              <RefreshCw className="w-4 h-4" />
-              Renouveler mon adhésion
-            </a>
+            <div className="space-y-2">
+              <a
+                href="https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm w-full shadow-sm"
+              >
+                💳 Payer en ligne (HelloAsso)
+              </a>
+              <button
+                onClick={() => alert(
+                  "💵 Paiement par virement\n\n" +
+                  "Rapprochez-vous de Hernan au prochain entraînement pour effectuer le règlement.\n\n" +
+                  "Une fois validé par le bureau, votre adhésion sera marquée comme payée et vous recevrez un email de confirmation."
+                )}
+                className="flex items-center justify-center gap-2 bg-white hover:bg-amber-100 border-2 border-amber-300 text-amber-800 font-semibold px-4 py-2.5 rounded-xl transition text-sm w-full"
+              >
+                💵 Régler par virement (Hernan)
+              </button>
+            </div>
+            <p className="text-xs text-amber-600 mt-3 text-center">
+              <RefreshCw className="w-3 h-3 inline mr-1" />
+              Vos infos sont déjà en base, pas besoin de tout refaire
+            </p>
           </div>
         )}
 
