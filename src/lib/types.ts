@@ -138,6 +138,10 @@ export type DB = {
   adminCredentials?: { email: string; code: string; readOnly?: boolean; permissions?: string[] }[]; // codes admin indépendants des adhérents
   contactEmails?: string[]; // emails recevant les messages du formulaire de contact
   reportPrecedent?: number; // report de trésorerie des saisons précédentes
+  // Si true, les rappels saison J-30/15/5/1 ne sont PAS envoyés (utile lors d'une
+  // réouverture temporaire des inscriptions pour un nouvel adhérent — pas la peine
+  // de spammer tous les adhérents avec des rappels qui ne les concernent pas)
+  seasonRemindersDisabled?: boolean;
   // Engagement adhérents (saison courante, archivés dans SeasonArchive lors du changement de saison)
   polls?: Poll[];
   agItems?: AGItem[];

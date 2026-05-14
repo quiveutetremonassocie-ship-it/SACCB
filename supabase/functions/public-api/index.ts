@@ -1304,8 +1304,9 @@ Deno.serve(async (req) => {
 
     // ── Rappels fermeture des inscriptions saison (J-30 / J-15 / J-5 / J-1) ──
     // → envoyé aux membres NON PAYÉS pour les inciter à régler avant la date limite
-    // (skippé si pas de date de fermeture configurée)
-    if (!isNaN(daysLeft) && (daysLeft === 30 || daysLeft === 15 || daysLeft === 5 || daysLeft === 1)) {
+    // (skippé si pas de date de fermeture configurée OU si seasonRemindersDisabled)
+    const remindersDisabled = d.seasonRemindersDisabled === true;
+    if (!remindersDisabled && !isNaN(daysLeft) && (daysLeft === 30 || daysLeft === 15 || daysLeft === 5 || daysLeft === 1)) {
       if (unpaidEmails.length > 0) {
         const closeFormatted = parsedClose ? parsedClose.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : inscCloseDate;
         const isUrgent = daysLeft <= 5;
@@ -1383,7 +1384,9 @@ Deno.serve(async (req) => {
     }
 
     // ── Suppression des non-payés après fermeture ──
-    if (!isNaN(daysLeft) && daysLeft < 0) {
+    // (skippé si réouverture temporaire — sinon on supprimerait des adhérents existants
+    //  qui n'avaient rien demandé)
+    if (!remindersDisabled && !isNaN(daysLeft) && daysLeft < 0) {
       const before = membres.length;
       const kept = membres.filter((m) => m.ok === true);
       if (kept.length < before) {
@@ -1392,6 +1395,15 @@ Deno.serve(async (req) => {
         await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
         results.cleanup = { removed: before - kept.length };
       }
+    }
+
+    // ── Si réouverture temporaire arrivée à terme : juste fermer les inscriptions ──
+    // (sans supprimer personne, ni envoyer de rappel)
+    if (remindersDisabled && !isNaN(daysLeft) && daysLeft < 0 && d.insc_open === true) {
+      d.insc_open = false;
+      d.seasonRemindersDisabled = false; // on désactive le flag aussi
+      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      results.tempReopenClosed = true;
     }
 
     // ── Rappels tournois (J-30 / J-15 / J-5 / J-1 avant dateLimit) ──

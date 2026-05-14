@@ -125,7 +125,8 @@ export default function SeasonSettings({
       `Rouvrir les inscriptions jusqu'au ${formatted} (dans ${days} jour${days > 1 ? "s" : ""}) ?\n\n` +
       `• Les inscriptions seront ouvertes immédiatement\n` +
       `• Elles se fermeront automatiquement à cette date\n` +
-      `• Les rappels J-30/J-15/J-5/J-1 partiront aux non-payés selon le délai`
+      `• Les rappels automatiques aux non-payés sont DÉSACTIVÉS pendant cette période\n` +
+      `  (pour ne pas spammer les adhérents existants avec des rappels qui ne les concernent pas)`
     )) return;
 
     setInscCloseDate(isoDate);
@@ -133,8 +134,9 @@ export default function SeasonSettings({
       ...db,
       insc_open: true,
       insc_close_date: isoDate,
+      seasonRemindersDisabled: true, // pas de rappels J-X aux adhérents existants
     });
-    alert(`✅ Inscriptions rouvertes jusqu'au ${formatted}.`);
+    alert(`✅ Inscriptions rouvertes jusqu'au ${formatted}.\n\nLes rappels automatiques sont désactivés pendant cette période.`);
   }
 
   async function newSeason() {
@@ -196,6 +198,8 @@ export default function SeasonSettings({
       membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
       insc_open: true,
       insc_close_date: inscCloseDate,
+      // Réactive les rappels automatiques (au cas où ils étaient désactivés par une réouverture temporaire précédente)
+      seasonRemindersDisabled: false,
       // Reset engagement pour la nouvelle saison
       polls: [],
       agItems: [],
