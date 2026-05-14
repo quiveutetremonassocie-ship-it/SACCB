@@ -113,8 +113,8 @@ export async function verifyMembre(
   return res.json();
 }
 
-// ─── Vérification session membre (existe encore en DB ?) ───
-export async function checkMemberSession(email: string, membreId: string): Promise<boolean> {
+// ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
+export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -122,9 +122,9 @@ export async function checkMemberSession(email: string, membreId: string): Promi
       body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId }),
     });
     const data = await res.json();
-    return data.ok === true;
+    return { valid: data.ok === true, paid: data.paid };
   } catch {
-    return true; // En cas d'erreur réseau, on laisse passer pour ne pas bloquer l'accès
+    return { valid: true }; // En cas d'erreur réseau, on laisse passer pour ne pas bloquer l'accès
   }
 }
 

@@ -4,7 +4,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
-import { getMemberSession, clearMemberSession, MemberSession } from "@/lib/useMemberSession";
+import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
 import Presentation from "./Presentation";
@@ -90,11 +90,18 @@ export default function Site() {
       }
     } else {
       // Membre normal : vérifier en arrière-plan que le compte existe toujours en DB
-      // Si supprimé par l'admin, la session est effacée dès la prochaine visite
-      checkMemberSession(session.email, session.membreId).then((valid) => {
-        if (!valid) {
+      // Et synchroniser le statut paid (peut avoir changé si nouvelle saison ou validation admin)
+      checkMemberSession(session.email, session.membreId).then((res) => {
+        if (!res.valid) {
           clearMemberSession();
           setMemberSession(null);
+          return;
+        }
+        // Si le statut paid a changé, mettre à jour la session locale
+        if (res.paid !== undefined && res.paid !== session.paid) {
+          const updated = { ...session, paid: res.paid };
+          persistMemberSession(updated);
+          setMemberSession(updated);
         }
       });
     }
@@ -194,14 +201,20 @@ export default function Site() {
 
   const onMemberButtonClick = async () => {
     if (memberSession) {
-      // Re-vérifier que le membre existe toujours en DB (cas suppression par admin)
+      // Re-vérifier que le membre existe toujours en DB et que le statut paid est à jour
       if (!memberSession.isAdmin) {
-        const valid = await checkMemberSession(memberSession.email, memberSession.membreId);
-        if (!valid) {
+        const res = await checkMemberSession(memberSession.email, memberSession.membreId);
+        if (!res.valid) {
           clearMemberSession();
           setMemberSession(null);
           setMemberLoginOpen(true);
           return;
+        }
+        // Mettre à jour le statut paid si différent (ex: après démarrage nouvelle saison)
+        if (res.paid !== undefined && res.paid !== memberSession.paid) {
+          const updated = { ...memberSession, paid: res.paid };
+          persistMemberSession(updated);
+          setMemberSession(updated);
         }
       }
       setMemberPanelOpen(true);
