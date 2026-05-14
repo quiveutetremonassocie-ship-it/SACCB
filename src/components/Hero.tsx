@@ -136,9 +136,12 @@ export default function Hero({
           transition={{ duration: 0.7, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
         >
-          <a href="#inscription" className="btn-sport">
-            <Trophy className="w-5 h-5" /> Adhérer au club
-          </a>
+          {/* Bouton "Adhérer au club" : visible uniquement si les inscriptions sont ouvertes */}
+          {inscOpen && (
+            <a href="#inscription" className="btn-sport">
+              <Trophy className="w-5 h-5" /> Adhérer au club
+            </a>
+          )}
           <a href="#tournois" className="btn-ghost">
             <MapPin className="w-5 h-5" /> Voir les tournois
           </a>
