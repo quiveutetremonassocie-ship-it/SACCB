@@ -5,6 +5,16 @@ import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlo
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 
+// Échappe le HTML pour insertion sûre dans des templates générés
+function escapeHtmlClient(s: string): string {
+  return String(s)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export default function EngagementAdmin({
   db,
   onPersist,
@@ -230,6 +240,85 @@ function AGTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Pro
   const [responseText, setResponseText] = useState("");
   const items = db.agItems ?? [];
 
+  function exportPdf() {
+    const questions = items.filter((i) => i.type === "question");
+    const ameliorations = items.filter((i) => i.type === "amelioration");
+    const today = new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+    const renderItem = (item: typeof items[number]) => `
+      <div class="item ${item.resolved ? "resolved" : ""}">
+        <div class="item-header">
+          <span class="item-author">${item.anonymous ? "Anonyme" : escapeHtmlClient(item.authorNom || "?")}</span>
+          <span class="item-date">${new Date(item.createdAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}</span>
+          ${item.resolved ? '<span class="badge-traite">Traité</span>' : ""}
+        </div>
+        <p class="item-text">${escapeHtmlClient(item.text)}</p>
+        ${item.reponse ? `
+          <div class="item-reponse">
+            <p class="item-reponse-label">Réponse du bureau ${item.reponseDate ? `(${new Date(item.reponseDate).toLocaleDateString("fr-FR")})` : ""}</p>
+            <p>${escapeHtmlClient(item.reponse)}</p>
+          </div>
+        ` : ""}
+      </div>
+    `;
+
+    const html = `<!DOCTYPE html>
+<html><head>
+<meta charset="UTF-8">
+<title>Questions et idées AG — Saison ${db.y1}–${db.y2}</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 0 auto; padding: 32px; color: #1e293b; }
+  .header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 24px; }
+  .header img { width: 70px; height: 70px; object-fit: contain; }
+  h1 { color: #1e3a5f; font-size: 22px; margin: 0; }
+  .subtitle { font-size: 12px; color: #64748b; margin: 4px 0 0; }
+  h2 { color: #1e3a5f; font-size: 16px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 28px 0 12px; }
+  .empty { color: #94a3b8; font-style: italic; padding: 12px 0; }
+  .item { background: #f8fafc; border-left: 3px solid #f59e0b; padding: 12px 16px; margin-bottom: 12px; border-radius: 4px; page-break-inside: avoid; }
+  .item.resolved { border-left-color: #3b82f6; background: #eff6ff; }
+  .item-header { display: flex; gap: 12px; align-items: center; font-size: 11px; color: #64748b; margin-bottom: 6px; }
+  .item-author { font-weight: 600; color: #1e293b; }
+  .badge-traite { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
+  .item-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+  .item-reponse { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; background: white; padding: 8px 12px; border-radius: 4px; }
+  .item-reponse-label { text-transform: uppercase; font-size: 10px; font-weight: 700; color: #1e3a5f; margin: 0 0 4px; letter-spacing: 0.05em; }
+  .item-reponse p { font-size: 12px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
+  .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
+  @media print { body { padding: 16px; } }
+</style>
+</head>
+<body>
+  <div class="header">
+    <img src="/logo.png" alt="Logo SACCB" />
+    <div>
+      <h1>Questions & idées des adhérents</h1>
+      <p class="subtitle">Saison ${db.y1}–${db.y2} &nbsp;|&nbsp; Document généré le ${today}</p>
+    </div>
+  </div>
+
+  <h2>Questions à l'assemblée (${questions.length})</h2>
+  ${questions.length === 0 ? '<p class="empty">Aucune question soumise pour cette saison.</p>' : questions.slice().reverse().map(renderItem).join("")}
+
+  <h2>Idées d'améliorations (${ameliorations.length})</h2>
+  ${ameliorations.length === 0 ? `<p class="empty">Aucune idée d'amélioration soumise pour cette saison.</p>` : ameliorations.slice().reverse().map(renderItem).join("")}
+
+  <div class="footer">
+    SACCB — Sainte-Adresse Club de Compétition de Badminton<br>
+    contact@saccb.fr · saccb.fr
+  </div>
+
+  <script>window.onload = () => window.print();</script>
+</body></html>`;
+
+    const win = window.open("", "_blank");
+    if (win) {
+      win.document.write(html);
+      win.document.close();
+    } else {
+      alert("Le navigateur a bloqué l'ouverture du PDF. Autorisez les popups pour ce site.");
+    }
+  }
+
   async function saveResponse(id: string) {
     if (readOnly) return;
     if (responseText.trim().length < 2) return;
@@ -268,8 +357,24 @@ function AGTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Pro
     );
   }
 
+  const questionsCount = items.filter((i) => i.type === "question").length;
+  const ameliorationsCount = items.filter((i) => i.type === "amelioration").length;
+
   return (
     <div className="space-y-2">
+      {/* Bouton export PDF */}
+      <div className="flex items-center justify-between flex-wrap gap-2 mb-3 pb-3 border-b border-slate-200">
+        <p className="text-xs text-slate-500">
+          <strong>{questionsCount}</strong> question{questionsCount > 1 ? "s" : ""} · <strong>{ameliorationsCount}</strong> idée{ameliorationsCount > 1 ? "s" : ""}
+        </p>
+        <button
+          onClick={exportPdf}
+          className="btn-ghost !text-xs !px-3 !py-1.5 flex items-center gap-1.5 text-blue-700 border-blue-300 hover:bg-blue-50"
+          title="Télécharger un PDF de toutes les questions et idées"
+        >
+          <FileDown className="w-3.5 h-3.5" /> Exporter en PDF
+        </button>
+      </div>
       {items.slice().reverse().map((item) => {
         const isQ = item.type === "question";
         return (

@@ -6,6 +6,7 @@ import { BarChart3, MessageSquare, Lock, Send, Lightbulb, ChevronDown, ChevronUp
 import { Poll, AGItem, ReunionReport } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
 import { memberVotePoll, memberSubmitAGItem, fetchMyVotes } from "@/lib/db";
+import { clearMemberSession } from "@/lib/useMemberSession";
 
 type PollPublic = Poll & {
   voteCounts?: Record<number, number>;
@@ -53,6 +54,19 @@ export default function Engagement({
   const openPolls = useMemo(() => polls.filter((p) => !p.closed), [polls]);
   const closedPolls = useMemo(() => polls.filter((p) => p.closed), [polls]);
 
+  // Helper : si l'API renvoie "Reconnectez-vous", on déconnecte automatiquement
+  // et on rouvre le modal de connexion (cas typique : code modifié via "code oublié")
+  function handleSessionExpired(reason: string | undefined): boolean {
+    if (reason && /Reconnectez-vous|Session périmée|code incorrect/i.test(reason)) {
+      clearMemberSession();
+      sessionStorage.removeItem("saccb_member_code");
+      alert("Votre session a expiré ou votre code a été modifié. Veuillez vous reconnecter.");
+      onLoginRequest();
+      return true;
+    }
+    return false;
+  }
+
   async function vote(pollId: string, optionIdx: number) {
     if (!memberSession || memberSession.paid !== true) {
       onLoginRequest();
@@ -68,6 +82,7 @@ export default function Engagement({
       const fresh = await fetchMyVotes(memberSession.email, code, memberSession.membreId);
       setMyVotes(fresh);
     } else {
+      if (handleSessionExpired(r.reason)) return;
       alert(r.reason || "Erreur lors du vote.");
     }
   }
@@ -102,6 +117,7 @@ export default function Engagement({
       await onRefresh();
       setTimeout(() => setAgMsg(null), 4000);
     } else {
+      if (handleSessionExpired(r.reason)) return;
       setAgMsg({ ok: false, text: r.reason || "Erreur lors de l'envoi." });
     }
   }
