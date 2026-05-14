@@ -117,6 +117,12 @@ function isHashedCode(stored: string | undefined | null): boolean {
   return typeof stored === "string" && stored.startsWith("h$");
 }
 
+// Sleep helper — utilisé pour throttler les appels Resend (rate limit free tier = 2/sec)
+function sleep(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+const RESEND_THROTTLE_MS = 600; // ~1.6 req/sec, safe sous la limite free tier de 2/sec
+
 // Parse une date dans plusieurs formats : ISO YYYY-MM-DD, DD/MM/YYYY, ou texte libre français ("31 mai 2026")
 // Retourne null si non parsable.
 function parseFlexibleDate(input: string): Date | null {
@@ -1092,6 +1098,7 @@ Deno.serve(async (req) => {
       } else {
         lastError = await sendRes.text().catch(() => "");
       }
+      await sleep(RESEND_THROTTLE_MS);
     }
 
     if (sentCount === 0) {
@@ -1193,6 +1200,7 @@ Deno.serve(async (req) => {
       } else {
         lastErrorSeason = await sendRes.text().catch(() => "");
       }
+      await sleep(RESEND_THROTTLE_MS);
     }
 
     if (sentCountSeason === 0) {
@@ -1303,6 +1311,7 @@ Deno.serve(async (req) => {
             `,
             }),
           }).catch(() => {});
+          await sleep(RESEND_THROTTLE_MS);
         }
         results.season_reminder = { sent: unpaidEmails.length, daysLeft };
       }
@@ -1395,6 +1404,7 @@ Deno.serve(async (req) => {
           `,
           }),
         }).catch(() => {});
+        await sleep(RESEND_THROTTLE_MS);
       }
       tournoiRemindersSent.push(String(t.name));
     }
@@ -2324,6 +2334,7 @@ Deno.serve(async (req) => {
       } else {
         totalSent++;
       }
+      await sleep(RESEND_THROTTLE_MS);
     }
 
     if (errors.length > 0 && totalSent === 0) {
