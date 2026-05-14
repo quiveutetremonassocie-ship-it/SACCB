@@ -289,7 +289,13 @@ export default function Site() {
         </div>
       )}
       <main>
-        <Hero seasonY1={db.y1} seasonY2={db.y2} inscOpen={db.insc_open} isMember={!!memberSession} />
+        <Hero
+          seasonY1={db.y1}
+          seasonY2={db.y2}
+          inscOpen={db.insc_open}
+          isMember={!!memberSession}
+          engagementOpen={db.pollsOpen === true || db.agOpen === true || db.engagementOpen === true}
+        />
         <Presentation />
         <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
         <Engagement

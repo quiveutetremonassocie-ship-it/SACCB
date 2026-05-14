@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronDown, MapPin, Trophy, Flame, Users2, Calendar } from "lucide-react";
+import { ChevronDown, MapPin, Trophy, Flame, Users2, Calendar, Megaphone } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
 
 export default function Hero({
@@ -9,11 +9,13 @@ export default function Hero({
   seasonY2,
   inscOpen,
   isMember = false,
+  engagementOpen = false,
 }: {
   seasonY1: number;
   seasonY2: number;
   inscOpen: boolean;
   isMember?: boolean;
+  engagementOpen?: boolean; // true si au moins un des 2 toggles (pollsOpen ou agOpen) est activé
 }) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
@@ -142,6 +144,16 @@ export default function Hero({
           {inscOpen && !isMember && (
             <a href="#inscription" className="btn-sport">
               <Trophy className="w-5 h-5" /> Adhérer au club
+            </a>
+          )}
+          {/* Bouton "Sondages & AG" : visible uniquement si membre connecté ET au moins une des sections engagement est ouverte */}
+          {isMember && engagementOpen && (
+            <a
+              href="#engagement"
+              className="btn-sport !bg-gradient-to-r !from-purple-600 !to-amber-500 animate-pulse-slow"
+              style={{ animation: "pulse 2s ease-in-out infinite" }}
+            >
+              <Megaphone className="w-5 h-5" /> Sondages & AG
             </a>
           )}
           <a href="#tournois" className="btn-ghost">
