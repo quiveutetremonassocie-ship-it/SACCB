@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronDown, MapPin, Trophy, Flame, Users2, Calendar, Megaphone } from "lucide-react";
+import { ChevronDown, MapPin, Trophy, Flame, Users2, Calendar, Megaphone, Newspaper, Clock, Mail, Award } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
 
 export default function Hero({
@@ -133,31 +133,53 @@ export default function Hero({
           Esprit convivial, jeu pour tous les niveaux et tournois tout au long de l&apos;année.
         </motion.p>
 
-        {/* CTA */}
+        {/* CTA principal (1 seul gros bouton selon contexte) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.5 }}
-          className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
+          className="flex flex-col sm:flex-row gap-4 justify-center mb-6"
         >
-          {/* Bouton "Adhérer au club" : visible uniquement si inscriptions ouvertes ET visiteur non connecté */}
+          {/* Adhérer au club : visible uniquement si inscriptions ouvertes ET visiteur non connecté */}
           {inscOpen && !isMember && (
             <a href="#inscription" className="btn-sport">
               <Trophy className="w-5 h-5" /> Adhérer au club
             </a>
           )}
-          {/* Bouton "Sondages & AG" : visible uniquement si membre connecté ET au moins une des sections engagement est ouverte */}
+          {/* Sondages & AG : visible uniquement si membre connecté ET section engagement activée */}
           {isMember && engagementOpen && (
             <a
               href="#engagement"
-              className="btn-sport !bg-gradient-to-r !from-purple-600 !to-amber-500 animate-pulse-slow"
+              className="btn-sport !bg-gradient-to-r !from-purple-600 !to-amber-500"
               style={{ animation: "pulse 2s ease-in-out infinite" }}
             >
               <Megaphone className="w-5 h-5" /> Sondages & AG
             </a>
           )}
-          <a href="#tournois" className="btn-ghost">
-            <MapPin className="w-5 h-5" /> Voir les tournois
+        </motion.div>
+
+        {/* Menu rapide (raccourcis vers les sections principales) */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.7, delay: 0.6 }}
+          className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-2xl mx-auto mb-16"
+        >
+          <a href="#actualites" className="quick-link group">
+            <Newspaper className="w-4 h-4 text-amber-500 group-hover:scale-110 transition" />
+            <span>Actus</span>
+          </a>
+          <a href="#tournois" className="quick-link group">
+            <MapPin className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition" />
+            <span>Tournois</span>
+          </a>
+          <a href="#horaires" className="quick-link group">
+            <Clock className="w-4 h-4 text-blue-500 group-hover:scale-110 transition" />
+            <span>Horaires</span>
+          </a>
+          <a href="#palmares" className="quick-link group">
+            <Award className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition" />
+            <span>Palmarès</span>
           </a>
         </motion.div>
 

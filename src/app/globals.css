@@ -69,6 +69,9 @@ body {
   .btn-ghost {
     @apply btn text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm;
   }
+  .quick-link {
+    @apply flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/90 backdrop-blur border border-slate-200 text-slate-700 hover:bg-white hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 transition shadow-sm text-sm font-medium;
+  }
   .input {
     @apply w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition;
   }
