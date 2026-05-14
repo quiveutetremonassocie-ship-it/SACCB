@@ -314,13 +314,16 @@ export default function Site() {
           onLoginRequest={() => setMemberLoginOpen(true)}
         />
         <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
-        <Inscription
-          db={db}
-          membresCount={membresCount}
-          quota={db.quota ?? QUOTA_DEFAULT}
-          prix={PRIX}
-          onMembreAdded={() => setMembresCount((n) => n + 1)}
-        />
+        {/* Section inscription : cachée pour les membres connectés (ils sont déjà adhérents) */}
+        {!memberSession && (
+          <Inscription
+            db={db}
+            membresCount={membresCount}
+            quota={db.quota ?? QUOTA_DEFAULT}
+            prix={PRIX}
+            onMembreAdded={() => setMembresCount((n) => n + 1)}
+          />
+        )}
       </main>
       <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
 
