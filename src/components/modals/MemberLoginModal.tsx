@@ -37,11 +37,10 @@ export default function MemberLoginModal({
       setError(r.reason || "Email ou code incorrect.");
       return;
     }
-    // Bloquer l'accès si le paiement n'est pas encore validé (virement en attente)
-    if (r.paid === false && !r.isAdmin) {
-      setError("Votre adhésion n'est pas encore active. Si vous avez choisi le paiement par virement, patientez la validation de l'administrateur. Vous recevrez un email de confirmation.");
-      return;
-    }
+    // Note : on n'empêche PLUS la connexion si paid === false.
+    // Cas d'usage : adhérent qui doit renouveler (nouvelle saison) ou qui attend
+    // la validation de son virement → il doit pouvoir accéder à son espace pour
+    // voir le bandeau "Adhésion à renouveler" et déclencher le paiement.
     const sess = {
       membreId: r.membre.id,
       nom: r.membre.nom,
