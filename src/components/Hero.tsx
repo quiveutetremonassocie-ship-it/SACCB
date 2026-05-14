@@ -8,10 +8,12 @@ export default function Hero({
   seasonY1,
   seasonY2,
   inscOpen,
+  isMember = false,
 }: {
   seasonY1: number;
   seasonY2: number;
   inscOpen: boolean;
+  isMember?: boolean;
 }) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
@@ -136,8 +138,8 @@ export default function Hero({
           transition={{ duration: 0.7, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 justify-center mb-16"
         >
-          {/* Bouton "Adhérer au club" : visible uniquement si les inscriptions sont ouvertes */}
-          {inscOpen && (
+          {/* Bouton "Adhérer au club" : visible uniquement si inscriptions ouvertes ET visiteur non connecté */}
+          {inscOpen && !isMember && (
             <a href="#inscription" className="btn-sport">
               <Trophy className="w-5 h-5" /> Adhérer au club
             </a>
