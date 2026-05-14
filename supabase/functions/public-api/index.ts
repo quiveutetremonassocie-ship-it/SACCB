@@ -1389,6 +1389,7 @@ Deno.serve(async (req) => {
 
     // ── Rappels tournois (J-30 / J-15 / J-5 / J-1 avant dateLimit) ──
     const tournois = (d.config_tournois || []) as Record<string, unknown>[];
+    const inscritsTournoi = (d.inscrits_tournoi || []) as Record<string, unknown>[];
     const tournoiRemindersSent: string[] = [];
     for (const t of tournois) {
       const dateLimit = String(t.dateLimit || t.date || "");
@@ -1398,14 +1399,28 @@ Deno.serve(async (req) => {
       const tTs = parsedT.getTime();
       const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
       if (tDaysLeft !== 30 && tDaysLeft !== 15 && tDaysLeft !== 5 && tDaysLeft !== 1) continue;
-      if (newsEmails.length === 0) continue;
+
+      // 🎯 Exclure les membres déjà inscrits à CE tournoi (inutile de leur envoyer un rappel)
+      const inscritsCeTournoi = inscritsTournoi.filter((i) => i.tournoiId === t.id);
+      const inscritsNoms = inscritsCeTournoi
+        .map((i) => String(i.joueurs || "").toLowerCase())
+        .join(" | ");
+      const newsRecipientsForThisT = newsRecipients.filter((r) => {
+        if (!r.prenom) return true; // si pas de prénom, on ne peut pas matcher → on garde par sécurité
+        const nameLower = r.prenom.toLowerCase();
+        // Si le prénom du membre apparaît dans la liste des inscrits → on l'exclut
+        return !inscritsNoms.includes(nameLower);
+      });
+
+      if (newsRecipientsForThisT.length === 0) continue;
 
       const dateFormatted = parsedT.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
       const tIsUrgent = tDaysLeft <= 5;
       const tHeading = tDaysLeft === 1 ? `Dernière chance — plus que 24H !` : `Plus que ${tDaysLeft} jours !`;
 
       // 📧 Envoi INDIVIDUEL personnalisé (1 email par destinataire avec son prénom)
-      for (const recipient of newsRecipients) {
+      // Exclut les membres déjà inscrits à ce tournoi
+      for (const recipient of newsRecipientsForThisT) {
         const greetingT = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
         const greetingTextT = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
         // Sujet personnalisé : 'Marie, inscription au tournoi X' au lieu de '🚨 Tournoi X — plus que 24H'
@@ -2503,6 +2518,110 @@ Deno.serve(async (req) => {
     const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
+  }
+
+  // ─── ACTION: Notifier les adhérents qu'un nouveau sondage est disponible ───
+  if (action === "notify_new_poll") {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const pollId = String(body.pollId || "");
+    if (!pollId) return json({ ok: false, reason: "pollId manquant." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    // 🔒 Auth admin obligatoire
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    // Trouver le sondage
+    const polls = (d.polls || []) as Record<string, unknown>[];
+    const poll = polls.find((p) => p.id === pollId);
+    if (!poll) return json({ ok: false, reason: "Sondage introuvable." });
+
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const recipients = membres
+      .filter((m) => m.ok === true && m.newsOptIn !== false)
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+
+    if (recipients.length === 0) return json({ ok: false, reason: "Aucun adhérent à notifier." });
+
+    let sentCount = 0;
+    const errors: string[] = [];
+    const pollQuestion = String(poll.question || "Sondage");
+    const optionsList = ((poll.options as string[]) || []).slice(0, 5).map((o) => `• ${o}`).join("\n");
+
+    for (const recipient of recipients) {
+      const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+      const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+      const subject = recipient.prenom
+        ? `${recipient.prenom}, votre avis sur "${pollQuestion}"`
+        : `Votre avis sur "${pollQuestion}"`;
+      const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site du club :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+
+      const sendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+          to: [recipient.email],
+          subject,
+          text: plainText,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                <div>
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
+              </div>
+              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
+                <h2 style="color: #1e3a5f; margin-top: 0;">📊 Un nouveau sondage vous attend !</h2>
+                <p style="color: #475569;">Le bureau souhaite recueillir votre avis :</p>
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                  <p style="margin: 0 0 12px; font-size: 16px; font-weight: bold; color: #1e3a5f;">${escapeHtml(pollQuestion)}</p>
+                  ${((poll.options as string[]) || []).slice(0, 5).map((o) => `<p style="margin: 4px 0; color: #64748b; font-size: 13px;">• ${escapeHtml(o)}</p>`).join("")}
+                </div>
+                <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                  📊 Donner mon avis →
+                </a>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                  <tr><td>
+                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                      <td style="vertical-align: middle;">
+                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                      </td>
+                    </tr></table>
+                  </td></tr>
+                </table>
+              </div>
+            </div>
+          `,
+        }),
+      });
+      if (sendRes.ok) sentCount++;
+      else errors.push(`${recipient.email}: ${sendRes.status}`);
+      await sleep(RESEND_THROTTLE_MS);
+    }
+
+    if (sentCount === 0) return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
+    return json({ ok: true, sent: sentCount, total: recipients.length });
   }
 
   // ─── ACTION: Notifier les adhérents que la section Sondages & AG est ouverte ───

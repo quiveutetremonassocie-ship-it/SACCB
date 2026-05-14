@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail } from "lucide-react";
+import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail, Bell } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
-import { adminNotifyEngagementOpen } from "@/lib/db";
+import { adminNotifyEngagementOpen, adminNotifyNewPoll } from "@/lib/db";
 
 // Échappe le HTML pour insertion sûre dans des templates générés
 function escapeHtmlClient(s: string): string {
@@ -158,7 +158,7 @@ export default function EngagementAdmin({
         </button>
       </div>
 
-      {tab === "sondages" && <PollsTab db={db} onPersist={onPersist} readOnly={readOnly} />}
+      {tab === "sondages" && <PollsTab db={db} onPersist={onPersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />}
       {tab === "ag" && <AGTab db={db} onPersist={onPersist} readOnly={readOnly} />}
       {tab === "reports" && <ReportsTab db={db} onPersist={onPersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />}
     </div>
@@ -166,12 +166,26 @@ export default function EngagementAdmin({
 }
 
 // ─── Onglet sondages ───
-function PollsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Promise<void>; readOnly?: boolean }) {
+function PollsTab({ db, onPersist, adminEmail, adminCode, readOnly }: { db: DB; onPersist: (db: DB) => Promise<void>; adminEmail?: string; adminCode?: string; readOnly?: boolean }) {
   const [showForm, setShowForm] = useState(false);
   const [question, setQuestion] = useState("");
   const [options, setOptions] = useState<string[]>(["", ""]);
   const [multipleChoice, setMultipleChoice] = useState(false);
+  const [notifyingPollId, setNotifyingPollId] = useState<string | null>(null);
   const polls = db.polls ?? [];
+
+  async function notifyPoll(pollId: string, question: string) {
+    if (!adminEmail || !adminCode) {
+      alert("Identifiants admin manquants pour notifier.");
+      return;
+    }
+    if (!confirm(`Envoyer un email à tous les adhérents (payés + news activées) pour leur dire qu'un nouveau sondage est disponible ?\n\n"${question}"`)) return;
+    setNotifyingPollId(pollId);
+    const r = await adminNotifyNewPoll(adminEmail, adminCode, pollId);
+    setNotifyingPollId(null);
+    if (r.ok) alert(`✅ Email envoyé à ${r.sent} adhérent${(r.sent ?? 0) > 1 ? "s" : ""} !`);
+    else alert("Erreur : " + (r.reason || "Inconnue"));
+  }
 
   async function createPoll() {
     if (readOnly) return;
@@ -291,6 +305,14 @@ function PollsTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => 
                 </div>
                 {!readOnly && (
                   <div className="flex gap-1 shrink-0">
+                    <button
+                      onClick={() => notifyPoll(poll.id, poll.question)}
+                      disabled={notifyingPollId === poll.id || poll.closed === true}
+                      className="p-1.5 rounded hover:bg-blue-50 text-blue-500 hover:text-blue-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      title={poll.closed ? "Sondage fermé — pas de notification" : "Notifier les adhérents par email"}
+                    >
+                      <Bell className={`w-4 h-4 ${notifyingPollId === poll.id ? "animate-pulse" : ""}`} />
+                    </button>
                     <button
                       onClick={() => toggleClose(poll.id)}
                       className="p-1.5 rounded hover:bg-slate-100 text-slate-500 hover:text-slate-700"

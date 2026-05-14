@@ -145,6 +145,20 @@ export async function notifyMembres(
   return res.json();
 }
 
+// ─── Notifier les adhérents qu'un nouveau sondage est disponible — AUTH ADMIN ───
+export async function adminNotifyNewPoll(
+  adminEmail: string,
+  adminCode: string,
+  pollId: string
+): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "notify_new_poll", adminEmail, adminCode, pollId }),
+  });
+  return res.json();
+}
+
 // ─── Notifier les adhérents que la section Sondages & AG est ouverte — AUTH ADMIN ───
 export async function adminNotifyEngagementOpen(
   adminEmail: string,
