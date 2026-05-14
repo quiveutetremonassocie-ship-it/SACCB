@@ -142,6 +142,9 @@ export type DB = {
   polls?: Poll[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
+  // Toggle global pour afficher ou cacher la section "Sondages & AG" du site public
+  // (défaut: false = cachée, l'admin l'active manuellement quand pertinent ex: avant AG)
+  engagementOpen?: boolean;
   // Règles du club (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

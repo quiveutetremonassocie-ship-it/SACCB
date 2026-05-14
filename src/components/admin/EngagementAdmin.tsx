@@ -30,11 +30,44 @@ export default function EngagementAdmin({
 }) {
   const [tab, setTab] = useState<"sondages" | "ag" | "reports">("sondages");
 
+  const isEngagementOpen = db.engagementOpen === true;
+
+  async function toggleEngagement() {
+    if (readOnly) return;
+    await onPersist({ ...db, engagementOpen: !isEngagementOpen });
+  }
+
   return (
     <div className="glass p-4 md:p-6">
-      <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-4 flex items-center gap-2">
-        📣 Sondages, AG & Comptes-rendus
-      </h3>
+      <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
+        <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 flex items-center gap-2">
+          📣 Sondages, AG & Comptes-rendus
+        </h3>
+        {/* Toggle visibilité côté site public */}
+        <button
+          onClick={toggleEngagement}
+          disabled={readOnly}
+          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border-2 transition ${
+            isEngagementOpen
+              ? "bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
+              : "bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100"
+          }`}
+          title={isEngagementOpen ? "Cliquer pour masquer la section côté site public" : "Cliquer pour afficher la section côté site public"}
+        >
+          <span className={`relative inline-block w-9 h-5 rounded-full transition-colors ${isEngagementOpen ? "bg-emerald-500" : "bg-slate-300"}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isEngagementOpen ? "translate-x-4" : ""}`} />
+          </span>
+          {isEngagementOpen ? "Visible par les adhérents" : "Cachée"}
+        </button>
+      </div>
+
+      {/* Bandeau d'info si caché */}
+      {!isEngagementOpen && (
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
+          🔒 La section <strong>Sondages & AG</strong> n&apos;est <strong>pas affichée</strong> sur le site public.
+          Les adhérents ne la voient pas. Activez-la pour la rendre visible (typiquement avant une AG ou pour lancer un sondage).
+        </div>
+      )}
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 border-b border-slate-200">

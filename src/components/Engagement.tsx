@@ -17,6 +17,7 @@ export default function Engagement({
   polls = [],
   agItems = [],
   reunionReports = [],
+  engagementOpen = false,
   memberSession,
   onLoginRequest,
   onRefresh,
@@ -24,10 +25,13 @@ export default function Engagement({
   polls?: PollPublic[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
+  engagementOpen?: boolean;
   memberSession: MemberSession | null;
   onLoginRequest: () => void;
   onRefresh: () => Promise<void>;
 }) {
+  // 🔒 Toggle global : si l'admin n'a pas activé la section, on n'affiche RIEN
+  if (!engagementOpen) return null;
   const [myVotes, setMyVotes] = useState<Record<string, number[]>>({});
   const [voting, setVoting] = useState<string | null>(null);
   const [agOpen, setAgOpen] = useState(false);
