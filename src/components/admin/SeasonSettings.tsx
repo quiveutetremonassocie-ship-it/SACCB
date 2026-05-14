@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 
@@ -100,6 +100,41 @@ export default function SeasonSettings({
     );
     await onPersist({ ...db, archives: newArchives });
     setEditingArchiveIdx(null);
+  }
+
+  async function reopenForDays() {
+    const daysStr = prompt(
+      "Rouvrir les inscriptions pendant combien de jours ?\n\n" +
+      "Exemple : 5 → ouvre maintenant et ferme automatiquement dans 5 jours.\n" +
+      "Les rappels J-5/J-1 partiront automatiquement aux non-payés.",
+      "5"
+    );
+    if (!daysStr) return;
+    const days = parseInt(daysStr.trim(), 10);
+    if (isNaN(days) || days < 1 || days > 365) {
+      alert("Nombre de jours invalide (entre 1 et 365).");
+      return;
+    }
+    // Calcul de la nouvelle dateLimit = aujourd'hui + N jours (format ISO YYYY-MM-DD)
+    const newCloseDate = new Date();
+    newCloseDate.setDate(newCloseDate.getDate() + days);
+    const isoDate = newCloseDate.toISOString().slice(0, 10);
+    const formatted = newCloseDate.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+
+    if (!confirm(
+      `Rouvrir les inscriptions jusqu'au ${formatted} (dans ${days} jour${days > 1 ? "s" : ""}) ?\n\n` +
+      `• Les inscriptions seront ouvertes immédiatement\n` +
+      `• Elles se fermeront automatiquement à cette date\n` +
+      `• Les rappels J-30/J-15/J-5/J-1 partiront aux non-payés selon le délai`
+    )) return;
+
+    setInscCloseDate(isoDate);
+    await onPersist({
+      ...db,
+      insc_open: true,
+      insc_close_date: isoDate,
+    });
+    alert(`✅ Inscriptions rouvertes jusqu'au ${formatted}.`);
   }
 
   async function newSeason() {
@@ -232,6 +267,10 @@ export default function SeasonSettings({
         <div className="space-y-3">
           <button onClick={toggle} className={db.insc_open ? "btn-danger w-full" : "btn-accent w-full"}>
             {db.insc_open ? <><Lock className="w-4 h-4" /> Fermer les inscriptions</> : <><Unlock className="w-4 h-4" /> Ouvrir les inscriptions</>}
+          </button>
+          {/* Réouverture temporaire avec fermeture auto après N jours */}
+          <button onClick={reopenForDays} className="btn-accent w-full !bg-gradient-to-r !from-amber-500 !to-orange-500">
+            <Clock className="w-4 h-4" /> Rouvrir temporairement (N jours)
           </button>
           <button onClick={update} className="btn-accent w-full">
             <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
