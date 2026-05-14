@@ -19,6 +19,7 @@ type Personne = {
   type: PersonType;
   email?: string; // utilisé seulement si sameAccount = false
   code?: string;  // utilisé seulement si sameAccount = false
+  tel?: string;   // utilisé seulement si sameAccount = false (sinon tel partagé)
 };
 
 export default function Inscription({
@@ -61,7 +62,7 @@ export default function Inscription({
 
   function addPersonne() {
     if (personnes.length >= 5) return;
-    setPersonnes(prev => [...prev, { prenom: "", nom: "", type: "Adulte", email: "", code: "" }]);
+    setPersonnes(prev => [...prev, { prenom: "", nom: "", type: "Adulte", email: "", code: "", tel: "" }]);
   }
 
   function removePersonne(idx: number) {
@@ -147,11 +148,12 @@ export default function Inscription({
         return;
       }
     } else {
-      // Comptes séparés : chaque personne doit avoir email + mdp
+      // Comptes séparés : chaque personne doit avoir email + mdp + téléphone
       for (let i = 0; i < personnes.length; i++) {
         const p = personnes[i];
         const email = (p.email || "").trim();
         const code = (p.code || "").trim();
+        const personTel = (p.tel || "").trim();
         if (!email || !/\S+@\S+\.\S+/.test(email)) {
           alert(`Email invalide pour la personne ${i + 1} (${p.prenom || "?"}).`);
           return;
@@ -162,6 +164,10 @@ export default function Inscription({
         }
         if (/^(.)\1+$/.test(code)) {
           alert(`Le mot de passe de la personne ${i + 1} ne peut pas être composé uniquement du même caractère.`);
+          return;
+        }
+        if (personTel.length < 8) {
+          alert(`Téléphone invalide pour la personne ${i + 1} (${p.prenom || "?"}).`);
           return;
         }
       }
@@ -179,7 +185,8 @@ export default function Inscription({
       return;
     }
 
-    if (!tel || tel.length < 8) {
+    // Téléphone partagé requis SEULEMENT en mode compte partagé (sinon chaque personne a le sien)
+    if (useSharedAccount && (!tel || tel.length < 8)) {
       alert("Téléphone invalide.");
       return;
     }
@@ -195,10 +202,11 @@ export default function Inscription({
     for (const p of personnes) {
       const personEmail = useSharedAccount ? sharedEmail.trim() : (p.email || "").trim();
       const personCode = useSharedAccount ? sharedCode : (p.code || "");
+      const personTel = useSharedAccount ? tel : (p.tel || "").trim();
       const r = await publicAddMembre({
         nom: `${p.prenom.trim()} ${p.nom.trim()}`.trim(),
         email: personEmail,
-        tel,
+        tel: personTel,
         type: p.type,
         paymentMethod: mode,
         code: personCode,
@@ -397,11 +405,11 @@ export default function Inscription({
                         <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
                       </select>
 
-                      {/* Email + mdp individuels (uniquement si comptes séparés et plusieurs personnes) */}
+                      {/* Email + mdp + tel individuels (uniquement si comptes séparés et plusieurs personnes) */}
                       {!sameAccount && personnes.length > 1 && (
                         <div className="mt-3 space-y-2 border-t border-slate-200 pt-3">
                           <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
-                            Identifiants de connexion
+                            Coordonnées & identifiants
                           </p>
                           <input
                             className="input !text-sm"
@@ -409,6 +417,14 @@ export default function Inscription({
                             placeholder="Email pour cette personne"
                             value={p.email || ""}
                             onChange={(e) => updatePersonne(idx, "email", e.target.value)}
+                            required
+                          />
+                          <input
+                            className="input !text-sm"
+                            type="tel"
+                            placeholder="Téléphone"
+                            value={p.tel || ""}
+                            onChange={(e) => updatePersonne(idx, "tel", e.target.value)}
                             required
                           />
                           <div className="relative">
@@ -479,19 +495,7 @@ export default function Inscription({
                 </label>
               )}
 
-              {/* ── Téléphone (toujours partagé) ── */}
-              <div className="space-y-3">
-                <input
-                  className="input"
-                  type="tel"
-                  placeholder="Téléphone (contact)"
-                  value={sharedTel}
-                  onChange={(e) => setSharedTel(e.target.value)}
-                  required
-                />
-              </div>
-
-              {/* ── Email + mot de passe partagés (si compte unique ou 1 seule personne) ── */}
+              {/* ── Email + téléphone + mot de passe partagés (si compte unique ou 1 seule personne) ── */}
               {(sameAccount || personnes.length === 1) && (
                 <div className="space-y-3">
                   <input
@@ -500,6 +504,14 @@ export default function Inscription({
                     placeholder="Email"
                     value={sharedEmail}
                     onChange={(e) => setSharedEmail(e.target.value)}
+                    required
+                  />
+                  <input
+                    className="input"
+                    type="tel"
+                    placeholder="Téléphone"
+                    value={sharedTel}
+                    onChange={(e) => setSharedTel(e.target.value)}
                     required
                   />
                   <div>
