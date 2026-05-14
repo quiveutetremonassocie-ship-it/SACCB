@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye } from "lucide-react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
@@ -41,10 +41,35 @@ export default function AdminPanel({
   const [emargementOpen, setEmargementOpen] = useState(false);
   const [editMembre, setEditMembre] = useState<Membre | null>(null);
   const [editBin, setEditBin] = useState<{ id: string; joueurs: string } | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [lastRefresh, setLastRefresh] = useState<number>(Date.now());
 
+  // Auto-refresh toutes les 60 secondes pour éviter les caches périmés
+  useEffect(() => {
+    const interval = setInterval(() => {
+      onRefresh().then(() => setLastRefresh(Date.now())).catch(() => {});
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [onRefresh]);
+
+  async function manualRefresh() {
+    setRefreshing(true);
+    try {
+      await onRefresh();
+      setLastRefresh(Date.now());
+    } finally {
+      setRefreshing(false);
+    }
+  }
+
+  // Wrapper qui sauvegarde puis rafraîchit la DB (évite les caches périmés)
   const safePersist = readOnly
     ? async (_db: DB) => { alert("Accès en lecture seule — vous ne pouvez pas modifier les données."); }
-    : onPersist;
+    : async (next: DB) => {
+        await onPersist(next);
+        // Refresh silencieux après chaque sauvegarde pour avoir l'état serveur à jour
+        onRefresh().then(() => setLastRefresh(Date.now())).catch(() => {});
+      };
 
   function canEdit(section: string): boolean {
     if (readOnly) return false;
@@ -105,10 +130,21 @@ export default function AdminPanel({
             <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold">Panel</p>
             <h2 className="font-display text-2xl md:text-4xl tracking-wider text-slate-800">Gestion SACCB</h2>
           </div>
-          <button onClick={onClose} className="btn-danger !px-3 !py-2">
-            <X className="w-4 h-4" />
-            <span className="hidden sm:inline ml-1">Fermer</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={manualRefresh}
+              disabled={refreshing}
+              className="btn-ghost !px-3 !py-2 !text-xs flex items-center gap-1.5"
+              title={`Dernière mise à jour : ${new Date(lastRefresh).toLocaleTimeString("fr-FR")}`}
+            >
+              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
+              <span className="hidden sm:inline">{refreshing ? "..." : "Rafraîchir"}</span>
+            </button>
+            <button onClick={onClose} className="btn-danger !px-3 !py-2">
+              <X className="w-4 h-4" />
+              <span className="hidden sm:inline ml-1">Fermer</span>
+            </button>
+          </div>
         </div>
 
         {readOnly && (
