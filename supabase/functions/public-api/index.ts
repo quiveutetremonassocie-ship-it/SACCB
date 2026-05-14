@@ -1517,8 +1517,10 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
 
+    // ⚠️ Pas de filtre m.ok === true ici : un adhérent doit pouvoir récupérer son code
+    // même s'il n'a pas encore (re)payé son adhésion (sinon il ne peut pas se reconnecter pour renouveler)
     const membreIdx = membres.findIndex(
-      (m) => String(m.email || "").toLowerCase() === email && m.ok === true
+      (m) => String(m.email || "").toLowerCase() === email
     );
     const membre = membreIdx !== -1 ? membres[membreIdx] : undefined;
 
