@@ -1,9 +1,10 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown } from "lucide-react";
+import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
+import { adminNotifyEngagementOpen } from "@/lib/db";
 
 // Échappe le HTML pour insertion sûre dans des templates générés
 function escapeHtmlClient(s: string): string {
@@ -28,46 +29,109 @@ export default function EngagementAdmin({
   adminCode?: string;
   readOnly?: boolean;
 }) {
+  // Toggle granulaire géré juste après (besoin d'un state pour le bouton notifier)
+  // Note : le hook useState pour notifying est défini plus bas (à côté des togglers)
   const [tab, setTab] = useState<"sondages" | "ag" | "reports">("sondages");
 
-  const isEngagementOpen = db.engagementOpen === true;
+  // Migration douce : engagementOpen ancien équivaut aux 2 toggles
+  const pollsOpen = db.pollsOpen === true || db.engagementOpen === true;
+  const agOpen = db.agOpen === true || db.engagementOpen === true;
+  const [notifying, setNotifying] = useState(false);
 
-  async function toggleEngagement() {
+  async function togglePolls() {
     if (readOnly) return;
-    await onPersist({ ...db, engagementOpen: !isEngagementOpen });
+    await onPersist({ ...db, pollsOpen: !pollsOpen, engagementOpen: undefined });
+  }
+  async function toggleAG() {
+    if (readOnly) return;
+    await onPersist({ ...db, agOpen: !agOpen, engagementOpen: undefined });
+  }
+
+  async function notifyAdherents() {
+    if (readOnly || !adminEmail || !adminCode) return;
+    if (!pollsOpen && !agOpen) {
+      alert("Activez au moins l'une des 2 sections (Sondages ou AG) avant de notifier les adhérents.");
+      return;
+    }
+    let label = "";
+    if (pollsOpen && agOpen) label = "Sondages + AG";
+    else if (pollsOpen) label = "Sondages";
+    else label = "AG (questions & idées)";
+    if (!confirm(`Envoyer un email à tous les adhérents (payés + news activées) pour leur dire que la section "${label}" est maintenant disponible ?`)) return;
+    setNotifying(true);
+    const r = await adminNotifyEngagementOpen(adminEmail, adminCode, pollsOpen, agOpen);
+    setNotifying(false);
+    if (r.ok) alert(`✅ Email envoyé à ${r.sent} adhérent${(r.sent ?? 0) > 1 ? "s" : ""} !`);
+    else alert("Erreur : " + (r.reason || "Inconnue"));
   }
 
   return (
     <div className="glass p-4 md:p-6">
-      <div className="flex items-start justify-between gap-3 mb-4 flex-wrap">
-        <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 flex items-center gap-2">
-          📣 Sondages, AG & Comptes-rendus
-        </h3>
-        {/* Toggle visibilité côté site public */}
-        <button
-          onClick={toggleEngagement}
-          disabled={readOnly}
-          className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-semibold border-2 transition ${
-            isEngagementOpen
-              ? "bg-emerald-50 border-emerald-300 text-emerald-700 hover:bg-emerald-100"
-              : "bg-slate-50 border-slate-300 text-slate-600 hover:bg-slate-100"
-          }`}
-          title={isEngagementOpen ? "Cliquer pour masquer la section côté site public" : "Cliquer pour afficher la section côté site public"}
-        >
-          <span className={`relative inline-block w-9 h-5 rounded-full transition-colors ${isEngagementOpen ? "bg-emerald-500" : "bg-slate-300"}`}>
-            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${isEngagementOpen ? "translate-x-4" : ""}`} />
-          </span>
-          {isEngagementOpen ? "Visible par les adhérents" : "Cachée"}
-        </button>
-      </div>
+      <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-4 flex items-center gap-2">
+        📣 Sondages, AG & Comptes-rendus
+      </h3>
 
-      {/* Bandeau d'info si caché */}
-      {!isEngagementOpen && (
-        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-3 text-xs text-slate-600">
-          🔒 La section <strong>Sondages & AG</strong> n&apos;est <strong>pas affichée</strong> sur le site public.
-          Les adhérents ne la voient pas. Activez-la pour la rendre visible (typiquement avant une AG ou pour lancer un sondage).
-        </div>
-      )}
+      {/* 2 toggles séparés visibilité côté site public */}
+      <div className="bg-slate-50 border border-slate-200 rounded-xl p-3 mb-4 space-y-2">
+        <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2">
+          Visibilité côté site public
+        </p>
+        {/* Toggle Sondages */}
+        <button
+          onClick={togglePolls}
+          disabled={readOnly}
+          className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition ${
+            pollsOpen
+              ? "bg-purple-50 border-purple-300 text-purple-800 hover:bg-purple-100"
+              : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <BarChart3 className="w-4 h-4" />
+            Sondages + Comptes-rendus
+          </span>
+          <span className={`relative inline-block w-10 h-5 rounded-full transition-colors ${pollsOpen ? "bg-purple-500" : "bg-slate-300"}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${pollsOpen ? "translate-x-5" : ""}`} />
+          </span>
+        </button>
+        {/* Toggle AG */}
+        <button
+          onClick={toggleAG}
+          disabled={readOnly}
+          className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition ${
+            agOpen
+              ? "bg-amber-50 border-amber-300 text-amber-800 hover:bg-amber-100"
+              : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <MessageSquare className="w-4 h-4" />
+            Questions & idées AG
+          </span>
+          <span className={`relative inline-block w-10 h-5 rounded-full transition-colors ${agOpen ? "bg-amber-500" : "bg-slate-300"}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${agOpen ? "translate-x-5" : ""}`} />
+          </span>
+        </button>
+
+        {/* Bandeau d'info quand caché */}
+        {!pollsOpen && !agOpen && (
+          <div className="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 mt-1">
+            🔒 Aucune section visible sur le site public.
+          </div>
+        )}
+
+        {/* Bouton notifier les adhérents (visible si au moins 1 toggle activé) */}
+        {(pollsOpen || agOpen) && !readOnly && (
+          <button
+            onClick={notifyAdherents}
+            disabled={notifying}
+            className="w-full mt-2 flex items-center justify-center gap-2 px-3 py-2.5 rounded-xl text-sm font-medium bg-blue-50 border-2 border-blue-300 text-blue-800 hover:bg-blue-100 transition disabled:opacity-50"
+          >
+            <Mail className="w-4 h-4" />
+            {notifying ? "Envoi en cours..." : "📣 Notifier les adhérents par email"}
+          </button>
+        )}
+      </div>
 
       {/* Tabs */}
       <div className="flex gap-2 mb-5 border-b border-slate-200">

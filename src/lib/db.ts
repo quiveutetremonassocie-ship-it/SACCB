@@ -34,7 +34,8 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     polls: d.polls ?? [],
     agItems: d.agItems ?? [],
     reunionReports: d.reunionReports ?? [],
-    engagementOpen: d.engagementOpen === true,
+    pollsOpen: d.pollsOpen === true,
+    agOpen: d.agOpen === true,
     clubRules: d.clubRules ?? "",
     clubRulesPdfUrl: d.clubRulesPdfUrl ?? undefined,
     clubRulesPdfName: d.clubRulesPdfName ?? undefined,
@@ -140,6 +141,21 @@ export async function notifyMembres(
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
     body: JSON.stringify({ action: "notify_membres", tournoiId, tournoiName, adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
+// ─── Notifier les adhérents que la section Sondages & AG est ouverte — AUTH ADMIN ───
+export async function adminNotifyEngagementOpen(
+  adminEmail: string,
+  adminCode: string,
+  includePolls: boolean,
+  includeAG: boolean
+): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "notify_engagement_open", adminEmail, adminCode, includePolls, includeAG }),
   });
   return res.json();
 }

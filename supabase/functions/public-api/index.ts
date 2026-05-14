@@ -522,7 +522,9 @@ Deno.serve(async (req) => {
       polls,
       agItems,
       reunionReports: d.reunionReports ?? [],
-      engagementOpen: d.engagementOpen === true,
+      // Migration douce : si engagementOpen=true (ancien format), équivaut aux 2 toggles
+      pollsOpen: d.pollsOpen === true || d.engagementOpen === true,
+      agOpen: d.agOpen === true || d.engagementOpen === true,
       clubRules: d.clubRules ?? "",
       clubRulesPdfUrl: d.clubRulesPdfUrl ?? null,
       clubRulesPdfName: d.clubRulesPdfName ?? null,
@@ -2501,6 +2503,119 @@ Deno.serve(async (req) => {
     const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
+  }
+
+  // ─── ACTION: Notifier les adhérents que la section Sondages & AG est ouverte ───
+  if (action === "notify_engagement_open") {
+    const resendKey = Deno.env.get("RESEND_API_KEY");
+    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    // 🔒 Auth admin obligatoire
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const includePolls = body.includePolls !== false;
+    const includeAG = body.includeAG !== false;
+    if (!includePolls && !includeAG) {
+      return json({ ok: false, reason: "Au moins un des 2 (sondages ou AG) doit être inclus." }, 400);
+    }
+
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const recipients = membres
+      .filter((m) => m.ok === true && m.newsOptIn !== false)
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+
+    if (recipients.length === 0) return json({ ok: false, reason: "Aucun adhérent à notifier." });
+
+    // Construction du contenu selon ce qui est ouvert
+    let topic = "";
+    let topicEmail = "";
+    if (includePolls && includeAG) {
+      topic = "Sondages et préparation de l'AG";
+      topicEmail = "préparer ensemble la prochaine assemblée générale et participer aux sondages en cours";
+    } else if (includePolls) {
+      topic = "Sondages en cours";
+      topicEmail = "donner votre avis sur les sondages en cours";
+    } else {
+      topic = "Préparation de l'assemblée générale";
+      topicEmail = "préparer ensemble la prochaine assemblée générale en posant vos questions et en partageant vos idées";
+    }
+
+    let sentCount = 0;
+    const errors: string[] = [];
+    for (const recipient of recipients) {
+      const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+      const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+      const subject = recipient.prenom
+        ? `${recipient.prenom}, ${topic.toLowerCase()} au SACCB`
+        : `${topic} au SACCB`;
+      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site du club !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.\n\nAccéder à l'espace : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+
+      const sendRes = await fetch("https://api.resend.com/emails", {
+        method: "POST",
+        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
+        body: JSON.stringify({
+          from: "SACCB <contact@saccb.fr>",
+          headers: {
+            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+          },
+          to: [recipient.email],
+          subject,
+          text: plainText,
+          html: `
+            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                <div>
+                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                </div>
+              </div>
+              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
+                <h2 style="color: #1e3a5f; margin-top: 0;">📣 ${topic}</h2>
+                <p style="color: #475569;">Une nouvelle section est disponible sur le site du club !</p>
+                <p style="color: #475569;">Vous pouvez maintenant <strong>${topicEmail}</strong>.</p>
+                <p style="color: #475569;">C'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.</p>
+                <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
+                  📣 Accéder à l'espace →
+                </a>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+                  <tr><td>
+                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
+                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
+                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
+                    <table cellpadding="0" cellspacing="0" border="0"><tr>
+                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
+                      <td style="vertical-align: middle;">
+                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                      </td>
+                    </tr></table>
+                  </td></tr>
+                </table>
+              </div>
+            </div>
+          `,
+        }),
+      });
+      if (sendRes.ok) sentCount++;
+      else errors.push(`${recipient.email}: ${sendRes.status}`);
+      await sleep(RESEND_THROTTLE_MS);
+    }
+
+    if (sentCount === 0) {
+      return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
+    }
+    return json({ ok: true, sent: sentCount, total: recipients.length });
   }
 
   return json({ error: "Action inconnue" }, 400);

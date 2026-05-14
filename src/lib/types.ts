@@ -142,9 +142,11 @@ export type DB = {
   polls?: Poll[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
-  // Toggle global pour afficher ou cacher la section "Sondages & AG" du site public
-  // (défaut: false = cachée, l'admin l'active manuellement quand pertinent ex: avant AG)
+  // Toggle global (deprecated, gardé pour rétrocompat — équivaut à pollsOpen + agOpen tous les 2)
   engagementOpen?: boolean;
+  // Toggles séparés pour activer/désactiver indépendamment chaque sous-section
+  pollsOpen?: boolean; // Sondages visibles côté public (avec compte-rendus de réunion)
+  agOpen?: boolean;    // Section AG (questions + idées) visible côté public
   // Règles du club (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

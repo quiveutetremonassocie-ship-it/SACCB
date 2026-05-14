@@ -17,7 +17,8 @@ export default function Engagement({
   polls = [],
   agItems = [],
   reunionReports = [],
-  engagementOpen = false,
+  pollsOpen = false,
+  agOpen = false,
   memberSession,
   onLoginRequest,
   onRefresh,
@@ -25,16 +26,17 @@ export default function Engagement({
   polls?: PollPublic[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
-  engagementOpen?: boolean;
+  pollsOpen?: boolean;
+  agOpen?: boolean;
   memberSession: MemberSession | null;
   onLoginRequest: () => void;
   onRefresh: () => Promise<void>;
 }) {
-  // 🔒 Toggle global : si l'admin n'a pas activé la section, on n'affiche RIEN
-  if (!engagementOpen) return null;
+  // 🔒 Si aucun des 2 toggles activés, on n'affiche RIEN
+  if (!pollsOpen && !agOpen) return null;
   const [myVotes, setMyVotes] = useState<Record<string, number[]>>({});
   const [voting, setVoting] = useState<string | null>(null);
-  const [agOpen, setAgOpen] = useState(false);
+  const [agItemsExpanded, setAgItemsExpanded] = useState(false);
   const [reportOpen, setReportOpen] = useState<string | null>(null);
 
   // Form question/idée AG
@@ -145,14 +147,25 @@ export default function Engagement({
           transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
-          <div className="sport-label mb-5">
+          <div className="sport-label mb-5 animate-pulse">
             <span className="sport-label-dot" />
-            <span className="sport-label-text text-purple-600">La parole aux adhérents</span>
+            <span className="sport-label-text text-purple-600">📣 La parole aux adhérents</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Sondages & AG</h2>
+          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
+            {pollsOpen && agOpen ? "Sondages & AG" : pollsOpen ? "Sondages en cours" : "Préparation de l'AG"}
+          </h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
-            Donnez votre avis, posez vos questions, proposez vos idées pour faire vivre le club.
+            {pollsOpen && agOpen
+              ? "Donnez votre avis, posez vos questions, proposez vos idées pour faire vivre le club."
+              : pollsOpen
+              ? "Donnez votre avis sur les sondages en cours du club."
+              : "Posez vos questions et proposez vos idées pour préparer ensemble la prochaine assemblée."}
           </p>
+          <div className="inline-block mt-4 px-4 py-1.5 bg-gradient-to-r from-purple-100 to-amber-100 border border-purple-200 rounded-full">
+            <span className="text-xs font-bold uppercase tracking-widest text-purple-700">
+              ✨ Espace ouvert — participez !
+            </span>
+          </div>
         </motion.div>
 
         {/* 🔒 Section entièrement réservée aux membres connectés */}
@@ -182,8 +195,8 @@ export default function Engagement({
           </div>
         )}
 
-        {/* SONDAGES */}
-        {openPolls.length > 0 && (
+        {/* SONDAGES (visibles seulement si pollsOpen) */}
+        {pollsOpen && openPolls.length > 0 && (
           <div className="max-w-3xl mx-auto mb-10">
             <h3 className="flex items-center gap-2 font-display text-2xl tracking-wider text-slate-800 mb-4">
               <BarChart3 className="w-6 h-6 text-purple-500" /> Sondages en cours
@@ -203,7 +216,7 @@ export default function Engagement({
           </div>
         )}
 
-        {closedPolls.length > 0 && (
+        {pollsOpen && closedPolls.length > 0 && (
           <details className="max-w-3xl mx-auto mb-10">
             <summary className="cursor-pointer text-sm text-slate-500 hover:text-slate-700 mb-3">
               Voir les sondages fermés ({closedPolls.length})
@@ -223,8 +236,8 @@ export default function Engagement({
           </details>
         )}
 
-        {/* QUESTIONS / IDÉES À L'AG */}
-        {memberSession?.paid === true && (
+        {/* QUESTIONS / IDÉES À L'AG (visible seulement si agOpen) */}
+        {agOpen && memberSession?.paid === true && (
           <div className="max-w-3xl mx-auto mb-10">
             <h3 className="flex items-center gap-2 font-display text-2xl tracking-wider text-slate-800 mb-2">
               <MessageSquare className="w-6 h-6 text-amber-500" /> Réunion / AG
@@ -289,21 +302,21 @@ export default function Engagement({
           </div>
         )}
 
-        {/* AFFICHAGE DES QUESTIONS / IDÉES */}
-        {(questions.length > 0 || ameliorations.length > 0) && (
+        {/* AFFICHAGE DES QUESTIONS / IDÉES (visible seulement si agOpen) */}
+        {agOpen && (questions.length > 0 || ameliorations.length > 0) && (
           <div className="max-w-3xl mx-auto mb-10">
             <button
-              onClick={() => setAgOpen(!agOpen)}
+              onClick={() => setAgItemsExpanded(!agItemsExpanded)}
               className="flex items-center justify-between w-full bg-white border border-slate-200 rounded-2xl px-5 py-4 hover:bg-slate-50 transition shadow-sm"
             >
               <span className="flex items-center gap-2 font-medium text-slate-700">
                 <MessageSquare className="w-5 h-5 text-amber-500" />
                 Questions & idées de la saison ({agItems.length})
               </span>
-              {agOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
+              {agItemsExpanded ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
             </button>
 
-            {agOpen && (
+            {agItemsExpanded && (
               <div className="mt-3 space-y-2">
                 {agItems.slice().reverse().map((item) => (
                   <AGItemCard key={item.id} item={item} />
@@ -313,8 +326,8 @@ export default function Engagement({
           </div>
         )}
 
-        {/* COMPTES-RENDUS DE RÉUNION */}
-        {reunionReports.length > 0 && (
+        {/* COMPTES-RENDUS DE RÉUNION (visible si pollsOpen — accompagne les sondages) */}
+        {pollsOpen && reunionReports.length > 0 && (
           <div className="max-w-3xl mx-auto">
             <h3 className="flex items-center gap-2 font-display text-2xl tracking-wider text-slate-800 mb-4">
               <FileText className="w-6 h-6 text-blue-500" /> Comptes-rendus de réunions

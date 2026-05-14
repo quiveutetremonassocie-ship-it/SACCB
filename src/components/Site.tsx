@@ -296,7 +296,8 @@ export default function Site() {
           polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
           agItems={db.agItems ?? []}
           reunionReports={db.reunionReports ?? []}
-          engagementOpen={db.engagementOpen === true}
+          pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
+          agOpen={db.agOpen === true || db.engagementOpen === true}
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
           onRefresh={async () => { await refreshPublic(); }}
