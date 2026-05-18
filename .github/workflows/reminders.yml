@@ -1,9 +1,9 @@
 name: Rappels inscription automatiques
 
 on:
-  schedule:
-    # Tous les jours à 8h du matin (heure Paris en été = UTC+2, donc 6h UTC)
-    - cron: "0 6 * * *"
+  # ⚠️ Cron désactivé : on utilise pg_cron Supabase à la place (précis à la seconde)
+  # Le job tourne tous les jours à 9h Paris via la fonction cron.schedule('rappels-quotidiens', ...)
+  # Garde uniquement le déclenchement manuel pour tester si besoin.
   workflow_dispatch: # permet de lancer manuellement pour tester
 
 jobs:
