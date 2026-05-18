@@ -117,11 +117,11 @@ function isHashedCode(stored: string | undefined | null): boolean {
   return typeof stored === "string" && stored.startsWith("h$");
 }
 
-// Sleep helper — utilisé pour throttler les appels Resend (rate limit free tier = 2/sec)
+// Sleep helper — utilisé pour throttler les appels API email (Brevo 10/sec, Resend 2/sec)
 function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => setTimeout(resolve, ms));
 }
-const RESEND_THROTTLE_MS = 600; // ~1.6 req/sec, safe sous la limite free tier de 2/sec
+const EMAIL_THROTTLE_MS = 600; // ~1.6 req/sec, safe sous la limite free tier de 2/sec
 
 // Extrait le prénom du nom complet (premier mot, capitalisé)
 function extractFirstName(fullName: string): string {
@@ -176,6 +176,61 @@ function parseFlexibleDate(input: string): Date | null {
   // Dernier recours : essayer le parser natif
   const d = new Date(s);
   return isNaN(d.getTime()) ? null : d;
+}
+
+
+// ============================================================
+// Helper d'envoi d'email via Brevo (transactional API v3).
+// Accepte un payload "style Resend" et le convertit pour Brevo.
+// Retourne la Response fetch (statut 201 = OK).
+// ============================================================
+async function sendBrevo(
+  brevoKey: string,
+  payload: {
+    from: string;
+    to: string | string[];
+    bcc?: string[];
+    reply_to?: string | string[];
+    subject: string;
+    html?: string;
+    text?: string;
+    headers?: Record<string, string>;
+    attachments?: Array<{ filename: string; content: string }>;
+  }
+): Promise<Response> {
+  const fromStr = String(payload.from || "");
+  const fromMatch = fromStr.match(/^(.+?)\s*<(.+)>$/);
+  const sender = fromMatch
+    ? { name: fromMatch[1].trim(), email: fromMatch[2].trim() }
+    : { email: fromStr };
+
+  const toArr = Array.isArray(payload.to) ? payload.to : [payload.to];
+  const body: Record<string, unknown> = {
+    sender,
+    to: toArr.filter(Boolean).map((e) => ({ email: e })),
+    subject: payload.subject,
+  };
+  if (payload.html) body.htmlContent = payload.html;
+  if (payload.text) body.textContent = payload.text;
+  if (payload.bcc && payload.bcc.length) body.bcc = payload.bcc.map((e) => ({ email: e }));
+  if (payload.reply_to) {
+    const r = Array.isArray(payload.reply_to) ? payload.reply_to[0] : payload.reply_to;
+    if (r) body.replyTo = { email: r };
+  }
+  if (payload.headers && Object.keys(payload.headers).length) body.headers = payload.headers;
+  if (payload.attachments && payload.attachments.length) {
+    body.attachment = payload.attachments.map((a) => ({ name: a.filename, content: a.content }));
+  }
+
+  return fetch("https://api.brevo.com/v3/smtp/email", {
+    method: "POST",
+    headers: {
+      "api-key": brevoKey,
+      "Content-Type": "application/json",
+      "accept": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
 }
 
 // Helper async pour find par credentials (membres)
@@ -384,24 +439,17 @@ Deno.serve(async (req) => {
 
       // Email de confirmation (fire and forget)
       const paidMembre = membres.find((m) => String(m.email || "").toLowerCase() === payerEmail);
-      const resendKey = Deno.env.get("RESEND_API_KEY");
-      if (resendKey && paidMembre) {
+      const brevoKey = Deno.env.get("BREVO_API_KEY");
+      if (brevoKey && paidMembre) {
         const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
         const prix = prixMap[String(paidMembre.type)] ?? 50;
         const membreCode = String(paidMembre.code || "");
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
-          headers: {
-            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
+            headers: {
+              "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
             to: [String(paidMembre.email)],
             subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
             html: `
@@ -457,8 +505,7 @@ Deno.serve(async (req) => {
                 </div>
               </div>
             `,
-          }),
-        }).catch(() => {});
+          }).catch(() => {});
       }
 
       // Sync Google Sheets
@@ -1030,10 +1077,10 @@ Deno.serve(async (req) => {
   if (action === "notify_membres") {
     const tournoiId = sanitize(String(body.tournoiId || ""));
     const tournoiName = sanitize(String(body.tournoiName || ""));
-    const resendKey = Deno.env.get("RESEND_API_KEY");
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
 
-    if (!resendKey) {
-      return json({ ok: false, reason: "Service email non configuré (RESEND_API_KEY manquant)." });
+    if (!brevoKey) {
+      return json({ ok: false, reason: "Service email non configuré (BREVO_API_KEY manquant)." });
     }
 
     const { data, error } = await supabaseAdmin
@@ -1078,13 +1125,7 @@ Deno.serve(async (req) => {
       const greetingN = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
       const greetingTextN = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
       const plainTextN = `${greetingTextN}\n\nUn nouveau tournoi vient d'être ajouté sur le site du club : ${tournoi.name}\n${dateStr}\n\nConnectez-vous à votre espace membre pour inscrire votre binôme : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
-      const sendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: {
-          Authorization: `Bearer ${resendKey}`,
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
+      const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1137,14 +1178,13 @@ Deno.serve(async (req) => {
             </div>
           </div>
         `,
-        }),
-      });
+        });
       if (sendRes.ok) {
         sentCount++;
       } else {
         lastError = await sendRes.text().catch(() => "");
       }
-      await sleep(RESEND_THROTTLE_MS);
+      await sleep(EMAIL_THROTTLE_MS);
     }
 
     if (sentCount === 0) {
@@ -1156,8 +1196,8 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Notifier tous les anciens adhérents du début de nouvelle saison ───
   if (action === "notify_new_season") {
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -1190,10 +1230,7 @@ Deno.serve(async (req) => {
       const greetingS = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
       const greetingTextS = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
       const plainTextS = `${greetingTextS}\n\nLa saison ${d.y1}-${d.y2} du SACCB est maintenant ouverte !\nLes places partent vite, alors ne tardez pas à renouveler votre adhésion.\n\nVotre code personnel vous permettra de vous reconnecter directement sur le site.\nSi vous l'avez oublié, cliquez sur "Code oublié ?" sur la page de connexion.\n\nJe renouvelle mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
-      const sendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1246,14 +1283,13 @@ Deno.serve(async (req) => {
             </div>
           </div>
         `,
-        }),
-      });
+        });
       if (sendRes.ok) {
         sentCountSeason++;
       } else {
         lastErrorSeason = await sendRes.text().catch(() => "");
       }
-      await sleep(RESEND_THROTTLE_MS);
+      await sleep(EMAIL_THROTTLE_MS);
     }
 
     if (sentCountSeason === 0) {
@@ -1265,8 +1301,8 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Rappels automatiques d'inscription (J-30 et J-15) ───
   if (action === "check_reminders") {
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "RESEND_API_KEY manquant." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "BREVO_API_KEY manquant." });
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -1322,10 +1358,7 @@ Deno.serve(async (req) => {
             : `Votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`;
           const closeFormattedSafe = closeFormatted;
           const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
-          await fetch("https://api.resend.com/emails", {
-            method: "POST",
-            headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-            body: JSON.stringify({
+          await sendBrevo(brevoKey, {
               from: "SACCB <contact@saccb.fr>",
               headers: {
                 "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1375,9 +1408,8 @@ Deno.serve(async (req) => {
                 </div>
               </div>
             `,
-            }),
-          }).catch(() => {});
-          await sleep(RESEND_THROTTLE_MS);
+            }).catch(() => {});
+          await sleep(EMAIL_THROTTLE_MS);
         }
         results.season_reminder = { sent: unpaidEmails.length, daysLeft };
       }
@@ -1447,10 +1479,7 @@ Deno.serve(async (req) => {
           ? `${recipient.prenom}, inscription au tournoi ${t.name} (${tDaysLeft === 1 ? "demain" : `dans ${tDaysLeft} jours`})`
           : `Inscription au tournoi ${t.name} (${tDaysLeft === 1 ? "demain" : `dans ${tDaysLeft} jours`})`;
         const plainTextT = `${greetingTextT}\n\nLa date limite d'inscription pour le tournoi "${t.name}" approche !\nDate limite : ${dateFormatted}\n${tDaysLeft === 1 ? "C'est votre dernière chance pour vous inscrire !" : `Plus que ${tDaysLeft} jours.`}\n\nVoir les tournois : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
-        await fetch("https://api.resend.com/emails", {
-          method: "POST",
-          headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-          body: JSON.stringify({
+        await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
             headers: {
               "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1500,9 +1529,8 @@ Deno.serve(async (req) => {
               </div>
             </div>
           `,
-          }),
-        }).catch(() => {});
-        await sleep(RESEND_THROTTLE_MS);
+          }).catch(() => {});
+        await sleep(EMAIL_THROTTLE_MS);
       }
       tournoiRemindersSent.push(String(t.name));
     }
@@ -1540,8 +1568,8 @@ Deno.serve(async (req) => {
     const email = sanitize(String(body.email || "")).toLowerCase();
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -1571,15 +1599,8 @@ Deno.serve(async (req) => {
       await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
       // Remplacement pour le template HTML ci-dessous
       (membre as Record<string, unknown>).code = newPlainCode;
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -1627,8 +1648,7 @@ Deno.serve(async (req) => {
               </div>
             </div>
           `,
-        }),
-      }).catch(() => {});
+        }).catch(() => {});
     }
 
     return json({ ok: true });
@@ -1685,8 +1705,8 @@ Deno.serve(async (req) => {
     const membreId = String(body.membreId || "");
     if (!membreId) return json({ ok: false, reason: "membreId manquant." }, 400);
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -1711,10 +1731,7 @@ Deno.serve(async (req) => {
     const prix = prixMap[String(membre.type)] ?? 50;
     const membreCode = ""; // Codes hashés en base : on n'affiche plus le code dans l'email
 
-    const sendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",
         headers: {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1775,8 +1792,7 @@ Deno.serve(async (req) => {
             </div>
           </div>
         `,
-      }),
-    });
+      });
 
     if (!sendRes.ok) {
       const errText = await sendRes.text();
@@ -1801,8 +1817,8 @@ Deno.serve(async (req) => {
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
     if (!message || message.length < 5) return json({ ok: false, reason: "Message trop court." }, 400);
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     // Lire les emails de contact depuis la DB, sinon fallback sur les emails par défaut
     const { data: dbData } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
@@ -1810,10 +1826,7 @@ Deno.serve(async (req) => {
     const contactEmails = ((dbD.contactEmails || []) as string[]);
     const toEmails = contactEmails.length > 0 ? contactEmails : ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
 
-    const sendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB Site <contact@saccb.fr>",
         headers: {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1834,12 +1847,11 @@ Deno.serve(async (req) => {
             <p style="color: #94a3b8; font-size: 12px;">Message reçu via le formulaire de contact de saccb.fr</p>
           </div>
         `,
-      }),
-    });
+      });
 
     if (!sendRes.ok) {
       const errBody = await sendRes.json().catch(() => ({}));
-      return json({ ok: false, reason: `Erreur Resend (${sendRes.status}): ${JSON.stringify(errBody)}` });
+      return json({ ok: false, reason: `Erreur Brevo (${sendRes.status}): ${JSON.stringify(errBody)}` });
     }
     return json({ ok: true });
   }
@@ -1849,8 +1861,8 @@ Deno.serve(async (req) => {
     const membreId = String(body.membreId || "");
     if (!membreId) return json({ ok: false, reason: "membreId manquant." }, 400);
 
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -1878,10 +1890,7 @@ Deno.serve(async (req) => {
     currentData.membres = membres;
     await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
 
-    const sendRes = await fetch("https://api.resend.com/emails", {
-      method: "POST",
-      headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
+    const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",
         headers: {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -1965,8 +1974,7 @@ Deno.serve(async (req) => {
             </div>
           </div>
         `,
-      }),
-    });
+      });
 
     if (!sendRes.ok) {
       const errText = await sendRes.text();
@@ -2010,17 +2018,10 @@ Deno.serve(async (req) => {
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
     // Notifier les admins par email
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (resendKey) {
-      await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (brevoKey) {
+      await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
-        headers: {
-          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-        },
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
@@ -2036,8 +2037,7 @@ Deno.serve(async (req) => {
               <p style="color: #94a3b8; font-size: 12px;">Ceci est un message automatique de saccb.fr</p>
             </div>
           `,
-        }),
-      }).catch(() => {});
+        }).catch(() => {});
     }
 
     return json({ ok: true, removed, kept: kept.length });
@@ -2317,8 +2317,8 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Envoi d'un email personnalisé aux adhérents (avec pièces jointes) ───
   if (action === "admin_send_email") {
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
@@ -2384,8 +2384,8 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Pièces jointes trop volumineuses (25 Mo max au total)." }, 413);
     }
 
-    // Construction du payload Resend (avec attachments si présents)
-    const resendAttachments = attachments
+    // Construction du payload email (avec attachments si présents)
+    const emailAttachments = attachments
       .filter((a) => a.filename && a.content)
       .map((a) => ({
         filename: String(a.filename).slice(0, 200).replace(/[^a-zA-Z0-9._-]/g, "_"),
@@ -2407,10 +2407,7 @@ Deno.serve(async (req) => {
       const greetingA = prenomAdmin ? `Bonjour ${escapeHtml(prenomAdmin)},` : "Bonjour,";
       const greetingTextA = prenomAdmin ? `Bonjour ${prenomAdmin},` : "Bonjour,";
       const plainTextA = `${greetingTextA}\n\n${htmlBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
-      const sendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -2450,16 +2447,15 @@ Deno.serve(async (req) => {
               </div>
             </div>
           `,
-          ...(resendAttachments.length > 0 ? { attachments: resendAttachments } : {}),
-        }),
-      });
+          ...(emailAttachments.length > 0 ? { attachments: emailAttachments } : {}),
+        });
       if (!sendRes.ok) {
         const t = await sendRes.text().catch(() => "");
         errors.push(`${recipientEmail}: ${sendRes.status} ${t.slice(0, 100)}`);
       } else {
         totalSent++;
       }
-      await sleep(RESEND_THROTTLE_MS);
+      await sleep(EMAIL_THROTTLE_MS);
     }
 
     if (errors.length > 0 && totalSent === 0) {
@@ -2479,7 +2475,7 @@ Deno.serve(async (req) => {
         recipientsPreview: recipientEmails.slice(0, 3),
         targetMode,
         sentBy: adminEmailUsed,
-        attachmentNames: resendAttachments.map((a) => a.filename),
+        attachmentNames: emailAttachments.map((a) => a.filename),
         status: errors.length > 0 ? "partial" : "sent",
         sentCount: totalSent,
         totalCount: recipientEmails.length,
@@ -2541,8 +2537,8 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Notifier les adhérents qu'un nouveau sondage est disponible ───
   if (action === "notify_new_poll") {
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const pollId = String(body.pollId || "");
     if (!pollId) return json({ ok: false, reason: "pollId manquant." }, 400);
@@ -2581,10 +2577,7 @@ Deno.serve(async (req) => {
         : `Votre avis sur "${pollQuestion}"`;
       const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site du club :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
-      const sendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -2632,11 +2625,10 @@ Deno.serve(async (req) => {
               </div>
             </div>
           `,
-        }),
-      });
+        });
       if (sendRes.ok) sentCount++;
       else errors.push(`${recipient.email}: ${sendRes.status}`);
-      await sleep(RESEND_THROTTLE_MS);
+      await sleep(EMAIL_THROTTLE_MS);
     }
 
     if (sentCount === 0) return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
@@ -2645,8 +2637,8 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Notifier les adhérents que la section Sondages & AG est ouverte ───
   if (action === "notify_engagement_open") {
-    const resendKey = Deno.env.get("RESEND_API_KEY");
-    if (!resendKey) return json({ ok: false, reason: "Service email non configuré." });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
@@ -2694,10 +2686,7 @@ Deno.serve(async (req) => {
         : `${topic} au SACCB`;
       const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site du club !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.\n\nAccéder à l'espace : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
-      const sendRes = await fetch("https://api.resend.com/emails", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${resendKey}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
             "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -2743,11 +2732,10 @@ Deno.serve(async (req) => {
               </div>
             </div>
           `,
-        }),
-      });
+        });
       if (sendRes.ok) sentCount++;
       else errors.push(`${recipient.email}: ${sendRes.status}`);
-      await sleep(RESEND_THROTTLE_MS);
+      await sleep(EMAIL_THROTTLE_MS);
     }
 
     if (sentCount === 0) {

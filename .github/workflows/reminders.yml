@@ -12,29 +12,39 @@ jobs:
     steps:
       - name: Vérifier rappels J-30 / J-15 / J-5 / J-1 (saison + tournois)
         run: |
+          set +e
           echo "🕐 Date/heure : $(date -u) UTC"
           echo ""
           echo "📤 Appel de check_reminders..."
-          RESPONSE=$(curl -s -w "\nHTTP_STATUS:%{http_code}" -X POST "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/public-api" \
+          BODY_FILE=$(mktemp)
+          STATUS=$(curl -s -o "$BODY_FILE" -w "%{http_code}" \
+            --max-time 120 \
+            -X POST "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/public-api" \
             -H "Content-Type: application/json" \
-            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
             -d '{"action":"check_reminders"}')
-          BODY=$(echo "$RESPONSE" | sed -e 's/HTTP_STATUS\:.*//g')
-          STATUS=$(echo "$RESPONSE" | tr -d '\n' | sed -e 's/.*HTTP_STATUS://')
-          echo "📨 Réponse (HTTP $STATUS) :"
+          CURL_EXIT=$?
+          BODY=$(cat "$BODY_FILE")
+          echo "📨 HTTP Status : $STATUS (curl exit=$CURL_EXIT)"
+          echo "📦 Body :"
           echo "$BODY"
           echo ""
-          if [ "$STATUS" -ne 200 ]; then
-            echo "❌ Erreur HTTP $STATUS — le rappel n'a pas pu s'exécuter"
+
+          if [ "$CURL_EXIT" -ne 0 ]; then
+            echo "❌ Erreur curl ($CURL_EXIT) — réseau/timeout"
             exit 1
           fi
-          if echo "$BODY" | grep -q '"ok":false'; then
-            echo "❌ La fonction a renvoyé une erreur"
+          if [ "$STATUS" != "200" ]; then
+            echo "❌ HTTP $STATUS — la fonction a planté"
             exit 1
           fi
-          if echo "$BODY" | grep -q 'season_reminder\|tournoi_reminders\|cleanup\|tournois_closed'; then
-            echo "✅ Rappels/actions effectués avec succès"
-          else
-            echo "ℹ️  Aucun rappel à envoyer aujourd'hui (J-30/J-15/J-5/J-1 non atteints)"
+
+          # Parse le champ ok racine via jq (ignore les ok:false dans sous-objets)
+          OK=$(echo "$BODY" | jq -r '.ok' 2>/dev/null)
+          if [ "$OK" != "true" ]; then
+            echo "❌ Champ racine ok != true (valeur: $OK)"
+            exit 1
           fi
+
+          echo "✅ Workflow terminé sans erreur"
