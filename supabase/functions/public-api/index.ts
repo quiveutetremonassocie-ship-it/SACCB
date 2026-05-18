@@ -64,6 +64,21 @@ function isLoginRateLimited(ip: string): boolean {
   return entry.count > 10;
 }
 
+// Rate limiting inscription adhérent + inscription tournoi (max 5/heure par IP)
+// Protège contre les bots qui spammeraient des inscriptions automatiques
+const registrationLimitMap = new Map<string, { count: number; reset: number }>();
+
+function isRegistrationRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = registrationLimitMap.get(ip);
+  if (!entry || now > entry.reset) {
+    registrationLimitMap.set(ip, { count: 1, reset: now + 3_600_000 }); // 1 heure
+    return false;
+  }
+  entry.count++;
+  return entry.count > 5;
+}
+
 function sanitize(str: string): string {
   return str
     .replace(/[<>]/g, "") // pas de balises HTML
@@ -924,6 +939,10 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Inscription publique ───
   if (action === "add_membre") {
+    // 🔒 SÉCURITÉ : rate limit pour empêcher le spam d'inscriptions automatiques
+    if (isRegistrationRateLimited(ip)) {
+      return json({ ok: false, reason: "Trop de tentatives d'inscription. Réessayez dans une heure." }, 429);
+    }
     const nom = sanitize(String(body.nom || ""));
     const email = sanitize(String(body.email || "")).toLowerCase();
     const tel = sanitize(String(body.tel || ""));
@@ -962,7 +981,8 @@ Deno.serve(async (req) => {
       const existingIdx = membres.findIndex((m) => String(m.email || "").toLowerCase() === email);
       if (existingIdx !== -1) {
         if (membres[existingIdx].ok === true) {
-          return json({ ok: false, reason: "Cet email est déjà inscrit et son adhésion est active !" });
+          // 🔒 Message volontairement neutre (anti-énumération d'emails) tout en restant compréhensible pour un vrai adhérent
+          return json({ ok: false, reason: "Une adhésion active existe déjà pour ces informations. Connectez-vous à votre espace membre ou contactez le club." });
         }
         // Renouvellement : on met à jour l'entrée existante
         const existing = membres[existingIdx];
@@ -1085,6 +1105,10 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Inscription tournoi ───
   if (action === "register_tournoi") {
+    // 🔒 SÉCURITÉ : rate limit pour empêcher le spam d'inscriptions tournoi
+    if (isRegistrationRateLimited(ip)) {
+      return json({ ok: false, reason: "Trop de tentatives d'inscription. Réessayez dans une heure." }, 429);
+    }
     const tournoiId = sanitize(String(body.tournoiId || ""));
     const p1 = sanitize(String(body.p1 || ""));
     const p2 = sanitize(String(body.p2 || ""));
