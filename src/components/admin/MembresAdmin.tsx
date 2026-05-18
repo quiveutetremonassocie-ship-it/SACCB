@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff } from "lucide-react";
+import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
-import { adminSendConfirmation, adminSendWelcome } from "@/lib/db";
+import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -83,6 +83,39 @@ export default function MembresAdmin({
     if (!confirm("Supprimer cet adhérent ?")) return;
     const next = { ...db, membres: db.membres.filter((m) => m.id !== id) };
     await onPersist(next);
+  }
+
+  // 🔑 Réinitialiser le code d'un adhérent (avec DOUBLE confirmation pour éviter le clic accidentel)
+  const [resettingId, setResettingId] = useState<string | null>(null);
+  async function resetCode(m: Membre) {
+    if (!adminEmail || !adminCode) {
+      alert("Identifiants admin manquants.");
+      return;
+    }
+    // 1ère confirmation : alerte forte
+    const ok1 = confirm(
+      `⚠️ RÉINITIALISER LE CODE de ${m.nom} ?\n\n` +
+      `Un NOUVEAU code aléatoire sera généré et envoyé par email à :\n${m.email}\n\n` +
+      `L'ancien code ne fonctionnera plus.`
+    );
+    if (!ok1) return;
+    // 2e confirmation : il faut taper le nom pour valider
+    const typed = prompt(
+      `Pour confirmer, tapez le NOM EXACT de l'adhérent ci-dessous :\n\n${m.nom}`
+    );
+    if (typed === null) return;
+    if (typed.trim().toLowerCase() !== m.nom.trim().toLowerCase()) {
+      alert("Le nom saisi ne correspond pas. Réinitialisation annulée.");
+      return;
+    }
+    setResettingId(m.id);
+    const r = await adminResetMemberCode(m.id, adminEmail, adminCode);
+    setResettingId(null);
+    if (r.ok) {
+      alert(`✅ Code réinitialisé. Un email avec le nouveau code a été envoyé à ${m.email}.`);
+    } else {
+      alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
+    }
   }
 
   function copyEmails() {
@@ -317,6 +350,16 @@ export default function MembresAdmin({
                   </button>
                 )}
                 {!readOnly && (
+                  <button
+                    onClick={() => resetCode(m)}
+                    disabled={resettingId === m.id}
+                    className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-amber-500 !to-orange-500"
+                    title="Réinitialiser le code (envoie un nouveau code par email)"
+                  >
+                    <KeyRound className="w-3.5 h-3.5" />
+                  </button>
+                )}
+                {!readOnly && (
                   <button onClick={() => del(m.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer">
                     <Trash2 className="w-3.5 h-3.5" />
                   </button>
@@ -414,6 +457,16 @@ export default function MembresAdmin({
                     {!readOnly && (
                       <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
                         <Pencil className="w-3 h-3" />
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button
+                        onClick={() => resetCode(m)}
+                        disabled={resettingId === m.id}
+                        className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-amber-500 !to-orange-500"
+                        title="Réinitialiser le code (envoie un nouveau code par email)"
+                      >
+                        <KeyRound className="w-3 h-3" />
                       </button>
                     )}
                     {!readOnly && (
