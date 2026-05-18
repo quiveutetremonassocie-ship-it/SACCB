@@ -180,24 +180,33 @@ function parseFlexibleDate(input: string): Date | null {
 
 
 // ============================================================
-// Helper d'envoi d'email via Brevo (transactional API v3).
-// Accepte un payload "style Resend" et le convertit pour Brevo.
-// Retourne la Response fetch (statut 201 = OK).
+// Helpers d'envoi d'email avec fallback Brevo → Resend.
+// Brevo est le provider principal (300 mails/jour gratuits).
+// Resend est utilisé en secours si Brevo échoue (quota, panne, etc.)
+// Accepte un payload "style Resend" et convertit selon le provider.
+// Retourne la Response fetch du provider qui a réussi.
 // ============================================================
-async function sendBrevo(
-  brevoKey: string,
-  payload: {
-    from: string;
-    to: string | string[];
-    bcc?: string[];
-    reply_to?: string | string[];
-    subject: string;
-    html?: string;
-    text?: string;
-    headers?: Record<string, string>;
-    attachments?: Array<{ filename: string; content: string }>;
-  }
-): Promise<Response> {
+
+type EmailPayload = {
+  from: string;
+  to: string | string[];
+  bcc?: string[];
+  reply_to?: string | string[];
+  subject: string;
+  html?: string;
+  text?: string;
+  headers?: Record<string, string>;
+  attachments?: Array<{ filename: string; content: string }>;
+};
+
+// Conditions de fallback : on retente sur Resend si Brevo répond avec une erreur
+// "non liée à ton payload" (quota, rate limit, panne serveur, network error).
+// On ne retente PAS sur 400 (payload invalide) ni 401/403 (clé invalide).
+function shouldFallback(status: number): boolean {
+  return status === 402 || status === 429 || (status >= 500 && status < 600);
+}
+
+async function callBrevo(brevoKey: string, payload: EmailPayload): Promise<Response> {
   const fromStr = String(payload.from || "");
   const fromMatch = fromStr.match(/^(.+?)\s*<(.+)>$/);
   const sender = fromMatch
@@ -231,6 +240,60 @@ async function sendBrevo(
     },
     body: JSON.stringify(body),
   });
+}
+
+async function callResend(resendKey: string, payload: EmailPayload): Promise<Response> {
+  const body: Record<string, unknown> = {
+    from: payload.from,
+    to: Array.isArray(payload.to) ? payload.to : [payload.to],
+    subject: payload.subject,
+  };
+  if (payload.html) body.html = payload.html;
+  if (payload.text) body.text = payload.text;
+  if (payload.bcc && payload.bcc.length) body.bcc = payload.bcc;
+  if (payload.reply_to) body.reply_to = payload.reply_to;
+  if (payload.headers && Object.keys(payload.headers).length) body.headers = payload.headers;
+  if (payload.attachments && payload.attachments.length) {
+    body.attachments = payload.attachments;
+  }
+
+  return fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(body),
+  });
+}
+
+async function sendBrevo(brevoKey: string, payload: EmailPayload): Promise<Response> {
+  // Essai Brevo
+  try {
+    const res = await callBrevo(brevoKey, payload);
+    if (res.ok) return res;
+    // Brevo a répondu mais avec une erreur — fallback uniquement sur certaines erreurs
+    if (!shouldFallback(res.status)) return res;
+    console.warn(`[email] Brevo ${res.status} → fallback Resend`);
+  } catch (err) {
+    console.warn(`[email] Brevo network error → fallback Resend:`, err);
+  }
+  // Fallback Resend si la clé est configurée, sinon on retourne une erreur Brevo factice
+  const resendKey = Deno.env.get("RESEND_API_KEY");
+  if (!resendKey) {
+    return new Response(
+      JSON.stringify({ error: "Brevo failed and RESEND_API_KEY not configured for fallback" }),
+      { status: 502, headers: { "Content-Type": "application/json" } },
+    );
+  }
+  try {
+    return await callResend(resendKey, payload);
+  } catch (err) {
+    return new Response(
+      JSON.stringify({ error: "Both Brevo and Resend failed", details: String(err) }),
+      { status: 502, headers: { "Content-Type": "application/json" } },
+    );
+  }
 }
 
 // Helper async pour find par credentials (membres)
