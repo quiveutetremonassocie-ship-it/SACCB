@@ -1,9 +1,11 @@
 "use client";
 
 import { useState } from "react";
-import { UserCircle2, X } from "lucide-react";
-import { verifyMembre, publicForgotCode } from "@/lib/db";
+import { UserCircle2, X, KeyRound, ShieldCheck } from "lucide-react";
+import { verifyMembre, publicForgotCode, memberChangeCode } from "@/lib/db";
 import { MemberSession, setMemberSession } from "@/lib/useMemberSession";
+
+type View = "login" | "forgot" | "resetPrompt" | "changeCode";
 
 export default function MemberLoginModal({
   open,
@@ -18,14 +20,45 @@ export default function MemberLoginModal({
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [view, setView] = useState<View>("login");
 
   // Code oublié
-  const [forgotMode, setForgotMode] = useState(false);
   const [forgotEmail, setForgotEmail] = useState("");
   const [forgotLoading, setForgotLoading] = useState(false);
   const [forgotMsg, setForgotMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
+  // Session en attente d'être finalisée (après reset)
+  const [pendingSession, setPendingSession] = useState<{ session: Omit<MemberSession, "expiry">; adminCode?: string } | null>(null);
+
+  // Changement de code post-reset
+  const [newCode, setNewCode] = useState("");
+  const [newCode2, setNewCode2] = useState("");
+  const [changeLoading, setChangeLoading] = useState(false);
+  const [changeError, setChangeError] = useState("");
+
   if (!open) return null;
+
+  function resetAll() {
+    setEmail("");
+    setCode("");
+    setError("");
+    setView("login");
+    setForgotEmail("");
+    setForgotMsg(null);
+    setPendingSession(null);
+    setNewCode("");
+    setNewCode2("");
+    setChangeError("");
+  }
+
+  function finalizeLogin() {
+    if (!pendingSession) return;
+    const { session, adminCode } = pendingSession;
+    setMemberSession(session);
+    if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
+    onSuccess({ ...session, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, adminCode);
+    resetAll();
+  }
 
   async function submit(e: React.FormEvent) {
     e.preventDefault();
@@ -37,11 +70,7 @@ export default function MemberLoginModal({
       setError(r.reason || "Email ou code incorrect.");
       return;
     }
-    // Note : on n'empêche PLUS la connexion si paid === false.
-    // Cas d'usage : adhérent qui doit renouveler (nouvelle saison) ou qui attend
-    // la validation de son virement → il doit pouvoir accéder à son espace pour
-    // voir le bandeau "Adhésion à renouveler" et déclencher le paiement.
-    const sess = {
+    const session: Omit<MemberSession, "expiry"> = {
       membreId: r.membre.id,
       nom: r.membre.nom,
       type: r.membre.type,
@@ -49,14 +78,22 @@ export default function MemberLoginModal({
       paid: r.paid !== false,
       isAdmin: r.isAdmin === true,
       adminCode: r.isAdmin ? code : undefined,
-      newsOptIn: r.membre.newsOptIn !== false, // true par défaut
+      newsOptIn: r.membre.newsOptIn !== false,
     };
-    setMemberSession(sess); // sauvegarde en localStorage (inclut adminCode)
-    // Stocker le code pour charger les actus privées (membres normaux)
-    if (!r.isAdmin) sessionStorage.setItem("saccb_member_code", code);
-    onSuccess({ ...sess, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, r.isAdmin ? code : undefined);
-    setEmail("");
-    setCode("");
+    const adminCode = r.isAdmin ? code : undefined;
+
+    // 🔑 Si la connexion fait suite à une réinitialisation → proposer de personnaliser le code
+    if (r.codeJustReset === true && !r.isAdmin) {
+      setPendingSession({ session, adminCode });
+      setView("resetPrompt");
+      return;
+    }
+
+    // Sinon connexion normale
+    setMemberSession(session);
+    if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
+    onSuccess({ ...session, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, adminCode);
+    resetAll();
   }
 
   async function submitForgot(e: React.FormEvent) {
@@ -65,11 +102,44 @@ export default function MemberLoginModal({
     setForgotMsg(null);
     await publicForgotCode(forgotEmail);
     setForgotLoading(false);
-    // On affiche toujours le même message pour ne pas révéler si l'email existe
     setForgotMsg({
       ok: true,
       text: "Si cet email correspond à un compte actif, vous allez recevoir votre code par email dans quelques instants.",
     });
+  }
+
+  async function submitChangeCode(e: React.FormEvent) {
+    e.preventDefault();
+    setChangeError("");
+    if (newCode.length < 4) {
+      setChangeError("Le code doit contenir au moins 4 caractères.");
+      return;
+    }
+    if (newCode !== newCode2) {
+      setChangeError("Les deux codes ne correspondent pas.");
+      return;
+    }
+    if (newCode === code) {
+      setChangeError("Le nouveau code doit être différent de celui reçu par email.");
+      return;
+    }
+    setChangeLoading(true);
+    const r = await memberChangeCode(email.toLowerCase().trim(), code, newCode);
+    setChangeLoading(false);
+    if (!r.ok) {
+      setChangeError(r.reason || "Erreur lors du changement de code.");
+      return;
+    }
+    // Met à jour le code en sessionStorage avec le nouveau
+    setCode(newCode);
+    if (pendingSession && !pendingSession.session.isAdmin) {
+      sessionStorage.setItem("saccb_member_code", newCode);
+    }
+    // Et on finalise la connexion
+    if (!pendingSession) return;
+    setMemberSession(pendingSession.session);
+    onSuccess({ ...pendingSession.session, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, pendingSession.adminCode);
+    resetAll();
   }
 
   return (
@@ -78,18 +148,30 @@ export default function MemberLoginModal({
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center">
-              <UserCircle2 className="w-5 h-5 text-white" />
+              {view === "resetPrompt" || view === "changeCode" ? (
+                <KeyRound className="w-5 h-5 text-white" />
+              ) : (
+                <UserCircle2 className="w-5 h-5 text-white" />
+              )}
             </div>
             <h3 className="font-display text-xl tracking-wider text-slate-800">
-              {forgotMode ? "Code oublié" : "Espace membre"}
+              {view === "forgot"
+                ? "Code oublié"
+                : view === "resetPrompt"
+                ? "Personnaliser le code"
+                : view === "changeCode"
+                ? "Nouveau code"
+                : "Espace membre"}
             </h3>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-            <X className="w-5 h-5" />
-          </button>
+          {view !== "resetPrompt" && view !== "changeCode" && (
+            <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
+              <X className="w-5 h-5" />
+            </button>
+          )}
         </div>
 
-        {!forgotMode ? (
+        {view === "login" && (
           <>
             <p className="text-xs text-slate-400 mb-5">
               Connectez-vous avec votre email et le code choisi lors de votre inscription.
@@ -122,16 +204,18 @@ export default function MemberLoginModal({
               </button>
             </form>
             <button
-              onClick={() => { setForgotMode(true); setForgotMsg(null); setForgotEmail(""); }}
+              onClick={() => { setView("forgot"); setForgotMsg(null); setForgotEmail(""); }}
               className="block text-xs text-slate-400 hover:text-slate-600 text-center mt-3 w-full transition"
             >
               Code oublié ?
             </button>
           </>
-        ) : (
+        )}
+
+        {view === "forgot" && (
           <>
             <p className="text-xs text-slate-400 mb-5">
-              Entrez votre email d&apos;adhérent et nous vous enverrons votre code par email.
+              Entrez votre email d&apos;adhérent et nous vous enverrons un nouveau code par email.
             </p>
             <form onSubmit={submitForgot} className="space-y-3">
               <input
@@ -152,10 +236,78 @@ export default function MemberLoginModal({
               </button>
             </form>
             <button
-              onClick={() => setForgotMode(false)}
+              onClick={() => setView("login")}
               className="block text-xs text-slate-400 hover:text-slate-600 text-center mt-3 w-full transition"
             >
               ← Retour à la connexion
+            </button>
+          </>
+        )}
+
+        {view === "resetPrompt" && (
+          <>
+            <div className="bg-amber-50 border border-amber-200 rounded-lg p-4 mb-4 flex gap-3">
+              <ShieldCheck className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+              <p className="text-sm text-amber-800 leading-relaxed">
+                Votre code a été réinitialisé par email. Pour plus de sécurité, nous vous recommandons de le <strong>personnaliser maintenant</strong>.
+              </p>
+            </div>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setNewCode(""); setNewCode2(""); setChangeError(""); setView("changeCode"); }}
+                className="btn-primary w-full"
+              >
+                Oui, choisir un nouveau code
+              </button>
+              <button
+                onClick={finalizeLogin}
+                className="btn-ghost w-full"
+              >
+                Plus tard
+              </button>
+            </div>
+          </>
+        )}
+
+        {view === "changeCode" && (
+          <>
+            <p className="text-xs text-slate-400 mb-5">
+              Choisissez un nouveau code personnel (minimum 4 caractères). Vous l&apos;utiliserez à chaque connexion.
+            </p>
+            <form onSubmit={submitChangeCode} className="space-y-3">
+              <input
+                type="password"
+                className="input w-full"
+                placeholder="Nouveau code"
+                value={newCode}
+                onChange={(e) => setNewCode(e.target.value)}
+                minLength={4}
+                required
+                autoFocus
+              />
+              <input
+                type="password"
+                className="input w-full"
+                placeholder="Confirmer le nouveau code"
+                value={newCode2}
+                onChange={(e) => setNewCode2(e.target.value)}
+                minLength={4}
+                required
+              />
+              {changeError && (
+                <p className="text-red-500 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                  {changeError}
+                </p>
+              )}
+              <button type="submit" className="btn-primary w-full" disabled={changeLoading}>
+                {changeLoading ? "Enregistrement..." : "Enregistrer mon nouveau code"}
+              </button>
+            </form>
+            <button
+              onClick={finalizeLogin}
+              className="block text-xs text-slate-400 hover:text-slate-600 text-center mt-3 w-full transition"
+            >
+              ← Plus tard
             </button>
           </>
         )}

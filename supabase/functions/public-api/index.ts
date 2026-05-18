@@ -676,11 +676,24 @@ Deno.serve(async (req) => {
     }
 
     const isAdmin = adminEmails.includes(email);
+    const codeJustReset = membre.codeJustReset === true;
+
+    // Si le flag est levé, on le retire en base : la popup ne s'affichera qu'une fois après reset
+    if (codeJustReset) {
+      const idx = membres.findIndex((m) => m.id === membre.id);
+      if (idx !== -1) {
+        const { codeJustReset: _drop, ...rest } = membres[idx] as Record<string, unknown>;
+        membres[idx] = rest;
+        currentData.membres = membres;
+        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+      }
+    }
 
     return json({
       ok: true,
       paid: membre.ok === true,
       isAdmin,
+      codeJustReset,
       membre: {
         id: membre.id,
         nom: membre.nom,
@@ -1594,7 +1607,8 @@ Deno.serve(async (req) => {
       // 🔒 SÉCURITÉ : on génère un NOUVEAU code aléatoire, on le hash en base, on l'envoie en clair
       // Plus jamais de récupération de l'ancien code (impossible car hashé)
       const newPlainCode = String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres
-      membres[membreIdx] = { ...membre, code: await hashCode(newPlainCode) };
+      // 🔔 codeJustReset: flag pour proposer à l'adhérent de personnaliser le code dès sa prochaine connexion
+      membres[membreIdx] = { ...membre, code: await hashCode(newPlainCode), codeJustReset: true };
       currentData.membres = membres;
       await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
       // Remplacement pour le template HTML ci-dessous
@@ -1684,7 +1698,11 @@ Deno.serve(async (req) => {
 
     // 🔒 SÉCURITÉ : hasher le nouveau code avant stockage
     const hashedNew = await hashCode(newCode);
-    if (membre) membre.code = hashedNew;
+    if (membre) {
+      membre.code = hashedNew;
+      // Si l'utilisateur change son code après un reset → on retire le flag (déjà retiré au verify mais ceinture-bretelles)
+      if ((membre as Record<string, unknown>).codeJustReset) delete (membre as Record<string, unknown>).codeJustReset;
+    }
     if (adminCred) adminCred.code = hashedNew;
 
     currentData.membres = membres;
