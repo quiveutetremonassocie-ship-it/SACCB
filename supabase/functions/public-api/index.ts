@@ -857,6 +857,26 @@ Deno.serve(async (req) => {
     return json({ ok: true, data: normalizedData, readOnly: isReadOnly, permissions });
   }
 
+  // ─── ACTION: Exporter la DB complète (pour sauvegarde locale) — AUTH ADMIN REQUISE ───
+  // Retourne le JSON complet de saccb_db sans masquage des codes hashés
+  // (la sauvegarde doit être fidèle pour permettre une restauration)
+  if (action === "admin_export_backup") {
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const currentData = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+    return json({
+      ok: true,
+      exportedAt: new Date().toISOString(),
+      data: currentData,
+    });
+  }
+
   // ─── ACTION: Sauvegarder la DB en tant qu'admin membre ───
   if (action === "admin_save") {
     const email = sanitize(String(body.email || "")).toLowerCase();
