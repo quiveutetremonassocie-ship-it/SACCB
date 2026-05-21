@@ -1,7 +1,7 @@
 "use client";
 
 import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature } from "lucide-react";
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
@@ -18,6 +18,8 @@ export default function MemberPanel({
   archives = [],
   onClose,
   onBack,
+  autoOpenProcuration = false,
+  onProcurationOpened,
 }: {
   session: MemberSession;
   y1: number;
@@ -29,6 +31,8 @@ export default function MemberPanel({
   archives?: SeasonArchive[];
   onClose: () => void;
   onBack?: () => void;
+  autoOpenProcuration?: boolean;
+  onProcurationOpened?: () => void;
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
@@ -55,8 +59,14 @@ export default function MemberPanel({
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsMsg, setNewsMsg] = useState<string | null>(null);
 
-  // Procuration AG
+  // Procuration AG (peut etre auto-ouverte depuis un lien email)
   const [showProcuration, setShowProcuration] = useState(false);
+  useEffect(() => {
+    if (autoOpenProcuration && session.paid === true) {
+      setShowProcuration(true);
+      onProcurationOpened?.();
+    }
+  }, [autoOpenProcuration, session.paid, onProcurationOpened]);
 
   async function toggleNews() {
     const next = !newsOptIn;

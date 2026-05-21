@@ -2917,6 +2917,19 @@ Deno.serve(async (req) => {
       topicEmail = "préparer ensemble la prochaine assemblée générale en posant vos questions et en partageant vos idées";
     }
 
+    // Bloc procuration : ajoute uniquement si l'AG est concernee
+    const procurationBlockHtml = includeAG ? `
+                <div style="margin-top: 22px; padding: 16px; background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px;">
+                  <p style="margin: 0 0 10px; color: #92400e; font-weight: 600; font-size: 14px;">📝 Pas disponible le jour de l'AG&nbsp;?</p>
+                  <p style="margin: 0 0 12px; color: #92400e; font-size: 13px;">Vous pouvez générer votre <strong>procuration</strong> directement depuis votre espace membre pour vous faire représenter par un autre adhérent.</p>
+                  <a href="https://saccb.fr/?member=1&procuration=1" style="display: inline-block; background: #b45309; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px;">
+                    📝 Générer ma procuration →
+                  </a>
+                </div>` : "";
+    const procurationBlockText = includeAG
+      ? `\n\nPas disponible le jour de l'AG ?\nGénérez votre procuration en 1 clic depuis votre espace membre : https://saccb.fr/?member=1&procuration=1`
+      : "";
+
     let sentCount = 0;
     const errors: string[] = [];
     for (const recipient of recipients) {
@@ -2925,7 +2938,7 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, ${topic.toLowerCase()} au SACCB`
         : `${topic} au SACCB`;
-      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site du club !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.\n\nAccéder à l'espace : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site du club !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
@@ -2954,6 +2967,7 @@ Deno.serve(async (req) => {
                 <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
                   📣 Accéder à l'espace →
                 </a>
+                ${procurationBlockHtml}
                 <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                   <tr><td>
                     <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>

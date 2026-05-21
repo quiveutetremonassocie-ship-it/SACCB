@@ -30,6 +30,9 @@ export default function Site() {
   const [resetOpen, setResetOpen] = useState(false);
   const [memberLoginOpen, setMemberLoginOpen] = useState(false);
   const [memberPanelOpen, setMemberPanelOpen] = useState(false);
+  // Quand un mail "engagement AG" est cliqué via ?member=1&procuration=1, on ouvre le panneau membre
+  // PUIS on auto-ouvre la modale procuration. Cet etat est consume par MemberPanel via une prop.
+  const [autoOpenProcuration, setAutoOpenProcuration] = useState(false);
   const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
   const [privateActualites, setPrivateActualites] = useState<import("@/lib/types").Actualite[]>([]);
 
@@ -116,9 +119,13 @@ export default function Site() {
         return;
       }
       // Auto-ouverture de l'espace membre depuis un lien email (?member=1)
+      // + auto-ouverture de la procuration AG via ?member=1&procuration=1
       const params = new URLSearchParams(window.location.search);
       if (params.get("member") === "1" || params.get("member") === "true") {
         const sess = getMemberSession();
+        if (params.get("procuration") === "1") {
+          setAutoOpenProcuration(true);
+        }
         if (sess) {
           setMemberPanelOpen(true);
         } else {
@@ -355,6 +362,8 @@ export default function Site() {
           archives={db.archives ?? []}
           onClose={onMemberPanelClose}
           onBack={onMemberPanelBack}
+          autoOpenProcuration={autoOpenProcuration}
+          onProcurationOpened={() => setAutoOpenProcuration(false)}
         />
       )}
       {adminOpen && (
