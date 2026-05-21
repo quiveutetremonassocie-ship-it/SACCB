@@ -177,12 +177,9 @@ export default function ProcurationModal({
           </p>
           <div className="text-center">
             <p className="text-sm sm:text-base">Signature (mandant)</p>
-            <p className="text-[10px] text-slate-500 italic mb-1">
+            <p className="text-[10px] text-slate-500 italic">
               précédée de «&nbsp;Bon pour pouvoir&nbsp;»
             </p>
-            <div className="mt-2 border border-blue-600 px-6 py-6 sm:px-10 sm:py-8 inline-block">
-              &nbsp;
-            </div>
           </div>
         </div>
 
