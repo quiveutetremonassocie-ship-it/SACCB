@@ -2889,10 +2889,11 @@ Deno.serve(async (req) => {
     const authError = await checkAdminAuth(body, d);
     if (authError) return authError;
 
-    const includePolls = body.includePolls !== false;
-    const includeAG = body.includeAG !== false;
-    if (!includePolls && !includeAG) {
-      return json({ ok: false, reason: "Au moins un des 2 (sondages ou AG) doit être inclus." }, 400);
+    const includePolls = body.includePolls === true;
+    const includeAG = body.includeAG === true;
+    const includeReports = body.includeReports === true;
+    if (!includePolls && !includeAG && !includeReports) {
+      return json({ ok: false, reason: "Au moins une section (sondages, AG ou comptes-rendus) doit être incluse." }, 400);
     }
 
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -2904,18 +2905,34 @@ Deno.serve(async (req) => {
     if (recipients.length === 0) return json({ ok: false, reason: "Aucun adhérent à notifier." });
 
     // Construction du contenu selon ce qui est ouvert
-    let topic = "";
-    let topicEmail = "";
-    if (includePolls && includeAG) {
-      topic = "Sondages et préparation de l'AG";
-      topicEmail = "préparer ensemble la prochaine assemblée générale et participer aux sondages en cours";
-    } else if (includePolls) {
-      topic = "Sondages en cours";
-      topicEmail = "donner votre avis sur les sondages en cours";
-    } else {
-      topic = "Préparation de l'assemblée générale";
-      topicEmail = "préparer ensemble la prochaine assemblée générale en posant vos questions et en partageant vos idées";
-    }
+    const parts: string[] = [];
+    if (includePolls) parts.push("sondages");
+    if (includeAG) parts.push("préparation AG");
+    if (includeReports) parts.push("comptes-rendus");
+    const topic =
+      parts.length === 3
+        ? "Sondages, AG et comptes-rendus"
+        : parts.length === 2
+        ? parts.map((p) => p[0].toUpperCase() + p.slice(1)).join(" + ")
+        : includePolls
+        ? "Sondages en cours"
+        : includeAG
+        ? "Préparation de l'assemblée générale"
+        : "Comptes-rendus de réunion";
+    const topicEmail =
+      includePolls && includeAG && includeReports
+        ? "consulter les sondages en cours, préparer la prochaine assemblée générale et lire les derniers comptes-rendus"
+        : includePolls && includeAG
+        ? "préparer ensemble la prochaine assemblée générale et participer aux sondages en cours"
+        : includePolls && includeReports
+        ? "participer aux sondages en cours et consulter les derniers comptes-rendus"
+        : includeAG && includeReports
+        ? "préparer la prochaine assemblée générale et consulter les derniers comptes-rendus"
+        : includePolls
+        ? "donner votre avis sur les sondages en cours"
+        : includeAG
+        ? "préparer ensemble la prochaine assemblée générale en posant vos questions et en partageant vos idées"
+        : "consulter les comptes-rendus des dernières réunions";
 
     // Bloc procuration : ajoute uniquement si l'AG est concernee
     const procurationBlockHtml = includeAG ? `
@@ -2988,6 +3005,116 @@ Deno.serve(async (req) => {
             </div>
           `,
         });
+      if (sendRes.ok) sentCount++;
+      else errors.push(`${recipient.email}: ${sendRes.status}`);
+      await sleep(EMAIL_THROTTLE_MS);
+    }
+
+    if (sentCount === 0) {
+      return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
+    }
+    return json({ ok: true, sent: sentCount, total: recipients.length });
+  }
+
+  // ─── ACTION: Envoyer un compte-rendu specifique a tous les adherents — AUTH ADMIN ───
+  if (action === "send_report_to_members") {
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const reportId = String(body.reportId || "");
+    if (!reportId) return json({ ok: false, reason: "reportId manquant." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    // 🔒 Auth admin
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const reports = (d.reunionReports || []) as Record<string, unknown>[];
+    const report = reports.find((r) => r.id === reportId);
+    if (!report) return json({ ok: false, reason: "Compte-rendu introuvable." });
+
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const recipients = membres
+      .filter((m) => m.ok === true && m.newsOptIn !== false)
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((r) => r.email);
+
+    if (recipients.length === 0) return json({ ok: false, reason: "Aucun adhérent à notifier." });
+
+    const reportTitle = String(report.title || "Compte-rendu");
+    const reportDate = String(report.date || "");
+    const reportDateFormatted = reportDate
+      ? new Date(reportDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : "";
+    const reportContent = String(report.content || "").trim();
+    const reportPdfUrl = String(report.pdfUrl || "");
+    const reportPdfName = String(report.pdfName || "");
+    // Aperçu du texte (premiers 500 caracteres)
+    const contentPreview = reportContent.length > 0
+      ? reportContent.length > 500
+        ? reportContent.slice(0, 500) + "..."
+        : reportContent
+      : "";
+
+    const pdfBlockHtml = reportPdfUrl
+      ? `<div style="margin-top: 18px; padding: 14px; background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px;">
+          <p style="margin: 0 0 10px; color: #1e3a5f; font-size: 13px;">📎 Le compte-rendu complet est disponible en PDF&nbsp;:</p>
+          <a href="${escapeHtml(reportPdfUrl)}" style="display: inline-block; background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 13px;">
+            📄 Télécharger le PDF${reportPdfName ? ` (${escapeHtml(reportPdfName)})` : ""}
+          </a>
+        </div>`
+      : "";
+
+    let sentCount = 0;
+    const errors: string[] = [];
+    for (const recipient of recipients) {
+      const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
+      const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
+      const subject = recipient.prenom
+        ? `${recipient.prenom}, compte-rendu : ${reportTitle}`
+        : `Compte-rendu : ${reportTitle}`;
+      const plainText = `${greetingText}\n\nLe bureau du club met à votre disposition le compte-rendu suivant :\n\n${reportTitle}${reportDateFormatted ? ` — ${reportDateFormatted}` : ""}\n\n${contentPreview || "(voir PDF joint)"}${reportPdfUrl ? `\n\nPDF complet : ${reportPdfUrl}` : ""}\n\nVous pouvez aussi retrouver ce compte-rendu et les précédents dans la section Comptes-rendus du site : https://saccb.fr/#engagement\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+
+      const sendRes = await sendBrevo(brevoKey, {
+        from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+        to: [recipient.email],
+        subject,
+        text: plainText,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 22px;">SACCB</h1>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Compte-rendu de réunion</p>
+            </div>
+            <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
+              <h2 style="color: #1e3a5f; margin-top: 0; font-size: 20px;">📋 ${escapeHtml(reportTitle)}</h2>
+              ${reportDateFormatted ? `<p style="color: #64748b; font-size: 13px; margin: 0 0 16px;">Réunion du ${reportDateFormatted}</p>` : ""}
+              ${contentPreview ? `<div style="white-space: pre-wrap; color: #334155; line-height: 1.6; padding: 16px; background: white; border: 1px solid #e2e8f0; border-radius: 8px;">${escapeHtml(contentPreview)}</div>` : ""}
+              ${pdfBlockHtml}
+              <p style="color: #64748b; font-size: 12px; margin-top: 18px;">
+                Vous pouvez aussi consulter ce compte-rendu et les précédents dans la section "Comptes-rendus" du site.
+              </p>
+              <a href="https://saccb.fr/#engagement" style="display: inline-block; margin-top: 8px; color: #1e3a5f; text-decoration: underline; font-size: 13px;">
+                Voir tous les comptes-rendus →
+              </a>
+              <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px; border-top: 1px solid #e2e8f0; padding-top: 14px; width: 100%;">
+                <tr><td>
+                  <p style="margin: 0; color: #1e3a5f; font-size: 13px; font-weight: 600;">Bonne lecture !</p>
+                  <p style="margin: 4px 0 0; color: #64748b; font-size: 12px;">Le bureau du SACCB 🏸</p>
+                </td></tr>
+              </table>
+            </div>
+          </div>
+        `,
+      });
       if (sendRes.ok) sentCount++;
       else errors.push(`${recipient.email}: ${sendRes.status}`);
       await sleep(EMAIL_THROTTLE_MS);

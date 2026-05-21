@@ -301,7 +301,7 @@ export default function Site() {
           seasonY2={db.y2}
           inscOpen={db.insc_open}
           isMember={!!memberSession}
-          engagementOpen={db.pollsOpen === true || db.agOpen === true || db.engagementOpen === true}
+          engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
         />
         <Presentation />
         <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
@@ -311,6 +311,7 @@ export default function Site() {
           reunionReports={db.reunionReports ?? []}
           pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
           agOpen={db.agOpen === true || db.engagementOpen === true}
+          reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
           memberSession={memberSession}
           onLoginRequest={() => setMemberLoginOpen(true)}
           onRefresh={async () => { await refreshPublic(); }}

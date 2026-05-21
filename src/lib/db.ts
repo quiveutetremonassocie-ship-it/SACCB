@@ -165,12 +165,27 @@ export async function adminNotifyEngagementOpen(
   adminEmail: string,
   adminCode: string,
   includePolls: boolean,
-  includeAG: boolean
+  includeAG: boolean,
+  includeReports: boolean = false
 ): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "notify_engagement_open", adminEmail, adminCode, includePolls, includeAG }),
+    body: JSON.stringify({ action: "notify_engagement_open", adminEmail, adminCode, includePolls, includeAG, includeReports }),
+  });
+  return res.json();
+}
+
+// ─── Envoyer un compte-rendu spécifique à tous les adhérents payés+news — AUTH ADMIN REQUISE ───
+export async function adminSendReport(
+  reportId: string,
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "send_report_to_members", reportId, adminEmail, adminCode }),
   });
   return res.json();
 }

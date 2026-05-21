@@ -149,8 +149,9 @@ export type DB = {
   // Toggle global (deprecated, gardé pour rétrocompat — équivaut à pollsOpen + agOpen tous les 2)
   engagementOpen?: boolean;
   // Toggles séparés pour activer/désactiver indépendamment chaque sous-section
-  pollsOpen?: boolean; // Sondages visibles côté public (avec compte-rendus de réunion)
-  agOpen?: boolean;    // Section AG (questions + idées) visible côté public
+  pollsOpen?: boolean;   // Sondages visibles côté public
+  agOpen?: boolean;      // Section AG (questions + idées) visible côté public
+  reportsOpen?: boolean; // Comptes-rendus de réunion visibles côté public (dissocié des sondages)
   // Règles du club (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail, Bell } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
-import { adminNotifyEngagementOpen, adminNotifyNewPoll } from "@/lib/db";
+import { adminNotifyEngagementOpen, adminNotifyNewPoll, adminSendReport } from "@/lib/db";
 
 // Échappe le HTML pour insertion sûre dans des templates générés
 function escapeHtmlClient(s: string): string {
@@ -34,8 +34,12 @@ export default function EngagementAdmin({
   const [tab, setTab] = useState<"sondages" | "ag" | "reports">("sondages");
 
   // Migration douce : engagementOpen ancien équivaut aux 2 toggles
+  // reportsOpen est nouveau : si non défini mais pollsOpen est true => on prend l'ancien comportement (groupé)
   const pollsOpen = db.pollsOpen === true || db.engagementOpen === true;
   const agOpen = db.agOpen === true || db.engagementOpen === true;
+  const reportsOpen =
+    db.reportsOpen === true ||
+    (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true));
   const [notifying, setNotifying] = useState(false);
 
   async function togglePolls() {
@@ -46,20 +50,25 @@ export default function EngagementAdmin({
     if (readOnly) return;
     await onPersist({ ...db, agOpen: !agOpen, engagementOpen: undefined });
   }
+  async function toggleReports() {
+    if (readOnly) return;
+    await onPersist({ ...db, reportsOpen: !reportsOpen, engagementOpen: undefined });
+  }
 
   async function notifyAdherents() {
     if (readOnly || !adminEmail || !adminCode) return;
-    if (!pollsOpen && !agOpen) {
-      alert("Activez au moins l'une des 2 sections (Sondages ou AG) avant de notifier les adhérents.");
+    if (!pollsOpen && !agOpen && !reportsOpen) {
+      alert("Activez au moins une section (Sondages, AG ou Comptes-rendus) avant de notifier les adhérents.");
       return;
     }
-    let label = "";
-    if (pollsOpen && agOpen) label = "Sondages + AG";
-    else if (pollsOpen) label = "Sondages";
-    else label = "AG (questions & idées)";
-    if (!confirm(`Envoyer un email à tous les adhérents (payés + news activées) pour leur dire que la section "${label}" est maintenant disponible ?`)) return;
+    const sections: string[] = [];
+    if (pollsOpen) sections.push("Sondages");
+    if (agOpen) sections.push("Questions & idées AG");
+    if (reportsOpen) sections.push("Comptes-rendus");
+    const label = sections.join(" + ");
+    if (!confirm(`Envoyer un email à tous les adhérents (payés + news activées) pour leur dire que "${label}" est maintenant disponible ?`)) return;
     setNotifying(true);
-    const r = await adminNotifyEngagementOpen(adminEmail, adminCode, pollsOpen, agOpen);
+    const r = await adminNotifyEngagementOpen(adminEmail, adminCode, pollsOpen, agOpen, reportsOpen);
     setNotifying(false);
     if (r.ok) alert(`✅ Email envoyé à ${r.sent} adhérent${(r.sent ?? 0) > 1 ? "s" : ""} !`);
     else alert("Erreur : " + (r.reason || "Inconnue"));
@@ -88,7 +97,7 @@ export default function EngagementAdmin({
         >
           <span className="flex items-center gap-2">
             <BarChart3 className="w-4 h-4" />
-            Sondages + Comptes-rendus
+            Sondages
           </span>
           <span className={`relative inline-block w-10 h-5 rounded-full transition-colors ${pollsOpen ? "bg-purple-500" : "bg-slate-300"}`}>
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${pollsOpen ? "translate-x-5" : ""}`} />
@@ -112,16 +121,34 @@ export default function EngagementAdmin({
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${agOpen ? "translate-x-5" : ""}`} />
           </span>
         </button>
+        {/* Toggle Comptes-rendus (nouveau, dissocié des sondages) */}
+        <button
+          onClick={toggleReports}
+          disabled={readOnly}
+          className={`w-full flex items-center justify-between gap-2 px-3 py-2.5 rounded-xl text-sm font-medium border-2 transition ${
+            reportsOpen
+              ? "bg-blue-50 border-blue-300 text-blue-800 hover:bg-blue-100"
+              : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"
+          }`}
+        >
+          <span className="flex items-center gap-2">
+            <FileText className="w-4 h-4" />
+            Comptes-rendus
+          </span>
+          <span className={`relative inline-block w-10 h-5 rounded-full transition-colors ${reportsOpen ? "bg-blue-500" : "bg-slate-300"}`}>
+            <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${reportsOpen ? "translate-x-5" : ""}`} />
+          </span>
+        </button>
 
         {/* Bandeau d'info quand caché */}
-        {!pollsOpen && !agOpen && (
+        {!pollsOpen && !agOpen && !reportsOpen && (
           <div className="bg-slate-100 border border-slate-200 rounded-lg p-2.5 text-xs text-slate-600 mt-1">
             🔒 Aucune section visible sur le site public.
           </div>
         )}
 
         {/* Bouton notifier les adhérents (visible si au moins 1 toggle activé) */}
-        {(pollsOpen || agOpen) && !readOnly && (
+        {(pollsOpen || agOpen || reportsOpen) && !readOnly && (
           <button
             onClick={notifyAdherents}
             disabled={notifying}
@@ -609,8 +636,28 @@ function ReportsTab({
   });
   const [uploading, setUploading] = useState(false);
   const [openReport, setOpenReport] = useState<string | null>(null);
+  const [sendingReportId, setSendingReportId] = useState<string | null>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const reports = db.reunionReports ?? [];
+
+  async function emailReport(r: ReunionReport) {
+    if (readOnly) return;
+    if (!adminEmail || !adminCode) {
+      alert("Identifiants admin manquants.");
+      return;
+    }
+    if (!confirm(
+      `Envoyer ce compte-rendu par email à tous les adhérents (payés + news activées) ?\n\n` +
+      `📋 ${r.title}\n` +
+      `📅 ${new Date(r.date).toLocaleDateString("fr-FR")}\n` +
+      (r.pdfUrl ? `📎 Avec PDF joint\n` : `(pas de PDF, le contenu texte sera dans l'email)\n`)
+    )) return;
+    setSendingReportId(r.id);
+    const res = await adminSendReport(r.id, adminEmail, adminCode);
+    setSendingReportId(null);
+    if (res.ok) alert(`✅ Compte-rendu envoyé à ${res.sent} adhérent${(res.sent ?? 0) > 1 ? "s" : ""} !`);
+    else alert("Erreur : " + (res.reason || "Inconnue"));
+  }
 
   function startNew() {
     setEditingId(null);
@@ -870,6 +917,14 @@ function ReportsTab({
               </button>
               {!readOnly && (
                 <div className="flex gap-1 shrink-0">
+                  <button
+                    onClick={() => emailReport(r)}
+                    disabled={sendingReportId === r.id}
+                    className="p-1.5 rounded hover:bg-blue-50 text-blue-600 disabled:opacity-50"
+                    title="Envoyer ce compte-rendu par email à tous les adhérents"
+                  >
+                    {sendingReportId === r.id ? <span className="text-xs">…</span> : <Mail className="w-4 h-4" />}
+                  </button>
                   <button onClick={() => startEdit(r)} className="text-xs text-blue-600 hover:text-blue-800 px-2 font-medium">
                     Modifier
                   </button>

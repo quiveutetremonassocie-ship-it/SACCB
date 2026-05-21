@@ -19,6 +19,7 @@ export default function Engagement({
   reunionReports = [],
   pollsOpen = false,
   agOpen = false,
+  reportsOpen = false,
   memberSession,
   onLoginRequest,
   onRefresh,
@@ -28,12 +29,13 @@ export default function Engagement({
   reunionReports?: ReunionReport[];
   pollsOpen?: boolean;
   agOpen?: boolean;
+  reportsOpen?: boolean;
   memberSession: MemberSession | null;
   onLoginRequest: () => void;
   onRefresh: () => Promise<void>;
 }) {
-  // 🔒 Si aucun des 2 toggles activés, on n'affiche RIEN
-  if (!pollsOpen && !agOpen) return null;
+  // 🔒 Si aucune section activée, on n'affiche RIEN
+  if (!pollsOpen && !agOpen && !reportsOpen) return null;
   const [myVotes, setMyVotes] = useState<Record<string, number[]>>({});
   const [voting, setVoting] = useState<string | null>(null);
   const [agItemsExpanded, setAgItemsExpanded] = useState(false);
@@ -152,14 +154,22 @@ export default function Engagement({
             <span className="sport-label-text text-purple-600">📣 La parole aux adhérents</span>
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
-            {pollsOpen && agOpen ? "Sondages & AG" : pollsOpen ? "Sondages en cours" : "Préparation de l'AG"}
+            {(() => {
+              const parts: string[] = [];
+              if (pollsOpen) parts.push("Sondages");
+              if (agOpen) parts.push("AG");
+              if (reportsOpen) parts.push("Comptes-rendus");
+              return parts.join(" & ") || "Engagement";
+            })()}
           </h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
             {pollsOpen && agOpen
               ? "Donnez votre avis, posez vos questions, proposez vos idées pour faire vivre le club."
               : pollsOpen
               ? "Donnez votre avis sur les sondages en cours du club."
-              : "Posez vos questions et proposez vos idées pour préparer ensemble la prochaine assemblée."}
+              : agOpen
+              ? "Posez vos questions et proposez vos idées pour préparer ensemble la prochaine assemblée."
+              : "Consultez les comptes-rendus des dernières réunions du club."}
           </p>
           <div className="inline-block mt-4 px-4 py-1.5 bg-gradient-to-r from-purple-100 to-amber-100 border border-purple-200 rounded-full">
             <span className="text-xs font-bold uppercase tracking-widest text-purple-700">
@@ -326,8 +336,8 @@ export default function Engagement({
           </div>
         )}
 
-        {/* COMPTES-RENDUS DE RÉUNION (visible si pollsOpen — accompagne les sondages) */}
-        {pollsOpen && reunionReports.length > 0 && (
+        {/* COMPTES-RENDUS DE RÉUNION (dissocié des sondages — toggle reportsOpen) */}
+        {reportsOpen && reunionReports.length > 0 && (
           <div className="max-w-3xl mx-auto">
             <h3 className="flex items-center gap-2 font-display text-2xl tracking-wider text-slate-800 mb-4">
               <FileText className="w-6 h-6 text-blue-500" /> Comptes-rendus de réunions
