@@ -1,10 +1,11 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature } from "lucide-react";
 import { useState, useMemo } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
+import ProcurationModal from "./modals/ProcurationModal";
 
 export default function MemberPanel({
   session,
@@ -53,6 +54,9 @@ export default function MemberPanel({
   const [newsOptIn, setNewsOptIn] = useState(session.newsOptIn !== false);
   const [newsLoading, setNewsLoading] = useState(false);
   const [newsMsg, setNewsMsg] = useState<string | null>(null);
+
+  // Procuration AG
+  const [showProcuration, setShowProcuration] = useState(false);
 
   async function toggleNews() {
     const next = !newsOptIn;
@@ -375,6 +379,20 @@ export default function MemberPanel({
           )}
         </div>
 
+        {/* Procuration AG — uniquement pour les membres payés */}
+        {session.paid === true && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowProcuration(true)}
+              className="flex items-center justify-center gap-2 w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
+              title="Génère une procuration si tu ne peux pas être présent(e) à l'Assemblée Générale"
+            >
+              <FileSignature className="w-4 h-4 text-[#1e3a5f]" />
+              Procuration Assemblée Générale
+            </button>
+          </div>
+        )}
+
         {/* Classement de la saison */}
         {classement && (
           <div className="mb-4">
@@ -535,6 +553,16 @@ export default function MemberPanel({
           </div>
         )}
       </div>
+
+      {/* Modal procuration AG */}
+      {showProcuration && (
+        <ProcurationModal
+          session={session}
+          y1={y1}
+          y2={y2}
+          onClose={() => setShowProcuration(false)}
+        />
+      )}
     </div>
   );
 }
