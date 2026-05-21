@@ -209,6 +209,39 @@ export async function memberChangeCode(
   return res.json();
 }
 
+// ─── Exporter la DB complète en JSON (sauvegarde) — AUTH ADMIN REQUISE ───
+export async function adminExportBackup(
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; data?: Record<string, unknown>; exportedAt?: string; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_export_backup", adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
+// ─── Restaurer la DB depuis un JSON de sauvegarde — AUTH ADMIN REQUISE ───
+export async function adminImportBackup(
+  backupData: Record<string, unknown>,
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; restoredAt?: string; stats?: { membres: number; tournois: number; actualites: number }; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({
+      action: "admin_import_backup",
+      backupData,
+      confirmRestore: true,
+      adminEmail,
+      adminCode,
+    }),
+  });
+  return res.json();
+}
+
 // ─── Réinitialiser le code d'un adhérent (depuis l'admin) — AUTH ADMIN REQUISE ───
 // Génère un nouveau code aléatoire et l'envoie par email à l'adhérent
 export async function adminResetMemberCode(

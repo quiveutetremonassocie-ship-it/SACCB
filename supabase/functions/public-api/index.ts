@@ -877,6 +877,50 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ─── ACTION: Restaurer la DB depuis une sauvegarde JSON — AUTH ADMIN REQUISE ───
+  // Remplace integralement le contenu de saccb_db.data par le payload fourni.
+  // Securite : double check sur la structure + flag explicite confirmRestore=true.
+  if (action === "admin_import_backup") {
+    const { data, error } = await supabaseAdmin
+      .from("saccb_db")
+      .select("data")
+      .eq("id", 1)
+      .single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const currentData = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+
+    const newData = body.backupData as Record<string, unknown> | undefined;
+    if (!newData || typeof newData !== "object") {
+      return json({ ok: false, reason: "backupData manquant ou invalide." }, 400);
+    }
+    // Verifications minimales que ca ressemble bien a une DB SACCB
+    const looksLikeSACCB =
+      Array.isArray(newData.membres) ||
+      Array.isArray(newData.config_tournois) ||
+      Array.isArray(newData.actualites);
+    if (!looksLikeSACCB) {
+      return json({ ok: false, reason: "Le fichier ne ressemble pas a une sauvegarde SACCB (aucun champ membres/tournois/actualites)." }, 400);
+    }
+    if (body.confirmRestore !== true) {
+      return json({ ok: false, reason: "Flag de confirmation manquant." }, 400);
+    }
+
+    const { error: updateError } = await supabaseAdmin
+      .from("saccb_db")
+      .update({ data: newData })
+      .eq("id", 1);
+    if (updateError) return json({ ok: false, reason: "Erreur lors de la restauration : " + updateError.message }, 500);
+
+    const stats = {
+      membres: Array.isArray(newData.membres) ? (newData.membres as unknown[]).length : 0,
+      tournois: Array.isArray(newData.config_tournois) ? (newData.config_tournois as unknown[]).length : 0,
+      actualites: Array.isArray(newData.actualites) ? (newData.actualites as unknown[]).length : 0,
+    };
+    return json({ ok: true, restoredAt: new Date().toISOString(), stats });
+  }
+
   // ─── ACTION: Sauvegarder la DB en tant qu'admin membre ───
   if (action === "admin_save") {
     const email = sanitize(String(body.email || "")).toLowerCase();

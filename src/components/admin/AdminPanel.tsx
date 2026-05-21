@@ -1,8 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
+import { adminExportBackup, adminImportBackup } from "@/lib/db";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
 import StatsAdhesions from "./StatsAdhesions";
@@ -122,6 +123,103 @@ export default function AdminPanel({
     link.click();
   }
 
+  // \ud83d\udcbe Telecharge un fichier JSON complet (DB entiere) - sauvegarde manuelle
+  const [backupBusy, setBackupBusy] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  async function downloadJSONBackup() {
+    if (!adminEmail || !adminCode) {
+      alert("Identifiants admin manquants.");
+      return;
+    }
+    setBackupBusy(true);
+    try {
+      const r = await adminExportBackup(adminEmail, adminCode);
+      if (!r.ok || !r.data) {
+        alert(`\u00c9chec : ${r.reason || "erreur inconnue"}`);
+        return;
+      }
+      const blob = new Blob([JSON.stringify(r.data, null, 2)], { type: "application/json" });
+      const link = document.createElement("a");
+      link.href = URL.createObjectURL(blob);
+      const ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
+      link.download = `saccb_backup_${ts}.json`;
+      link.click();
+      URL.revokeObjectURL(link.href);
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
+  // \u23ee\ufe0f Restaure depuis un fichier JSON (DOUBLE confirmation - tres destructif)
+  async function handleRestoreFile(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    // reset le input pour pouvoir re-uploader le meme fichier plus tard
+    if (fileInputRef.current) fileInputRef.current.value = "";
+
+    if (!adminEmail || !adminCode) {
+      alert("Identifiants admin manquants.");
+      return;
+    }
+
+    // Lecture du fichier
+    let parsed: Record<string, unknown>;
+    try {
+      const txt = await file.text();
+      parsed = JSON.parse(txt);
+    } catch {
+      alert("\u274c Ce fichier n'est pas un JSON valide.");
+      return;
+    }
+
+    const nbMembres = Array.isArray(parsed.membres) ? (parsed.membres as unknown[]).length : 0;
+    const nbTournois = Array.isArray(parsed.config_tournois) ? (parsed.config_tournois as unknown[]).length : 0;
+    const nbActu = Array.isArray(parsed.actualites) ? (parsed.actualites as unknown[]).length : 0;
+
+    // 1ere confirmation : ce qui va etre restaure
+    const ok1 = confirm(
+      `\u26a0\ufe0f RESTAURATION COMPL\u00c8TE DE LA BASE ?\n\n` +
+      `Fichier : ${file.name}\n` +
+      `Contenu :\n` +
+      `  \u2022 ${nbMembres} adh\u00e9rents\n` +
+      `  \u2022 ${nbTournois} tournois\n` +
+      `  \u2022 ${nbActu} actualit\u00e9s\n\n` +
+      `\u26a0\ufe0f TOUTES LES DONN\u00c9ES ACTUELLES SERONT \u00c9CRAS\u00c9ES.\n` +
+      `Cette action est IRR\u00c9VERSIBLE (sauf si tu as une autre sauvegarde).`
+    );
+    if (!ok1) return;
+
+    // 2eme confirmation : taper RESTAURER
+    const typed = prompt(
+      `Pour confirmer d\u00e9finitivement, tape RESTAURER ci-dessous (en majuscules) :`
+    );
+    if (typed === null) return;
+    if (typed.trim() !== "RESTAURER") {
+      alert("Confirmation incorrecte. Restauration annul\u00e9e.");
+      return;
+    }
+
+    setBackupBusy(true);
+    try {
+      const r = await adminImportBackup(parsed, adminEmail, adminCode);
+      if (!r.ok) {
+        alert(`\u274c \u00c9chec : ${r.reason || "erreur inconnue"}`);
+        return;
+      }
+      alert(
+        `\u2705 Restauration r\u00e9ussie !\n\n` +
+        `Adh\u00e9rents : ${r.stats?.membres ?? 0}\n` +
+        `Tournois : ${r.stats?.tournois ?? 0}\n` +
+        `Actualit\u00e9s : ${r.stats?.actualites ?? 0}\n\n` +
+        `La page va se recharger pour afficher les nouvelles donn\u00e9es.`
+      );
+      await onRefresh();
+      window.location.reload();
+    } finally {
+      setBackupBusy(false);
+    }
+  }
+
   return (
     <div className="fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto">
       <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10">
@@ -163,15 +261,46 @@ export default function AdminPanel({
           <StatsAdhesions totals={totals} />
 
           <div className="lg:col-span-2 glass p-4 md:p-6">
-            <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde PC</h3>
-            <div className="grid grid-cols-2 gap-3">
+            <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500 !text-xs md:!text-sm">
                 <FileSpreadsheet className="w-4 h-4" /> Exporter CSV
               </button>
               <button onClick={() => setEmargementOpen(true)} className="btn-primary !bg-gradient-to-r !from-amber-500 !to-orange-500 !text-xs md:!text-sm">
                 <FileText className="w-4 h-4" /> Émargement
               </button>
+              <button
+                onClick={downloadJSONBackup}
+                disabled={backupBusy}
+                className="btn-primary !bg-gradient-to-r !from-sky-500 !to-blue-600 !text-xs md:!text-sm"
+                title="Télécharge un fichier JSON contenant toute la base (adhérents, tournois, actus, sondages, etc.)"
+              >
+                <DatabaseBackup className="w-4 h-4" /> {backupBusy ? "..." : "Sauvegarde JSON"}
+              </button>
+              {!readOnly && (
+                <>
+                  <button
+                    onClick={() => fileInputRef.current?.click()}
+                    disabled={backupBusy}
+                    className="btn-primary !bg-gradient-to-r !from-rose-600 !to-red-700 !text-xs md:!text-sm"
+                    title="Restaure la base à partir d'un fichier JSON de sauvegarde (DESTRUCTIF)"
+                  >
+                    <Upload className="w-4 h-4" /> Restaurer…
+                  </button>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".json,application/json"
+                    onChange={handleRestoreFile}
+                    className="hidden"
+                  />
+                </>
+              )}
             </div>
+            <p className="text-xs text-slate-500 mt-3 leading-relaxed">
+              💡 <strong>Sauvegarde JSON</strong> télécharge tout (utile avant un changement risqué).
+              <span className="text-red-500"> <strong>Restaurer</strong> écrase la base avec un fichier JSON — irréversible, double confirmation requise.</span>
+            </p>
           </div>
 
           <HelloAssoQR />
