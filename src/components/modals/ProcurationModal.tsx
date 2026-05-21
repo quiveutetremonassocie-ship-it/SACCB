@@ -74,11 +74,6 @@ export default function ProcurationModal({
                 required
                 autoFocus={!defaultName}
               />
-              {looksLikeEmail && (
-                <p className="text-xs text-amber-600 mt-1">
-                  ⚠️ Vérifie que ton prénom et ton nom sont bien renseignés (pas une adresse email).
-                </p>
-              )}
             </div>
 
             <div>

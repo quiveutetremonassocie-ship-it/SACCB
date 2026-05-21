@@ -165,9 +165,66 @@ body {
 ::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #2d5a8e, #059669); }
 
 /* ============ PRINT ============ */
+@page {
+  size: A4 portrait;
+  margin: 0;
+}
+
 @media print {
-  body * { visibility: hidden; }
-  .printable, .printable * { visibility: visible; }
-  .printable { position: absolute; left: 0; top: 0; width: 100%; background: white; color: black; }
+  /* Reset document */
+  html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    background: white !important;
+  }
+
+  /* Cache tout ce qui n'est ni la zone imprimable, ni un ancetre,
+     ni un descendant. :has() conserve la chaine de parents du .printable. */
+  body :not(:has(.printable)):not(.printable):not(.printable *) {
+    display: none !important;
+  }
+
+  /* Neutraliser les conteneurs (modale backdrop, wrappers...) qui contiennent
+     .printable : on les "transparentise" pour ne pas contraindre la taille
+     et eviter les pages blanches. */
+  body :has(.printable):not(.printable) {
+    display: block !important;
+    position: static !important;
+    inset: auto !important;
+    width: auto !important;
+    max-width: none !important;
+    height: auto !important;
+    min-height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+    backdrop-filter: none !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    overflow: visible !important;
+    transform: none !important;
+  }
+
+  /* Le bloc imprimable occupe toute la page A4 */
+  .printable {
+    position: static !important;
+    display: block !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    height: auto !important;
+    margin: 0 !important;
+    padding: 15mm !important;
+    background: white !important;
+    color: black !important;
+    box-shadow: none !important;
+    border: 0 !important;
+    border-radius: 0 !important;
+    page-break-inside: avoid;
+  }
+
   .no-print { display: none !important; }
 }
