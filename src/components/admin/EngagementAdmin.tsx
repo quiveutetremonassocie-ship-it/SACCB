@@ -659,6 +659,27 @@ function ReportsTab({
     else alert("Erreur : " + (res.reason || "Inconnue"));
   }
 
+  // 🗑️ Supprimer un compte-rendu spécifique d'une archive
+  async function deleteArchivedReport(archiveIdx: number, reportId: string) {
+    if (readOnly) return;
+    const archive = (db.archives ?? [])[archiveIdx];
+    const report = (archive?.reunionReports ?? []).find((r) => r.id === reportId);
+    if (!report) return;
+    if (!confirm(
+      `Supprimer définitivement ce compte-rendu archivé ?\n\n` +
+      `📋 ${report.title}\n` +
+      `📅 ${new Date(report.date).toLocaleDateString("fr-FR")}\n` +
+      `📦 Archive saison ${archive.y1}–${archive.y2}\n\n` +
+      `Action irréversible.`
+    )) return;
+    const newArchives = (db.archives ?? []).map((a, i) =>
+      i === archiveIdx
+        ? { ...a, reunionReports: (a.reunionReports ?? []).filter((r) => r.id !== reportId) }
+        : a
+    );
+    await onPersist({ ...db, archives: newArchives });
+  }
+
   function startNew() {
     setEditingId(null);
     setForm({ title: "", type: "ag", date: new Date().toISOString().slice(0, 10), content: "" });
@@ -953,6 +974,114 @@ function ReportsTab({
           </div>
         ))}
       </div>
+
+      {/* 📦 Archives — comptes-rendus des saisons précédentes */}
+      {(() => {
+        const archivesWithReports = (db.archives ?? [])
+          .map((a, i) => ({ archive: a, idx: i }))
+          .filter(({ archive }) => (archive.reunionReports ?? []).length > 0)
+          .reverse(); // plus récent en premier
+        if (archivesWithReports.length === 0) return null;
+        return (
+          <div className="mt-6 pt-5 border-t border-slate-200">
+            <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 flex items-center gap-2">
+              📦 Archives des saisons précédentes
+            </p>
+            <div className="space-y-3">
+              {archivesWithReports.map(({ archive, idx }) => (
+                <ArchivedReportsBlock
+                  key={`${archive.y1}-${archive.y2}-${idx}`}
+                  archive={archive}
+                  archiveIdx={idx}
+                  readOnly={readOnly}
+                  onDelete={deleteArchivedReport}
+                />
+              ))}
+            </div>
+          </div>
+        );
+      })()}
+    </div>
+  );
+}
+
+// Bloc d'archives dépliable affichant les compte-rendus d'une saison passée
+function ArchivedReportsBlock({
+  archive,
+  archiveIdx,
+  readOnly,
+  onDelete,
+}: {
+  archive: import("@/lib/types").SeasonArchive;
+  archiveIdx: number;
+  readOnly?: boolean;
+  onDelete: (archiveIdx: number, reportId: string) => Promise<void>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [openReport, setOpenReport] = useState<string | null>(null);
+  const reports = archive.reunionReports ?? [];
+  return (
+    <div className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between gap-2 px-3 py-2.5 hover:bg-slate-100 transition text-left"
+      >
+        <div className="min-w-0">
+          <p className="text-sm font-semibold text-slate-700">Saison {archive.y1}–{archive.y2}</p>
+          <p className="text-xs text-slate-400">
+            {reports.length} compte-rendu{reports.length > 1 ? "s" : ""}
+          </p>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+      </button>
+      {open && (
+        <div className="divide-y divide-slate-200">
+          {reports.slice().reverse().map((r) => (
+            <div key={r.id} className="bg-white">
+              <div className="flex items-center justify-between gap-2 p-3">
+                <button
+                  onClick={() => setOpenReport(openReport === r.id ? null : r.id)}
+                  className="flex items-center gap-3 min-w-0 flex-1 text-left"
+                >
+                  <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                  <div className="min-w-0">
+                    <p className="font-medium text-slate-800 text-sm truncate">{r.title}</p>
+                    <p className="text-xs text-slate-400">
+                      {labelType(r.type)} · {new Date(r.date).toLocaleDateString("fr-FR")}
+                    </p>
+                  </div>
+                  {openReport === r.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                </button>
+                {!readOnly && (
+                  <button
+                    onClick={() => onDelete(archiveIdx, r.id)}
+                    className="p-1.5 rounded hover:bg-red-50 text-red-500 shrink-0"
+                    title="Supprimer ce compte-rendu archivé"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              {openReport === r.id && (
+                <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
+                  <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{r.content}</p>
+                  {r.pdfUrl && (
+                    <a
+                      href={r.pdfUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="inline-flex items-center gap-2 mt-3 px-3 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-medium transition"
+                    >
+                      <FileDown className="w-4 h-4" />
+                      {r.pdfName || "Télécharger le PDF"}
+                    </a>
+                  )}
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

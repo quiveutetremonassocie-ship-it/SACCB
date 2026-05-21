@@ -309,6 +309,7 @@ export default function Site() {
           polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
           agItems={db.agItems ?? []}
           reunionReports={db.reunionReports ?? []}
+          archives={db.archives ?? []}
           pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
           agOpen={db.agOpen === true || db.engagementOpen === true}
           reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}

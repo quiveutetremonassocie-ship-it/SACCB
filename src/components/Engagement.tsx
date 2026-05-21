@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { motion } from "framer-motion";
 import { BarChart3, MessageSquare, Lock, Send, Lightbulb, ChevronDown, ChevronUp, FileText, CheckCircle2, EyeOff, Calendar, FileDown } from "lucide-react";
-import { Poll, AGItem, ReunionReport } from "@/lib/types";
+import { Poll, AGItem, ReunionReport, SeasonArchive } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
 import { memberVotePoll, memberSubmitAGItem, fetchMyVotes } from "@/lib/db";
 import { clearMemberSession } from "@/lib/useMemberSession";
@@ -17,6 +17,7 @@ export default function Engagement({
   polls = [],
   agItems = [],
   reunionReports = [],
+  archives = [],
   pollsOpen = false,
   agOpen = false,
   reportsOpen = false,
@@ -27,6 +28,7 @@ export default function Engagement({
   polls?: PollPublic[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
+  archives?: SeasonArchive[];
   pollsOpen?: boolean;
   agOpen?: boolean;
   reportsOpen?: boolean;
@@ -61,6 +63,18 @@ export default function Engagement({
 
   const openPolls = useMemo(() => polls.filter((p) => !p.closed), [polls]);
   const closedPolls = useMemo(() => polls.filter((p) => p.closed), [polls]);
+
+  // Saisons archivees ayant des comptes-rendus (pour affichage des "Saisons precedentes")
+  const archivedSeasonsWithReports = useMemo(() => {
+    return (archives ?? [])
+      .map((a) => ({
+        y1: a.y1,
+        y2: a.y2,
+        reports: (a.reunionReports ?? []),
+      }))
+      .filter((s) => s.reports.length > 0)
+      .reverse(); // la plus recente en haut
+  }, [archives]);
 
   // Helper : si l'API renvoie "Reconnectez-vous", on déconnecte automatiquement
   // et on rouvre le modal de connexion (cas typique : code modifié via "code oublié")
@@ -336,59 +350,44 @@ export default function Engagement({
           </div>
         )}
 
-        {/* COMPTES-RENDUS DE RÉUNION (dissocié des sondages — toggle reportsOpen) */}
-        {reportsOpen && reunionReports.length > 0 && (
+        {/* COMPTES-RENDUS DE RÉUNION (dissocié des sondages — toggle reportsOpen)
+            + ARCHIVES des saisons précédentes (accessibles aux nouveaux adhérents) */}
+        {reportsOpen && (reunionReports.length > 0 || archivedSeasonsWithReports.length > 0) && (
           <div className="max-w-3xl mx-auto">
             <h3 className="flex items-center gap-2 font-display text-2xl tracking-wider text-slate-800 mb-4">
               <FileText className="w-6 h-6 text-blue-500" /> Comptes-rendus de réunions
             </h3>
-            <div className="space-y-2">
-              {reunionReports.slice().reverse().map((r) => (
-                <div key={r.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
-                  <button
-                    onClick={() => setReportOpen(reportOpen === r.id ? null : r.id)}
-                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-left"
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
-                        r.type === "ag" ? "bg-purple-100" :
-                        r.type === "debut_saison" ? "bg-emerald-100" :
-                        r.type === "fin_saison" ? "bg-amber-100" : "bg-slate-100"
-                      }`}>
-                        <Calendar className={`w-4 h-4 ${
-                          r.type === "ag" ? "text-purple-600" :
-                          r.type === "debut_saison" ? "text-emerald-600" :
-                          r.type === "fin_saison" ? "text-amber-600" : "text-slate-600"
-                        }`} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="font-medium text-slate-800 truncate">{r.title}</p>
-                        <p className="text-xs text-slate-400">
-                          {labelType(r.type)} · {new Date(r.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
-                        </p>
-                      </div>
-                    </div>
-                    {reportOpen === r.id ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
-                  </button>
-                  {reportOpen === r.id && (
-                    <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
-                      <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{r.content}</p>
-                      {r.pdfUrl && (
-                        <a
-                          href={r.pdfUrl}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-semibold transition"
-                        >
-                          <FileDown className="w-4 h-4" />
-                          {r.pdfName || "Télécharger le PDF"}
-                        </a>
-                      )}
-                    </div>
-                  )}
+            {/* Saison courante */}
+            {reunionReports.length > 0 && (
+              <div className="space-y-2">
+                {reunionReports.slice().reverse().map((r) => (
+                  <ReportRow
+                    key={r.id}
+                    report={r}
+                    isOpen={reportOpen === r.id}
+                    onToggle={() => setReportOpen(reportOpen === r.id ? null : r.id)}
+                  />
+                ))}
+              </div>
+            )}
+            {/* Archives des saisons précédentes */}
+            {archivedSeasonsWithReports.length > 0 && (
+              <div className="mt-6">
+                <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 flex items-center gap-2">
+                  📦 Saisons précédentes
+                </p>
+                <div className="space-y-3">
+                  {archivedSeasonsWithReports.map((season) => (
+                    <ArchivedSeasonAccordion
+                      key={`${season.y1}-${season.y2}`}
+                      y1={season.y1}
+                      y2={season.y2}
+                      reports={season.reports}
+                    />
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </div>
         )}
           </>
@@ -405,6 +404,87 @@ function labelType(t: ReunionReport["type"]): string {
     case "fin_saison": return "Fin de saison";
     default: return "Réunion";
   }
+}
+
+// Ligne de compte-rendu dépliable (factorisé pour réutilisation saison courante + archives)
+function ReportRow({ report: r, isOpen, onToggle }: { report: ReunionReport; isOpen: boolean; onToggle: () => void }) {
+  return (
+    <div className="bg-white border border-slate-200 rounded-xl overflow-hidden shadow-sm">
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition text-left"
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 ${
+            r.type === "ag" ? "bg-purple-100" :
+            r.type === "debut_saison" ? "bg-emerald-100" :
+            r.type === "fin_saison" ? "bg-amber-100" : "bg-slate-100"
+          }`}>
+            <Calendar className={`w-4 h-4 ${
+              r.type === "ag" ? "text-purple-600" :
+              r.type === "debut_saison" ? "text-emerald-600" :
+              r.type === "fin_saison" ? "text-amber-600" : "text-slate-600"
+            }`} />
+          </div>
+          <div className="min-w-0">
+            <p className="font-medium text-slate-800 truncate">{r.title}</p>
+            <p className="text-xs text-slate-400">
+              {labelType(r.type)} · {new Date(r.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+            </p>
+          </div>
+        </div>
+        {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+      </button>
+      {isOpen && (
+        <div className="px-4 py-3 border-t border-slate-100 bg-slate-50">
+          <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{r.content}</p>
+          {r.pdfUrl && (
+            <a
+              href={r.pdfUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-2 mt-3 px-4 py-2 bg-blue-100 hover:bg-blue-200 text-blue-800 rounded-lg text-sm font-semibold transition"
+            >
+              <FileDown className="w-4 h-4" />
+              {r.pdfName || "Télécharger le PDF"}
+            </a>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// Accordéon "Saison N–N+1" listant les compte-rendus archivés
+function ArchivedSeasonAccordion({ y1, y2, reports }: { y1: number; y2: number; reports: ReunionReport[] }) {
+  const [open, setOpen] = useState(false);
+  const [openReportId, setOpenReportId] = useState<string | null>(null);
+  return (
+    <div className="bg-slate-50 border border-slate-200 rounded-xl overflow-hidden">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 hover:bg-slate-100 transition text-left"
+      >
+        <div>
+          <p className="text-sm font-semibold text-slate-700">Saison {y1}–{y2}</p>
+          <p className="text-xs text-slate-400">{reports.length} compte-rendu{reports.length > 1 ? "s" : ""}</p>
+        </div>
+        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+      </button>
+      {open && (
+        <div className="p-3 space-y-2 border-t border-slate-200">
+          {reports.slice().reverse().map((r) => (
+            <ReportRow
+              key={r.id}
+              report={r}
+              isOpen={openReportId === r.id}
+              onToggle={() => setOpenReportId(openReportId === r.id ? null : r.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  );
 }
 
 function PollCard({
