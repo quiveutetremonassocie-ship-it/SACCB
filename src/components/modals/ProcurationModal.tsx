@@ -15,25 +15,15 @@ export default function ProcurationModal({
   y2: number;
   onClose: () => void;
 }) {
-  // Champs editables avant impression
+  // Champs à remplir avant l'aperçu
   const [mandataire, setMandataire] = useState("");
   const [agDate, setAgDate] = useState(""); // YYYY-MM-DD
-  const [lieu, setLieu] = useState("Sainte-Adresse");
   const [showPreview, setShowPreview] = useState(false);
 
-  const todayFormatted = new Date().toLocaleDateString("fr-FR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
-
+  const todayFormatted = new Date().toLocaleDateString("fr-FR");
   const agDateFormatted = agDate
-    ? new Date(agDate).toLocaleDateString("fr-FR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : "______________________________";
+    ? new Date(agDate).toLocaleDateString("fr-FR")
+    : "..................................";
 
   function handlePrepare(e: React.FormEvent) {
     e.preventDefault();
@@ -41,10 +31,10 @@ export default function ProcurationModal({
     setShowPreview(true);
   }
 
-  return (
-    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      {!showPreview ? (
-        // ─── ÉTAPE 1 : formulaire ───
+  // ─── ÉTAPE 1 : petit formulaire ───
+  if (!showPreview) {
+    return (
+      <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
         <div className="no-print bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-md my-auto">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3">
@@ -61,13 +51,13 @@ export default function ProcurationModal({
           </div>
 
           <p className="text-sm text-slate-600 mb-5 leading-relaxed">
-            Génère une procuration pour te faire représenter à l&apos;Assemblée Générale du club
+            Génère une procuration officielle pour te faire représenter à l&apos;Assemblée Générale
             si tu ne peux pas y assister.
           </p>
 
           <form onSubmit={handlePrepare} className="space-y-4">
             <div>
-              <label className="label">Vos informations (auto-remplies)</label>
+              <label className="label">Vos informations</label>
               <input
                 type="text"
                 value={session.nom}
@@ -103,23 +93,13 @@ export default function ProcurationModal({
                 className="input"
               />
               <p className="text-xs text-slate-400 mt-1">
-                Laisse vide si tu ne connais pas encore la date — tu pourras l&apos;écrire à la main.
+                Laisse vide si tu ne la connais pas — tu pourras l&apos;écrire à la main sur le PDF.
               </p>
-            </div>
-
-            <div>
-              <label className="label">Fait à</label>
-              <input
-                type="text"
-                value={lieu}
-                onChange={(e) => setLieu(e.target.value)}
-                className="input"
-              />
             </div>
 
             <div className="flex gap-2 pt-2">
               <button type="submit" className="btn-primary flex-1">
-                Aperçu & imprimer
+                Aperçu &amp; imprimer
               </button>
               <button type="button" onClick={onClose} className="btn-ghost">
                 Annuler
@@ -127,112 +107,78 @@ export default function ProcurationModal({
             </div>
           </form>
         </div>
-      ) : (
-        // ─── ÉTAPE 2 : prévisualisation du document imprimable ───
-        <div className="printable bg-white text-black rounded-md max-w-2xl w-full p-10 shadow-2xl my-8">
-          {/* En-tête avec logo */}
-          <div className="flex items-center gap-4 border-b-2 border-blue-500 pb-3 mb-8">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
-              alt="Logo SACCB"
-              className="w-20 h-20 object-contain shrink-0"
-            />
-            <div className="text-center flex-1">
-              <h1 className="text-2xl text-blue-600 font-bold">SACCB - SAINTE ADRESSE</h1>
-              <p className="text-xs">Sainte-Adresse Club de Compétition de Badminton</p>
-              <p className="text-xs text-slate-600">Salle Paul Vatine — 76310 Sainte-Adresse</p>
-            </div>
-          </div>
+      </div>
+    );
+  }
 
-          {/* Titre */}
-          <h2 className="text-center underline font-bold text-xl mb-2">
-            POUVOIR — ASSEMBLÉE GÉNÉRALE
-          </h2>
-          <p className="text-center text-sm text-slate-600 mb-8">
-            Saison {y1}–{y2}
-          </p>
-
-          {/* Corps du document */}
-          <div className="space-y-5 text-justify leading-relaxed">
-            <p>
-              Je soussigné(e), <strong>{session.nom}</strong>, membre adhérent(e) à jour de cotisation
-              de l&apos;association <strong>SACCB</strong> (Sainte-Adresse Club de Compétition de
-              Badminton) pour la saison <strong>{y1}–{y2}</strong>,
-            </p>
-
-            <p>
-              donne par la présente <strong>pouvoir</strong> à&nbsp;:
-            </p>
-
-            <p className="text-center text-lg">
-              <strong className="border-b border-slate-400 px-4 pb-1">{mandataire}</strong>
-            </p>
-
-            <p>
-              également membre de l&apos;association SACCB, à l&apos;effet de me représenter à
-              l&apos;Assemblée Générale du club qui se tiendra le{" "}
-              <strong>{agDateFormatted}</strong>, et de prendre part en mon nom à toutes les
-              délibérations et à tous les votes portés à l&apos;ordre du jour.
-            </p>
-
-            <p>
-              Le/la mandataire désigné(e) est autorisé(e) à voter en mon nom sur l&apos;ensemble des
-              résolutions présentées, qu&apos;elles concernent l&apos;approbation des rapports, le
-              vote du budget, l&apos;élection des membres du bureau, ou toute autre question
-              soumise à l&apos;Assemblée.
-            </p>
-
-            <p className="text-xs text-slate-600 italic">
-              Conformément aux statuts de l&apos;association, un membre ne peut détenir plus de
-              deux pouvoirs en plus du sien.
-            </p>
-          </div>
-
-          {/* Signature */}
-          <div className="flex justify-between items-end mt-12 pt-6 border-t border-slate-200">
-            <div>
-              <p className="text-sm">
-                Fait à <strong>{lieu}</strong>,
-              </p>
-              <p className="text-sm">
-                Le <strong>{todayFormatted}</strong>
-              </p>
-            </div>
-            <div className="text-center">
-              <p className="text-sm mb-2">
-                Signature du mandant (faire précéder
-                <br />
-                de la mention &laquo;&nbsp;Bon pour pouvoir&nbsp;&raquo;) :
-              </p>
-              <div className="w-48 h-20 border border-slate-300 rounded" />
-            </div>
-          </div>
-
-          {/* Pied de page */}
-          <div className="mt-10 pt-4 border-t border-slate-200 text-center">
-            <p className="text-[10px] text-slate-500">
-              SACCB · Sainte-Adresse Club de Compétition de Badminton · contact@saccb.fr · saccb.fr
-            </p>
-          </div>
-
-          {/* Boutons d'action (cachés à l'impression) */}
-          <div className="no-print mt-10 flex gap-3">
-            <button onClick={() => window.print()} className="btn-primary flex-1">
-              <Printer className="w-4 h-4" /> Imprimer / Enregistrer en PDF
-            </button>
-            <button
-              onClick={() => setShowPreview(false)}
-              className="btn-ghost"
-            >
-              ← Modifier
-            </button>
-            <button onClick={onClose} className="btn-ghost">
-              <X className="w-4 h-4" /> Fermer
-            </button>
+  // ─── ÉTAPE 2 : document imprimable (même style que le reçu) ───
+  return (
+    <div className="fixed inset-0 z-[5000] flex items-center justify-center bg-black/95 p-4 overflow-y-auto">
+      <div className="printable bg-white text-black rounded-md max-w-2xl w-full p-10 shadow-2xl my-8">
+        {/* En-tête identique au reçu */}
+        <div className="flex items-center gap-4 border-b-2 border-blue-500 pb-3 mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="Logo SACCB" className="w-20 h-20 object-contain shrink-0" />
+          <div className="text-center flex-1">
+            <h1 className="text-2xl text-blue-600 font-bold">SACCB - SAINTE ADRESSE</h1>
+            <p className="text-xs">Club de Badminton — Salle Paul Vatine</p>
           </div>
         </div>
-      )}
+
+        <h2 className="text-center underline font-bold text-lg mb-8">
+          POUVOIR — ASSEMBLÉE GÉNÉRALE
+        </h2>
+
+        <p className="mb-4">
+          Je soussigné(e), <strong>{session.nom}</strong>, membre adhérent(e) à jour de cotisation
+          de l&apos;association <strong>SACCB</strong> pour la saison <strong>{y1}–{y2}</strong>,
+          donne pouvoir à&nbsp;:
+        </p>
+
+        <p className="text-center text-2xl font-bold mb-6">{mandataire}</p>
+
+        <p className="mb-4">
+          également membre de l&apos;association, à l&apos;effet de me représenter à
+          l&apos;Assemblée Générale du club qui se tiendra le{" "}
+          <strong>{agDateFormatted}</strong>.
+        </p>
+
+        <p className="mb-8">
+          Le/la mandataire est autorisé(e) à voter en mon nom sur l&apos;ensemble des résolutions
+          portées à l&apos;ordre du jour (approbation des rapports, vote du budget, élection des
+          membres du bureau, etc.).
+        </p>
+
+        <div className="flex justify-between mt-12">
+          <p>
+            Fait à Sainte-Adresse,
+            <br />
+            Le {todayFormatted}
+          </p>
+          <div className="text-center">
+            <p>Signature (mandant)</p>
+            <p className="text-[10px] text-slate-500 italic mb-1">
+              précédée de « Bon pour pouvoir »
+            </p>
+            <div className="mt-2 font-bold text-blue-600 border border-blue-600 px-6 py-6 inline-block">
+              &nbsp;
+            </div>
+          </div>
+        </div>
+
+        {/* Boutons d'action (cachés à l'impression) */}
+        <div className="no-print mt-10 flex gap-3">
+          <button onClick={() => window.print()} className="btn-primary flex-1">
+            <Printer className="w-4 h-4" /> Imprimer
+          </button>
+          <button onClick={() => setShowPreview(false)} className="btn-ghost">
+            ← Modifier
+          </button>
+          <button onClick={onClose} className="btn-ghost flex-1">
+            <X className="w-4 h-4" /> Fermer
+          </button>
+        </div>
+      </div>
     </div>
   );
 }
