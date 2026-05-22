@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp, Trophy, Users, FileText, Calendar, FileDown } from "lucide-react";
+import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp, Trophy, Users, FileText, Calendar, FileDown, ArrowUpFromLine } from "lucide-react";
 import { DB, SeasonArchive, Tournoi, InscritTournoi, ReunionReport } from "@/lib/types";
 
 export default function ArchiveEditModal({
@@ -52,6 +52,47 @@ export default function ArchiveEditModal({
       inscrits_tournoi: inscrits.filter((i) => i.tournoiId !== t.id),
     });
     if (expandedTournoiId === t.id) setExpandedTournoiId(null);
+  }
+
+  // 📤 Remettre un tournoi archivé dans la saison courante (avec ses inscriptions).
+  // Le tournoi est SUPPRIMÉ de l'archive (sinon doublon). L'admin pourra le ré-archiver
+  // ensuite via TournoisAdmin si besoin.
+  async function unarchiveTournoi(t: Tournoi) {
+    if (!archive) return;
+    const tInscrits = inscrits.filter((i) => i.tournoiId === t.id);
+    if (!confirm(
+      `Remettre ce tournoi dans la saison courante (${db.y1}–${db.y2}) ?\n\n` +
+      `🏸 ${t.name}\n` +
+      `📅 ${t.date}\n` +
+      `${tInscrits.length} équipe${tInscrits.length > 1 ? "s inscrites" : " inscrite"} suivront\n\n` +
+      `Le tournoi sera retiré de l'archive (tu pourras le ré-archiver ensuite si besoin).`
+    )) return;
+
+    // Vérifier qu'un tournoi avec le même id n'existe pas déjà dans la saison courante
+    const alreadyInCurrent = (db.config_tournois ?? []).some((x) => x.id === t.id);
+    if (alreadyInCurrent) {
+      alert("Un tournoi avec le même identifiant existe déjà dans la saison courante. Suppression manuelle requise avant restauration.");
+      return;
+    }
+
+    const newArchives = (db.archives ?? []).map((a, i) =>
+      i === archiveIdx
+        ? {
+            ...a,
+            config_tournois: tournois.filter((x) => x.id !== t.id),
+            inscrits_tournoi: inscrits.filter((i) => i.tournoiId !== t.id),
+          }
+        : a
+    );
+
+    await onPersist({
+      ...db,
+      config_tournois: [...(db.config_tournois ?? []), t],
+      inscrits_tournoi: [...(db.inscrits_tournoi ?? []), ...tInscrits],
+      archives: newArchives,
+    });
+    if (expandedTournoiId === t.id) setExpandedTournoiId(null);
+    alert(`✅ "${t.name}" remis dans la saison courante avec ${tInscrits.length} équipe${tInscrits.length > 1 ? "s" : ""}.`);
   }
 
   function startEditTournoi(t: Tournoi) {
@@ -211,6 +252,13 @@ export default function ArchiveEditModal({
                             {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
                           </button>
                           <div className="flex gap-1 shrink-0">
+                            <button
+                              onClick={() => unarchiveTournoi(t)}
+                              className="p-1.5 rounded hover:bg-emerald-50 text-emerald-600"
+                              title="Remettre dans la saison courante"
+                            >
+                              <ArrowUpFromLine className="w-4 h-4" />
+                            </button>
                             <button onClick={() => startEditTournoi(t)} className="p-1.5 rounded hover:bg-blue-50 text-blue-600" title="Modifier">
                               <Pencil className="w-4 h-4" />
                             </button>

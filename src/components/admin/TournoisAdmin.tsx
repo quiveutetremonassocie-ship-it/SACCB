@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive, PackageCheck, Lock, Unlock } from "lucide-react";
+import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive, PackageCheck, Lock, Unlock, ArrowUpFromLine } from "lucide-react";
 import { DB, Tournoi, InscritTournoi } from "@/lib/types";
 import { notifyMembres } from "@/lib/db";
 
@@ -209,6 +209,50 @@ export default function TournoisAdmin({
       };
     });
     await onPersist({ ...db, archives: newArchives });
+  }
+
+  // 📤 Remettre un tournoi archivé dans la saison courante (avec inscriptions)
+  // Le tournoi est retiré de l'archive (pour éviter le doublon). Re-archivable via
+  // le bouton "Archiver" existant sur chaque tournoi courant.
+  async function unarchiveTournoi(archiveKey: string, tournoiId: string) {
+    const [y1, y2] = archiveKey.split("-").map(Number);
+    const archive = (db.archives ?? []).find((a) => a.y1 === y1 && a.y2 === y2);
+    if (!archive) return;
+    const tournoi = (archive.config_tournois ?? []).find((t) => t.id === tournoiId);
+    if (!tournoi) return;
+    const archInscrits = (archive.inscrits_tournoi ?? []).filter((i) => i.tournoiId === tournoiId);
+
+    if (!confirm(
+      `Remettre ce tournoi dans la saison courante (${db.y1}–${db.y2}) ?\n\n` +
+      `🏸 ${tournoi.name}\n` +
+      `📅 ${tournoi.date}\n` +
+      `${archInscrits.length} équipe${archInscrits.length > 1 ? "s inscrites" : " inscrite"} suivront\n\n` +
+      `Le tournoi sera retiré de l'archive ${y1}–${y2} (tu pourras le ré-archiver ensuite via le bouton "Archiver" du tournoi).`
+    )) return;
+
+    // Refus si un tournoi avec le même id existe déjà dans la saison courante
+    const alreadyInCurrent = (db.config_tournois ?? []).some((t) => t.id === tournoiId);
+    if (alreadyInCurrent) {
+      alert("Un tournoi avec le même identifiant existe déjà dans la saison courante. Supprime-le d'abord avant de restaurer celui-ci.");
+      return;
+    }
+
+    const newArchives = (db.archives ?? []).map((a) => {
+      if (a.y1 !== y1 || a.y2 !== y2) return a;
+      return {
+        ...a,
+        config_tournois: a.config_tournois.filter((t) => t.id !== tournoiId),
+        inscrits_tournoi: a.inscrits_tournoi.filter((i) => i.tournoiId !== tournoiId),
+      };
+    });
+
+    await onPersist({
+      ...db,
+      config_tournois: [...(db.config_tournois ?? []), tournoi],
+      inscrits_tournoi: [...(db.inscrits_tournoi ?? []), ...archInscrits],
+      archives: newArchives,
+    });
+    alert(`✅ "${tournoi.name}" remis dans la saison courante.`);
   }
 
   // Form pour ajouter un inscrit manuellement à un tournoi existant
@@ -561,6 +605,13 @@ export default function TournoisAdmin({
                                     </div>
                                     {!readOnly && (
                                       <div className="flex gap-1 shrink-0">
+                                        <button
+                                          onClick={() => unarchiveTournoi(key, t.id)}
+                                          className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-emerald-500 !to-teal-500"
+                                          title="Remettre dans la saison courante"
+                                        >
+                                          <ArrowUpFromLine className="w-3 h-3" />
+                                        </button>
                                         <button onClick={() => startEditArchive(key, t)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier"><Pencil className="w-3 h-3" /></button>
                                         <button onClick={() => delArchiveTournoi(key, t.id)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer"><Trash2 className="w-3 h-3" /></button>
                                       </div>
