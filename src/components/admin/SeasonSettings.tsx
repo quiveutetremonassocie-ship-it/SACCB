@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock, ListChecks } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
+import ArchiveEditModal from "./ArchiveEditModal";
 
 const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
 
@@ -43,6 +44,8 @@ export default function SeasonSettings({
   const [editingArchiveIdx, setEditingArchiveIdx] = useState<number | null>(null);
   const [editArchiveY1, setEditArchiveY1] = useState(0);
   const [editArchiveY2, setEditArchiveY2] = useState(0);
+  // Modal d'édition complète d'une archive (tournois, inscrits, compte-rendus)
+  const [archiveContentIdx, setArchiveContentIdx] = useState<number | null>(null);
 
   async function update() {
     await onPersist({
@@ -342,10 +345,17 @@ export default function SeasonSettings({
                           <RotateCcw className="w-3.5 h-3.5" />
                         </button>
                       )}
-                      <button onClick={() => startEditArchive(idx)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
+                      <button
+                        onClick={() => setArchiveContentIdx(idx)}
+                        className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-sky-500 !to-blue-600"
+                        title="Modifier le contenu (tournois, inscrits, compte-rendus)"
+                      >
+                        <ListChecks className="w-3.5 h-3.5" />
+                      </button>
+                      <button onClick={() => startEditArchive(idx)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier les années">
                         <Pencil className="w-3.5 h-3.5" />
                       </button>
-                      <button onClick={() => deleteArchive(idx)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer">
+                      <button onClick={() => deleteArchive(idx)} className="btn-danger !px-2 !py-1 !text-xs" title="Supprimer l'archive entière">
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </div>
@@ -745,6 +755,16 @@ export default function SeasonSettings({
           </button>
         </div>
       </div>}
+
+      {/* Modal d'édition complète d'une archive */}
+      {archiveContentIdx !== null && (
+        <ArchiveEditModal
+          db={db}
+          archiveIdx={archiveContentIdx}
+          onPersist={onPersist}
+          onClose={() => setArchiveContentIdx(null)}
+        />
+      )}
     </div>
   );
 }
