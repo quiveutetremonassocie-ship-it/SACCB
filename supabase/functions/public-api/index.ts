@@ -553,17 +553,38 @@ Deno.serve(async (req) => {
                     <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Connexion à votre espace membre</p>
                     <p style="margin: 0; color: #92400e; font-size: 13px;">Utilisez le code personnel que vous avez choisi à l'inscription pour vous connecter sur saccb.fr. Si vous l'avez oublié, cliquez sur « Code oublié ? » sur la page de connexion.</p>
                   </div>
+
+                  <!-- ✨ Bloc "Tout ce que vous pouvez faire sur le site" -->
+                  <div style="background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                    <h3 style="margin: 0 0 14px; color: #1e3a5f; font-size: 16px;">✨ Ce que vous pouvez faire sur le site</h3>
+                    <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size: 13px; color: #334155;">
+                      <tr><td style="padding: 6px 0; vertical-align: top; width: 30px;">🏸</td><td style="padding: 6px 0;"><strong>Vous inscrire aux tournois</strong> en quelques clics avec votre binôme</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voir vos statistiques perso</strong> : participations, podiums, équipiers</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">🏆</td><td style="padding: 6px 0;"><strong>Consulter le classement des binômes</strong> et l'historique des tournois passés</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📅</td><td style="padding: 6px 0;"><strong>Ajouter les tournois</strong> à votre agenda (Google Calendar, iPhone, Outlook)</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📋</td><td style="padding: 6px 0;"><strong>Lire les comptes-rendus</strong> des réunions et AG (saison actuelle + années précédentes)</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voter aux sondages</strong> du bureau et participer aux décisions du club</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">💡</td><td style="padding: 6px 0;"><strong>Proposer vos questions et idées</strong> pour préparer la prochaine assemblée générale</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📝</td><td style="padding: 6px 0;"><strong>Générer votre procuration AG</strong> en 1 clic si vous ne pouvez pas être présent(e)</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">🔑</td><td style="padding: 6px 0;"><strong>Modifier votre code personnel</strong> à tout moment</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📱</td><td style="padding: 6px 0;"><strong>Installer le site comme une app</strong> sur votre téléphone (iPhone : Safari → Partager → Sur l'écran d'accueil — Android : Chrome → menu → Installer)</td></tr>
+                    </table>
+                  </div>
+
                   ${currentData.whatsappLink ? `
                   <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
-                    <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club :</p>
+                    <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez aussi le groupe WhatsApp du club :</p>
                     <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
                       💬 Rejoindre le groupe WhatsApp
                     </a>
                   </div>
                   ` : ""}
-                  <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
-                    Accéder à mon espace membre →
-                  </a>
+
+                  <div style="text-align: center; margin: 24px 0 16px;">
+                    <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+                      🚀 Accéder à mon espace membre →
+                    </a>
+                  </div>
                   <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                     <tr><td>
                       <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
@@ -2081,17 +2102,39 @@ Deno.serve(async (req) => {
                 <p style="margin: 0 0 6px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Connexion à votre espace membre</p>
                 <p style="margin: 0; color: #92400e; font-size: 13px;">Utilisez le code personnel que vous avez choisi à l'inscription pour vous connecter sur saccb.fr. Si vous l'avez oublié, cliquez sur « Code oublié ? » sur la page de connexion.</p>
               </div>
+
+              <!-- ✨ Bloc "Tout ce que vous pouvez faire sur le site" -->
+              <div style="background: linear-gradient(135deg, #eff6ff 0%, #ecfdf5 100%); border: 1px solid #bfdbfe; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <h3 style="margin: 0 0 14px; color: #1e3a5f; font-size: 16px;">✨ Ce que vous pouvez faire sur le site</h3>
+                <table cellpadding="0" cellspacing="0" border="0" width="100%" style="font-size: 13px; color: #334155;">
+                  <tr><td style="padding: 6px 0; vertical-align: top; width: 30px;">🏸</td><td style="padding: 6px 0;"><strong>Vous inscrire aux tournois</strong> en quelques clics avec votre binôme</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voir vos statistiques perso</strong> : participations, podiums, équipiers</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">🏆</td><td style="padding: 6px 0;"><strong>Consulter le classement des binômes</strong> de la saison et l'historique des tournois passés</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📅</td><td style="padding: 6px 0;"><strong>Ajouter les tournois</strong> directement dans votre agenda (Google Calendar, iPhone, Outlook)</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📋</td><td style="padding: 6px 0;"><strong>Lire les comptes-rendus</strong> des réunions et AG (saison actuelle + années précédentes)</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voter aux sondages</strong> du bureau et participer aux décisions du club</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">💡</td><td style="padding: 6px 0;"><strong>Proposer vos questions et idées</strong> pour préparer la prochaine assemblée générale</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📝</td><td style="padding: 6px 0;"><strong>Générer votre procuration AG</strong> en 1 clic si vous ne pouvez pas être présent(e)</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">🔑</td><td style="padding: 6px 0;"><strong>Modifier votre code personnel</strong> à tout moment depuis votre espace</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📱</td><td style="padding: 6px 0;"><strong>Installer le site comme une app</strong> sur votre téléphone (iPhone : Safari → Partager → Sur l'écran d'accueil — Android : Chrome → menu → Installer)</td></tr>
+                </table>
+              </div>
+
               ${currentData.whatsappLink ? `
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
-                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club pour rester informé des entraînements et tournois :</p>
+                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez aussi le groupe WhatsApp du club pour échanger entre adhérents :</p>
                 <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
                   💬 Rejoindre le groupe WhatsApp
                 </a>
               </div>
               ` : ""}
-              <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 16px;">
-                Accéder à mon espace membre →
-              </a>
+
+              <div style="text-align: center; margin: 24px 0 16px;">
+                <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 32px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px;">
+                  🚀 Accéder à mon espace membre →
+                </a>
+              </div>
+
               <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                 <tr><td>
                   <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
