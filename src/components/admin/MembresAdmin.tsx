@@ -25,6 +25,7 @@ export default function MembresAdmin({
   const [autoSendEmail, setAutoSendEmail] = useState(true);
   const [search, setSearch] = useState("");
   const [filterNoPhoto, setFilterNoPhoto] = useState(false);
+  const [filterType, setFilterType] = useState<"all" | "Adulte" | "Etudiant">("all");
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -47,6 +48,8 @@ export default function MembresAdmin({
   }
 
   const noPhotoCount = db.membres.filter((m) => m.photoConsent !== true).length;
+  const adultesCount = db.membres.filter((m) => m.type === "Adulte").length;
+  const etudiantsCount = db.membres.filter((m) => m.type === "Etudiant").length;
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -56,10 +59,11 @@ export default function MembresAdmin({
           (m.nom.toLowerCase().includes(s) ||
           m.email.toLowerCase().includes(s) ||
           (m.tel && m.tel.includes(s))) &&
-          (!filterNoPhoto || m.photoConsent !== true)
+          (!filterNoPhoto || m.photoConsent !== true) &&
+          (filterType === "all" || m.type === filterType)
       )
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
-  }, [db.membres, search, filterNoPhoto]);
+  }, [db.membres, search, filterNoPhoto, filterType]);
 
   async function togglePaiement(id: string, val: boolean) {
     const next = { ...db, membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)) };
@@ -212,6 +216,27 @@ export default function MembresAdmin({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {/* Filtre type adhérent (Tous / Adultes / Étudiants) - cycle au clic */}
+        <button
+          onClick={() => setFilterType((v) => v === "all" ? "Adulte" : v === "Adulte" ? "Etudiant" : "all")}
+          className={`btn-primary !px-3 shrink-0 ${
+            filterType === "Adulte" ? "!bg-gradient-to-r !from-blue-500 !to-cyan-500"
+            : filterType === "Etudiant" ? "!bg-gradient-to-r !from-emerald-500 !to-green-500"
+            : "!bg-gradient-to-r !from-slate-400 !to-slate-500"
+          }`}
+          title={
+            filterType === "all" ? `Filtrer (actuel : tous)`
+            : filterType === "Adulte" ? `Filtre Adultes — clique pour voir Étudiants`
+            : `Filtre Étudiants — clique pour tout afficher`
+          }
+        >
+          <Users className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1">
+            {filterType === "all" ? "Tous"
+              : filterType === "Adulte" ? `Adultes (${adultesCount})`
+              : `Étudiants (${etudiantsCount})`}
+          </span>
+        </button>
         <button
           onClick={() => setFilterNoPhoto((v) => !v)}
           className={`btn-primary !px-3 shrink-0 ${filterNoPhoto ? "!bg-gradient-to-r !from-orange-500 !to-amber-500" : "!bg-gradient-to-r !from-slate-400 !to-slate-500"}`}
