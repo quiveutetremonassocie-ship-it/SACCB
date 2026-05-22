@@ -129,6 +129,47 @@ export default function MemberPanel({
 
   const totalPast = allSeasons.reduce((s, a) => s + a.tournois.length, 0);
 
+  // 📊 Stats perso de l'adhérent (saison courante + archives)
+  const personalStats = useMemo(() => {
+    const nomLower = session.nom.toLowerCase();
+    const allInscrits = [
+      ...inscritsTournoi,
+      ...(archives ?? []).flatMap((a) => a.inscrits_tournoi ?? []),
+    ];
+    // Mes inscriptions (toutes saisons confondues)
+    const mine = allInscrits.filter((i) => i.joueurs.toLowerCase().includes(nomLower));
+    // Saison courante uniquement
+    const mineCurrent = inscritsTournoi.filter((i) => i.joueurs.toLowerCase().includes(nomLower));
+    // Podiums (rang 1-3) toutes saisons
+    let podiums = 0;
+    let wins = 0;
+    for (const i of mine) {
+      if (!i.resultat) continue;
+      const m = i.resultat.trim().match(/^(\d+)\/\d+$/);
+      if (!m) continue;
+      const rank = parseInt(m[1]);
+      if (rank === 1) wins++;
+      if (rank <= 3) podiums++;
+    }
+    // Équipiers uniques (sans soi-même)
+    const partners = new Set<string>();
+    for (const i of mine) {
+      const noms = i.joueurs.split(/[\/&,+]/).map((s) => s.trim()).filter(Boolean);
+      for (const n of noms) {
+        if (n.toLowerCase() !== nomLower && !n.toLowerCase().includes(nomLower)) {
+          partners.add(n);
+        }
+      }
+    }
+    return {
+      totalAllTime: mine.length,
+      currentSeason: mineCurrent.length,
+      podiums,
+      wins,
+      partners: partners.size,
+    };
+  }, [inscritsTournoi, archives, session.nom]);
+
   // Classement binômes saison courante
   const classement = useMemo(() => {
     const withResults = inscritsTournoi.filter((i) => i.resultat && /^\d+\/\d+$/.test(i.resultat.trim()));
@@ -299,6 +340,39 @@ export default function MemberPanel({
             Faites une capture d&apos;écran pour la conserver.
           </p>
         </div>
+
+        {/* 📊 Stats perso (uniquement si au moins une participation) */}
+        {personalStats.totalAllTime > 0 && (
+          <div className="mb-6 bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-widest text-blue-700 font-semibold mb-3 flex items-center gap-1">
+              <Star className="w-3.5 h-3.5" /> Vos statistiques
+            </p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
+                <p className="text-2xl font-bold text-[#1e3a5f]">{personalStats.currentSeason}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">Cette saison</p>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
+                <p className="text-2xl font-bold text-[#1e3a5f]">{personalStats.totalAllTime}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">Total tournois</p>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
+                <p className="text-2xl font-bold text-amber-600">
+                  {personalStats.wins > 0 && "🥇"} {personalStats.podiums}
+                </p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">
+                  Podium{personalStats.podiums > 1 ? "s" : ""}
+                </p>
+              </div>
+              <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
+                <p className="text-2xl font-bold text-emerald-600">{personalStats.partners}</p>
+                <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">
+                  Équipier{personalStats.partners > 1 ? "s différents" : " différent"}
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Changer le code */}
         <div className="mb-4">

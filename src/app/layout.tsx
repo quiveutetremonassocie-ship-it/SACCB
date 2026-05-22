@@ -45,6 +45,16 @@ export const metadata: Metadata = {
     ],
     apple: "/logo.png",
   },
+  manifest: "/manifest.json",
+  appleWebApp: {
+    capable: true,
+    title: "SACCB",
+    statusBarStyle: "black-translucent",
+  },
+};
+
+export const viewport = {
+  themeColor: "#1e3a5f",
 };
 
 const jsonLd = {

@@ -257,6 +257,20 @@ export async function adminImportBackup(
   return res.json();
 }
 
+// ─── Envoyer un rappel de paiement individuel à un adhérent — AUTH ADMIN REQUISE ───
+export async function adminSendPaymentReminder(
+  membreId: string,
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_send_payment_reminder", membreId, adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
 // ─── Réinitialiser le code d'un adhérent (depuis l'admin) — AUTH ADMIN REQUISE ───
 // Génère un nouveau code aléatoire et l'envoie par email à l'adhérent
 export async function adminResetMemberCode(

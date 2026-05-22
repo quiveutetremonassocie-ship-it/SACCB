@@ -1819,6 +1819,84 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // ─── ACTION: Envoyer un rappel de paiement individuel a un adherent — AUTH ADMIN ───
+  if (action === "admin_send_payment_reminder") {
+    const membreId = String(body.membreId || "");
+    if (!membreId) return json({ ok: false, reason: "membreId manquant." }, 400);
+
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const membre = membres.find((m) => m.id === membreId);
+    if (!membre) return json({ ok: false, reason: "Adhérent introuvable." });
+    if (membre.ok === true) return json({ ok: false, reason: "Cet adhérent est déjà à jour de cotisation." });
+    const email = String(membre.email || "");
+    if (!email) return json({ ok: false, reason: "Adhérent sans email." });
+
+    const inscCloseDate = String(d.insc_close_date || "");
+    const closeFormatted = inscCloseDate
+      ? new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : "";
+    const prenom = extractFirstName(String(membre.nom || ""));
+    const greeting = prenom ? `Bonjour ${escapeHtml(prenom)},` : "Bonjour,";
+    const greetingText = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+    const y1 = d.y1, y2 = d.y2;
+
+    const sendRes = await sendBrevo(brevoKey, {
+      from: "SACCB <contact@saccb.fr>",
+      headers: {
+        "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      to: [email],
+      subject: prenom
+        ? `${prenom}, pensez à finaliser votre adhésion SACCB`
+        : `Pensez à finaliser votre adhésion SACCB`,
+      text: `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${y1}–${y2} n'a pas encore été finalisée.\n\n${inscCloseDate ? `Pour pouvoir continuer à jouer, le règlement doit être effectué avant le ${closeFormatted}.\n\n` : ""}Vous pouvez régler en ligne via HelloAsso ou par virement à Hernan. Toutes les infos sont dans votre espace membre.\n\nAccéder à votre espace : https://saccb.fr/?member=1\n\nSi vous avez un souci ou souhaitez en discuter, répondez simplement à cet email.\n\n--\nLe bureau du SACCB\ncontact@saccb.fr · saccb.fr`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 22px;">SACCB</h1>
+            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Rappel cotisation</p>
+          </div>
+          <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+            <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
+            <p style="color: #475569;">Votre adhésion au SACCB pour la saison <strong>${y1}–${y2}</strong> n'a pas encore été finalisée.</p>
+            ${inscCloseDate ? `<div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 16px 0;"><p style="margin: 0; color: #92400e; font-size: 14px;">⏰ Pour pouvoir continuer à jouer, le règlement doit être effectué avant le <strong>${closeFormatted}</strong>.</p></div>` : ""}
+            <p style="color: #475569;">Vous pouvez :</p>
+            <ul style="color: #475569; padding-left: 20px;">
+              <li>💳 Régler en ligne via <strong>HelloAsso</strong></li>
+              <li>💵 Faire un <strong>virement à Hernan</strong></li>
+            </ul>
+            <p style="color: #475569;">Toutes les infos sont dans votre espace membre.</p>
+            <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; margin-top: 8px;">
+              🔑 Accéder à mon espace →
+            </a>
+            <p style="color: #64748b; font-size: 12px; margin-top: 20px;">
+              Si vous avez un souci ou souhaitez en discuter, répondez simplement à cet email.
+            </p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 14px; width: 100%;">
+              <tr><td>
+                <p style="margin: 0; color: #1e3a5f; font-size: 13px; font-weight: 600;">À très bientôt sur les terrains !</p>
+                <p style="margin: 4px 0 0; color: #64748b; font-size: 12px;">Le bureau du SACCB 🏸</p>
+              </td></tr>
+            </table>
+          </div>
+        </div>
+      `,
+    });
+    if (!sendRes.ok) return json({ ok: false, reason: "Erreur d'envoi : " + sendRes.status });
+    return json({ ok: true });
+  }
+
   // ─── ACTION: Réinitialiser le code d'un adhérent depuis l'admin ───
   // Génère un nouveau code aléatoire, le hash, l'envoie par email et lève le flag codeJustReset
   if (action === "admin_reset_code") {

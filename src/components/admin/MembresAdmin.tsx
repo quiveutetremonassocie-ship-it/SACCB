@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound } from "lucide-react";
+import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound, AlarmClock } from "lucide-react";
 import { DB, Membre } from "@/lib/types";
-import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode } from "@/lib/db";
+import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -83,6 +83,18 @@ export default function MembresAdmin({
     if (!confirm("Supprimer cet adhérent ?")) return;
     const next = { ...db, membres: db.membres.filter((m) => m.id !== id) };
     await onPersist(next);
+  }
+
+  // 💸 Envoyer un rappel de paiement à un adhérent
+  const [reminderId, setReminderId] = useState<string | null>(null);
+  async function sendPaymentReminder(m: Membre) {
+    if (!adminEmail || !adminCode) { alert("Identifiants admin manquants."); return; }
+    if (!confirm(`Envoyer un rappel de paiement par email à ${m.nom} ?\n\nL'email sera envoyé à : ${m.email}`)) return;
+    setReminderId(m.id);
+    const r = await adminSendPaymentReminder(m.id, adminEmail, adminCode);
+    setReminderId(null);
+    if (r.ok) alert(`✅ Rappel envoyé à ${m.nom}.`);
+    else alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
   }
 
   // 🔑 Réinitialiser le code d'un adhérent (avec DOUBLE confirmation pour éviter le clic accidentel)
@@ -341,6 +353,16 @@ export default function MembresAdmin({
                     <Send className="w-3.5 h-3.5" />
                   </button>
                 )}
+                {!readOnly && !m.ok && (
+                  <button
+                    onClick={() => sendPaymentReminder(m)}
+                    disabled={reminderId === m.id}
+                    className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-purple-500 !to-pink-500"
+                    title="Envoyer un rappel de paiement par email"
+                  >
+                    <AlarmClock className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
@@ -449,6 +471,16 @@ export default function MembresAdmin({
                         title="Envoyer l'email de confirmation"
                       >
                         <Send className="w-3 h-3" />
+                      </button>
+                    )}
+                    {!readOnly && !m.ok && (
+                      <button
+                        onClick={() => sendPaymentReminder(m)}
+                        disabled={reminderId === m.id}
+                        className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-purple-500 !to-pink-500"
+                        title="Envoyer un rappel de paiement par email"
+                      >
+                        <AlarmClock className="w-3 h-3" />
                       </button>
                     )}
                     <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">

@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp } from "lucide-react";
+import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus } from "lucide-react";
 import { useState } from "react";
 import { DB, Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import { publicRegisterTournoi } from "@/lib/db";
@@ -288,6 +288,87 @@ function CountdownBadge({ dateLimit }: { dateLimit?: string | null }) {
   return null;
 }
 
+// 📅 Helpers pour le download d'un fichier iCal (.ics) ajoutable dans tout agenda
+function parseFreeDate(input: string): Date | null {
+  if (!input) return null;
+  const s = input.trim();
+  if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+    const [dd, mm, yyyy] = s.split("/");
+    const d = new Date(`${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`);
+    return isNaN(d.getTime()) ? null : d;
+  }
+  const months: Record<string, number> = {
+    janvier: 0, fevrier: 1, février: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+    juillet: 6, aout: 7, août: 7, septembre: 8, octobre: 9, novembre: 10, decembre: 11, décembre: 11,
+  };
+  const m = s.toLowerCase().match(/(\d{1,2})(?:er|e|ème)?\s+([a-zéû]+)\s+(\d{4})/i);
+  if (m) {
+    const day = parseInt(m[1]);
+    const month = months[m[2]];
+    const year = parseInt(m[3]);
+    if (month !== undefined) {
+      return new Date(year, month, day);
+    }
+  }
+  return null;
+}
+
+function downloadIcs(t: Tournoi) {
+  const startDate = parseFreeDate(t.date);
+  if (!startDate) {
+    alert("La date du tournoi est dans un format non reconnu, impossible de l'ajouter au calendrier.");
+    return;
+  }
+  // Si on peut extraire une heure dans le champ date (ex: "31 mai 2026 (8:30)" ou "...8h30"), on l'utilise
+  const hourMatch = t.date.match(/(\d{1,2})[h:](\d{2})/);
+  if (hourMatch) {
+    startDate.setHours(parseInt(hourMatch[1]), parseInt(hourMatch[2]));
+  } else {
+    startDate.setHours(9, 0); // défaut 9h
+  }
+  // Fin = +6h par défaut (tournoi typique)
+  const endDate = new Date(startDate.getTime() + 6 * 60 * 60 * 1000);
+
+  function fmt(d: Date): string {
+    const pad = (n: number) => String(n).padStart(2, "0");
+    return `${d.getFullYear()}${pad(d.getMonth() + 1)}${pad(d.getDate())}T${pad(d.getHours())}${pad(d.getMinutes())}00`;
+  }
+  function escapeIcs(s: string): string {
+    return s.replace(/\\/g, "\\\\").replace(/;/g, "\\;").replace(/,/g, "\\,").replace(/\n/g, "\\n");
+  }
+
+  const uid = `tournoi-${t.id}@saccb.fr`;
+  const ics = [
+    "BEGIN:VCALENDAR",
+    "VERSION:2.0",
+    "PRODID:-//SACCB//Tournoi//FR",
+    "CALSCALE:GREGORIAN",
+    "BEGIN:VEVENT",
+    `UID:${uid}`,
+    `DTSTAMP:${fmt(new Date())}`,
+    `DTSTART:${fmt(startDate)}`,
+    `DTEND:${fmt(endDate)}`,
+    `SUMMARY:🏸 ${escapeIcs(t.name)}`,
+    `DESCRIPTION:${escapeIcs(`Tournoi de badminton SACCB${t.type ? ` (Double ${t.type})` : ""}. Plus d'infos sur https://saccb.fr/#tournois`)}`,
+    "LOCATION:Sainte-Adresse",
+    "END:VEVENT",
+    "END:VCALENDAR",
+  ].join("\r\n");
+
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = `tournoi-${t.name.replace(/[^a-z0-9]/gi, "-").toLowerCase()}.ics`;
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(link.href);
+}
+
 function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = [] }: {
   t: Tournoi; inscrits: InscritTournoi[]; memberSession: MemberSession | null; onLoginRequest: () => void; membreNoms?: string[];
 }) {
@@ -330,6 +411,14 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
               {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-red-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
             </div>
             {t.dateLimit && !inscriptionsClosed && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
+            <button
+              onClick={() => downloadIcs(t)}
+              className="mt-3 inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition"
+              title="Télécharge un fichier .ics à ouvrir avec Google Calendar / iPhone / Outlook"
+            >
+              <CalendarPlus className="w-3.5 h-3.5" />
+              Ajouter à mon agenda
+            </button>
           </div>
           {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
           {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermées</span>}

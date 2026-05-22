@@ -166,6 +166,93 @@ export default function TournoisAdmin({
     });
   }
 
+  // 📦 Archiver d'un coup TOUS les tournois dont la date est passée depuis +30 jours
+  // Helper pour parser la date d'un tournoi (texte libre français)
+  function parseTournoiDate(dateStr: string): Date | null {
+    if (!dateStr) return null;
+    const s = dateStr.trim();
+    if (/^\d{4}-\d{2}-\d{2}/.test(s)) {
+      const d = new Date(s);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    if (/^\d{1,2}\/\d{1,2}\/\d{4}/.test(s)) {
+      const [dd, mm, yyyy] = s.split("/");
+      const d = new Date(`${yyyy}-${mm.padStart(2, "0")}-${dd.padStart(2, "0")}`);
+      return isNaN(d.getTime()) ? null : d;
+    }
+    const months: Record<string, number> = {
+      janvier: 0, fevrier: 1, février: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+      juillet: 6, aout: 7, août: 7, septembre: 8, octobre: 9, novembre: 10, decembre: 11, décembre: 11,
+    };
+    const m = s.toLowerCase().match(/(\d{1,2})(?:er|e|ème)?\s+([a-zéû]+)\s+(\d{4})/i);
+    if (m) {
+      const day = parseInt(m[1]);
+      const month = months[m[2]];
+      const year = parseInt(m[3]);
+      if (month !== undefined) {
+        const d = new Date(year, month, day);
+        return isNaN(d.getTime()) ? null : d;
+      }
+    }
+    const d = new Date(s);
+    return isNaN(d.getTime()) ? null : d;
+  }
+
+  async function archivePastTournois() {
+    if (readOnly) return;
+    const cutoffDays = 30;
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - cutoffDays);
+
+    // Filtrer les tournois passés depuis +30 jours dont la date est parsable
+    const toArchive = (db.config_tournois ?? []).filter((t) => {
+      const d = parseTournoiDate(t.date);
+      return d !== null && d < cutoffDate;
+    });
+
+    if (toArchive.length === 0) {
+      alert(`Aucun tournoi à archiver (aucun tournoi dont la date est passée depuis +${cutoffDays} jours).`);
+      return;
+    }
+
+    if (!confirm(
+      `Archiver ${toArchive.length} tournoi${toArchive.length > 1 ? "s" : ""} passé${toArchive.length > 1 ? "s" : ""} (date > ${cutoffDays} jours) ?\n\n` +
+      toArchive.map((t) => `• ${t.name} (${t.date})`).join("\n") +
+      `\n\nLes inscriptions et résultats seront archivés avec.`
+    )) return;
+
+    // Ajouter à l'archive de la saison courante (créer si besoin)
+    const allInscrits = db.inscrits_tournoi ?? [];
+    const inscritsToArchive = allInscrits.filter((i) => toArchive.some((t) => t.id === i.tournoiId));
+    const ids = new Set(toArchive.map((t) => t.id));
+
+    const newArchives = [...(db.archives ?? [])];
+    const existingIdx = newArchives.findIndex((a) => a.y1 === db.y1 && a.y2 === db.y2);
+    if (existingIdx >= 0) {
+      const existing = newArchives[existingIdx];
+      newArchives[existingIdx] = {
+        ...existing,
+        config_tournois: [...existing.config_tournois, ...toArchive],
+        inscrits_tournoi: [...(existing.inscrits_tournoi ?? []), ...inscritsToArchive],
+      };
+    } else {
+      newArchives.push({
+        y1: db.y1, y2: db.y2,
+        membresCount: db.membres.filter((m) => m.ok).length,
+        config_tournois: toArchive,
+        inscrits_tournoi: inscritsToArchive,
+      });
+    }
+
+    await onPersist({
+      ...db,
+      config_tournois: (db.config_tournois ?? []).filter((t) => !ids.has(t.id)),
+      inscrits_tournoi: allInscrits.filter((i) => !ids.has(i.tournoiId)),
+      archives: newArchives,
+    });
+    alert(`✅ ${toArchive.length} tournoi${toArchive.length > 1 ? "s archivés" : " archivé"}.`);
+  }
+
   // ── Fonctions archive ──
 
   function startEditArchive(archiveKey: string, t: Tournoi) {
@@ -335,11 +422,22 @@ export default function TournoisAdmin({
 
   return (
     <div className="glass p-4 md:p-6">
-      <div className="flex items-center gap-3 mb-5">
-        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
-          <Trophy className="w-5 h-5 text-slate-800" />
+      <div className="flex items-center justify-between gap-3 mb-5 flex-wrap">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-500 flex items-center justify-center">
+            <Trophy className="w-5 h-5 text-slate-800" />
+          </div>
+          <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
         </div>
-        <h3 className="font-display text-2xl tracking-wider text-slate-800">Liste des tournois</h3>
+        {!readOnly && (db.config_tournois ?? []).length > 0 && (
+          <button
+            onClick={archivePastTournois}
+            className="btn-ghost !text-xs text-amber-700 border-amber-300 hover:bg-amber-50"
+            title="Archiver d'un coup tous les tournois dont la date est passée depuis +30 jours"
+          >
+            <Archive className="w-3.5 h-3.5" /> Archiver les passés
+          </button>
+        )}
       </div>
 
       {/* ── Saison courante ── */}
