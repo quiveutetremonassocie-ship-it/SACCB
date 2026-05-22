@@ -169,22 +169,32 @@ export default function SeasonSettings({
       ? `• Date limite : ${new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`
       : `• Aucune date limite configurée (à régler plus tard)`;
 
+    const polls = (db.polls ?? []).length;
+    const agItems = (db.agItems ?? []).length;
+    const archiveNote =
+      polls + agItems > 0
+        ? `\n• ⚠️ Les ${polls} sondage${polls > 1 ? "s" : ""} et ${agItems} question${agItems > 1 ? "s" : ""} d'AG actuels seront SUPPRIMÉS définitivement\n  (les résultats tournois et compte-rendus sont eux archivés)`
+        : "";
+
     if (!confirm(
       `Démarrer la saison ${newY1}–${newY2} ?\n\n` +
       `• Les ${db.membres.length} adhérents sont conservés mais remis en "non payé"\n` +
       `• Ils pourront se reconnecter et renouveler leur adhésion\n` +
+      archiveNote + "\n" +
       `${dateInfo}\n` +
       `• Ceux qui ne paient pas avant la date limite seront supprimés automatiquement`
     )) return;
 
+    // Archive minimaliste : on garde UNIQUEMENT ce qui sert vraiment sur la durée
+    // - résultats tournois (historique + classement membres)
+    // - comptes-rendus (utiles aux nouveaux adhérents pour les décisions passées)
+    // Les sondages et questions AG sont supprimés définitivement : une fois closes,
+    // ils n'apportent plus de valeur et encombrent l'admin au fil des saisons.
     const archive = {
       y1: db.y1, y2: db.y2,
       membresCount: db.membres.filter((m) => m.ok).length,
       config_tournois: db.config_tournois,
       inscrits_tournoi: db.inscrits_tournoi,
-      // Engagement archivé avec la saison (sondages, questions AG, comptes-rendus)
-      polls: db.polls ?? [],
-      agItems: db.agItems ?? [],
       reunionReports: db.reunionReports ?? [],
     };
     const prevArchives = db.archives ?? [];
@@ -320,7 +330,6 @@ export default function SeasonSettings({
                       <p className="text-xs text-slate-400">
                         {archive.membresCount} adhérents · {archive.config_tournois?.length ?? 0} tournoi{(archive.config_tournois?.length ?? 0) > 1 ? "s" : ""}
                         {(archive.reunionReports?.length ?? 0) > 0 && ` · ${archive.reunionReports?.length} compte-rendu${(archive.reunionReports?.length ?? 0) > 1 ? "s" : ""}`}
-                        {(archive.polls?.length ?? 0) > 0 && ` · ${archive.polls?.length} sondage${(archive.polls?.length ?? 0) > 1 ? "s" : ""}`}
                       </p>
                     </div>
                     <div className="flex gap-1.5">
