@@ -567,8 +567,36 @@ Deno.serve(async (req) => {
                       <tr><td style="padding: 6px 0; vertical-align: top;">💡</td><td style="padding: 6px 0;"><strong>Proposer vos questions et idées</strong> pour préparer la prochaine assemblée générale</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">📝</td><td style="padding: 6px 0;"><strong>Générer votre procuration AG</strong> en 1 clic si vous ne pouvez pas être présent(e)</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">🔑</td><td style="padding: 6px 0;"><strong>Modifier votre code personnel</strong> à tout moment</td></tr>
-                      <tr><td style="padding: 6px 0; vertical-align: top;">📱</td><td style="padding: 6px 0;"><strong>Installer le site comme une app</strong> sur votre téléphone (iPhone : Safari → Partager → Sur l'écran d'accueil — Android : Chrome → menu → Installer)</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📱</td><td style="padding: 6px 0;"><strong>Installer le site comme une app</strong> sur votre téléphone — voir le bloc ci-dessous 👇</td></tr>
                     </table>
+                  </div>
+
+                  <!-- 📱 Installer l'app sur téléphone -->
+                  <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                    <h3 style="margin: 0 0 12px; color: #6b21a8; font-size: 16px;">📱 Installer SACCB sur votre téléphone</h3>
+                    <p style="margin: 0 0 14px; color: #475569; font-size: 13px;">Comme une vraie app : icône sur l'écran d'accueil, ouverture en plein écran, et toujours à jour automatiquement.</p>
+
+                    <!-- iPhone -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 10px;">
+                      <p style="margin: 0 0 8px; color: #1e3a5f; font-size: 14px; font-weight: bold;">🍎 iPhone (Safari)</p>
+                      <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.7;">
+                        <li>Ouvrez <strong>saccb.fr</strong> dans <strong>Safari</strong> (pas Chrome)</li>
+                        <li>Appuyez sur le bouton <strong>Partager</strong> (carré avec flèche ↑) en bas de l'écran</li>
+                        <li>Faites défiler et touchez <strong>"Sur l'écran d'accueil"</strong></li>
+                        <li>Touchez <strong>"Ajouter"</strong> en haut à droite ✅</li>
+                      </ol>
+                    </div>
+
+                    <!-- Android -->
+                    <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+                      <p style="margin: 0 0 8px; color: #1e3a5f; font-size: 14px; font-weight: bold;">🤖 Android (Chrome)</p>
+                      <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.7;">
+                        <li>Ouvrez <strong>saccb.fr</strong> dans <strong>Chrome</strong></li>
+                        <li>Appuyez sur le menu <strong>⋮</strong> (3 points) en haut à droite</li>
+                        <li>Touchez <strong>"Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong></li>
+                        <li>Confirmez ✅</li>
+                      </ol>
+                    </div>
                   </div>
 
                   ${currentData.whatsappLink ? `
@@ -2116,8 +2144,36 @@ Deno.serve(async (req) => {
                   <tr><td style="padding: 6px 0; vertical-align: top;">💡</td><td style="padding: 6px 0;"><strong>Proposer vos questions et idées</strong> pour préparer la prochaine assemblée générale</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">📝</td><td style="padding: 6px 0;"><strong>Générer votre procuration AG</strong> en 1 clic si vous ne pouvez pas être présent(e)</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">🔑</td><td style="padding: 6px 0;"><strong>Modifier votre code personnel</strong> à tout moment depuis votre espace</td></tr>
-                  <tr><td style="padding: 6px 0; vertical-align: top;">📱</td><td style="padding: 6px 0;"><strong>Installer le site comme une app</strong> sur votre téléphone (iPhone : Safari → Partager → Sur l'écran d'accueil — Android : Chrome → menu → Installer)</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📱</td><td style="padding: 6px 0;"><strong>Installer le site comme une app</strong> sur votre téléphone — voir le bloc ci-dessous 👇</td></tr>
                 </table>
+              </div>
+
+              <!-- 📱 Installer l'app sur téléphone -->
+              <div style="background: #faf5ff; border: 1px solid #e9d5ff; border-radius: 12px; padding: 20px; margin: 20px 0;">
+                <h3 style="margin: 0 0 12px; color: #6b21a8; font-size: 16px;">📱 Installer SACCB sur votre téléphone</h3>
+                <p style="margin: 0 0 14px; color: #475569; font-size: 13px;">Comme une vraie app : icône sur l'écran d'accueil, ouverture en plein écran, et toujours à jour automatiquement.</p>
+
+                <!-- iPhone -->
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px; margin-bottom: 10px;">
+                  <p style="margin: 0 0 8px; color: #1e3a5f; font-size: 14px; font-weight: bold;">🍎 iPhone (Safari)</p>
+                  <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.7;">
+                    <li>Ouvrez <strong>saccb.fr</strong> dans <strong>Safari</strong> (pas Chrome)</li>
+                    <li>Appuyez sur le bouton <strong>Partager</strong> (carré avec flèche ↑) en bas de l'écran</li>
+                    <li>Faites défiler et touchez <strong>"Sur l'écran d'accueil"</strong></li>
+                    <li>Touchez <strong>"Ajouter"</strong> en haut à droite ✅</li>
+                  </ol>
+                </div>
+
+                <!-- Android -->
+                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 14px;">
+                  <p style="margin: 0 0 8px; color: #1e3a5f; font-size: 14px; font-weight: bold;">🤖 Android (Chrome)</p>
+                  <ol style="margin: 0; padding-left: 20px; color: #475569; font-size: 13px; line-height: 1.7;">
+                    <li>Ouvrez <strong>saccb.fr</strong> dans <strong>Chrome</strong></li>
+                    <li>Appuyez sur le menu <strong>⋮</strong> (3 points) en haut à droite</li>
+                    <li>Touchez <strong>"Installer l'application"</strong> ou <strong>"Ajouter à l'écran d'accueil"</strong></li>
+                    <li>Confirmez ✅</li>
+                  </ol>
+                </div>
               </div>
 
               ${currentData.whatsappLink ? `
