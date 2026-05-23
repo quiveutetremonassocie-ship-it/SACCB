@@ -2902,7 +2902,7 @@ Deno.serve(async (req) => {
       const prenomAdmin = emailToPrenom.get(recipientEmail.toLowerCase()) || "";
       const greetingA = prenomAdmin ? `Bonjour ${escapeHtml(prenomAdmin)},` : "Bonjour,";
       const greetingTextA = prenomAdmin ? `Bonjour ${prenomAdmin},` : "Bonjour,";
-      const plainTextA = `${greetingTextA}\n\n${htmlBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainTextA = `${greetingTextA}\n\n${htmlBody.replace(/<[^>]+>/g, "")}\n\nBonne journée,\nCordialement,\nLe bureau du SACCB\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -2924,7 +2924,15 @@ Deno.serve(async (req) => {
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <p style="color: #475569; margin: 0 0 16px;">${greetingA}</p>
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
+
+                <!-- ✍️ Formule de politesse automatique -->
+                <div style="margin-top: 22px; color: #475569; line-height: 1.6;">
+                  <p style="margin: 0;">Bonne journée,</p>
+                  <p style="margin: 0;">Cordialement,</p>
+                  <p style="margin: 0; font-weight: 600;">Le bureau du SACCB</p>
+                </div>
+
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                   <tr><td>
                     <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
                     <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
