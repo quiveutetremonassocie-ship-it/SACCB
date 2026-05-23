@@ -46,18 +46,22 @@ export default function EmailingAdmin({
 
   const history = (db.emailHistory || []).slice().reverse(); // plus récent en premier
 
-  // 🔍 Helper : résoudre une adresse email vers un nom (Prénom Nom de l'adhérent si match,
-  // sinon partie locale de l'email mise en forme, sinon valeur brute)
+  // 🔍 Helper : résoudre une adresse email vers UN PRÉNOM uniquement
+  // (1er mot du nom complet de l'adhérent, sinon partie locale de l'email)
   function resolveName(email?: string): string {
     if (!email) return "—";
     if (email === "system") return "Automatique (système)";
     const lower = email.toLowerCase();
     const membre = (db.membres ?? []).find((m) => (m.email || "").toLowerCase() === lower);
-    if (membre?.nom) return membre.nom;
+    if (membre?.nom) {
+      // On prend uniquement le PRÉNOM (1er mot du nom complet)
+      return membre.nom.trim().split(/\s+/)[0];
+    }
     const localPart = lower.split("@")[0];
     if (localPart) {
-      const cleaned = localPart.replace(/[._-]+/g, " ").trim();
-      return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+      // 1er mot avant un . ou _ pour rester compact
+      const firstToken = localPart.split(/[._-]/)[0];
+      return firstToken.charAt(0).toUpperCase() + firstToken.slice(1);
     }
     return email;
   }
