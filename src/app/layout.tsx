@@ -38,6 +38,14 @@ export const metadata: Metadata = {
     follow: true,
     googleBot: { index: true, follow: true },
   },
+  // 🌍 Meta GEO techniques (aide Google à classer le site géographiquement
+  // sans pousser un autre lieu que Sainte-Adresse côté contenu).
+  other: {
+    "geo.region": "FR-NOR",
+    "geo.placename": "Sainte-Adresse",
+    "geo.position": "49.5083;0.0833",
+    "ICBM": "49.5083, 0.0833",
+  },
   icons: {
     icon: [
       { url: "/favicon.png", type: "image/png" },
@@ -57,21 +65,46 @@ export const viewport = {
   themeColor: "#1e3a5f",
 };
 
+// JSON-LD enrichi : multi-types + coordonnées GPS + appartenance fédérale.
+// On reste centré sur Sainte-Adresse pour le contenu.
 const jsonLd = {
   "@context": "https://schema.org",
-  "@type": "SportsClub",
+  "@type": ["SportsClub", "LocalBusiness", "SportsActivityLocation"],
   name: "SACCB — Sainte-Adresse Club de Compétition de Badminton",
   alternateName: "SACCB",
   url: "https://saccb.fr",
-  description: "Club de badminton de Sainte-Adresse (Le Havre) — inscriptions, tournois, créneaux adultes et étudiants.",
+  logo: "https://saccb.fr/logo.png",
+  image: "https://saccb.fr/og-image.png",
+  description:
+    "Club de badminton de Sainte-Adresse. Inscriptions, tournois, créneaux adultes et étudiants. Salle Paul Vatine.",
   sport: "Badminton",
+  slogan: "Smash · Passion · Convivialité",
+  email: "contact@saccb.fr",
   address: {
     "@type": "PostalAddress",
+    streetAddress: "Salle Paul Vatine",
     addressLocality: "Sainte-Adresse",
     addressRegion: "Normandie",
     postalCode: "76310",
     addressCountry: "FR",
   },
+  geo: {
+    "@type": "GeoCoordinates",
+    latitude: 49.5083,
+    longitude: 0.0833,
+  },
+  areaServed: [
+    { "@type": "City", name: "Sainte-Adresse" },
+    { "@type": "AdministrativeArea", name: "Seine-Maritime" },
+    { "@type": "AdministrativeArea", name: "Normandie" },
+  ],
+  memberOf: [
+    { "@type": "Organization", name: "Fédération Française de Badminton", url: "https://www.ffbad.org" },
+    { "@type": "Organization", name: "Ligue Normandie de Badminton" },
+    { "@type": "Organization", name: "Comité Départemental 76 de Badminton" },
+  ],
+  knowsAbout: ["Badminton", "Tournois doubles", "Loisir badminton"],
+  audience: { "@type": "Audience", audienceType: "Adultes et étudiants tous niveaux" },
   sameAs: ["https://saccb.fr"],
 };
 
