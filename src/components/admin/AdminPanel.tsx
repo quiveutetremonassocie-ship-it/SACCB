@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
 import { adminExportBackup, adminImportBackup } from "@/lib/db";
 import Accounting from "./Accounting";
@@ -221,8 +221,25 @@ export default function AdminPanel({
     }
   }
 
+  // 🔝 Back-to-top : visible quand on a scrollé > 400 px
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const [showBackToTop, setShowBackToTop] = useState(false);
+  useEffect(() => {
+    const el = scrollContainerRef.current;
+    if (!el) return;
+    function onScroll() {
+      const c = scrollContainerRef.current;
+      if (c) setShowBackToTop(c.scrollTop > 400);
+    }
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => el.removeEventListener("scroll", onScroll);
+  }, []);
+  function scrollToTop() {
+    scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
   return (
-    <div className="fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto">
+    <div ref={scrollContainerRef} className="fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto">
       <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10">
         <div className="flex items-center justify-between mb-6 sticky top-0 z-10 -mx-4 md:-mx-6 lg:-mx-10 px-4 md:px-6 lg:px-10 py-3 bg-[#f8fafc]/95 backdrop-blur-xl border-b border-slate-200">
           <div>
@@ -374,6 +391,18 @@ export default function AdminPanel({
             setEditBin(null);
           }}
         />
+      )}
+
+      {/* 🔝 Bouton flottant "Retour en haut" — apparaît quand scrolled > 400px */}
+      {showBackToTop && (
+        <button
+          onClick={scrollToTop}
+          className="fixed bottom-6 right-6 z-[2100] w-12 h-12 rounded-full bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition flex items-center justify-center"
+          title="Retour en haut"
+          aria-label="Retour en haut"
+        >
+          <ChevronUp className="w-6 h-6" />
+        </button>
       )}
     </div>
   );
