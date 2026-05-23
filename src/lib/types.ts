@@ -163,6 +163,17 @@ export type DB = {
   contactMessages?: ContactMessage[];
   // Nom du président (utilisé dans les reçus, signatures, etc.)
   presidentName?: string;
+  // 👁️ Toggles de visibilité des sections publiques côté site (admin → "Visibilité sections")
+  // undefined = visible (comportement par défaut, rétrocompat). false = caché.
+  sectionsVisible?: {
+    actualites?: boolean;
+    tournois?: boolean;
+    horaires?: boolean;
+    palmares?: boolean;
+    rules?: boolean;
+    presentation?: boolean;
+    inscription?: boolean;
+  };
 };
 
 export type ContactMessage = {

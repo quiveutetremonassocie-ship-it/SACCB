@@ -297,6 +297,9 @@ export default function SeasonSettings({
         <p className="text-xs text-slate-400 mt-1">Apparaît sur les reçus de cotisation. Laisse vide pour conserver le nom par défaut.</p>
       </div>
 
+      {/* 👁️ Toggles de visibilité des sections du site public */}
+      <SectionVisibilityToggles db={db} onPersist={onPersist} readOnly={readOnly} />
+
       {!readOnly && (
         <div className="space-y-3">
           <button onClick={toggle} className={db.insc_open ? "btn-danger w-full" : "btn-accent w-full"}>
@@ -782,6 +785,83 @@ export default function SeasonSettings({
           onClose={() => setArchiveContentIdx(null)}
         />
       )}
+    </div>
+  );
+}
+
+// 👁️ Composant : toggles de visibilité de chaque section publique
+function SectionVisibilityToggles({
+  db,
+  onPersist,
+  readOnly,
+}: {
+  db: DB;
+  onPersist: (db: DB) => Promise<void>;
+  readOnly?: boolean;
+}) {
+  const sections: { key: keyof NonNullable<DB["sectionsVisible"]>; label: string; emoji: string; description?: string }[] = [
+    { key: "presentation", label: "Présentation", emoji: "🏸", description: "« Qui sommes-nous »" },
+    { key: "actualites", label: "Actualités", emoji: "📰", description: "Carrousel d'actus" },
+    { key: "tournois", label: "Tournois", emoji: "🏆", description: "À venir + passés" },
+    { key: "horaires", label: "Horaires", emoji: "🕐", description: "Créneaux & tarifs" },
+    { key: "palmares", label: "Palmarès", emoji: "🥇", description: "Résultats tournois extérieurs" },
+    { key: "rules", label: "Règlement", emoji: "📜", description: "Texte + PDF" },
+    { key: "inscription", label: "Inscription", emoji: "📝", description: "Formulaire public d'inscription" },
+  ];
+  const visibility = db.sectionsVisible ?? {};
+
+  async function toggle(key: keyof NonNullable<DB["sectionsVisible"]>) {
+    if (readOnly) return;
+    const current = visibility[key] !== false; // par défaut visible
+    const next = { ...visibility, [key]: !current };
+    await onPersist({ ...db, sectionsVisible: next });
+  }
+
+  const hiddenCount = sections.filter((s) => visibility[s.key] === false).length;
+
+  return (
+    <div className="mb-4 mt-4 bg-slate-50 border border-slate-200 rounded-xl p-3">
+      <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2 flex items-center gap-1">
+        👁️ Visibilité des sections du site public
+        {hiddenCount > 0 && (
+          <span className="ml-1 normal-case font-bold text-amber-600">
+            ({hiddenCount} masquée{hiddenCount > 1 ? "s" : ""})
+          </span>
+        )}
+      </p>
+      <p className="text-xs text-slate-400 mb-3">
+        Désactive une section pour la cacher complètement du site public (utile pour retirer
+        temporairement les actus, les tournois passés, etc.). Les adhérents connectés sont aussi
+        impactés.
+      </p>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        {sections.map((s) => {
+          const visible = visibility[s.key] !== false;
+          return (
+            <button
+              key={s.key}
+              onClick={() => toggle(s.key)}
+              disabled={readOnly}
+              className={`flex items-center justify-between gap-2 px-3 py-2 rounded-lg text-sm font-medium border transition ${
+                visible
+                  ? "bg-emerald-50 border-emerald-300 text-emerald-800 hover:bg-emerald-100"
+                  : "bg-slate-100 border-slate-300 text-slate-500 hover:bg-slate-200"
+              }`}
+            >
+              <span className="flex items-center gap-2 min-w-0 text-left">
+                <span>{s.emoji}</span>
+                <span className="min-w-0">
+                  <span className="block truncate">{s.label}</span>
+                  {s.description && <span className="block text-[10px] opacity-70 truncate">{s.description}</span>}
+                </span>
+              </span>
+              <span className={`relative inline-block w-9 h-5 rounded-full transition-colors shrink-0 ${visible ? "bg-emerald-500" : "bg-slate-400"}`}>
+                <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${visible ? "translate-x-4" : ""}`} />
+              </span>
+            </button>
+          );
+        })}
+      </div>
     </div>
   );
 }

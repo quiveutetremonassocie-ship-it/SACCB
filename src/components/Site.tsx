@@ -304,8 +304,11 @@ export default function Site() {
           engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
           membresCount={membresCount}
         />
-        <Presentation />
-        <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
+        {/* Toggles de visibilité : undefined = visible (default), false = caché */}
+        {db.sectionsVisible?.presentation !== false && <Presentation />}
+        {db.sectionsVisible?.actualites !== false && (
+          <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
+        )}
         <Engagement
           polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
           agItems={db.agItems ?? []}
@@ -318,23 +321,29 @@ export default function Site() {
           onLoginRequest={() => setMemberLoginOpen(true)}
           onRefresh={async () => { await refreshPublic(); }}
         />
-        <Rules
-          clubRules={db.clubRules ?? ""}
-          clubRulesPdfUrl={db.clubRulesPdfUrl}
-          clubRulesPdfName={db.clubRulesPdfName}
-          memberSession={memberSession}
-          onLoginRequest={() => setMemberLoginOpen(true)}
-        />
-        <Horaires />
-        <Tournois
-          db={db}
-          memberSession={memberSession}
-          onLoginRequest={() => setMemberLoginOpen(true)}
-          membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
-        />
-        <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
-        {/* Section inscription : cachée pour les membres connectés (ils sont déjà adhérents) */}
-        {!memberSession && (
+        {db.sectionsVisible?.rules !== false && (
+          <Rules
+            clubRules={db.clubRules ?? ""}
+            clubRulesPdfUrl={db.clubRulesPdfUrl}
+            clubRulesPdfName={db.clubRulesPdfName}
+            memberSession={memberSession}
+            onLoginRequest={() => setMemberLoginOpen(true)}
+          />
+        )}
+        {db.sectionsVisible?.horaires !== false && <Horaires />}
+        {db.sectionsVisible?.tournois !== false && (
+          <Tournois
+            db={db}
+            memberSession={memberSession}
+            onLoginRequest={() => setMemberLoginOpen(true)}
+            membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
+          />
+        )}
+        {db.sectionsVisible?.palmares !== false && (
+          <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
+        )}
+        {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
+        {!memberSession && db.sectionsVisible?.inscription !== false && (
           <Inscription
             db={db}
             membresCount={membresCount}

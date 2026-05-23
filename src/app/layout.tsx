@@ -2,17 +2,21 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SACCB — Association de Badminton de Sainte-Adresse",
+  title: "Badminton Sainte-Adresse — SACCB | Association tous niveaux",
   description:
-    "SACCB : l'association de badminton de Sainte-Adresse. Inscriptions, tournois doubles, créneaux adultes et étudiants. Rejoignez-nous !",
+    "Badminton à Sainte-Adresse : rejoignez le SACCB, l'association officielle de badminton de la commune. Tournois doubles, créneaux adultes & étudiants, salle Paul Vatine. Inscription en ligne.",
   keywords: [
-    "SACCB",
     "badminton Sainte-Adresse",
-    "association badminton",
-    "badminton 76",
+    "SACCB",
+    "Sainte-Adresse badminton",
+    "association badminton Sainte-Adresse",
     "Sainte-Adresse Club Compétition Badminton",
-    "tournoi badminton Seine-Maritime",
-    "inscription badminton",
+    "tournoi badminton Sainte-Adresse",
+    "inscription badminton Sainte-Adresse",
+    "salle Paul Vatine Sainte-Adresse",
+    "badminton 76310",
+    "badminton 76",
+    "badminton Seine-Maritime",
   ],
   authors: [{ name: "SACCB" }],
   creator: "SACCB",
@@ -23,14 +27,14 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://saccb.fr",
     siteName: "SACCB",
-    title: "SACCB — Association de Badminton de Sainte-Adresse",
+    title: "Badminton Sainte-Adresse — SACCB",
     description:
       "SACCB : l'association de badminton de Sainte-Adresse. Inscriptions, tournois, créneaux adultes et étudiants.",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "SACCB Badminton" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SACCB — Association de Badminton de Sainte-Adresse",
+    title: "Badminton Sainte-Adresse — SACCB",
     description: "L'association de badminton de Sainte-Adresse. Inscriptions, tournois, esprit convivial.",
   },
   robots: {

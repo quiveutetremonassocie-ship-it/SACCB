@@ -61,6 +61,11 @@ export default function Hero({
         color="#2563eb"
       />
 
+      {/* 🎯 H1 SEO (visuellement masqué mais lu par Google + lecteurs d'écran) */}
+      <h1 className="sr-only">
+        Badminton Sainte-Adresse — SACCB, l&apos;association de badminton de Sainte-Adresse
+      </h1>
+
       {/* CONTENU */}
       <div className="relative max-w-5xl mx-auto px-6 text-center z-10">
         {/* Badge saison */}
@@ -106,8 +111,8 @@ export default function Hero({
           <span className="h-px w-12 bg-gradient-to-l from-transparent to-amber-400/50" />
         </motion.div>
 
-        {/* TITRE */}
-        <motion.h1
+        {/* TITRE (h2 car le vrai h1 SEO est masqué au-dessus) */}
+        <motion.h2
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.7, delay: 0.15 }}
@@ -116,7 +121,7 @@ export default function Hero({
           <span className="text-transparent bg-clip-text bg-gradient-to-br from-[#1e3a5f] via-[#2d5a8e] to-emerald-600">
             SACCB
           </span>
-        </motion.h1>
+        </motion.h2>
 
         {/* Baseline */}
         <motion.p
