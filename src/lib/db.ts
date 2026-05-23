@@ -257,6 +257,35 @@ export async function adminImportBackup(
   return res.json();
 }
 
+// ─── Boîte de réception partagée : marquer un message comme répondu / archiver / supprimer ───
+export async function adminMarkMessageResponded(
+  messageId: string,
+  adminEmail: string,
+  adminCode: string,
+  unmark = false
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_mark_message_responded", messageId, adminEmail, adminCode, unmark }),
+  });
+  return res.json();
+}
+
+export async function adminArchiveMessage(
+  messageId: string,
+  adminEmail: string,
+  adminCode: string,
+  opts: { delete?: boolean; archived?: boolean } = { archived: true }
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_archive_message", messageId, adminEmail, adminCode, ...opts }),
+  });
+  return res.json();
+}
+
 // ─── Envoyer un rappel de paiement individuel à un adhérent — AUTH ADMIN REQUISE ───
 export async function adminSendPaymentReminder(
   membreId: string,

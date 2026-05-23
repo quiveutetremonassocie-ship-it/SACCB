@@ -159,6 +159,19 @@ export type DB = {
   clubRulesPdfName?: string;
   // Historique des emails envoyés manuellement par l'admin
   emailHistory?: EmailLog[];
+  // Messages reçus via le formulaire de contact public (boîte de réception partagée)
+  contactMessages?: ContactMessage[];
+};
+
+export type ContactMessage = {
+  id: string;
+  name: string;
+  email: string;
+  message: string;
+  createdAt: string; // ISO timestamp
+  respondedBy?: string;  // email de l'admin qui a marqué "répondu"
+  respondedAt?: string;  // ISO timestamp
+  archived?: boolean;    // masqué dans la liste principale
 };
 
 export type EmailLog = {

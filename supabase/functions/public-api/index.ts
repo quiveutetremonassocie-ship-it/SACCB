@@ -2271,6 +2271,84 @@ Deno.serve(async (req) => {
       const errBody = await sendRes.json().catch(() => ({}));
       return json({ ok: false, reason: `Erreur Brevo (${sendRes.status}): ${JSON.stringify(errBody)}` });
     }
+
+    // 💾 Sauvegarde du message dans la boîte de réception partagée admin
+    try {
+      const dbCurrent = (dbD ?? {}) as Record<string, unknown>;
+      const messages = (dbCurrent.contactMessages || []) as Record<string, unknown>[];
+      messages.push({
+        id: Date.now().toString(),
+        name,
+        email,
+        message,
+        createdAt: new Date().toISOString(),
+      });
+      // Conserver max 200 messages (on coupe les + anciens si > 200)
+      const trimmed = messages.length > 200 ? messages.slice(messages.length - 200) : messages;
+      dbCurrent.contactMessages = trimmed;
+      await supabaseAdmin.from("saccb_db").update({ data: dbCurrent }).eq("id", 1);
+    } catch (_e) {
+      // L'email est parti, c'est l'essentiel — on n'echoue pas si la sauvegarde echoue
+    }
+
+    return json({ ok: true });
+  }
+
+  // ─── ACTION: Marquer un message comme repondu (boîte partagée) — AUTH ADMIN ───
+  if (action === "admin_mark_message_responded") {
+    const messageId = String(body.messageId || "");
+    if (!messageId) return json({ ok: false, reason: "messageId manquant." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const adminEmail = sanitize(String(body.adminEmail || "")).toLowerCase();
+    const messages = (d.contactMessages || []) as Record<string, unknown>[];
+    const idx = messages.findIndex((m) => m.id === messageId);
+    if (idx === -1) return json({ ok: false, reason: "Message introuvable." });
+
+    const unmark = body.unmark === true;
+    if (unmark) {
+      const { respondedBy: _r, respondedAt: _t, ...rest } = messages[idx] as Record<string, unknown>;
+      messages[idx] = rest;
+    } else {
+      messages[idx] = { ...messages[idx], respondedBy: adminEmail, respondedAt: new Date().toISOString() };
+    }
+    d.contactMessages = messages;
+
+    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
+  }
+
+  // ─── ACTION: Archiver/supprimer un message — AUTH ADMIN ───
+  if (action === "admin_archive_message") {
+    const messageId = String(body.messageId || "");
+    if (!messageId) return json({ ok: false, reason: "messageId manquant." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const messages = (d.contactMessages || []) as Record<string, unknown>[];
+    const action_kind = body.delete === true ? "delete" : "archive";
+
+    if (action_kind === "delete") {
+      d.contactMessages = messages.filter((m) => m.id !== messageId);
+    } else {
+      d.contactMessages = messages.map((m) =>
+        m.id === messageId ? { ...m, archived: body.archived !== false } : m
+      );
+    }
+    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
 
