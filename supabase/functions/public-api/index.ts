@@ -2925,12 +2925,19 @@ Deno.serve(async (req) => {
                 <p style="color: #475569; margin: 0 0 16px;">${greetingA}</p>
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
 
-                <!-- ✍️ Formule de politesse automatique -->
-                <div style="margin-top: 22px; color: #475569; line-height: 1.6;">
-                  <p style="margin: 0;">Bonne journée,</p>
-                  <p style="margin: 0;">Cordialement,</p>
-                  <p style="margin: 0; font-weight: 600;">Le bureau du SACCB</p>
-                </div>
+                <!-- ✍️ Formule de politesse automatique avec logo -->
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px;">
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 14px;">
+                      <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="display: block; border-radius: 10px;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #475569; line-height: 1.6;">Bonne journée,</p>
+                      <p style="margin: 0; color: #475569; line-height: 1.6;">Cordialement,</p>
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; line-height: 1.6;">Le bureau du SACCB</p>
+                    </td>
+                  </tr>
+                </table>
 
                 <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                   <tr><td>
