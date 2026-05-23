@@ -34,9 +34,9 @@ export default function Rules({
         >
           <div className="sport-label mb-5">
             <span className="sport-label-dot" />
-            <span className="sport-label-text text-slate-700">Vie du club</span>
+            <span className="sport-label-text text-slate-700">Vie de l’association</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Règles du club</h2>
+          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Règles de l'association</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
             Le règlement intérieur du SACCB. Bonne lecture !
           </p>
@@ -48,7 +48,7 @@ export default function Rules({
             <Lock className="w-10 h-10 text-slate-400 mx-auto mb-4" />
             <p className="text-slate-700 font-semibold text-lg mb-2">Espace réservé aux adhérents</p>
             <p className="text-slate-500 text-sm mb-5 max-w-md mx-auto">
-              Connectez-vous à votre espace membre pour consulter les règles du club.
+              Connectez-vous à votre espace membre pour consulter les règles de l'association.
             </p>
             <button onClick={onLoginRequest} className="btn-primary">
               <Lock className="w-4 h-4" /> Se connecter

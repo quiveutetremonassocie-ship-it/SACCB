@@ -290,7 +290,7 @@ export default function AdminPanel({
           <div className="glass p-6 text-center my-4">
             <p className="text-slate-700 font-semibold mb-2">🔒 Aucun accès configuré</p>
             <p className="text-sm text-slate-500">
-              Votre compte admin n&apos;a accès à aucune section. Contactez le bureau du club pour
+              Votre compte admin n&apos;a accès à aucune section. Contactez le bureau de l’association pour
               obtenir des permissions.
             </p>
           </div>

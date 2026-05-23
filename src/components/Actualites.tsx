@@ -125,7 +125,7 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Actualités</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
-            Retrouvez ici les dernières nouvelles du club, événements et moments forts.
+            Retrouvez ici les dernières nouvelles de l’association, événements et moments forts.
           </p>
         </motion.div>
 

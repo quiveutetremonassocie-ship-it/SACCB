@@ -152,7 +152,7 @@ export type DB = {
   pollsOpen?: boolean;   // Sondages visibles côté public
   agOpen?: boolean;      // Section AG (questions + idées) visible côté public
   reportsOpen?: boolean; // Comptes-rendus de réunion visibles côté public (dissocié des sondages)
-  // Règles du club (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
+  // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;
   clubRulesPdfPath?: string;
@@ -206,7 +206,7 @@ export const ADMIN_SECTIONS = [
   { key: "actualites",   label: "Actualités",           emoji: "📰" },
   { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
   { key: "engagement",   label: "Sondages & AG",        emoji: "📣" },
-  { key: "rules",        label: "Règles du club",       emoji: "📜" },
+  { key: "rules",        label: "Règles de l'association",       emoji: "📜" },
   { key: "emailing",     label: "Envoi d'emails",       emoji: "📧" },
   { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
 ] as const;

@@ -197,7 +197,7 @@ export default function Accounting({
     <img src="/logo.png" alt="Logo SACCB" style="width: 70px; height: 70px; object-fit: contain;" />
     <div>
       <h1 style="margin: 0;">Bilan financier — Saison ${db.y1}–${db.y2}</h1>
-      <p class="subtitle" style="margin: 4px 0 0;">Club SACCB &nbsp;|&nbsp; Généré le ${today}</p>
+      <p class="subtitle" style="margin: 4px 0 0;">Association SACCB &nbsp;|&nbsp; Généré le ${today}</p>
     </div>
   </div>
 

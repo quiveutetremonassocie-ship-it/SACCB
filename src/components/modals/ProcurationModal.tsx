@@ -89,7 +89,7 @@ export default function ProcurationModal({
                 required
               />
               <p className="text-xs text-slate-400 mt-1">
-                Doit être un autre membre du club présent à l&apos;AG.
+                Doit être un autre membre de l'association présent à l&apos;AG.
               </p>
             </div>
 
@@ -137,7 +137,7 @@ export default function ProcurationModal({
               SACCB - SAINTE ADRESSE
             </h1>
             <p className="text-[10px] sm:text-xs">
-              Club de Badminton — Salle Paul Vatine
+              Association de Badminton — Salle Paul Vatine
             </p>
           </div>
         </div>
@@ -158,7 +158,7 @@ export default function ProcurationModal({
 
         <p className="mb-4 leading-relaxed">
           également membre de l&apos;association, à l&apos;effet de me représenter à
-          l&apos;Assemblée Générale du club qui se tiendra le{" "}
+          l&apos;Assemblée Générale de l’association qui se tiendra le{" "}
           <strong>{agDateFormatted}</strong>.
         </p>
 

@@ -610,7 +610,7 @@ Deno.serve(async (req) => {
                       <tr><td style="padding: 6px 0; vertical-align: top;">🏆</td><td style="padding: 6px 0;"><strong>Consulter le classement des binômes</strong> et l'historique des tournois passés</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">📅</td><td style="padding: 6px 0;"><strong>Ajouter les tournois</strong> à votre agenda (Google Calendar, iPhone, Outlook)</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">📋</td><td style="padding: 6px 0;"><strong>Lire les comptes-rendus</strong> des réunions et AG (saison actuelle + années précédentes)</td></tr>
-                      <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voter aux sondages</strong> du bureau et participer aux décisions du club</td></tr>
+                      <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voter aux sondages</strong> du bureau et participer aux décisions de l'association</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">💡</td><td style="padding: 6px 0;"><strong>Proposer vos questions et idées</strong> pour préparer la prochaine assemblée générale</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">📝</td><td style="padding: 6px 0;"><strong>Générer votre procuration AG</strong> en 1 clic si vous ne pouvez pas être présent(e)</td></tr>
                       <tr><td style="padding: 6px 0; vertical-align: top;">🔑</td><td style="padding: 6px 0;"><strong>Modifier votre code personnel</strong> à tout moment</td></tr>
@@ -648,7 +648,7 @@ Deno.serve(async (req) => {
 
                   ${currentData.whatsappLink ? `
                   <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
-                    <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez aussi le groupe WhatsApp du club :</p>
+                    <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez aussi le groupe WhatsApp de l'association :</p>
                     <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
                       💬 Rejoindre le groupe WhatsApp
                     </a>
@@ -1142,7 +1142,7 @@ Deno.serve(async (req) => {
       if (existingIdx !== -1) {
         if (membres[existingIdx].ok === true) {
           // 🔒 Message volontairement neutre (anti-énumération d'emails) tout en restant compréhensible pour un vrai adhérent
-          return json({ ok: false, reason: "Une adhésion active existe déjà pour ces informations. Connectez-vous à votre espace membre ou contactez le club." });
+          return json({ ok: false, reason: "Une adhésion active existe déjà pour ces informations. Connectez-vous à votre espace membre ou contactez l'association." });
         }
         // Renouvellement : on met à jour l'entrée existante
         const existing = membres[existingIdx];
@@ -1178,7 +1178,7 @@ Deno.serve(async (req) => {
     // Vérifier quota (dynamique, 65 par défaut)
     const quota = (currentData.quota as number) || 65;
     if (membres.length >= quota) {
-      return json({ ok: false, reason: "Le club est complet !" });
+      return json({ ok: false, reason: "L'association est complète !" });
     }
 
     const newMembre = {
@@ -1384,7 +1384,7 @@ Deno.serve(async (req) => {
     for (const recipient of recipientsNotify) {
       const greetingN = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
       const greetingTextN = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
-      const plainTextN = `${greetingTextN}\n\nUn nouveau tournoi vient d'être ajouté sur le site du club : ${tournoi.name}\n${dateStr}\n\nConnectez-vous à votre espace membre pour inscrire votre binôme : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainTextN = `${greetingTextN}\n\nUn nouveau tournoi vient d'être ajouté sur le site de l'association : ${tournoi.name}\n${dateStr}\n\nConnectez-vous à votre espace membre pour inscrire votre binôme : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -1408,7 +1408,7 @@ Deno.serve(async (req) => {
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
               <p style="color: #475569; margin: 0 0 16px;">${greetingN}</p>
               <h2 style="color: #1e3a5f; margin-top: 0;">🏸 Nouveau tournoi disponible !</h2>
-              <p style="color: #475569;">Un nouveau tournoi vient d'être ajouté sur le site du club :</p>
+              <p style="color: #475569;">Un nouveau tournoi vient d'être ajouté sur le site de l'association :</p>
               <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
                 <p style="margin: 0; font-size: 20px; font-weight: bold; color: #1e3a5f;">${tournoi.name}</p>
                 <p style="margin: 8px 0 0; color: #64748b;">${dateStr}</p>
@@ -2228,7 +2228,7 @@ Deno.serve(async (req) => {
                   <tr><td style="padding: 6px 0; vertical-align: top;">🏆</td><td style="padding: 6px 0;"><strong>Consulter le classement des binômes</strong> de la saison et l'historique des tournois passés</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">📅</td><td style="padding: 6px 0;"><strong>Ajouter les tournois</strong> directement dans votre agenda (Google Calendar, iPhone, Outlook)</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">📋</td><td style="padding: 6px 0;"><strong>Lire les comptes-rendus</strong> des réunions et AG (saison actuelle + années précédentes)</td></tr>
-                  <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voter aux sondages</strong> du bureau et participer aux décisions du club</td></tr>
+                  <tr><td style="padding: 6px 0; vertical-align: top;">📊</td><td style="padding: 6px 0;"><strong>Voter aux sondages</strong> du bureau et participer aux décisions de l'association</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">💡</td><td style="padding: 6px 0;"><strong>Proposer vos questions et idées</strong> pour préparer la prochaine assemblée générale</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">📝</td><td style="padding: 6px 0;"><strong>Générer votre procuration AG</strong> en 1 clic si vous ne pouvez pas être présent(e)</td></tr>
                   <tr><td style="padding: 6px 0; vertical-align: top;">🔑</td><td style="padding: 6px 0;"><strong>Modifier votre code personnel</strong> à tout moment depuis votre espace</td></tr>
@@ -2266,7 +2266,7 @@ Deno.serve(async (req) => {
 
               ${currentData.whatsappLink ? `
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
-                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez aussi le groupe WhatsApp du club pour échanger entre adhérents :</p>
+                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez aussi le groupe WhatsApp de l'association pour échanger entre adhérents :</p>
                 <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
                   💬 Rejoindre le groupe WhatsApp
                 </a>
@@ -2506,10 +2506,10 @@ Deno.serve(async (req) => {
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-              <h2 style="color: #1e3a5f; margin-top: 0;">🎉 Bienvenue au club, ${membre.nom} !</h2>
+              <h2 style="color: #1e3a5f; margin-top: 0;">🎉 Bienvenue dans l’association, ${membre.nom} !</h2>
               <p style="color: #475569;">
                 Vous avez été inscrit(e) au SACCB pour la saison <strong>${currentData.y1}–${currentData.y2}</strong>.
-                Vous avez accès à votre espace membre sur le site du club.
+                Vous avez accès à votre espace membre sur le site de l'association.
               </p>
 
               <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
@@ -2543,7 +2543,7 @@ Deno.serve(async (req) => {
 
               ${currentData.whatsappLink ? `
               <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin-top: 16px;">
-                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp du club :</p>
+                <p style="margin: 0 0 10px; color: #166534; font-size: 14px;">📱 Rejoignez le groupe WhatsApp de l'association :</p>
                 <a href="${currentData.whatsappLink}" style="display: inline-flex; align-items: center; gap: 8px; background: #25D366; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 14px;">
                   💬 Rejoindre le groupe WhatsApp
                 </a>
@@ -3195,7 +3195,7 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, votre avis sur "${pollQuestion}"`
         : `Votre avis sur "${pollQuestion}"`;
-      const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site du club :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site de l'association :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
@@ -3343,7 +3343,7 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, ${topic.toLowerCase()} au SACCB`
         : `${topic} au SACCB`;
-      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site du club !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site de l'association !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
@@ -3366,9 +3366,9 @@ Deno.serve(async (req) => {
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
                 <h2 style="color: #1e3a5f; margin-top: 0;">📣 ${topic}</h2>
-                <p style="color: #475569;">Une nouvelle section est disponible sur le site du club !</p>
+                <p style="color: #475569;">Une nouvelle section est disponible sur le site de l'association !</p>
                 <p style="color: #475569;">Vous pouvez maintenant <strong>${topicEmail}</strong>.</p>
-                <p style="color: #475569;">C'est l'occasion de faire entendre votre voix et de contribuer à la vie du club.</p>
+                <p style="color: #475569;">C'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.</p>
                 <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
                   📣 Accéder à l'espace →
                 </a>
@@ -3473,7 +3473,7 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, compte-rendu : ${reportTitle}`
         : `Compte-rendu : ${reportTitle}`;
-      const plainText = `${greetingText}\n\nLe bureau du club met à votre disposition le compte-rendu suivant :\n\n${reportTitle}${reportDateFormatted ? ` — ${reportDateFormatted}` : ""}\n\n${contentPreview || "(voir PDF joint)"}${reportPdfUrl ? `\n\nPDF complet : ${reportPdfUrl}` : ""}\n\nVous pouvez aussi retrouver ce compte-rendu et les précédents dans la section Comptes-rendus du site : https://saccb.fr/#engagement\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nLe bureau de l'association met à votre disposition le compte-rendu suivant :\n\n${reportTitle}${reportDateFormatted ? ` — ${reportDateFormatted}` : ""}\n\n${contentPreview || "(voir PDF joint)"}${reportPdfUrl ? `\n\nPDF complet : ${reportPdfUrl}` : ""}\n\nVous pouvez aussi retrouver ce compte-rendu et les précédents dans la section Comptes-rendus du site : https://saccb.fr/#engagement\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
       const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",

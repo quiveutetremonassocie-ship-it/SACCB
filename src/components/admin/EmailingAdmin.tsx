@@ -375,7 +375,7 @@ export default function EmailingAdmin({
             </p>
           )}
           <p className="text-xs text-slate-400 mt-1">
-            Ces emails s'ajoutent à la sélection ci-dessus. Permet d'envoyer à des personnes hors club (parents, partenaires, etc.).
+            Ces emails s'ajoutent à la sélection ci-dessus. Permet d'envoyer à des personnes hors association (parents, partenaires, etc.).
           </p>
         </div>
 

@@ -12,7 +12,7 @@ export type MemberSession = {
   paid?: boolean; // false = adhésion non renouvelée pour la saison en cours
   isAdmin?: boolean; // true = accès au panneau admin
   adminCode?: string; // code admin stocké dans la session (évite une clé localStorage séparée)
-  newsOptIn?: boolean; // préférence news du club
+  newsOptIn?: boolean; // préférence news de l’association
 };
 
 export function getMemberSession(): MemberSession | null {

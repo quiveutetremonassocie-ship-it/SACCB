@@ -168,7 +168,7 @@ export default function Palmares({ db, memberSession, onLoginRequest }: {
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Palmarès</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
-            Les résultats du club en tournois extérieurs.
+            Les résultats de l’association en tournois extérieurs.
           </p>
         </div>
 

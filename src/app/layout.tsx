@@ -2,13 +2,13 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "SACCB — Club de Badminton de Sainte-Adresse",
+  title: "SACCB — Association de Badminton de Sainte-Adresse",
   description:
-    "SACCB : le club de badminton de Sainte-Adresse (Le Havre). Inscriptions, tournois doubles, créneaux adultes et étudiants. Rejoignez le club !",
+    "SACCB : l'association de badminton de Sainte-Adresse. Inscriptions, tournois doubles, créneaux adultes et étudiants. Rejoignez-nous !",
   keywords: [
     "SACCB",
     "badminton Sainte-Adresse",
-    "club badminton Le Havre",
+    "association badminton",
     "badminton 76",
     "Sainte-Adresse Club Compétition Badminton",
     "tournoi badminton Seine-Maritime",
@@ -23,15 +23,15 @@ export const metadata: Metadata = {
     locale: "fr_FR",
     url: "https://saccb.fr",
     siteName: "SACCB",
-    title: "SACCB — Club de Badminton de Sainte-Adresse",
+    title: "SACCB — Association de Badminton de Sainte-Adresse",
     description:
-      "SACCB : le club de badminton de Sainte-Adresse (Le Havre). Inscriptions, tournois, créneaux adultes et étudiants.",
+      "SACCB : l'association de badminton de Sainte-Adresse. Inscriptions, tournois, créneaux adultes et étudiants.",
     images: [{ url: "/og-image.png", width: 1200, height: 630, alt: "SACCB Badminton" }],
   },
   twitter: {
     card: "summary_large_image",
-    title: "SACCB — Club de Badminton de Sainte-Adresse",
-    description: "Le club de badminton de Sainte-Adresse. Inscriptions, tournois, esprit convivial.",
+    title: "SACCB — Association de Badminton de Sainte-Adresse",
+    description: "L'association de badminton de Sainte-Adresse. Inscriptions, tournois, esprit convivial.",
   },
   robots: {
     index: true,
@@ -76,7 +76,7 @@ const jsonLd = {
   logo: "https://saccb.fr/logo.png",
   image: "https://saccb.fr/og-image.png",
   description:
-    "Club de badminton de Sainte-Adresse. Inscriptions, tournois, créneaux adultes et étudiants. Salle Paul Vatine.",
+    "Association de badminton de Sainte-Adresse. Inscriptions, tournois, créneaux adultes et étudiants. Salle Paul Vatine.",
   sport: "Badminton",
   slogan: "Smash · Passion · Convivialité",
   email: "contact@saccb.fr",

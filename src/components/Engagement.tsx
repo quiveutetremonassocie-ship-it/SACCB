@@ -178,12 +178,12 @@ export default function Engagement({
           </h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
             {pollsOpen && agOpen
-              ? "Donnez votre avis, posez vos questions, proposez vos idées pour faire vivre le club."
+              ? "Donnez votre avis, posez vos questions, proposez vos idées pour faire vivre l’association."
               : pollsOpen
-              ? "Donnez votre avis sur les sondages en cours du club."
+              ? "Donnez votre avis sur les sondages en cours de l’association."
               : agOpen
               ? "Posez vos questions et proposez vos idées pour préparer ensemble la prochaine assemblée."
-              : "Consultez les comptes-rendus des dernières réunions du club."}
+              : "Consultez les comptes-rendus des dernières réunions de l’association."}
           </p>
           <div className="inline-block mt-4 px-4 py-1.5 bg-gradient-to-r from-purple-100 to-amber-100 border border-purple-200 rounded-full">
             <span className="text-xs font-bold uppercase tracking-widest text-purple-700">
@@ -267,7 +267,7 @@ export default function Engagement({
               <MessageSquare className="w-6 h-6 text-amber-500" /> Réunion / AG
             </h3>
             <p className="text-sm text-slate-500 mb-4">
-              Posez vos questions au bureau ou proposez des améliorations pour le club.
+              Posez vos questions au bureau ou proposez des améliorations pour l’association.
               Vos messages seront traités lors de la prochaine assemblée.
             </p>
 
@@ -291,7 +291,7 @@ export default function Engagement({
 
               <textarea
                 className="input w-full min-h-[100px] resize-y"
-                placeholder={agType === "question" ? "Votre question pour le bureau…" : "Votre idée pour améliorer le club…"}
+                placeholder={agType === "question" ? "Votre question pour le bureau…" : "Votre idée pour améliorer l’association…"}
                 value={agText}
                 onChange={(e) => setAgText(e.target.value)}
                 maxLength={2000}

@@ -45,9 +45,9 @@ export default function Page() {
         <p>Vos données sont collectées et traitées pour les finalités suivantes :</p>
         <ul>
           <li>Gestion administrative des adhérents de l'association</li>
-          <li>Communication relative à la vie du club (créneaux, tournois, événements)</li>
+          <li>Communication relative à la vie de l'association (créneaux, tournois, événements)</li>
           <li>Établissement des listes d'émargement et reçus de cotisation</li>
-          <li>Inscription aux tournois organisés par le club</li>
+          <li>Inscription aux tournois organisés par l’association</li>
           <li>Tenue de la comptabilité et des obligations légales de l'association</li>
         </ul>
       </section>

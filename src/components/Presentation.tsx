@@ -26,11 +26,11 @@ export default function Presentation() {
         >
           <div className="sport-label mb-5">
             <span className="sport-label-dot" />
-            <span className="sport-label-text text-emerald-600">Le club</span>
+            <span className="sport-label-text text-emerald-600">L&apos;association</span>
           </div>
           <h2 className="font-display text-6xl md:text-7xl h-display mb-6">Qui sommes-nous ?</h2>
           <p className="text-slate-600 text-lg leading-relaxed">
-            Le <span className="text-[#1e3a5f] font-semibold">SACCB</span> est le club de badminton de
+            Le <span className="text-[#1e3a5f] font-semibold">SACCB</span> est l&apos;association de badminton de
             Sainte-Adresse. Un esprit convivial, du jeu pour tous les niveaux et une équipe
             accueillante qui vit au rythme du volant depuis plusieurs saisons.
           </p>

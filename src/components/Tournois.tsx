@@ -57,7 +57,7 @@ export default function Tournois({
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Tournois</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
-            Inscrivez votre binôme aux prochains tournois du club.
+            Inscrivez votre binôme aux prochains tournois de l’association.
           </p>
         </div>
 

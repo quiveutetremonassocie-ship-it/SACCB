@@ -134,7 +134,7 @@ export default function RulesAdmin({
           <ScrollText className="w-5 h-5 text-white" />
         </div>
         <div>
-          <h3 className="font-display text-2xl tracking-wider text-slate-800">Règles du club</h3>
+          <h3 className="font-display text-2xl tracking-wider text-slate-800">Règles de l'association</h3>
           <p className="text-xs text-slate-400">
             Visibles par tous les adhérents connectés. Restent permanentes (non archivées avec les saisons).
           </p>
@@ -153,7 +153,7 @@ export default function RulesAdmin({
 
 2. Matériel
    - Apporter ses raquettes
-   - Volants fournis par le club
+   - Volants fournis par l’association
 
 3. Tournois
    - Inscription obligatoire avant la date limite

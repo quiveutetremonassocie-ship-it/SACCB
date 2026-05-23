@@ -261,7 +261,7 @@ export default function SeasonSettings({
         </div>
         {db.membres.length >= currentQuota && (
           <p className="text-amber-600 text-xs mt-1 flex items-center gap-1">
-            <UserPlus className="w-3 h-3" /> Club complet — augmentez le quota pour accepter de nouveaux membres
+            <UserPlus className="w-3 h-3" /> Association complète — augmentez le quota pour accepter de nouveaux membres
           </p>
         )}
       </div>

@@ -19,7 +19,7 @@ export default function Page() {
         </p>
         <p>
           L'adhésion à l'association donne accès aux créneaux de pratique, aux équipements mis à
-          disposition et aux événements organisés par le club, dans les conditions décrites
+          disposition et aux événements organisés par l’association, dans les conditions décrites
           ci-après.
         </p>
       </section>
@@ -78,7 +78,7 @@ export default function Page() {
         <h2>Article 6 — Obligations de l'adhérent</h2>
         <p>En adhérant, le membre s'engage à :</p>
         <ul>
-          <li>respecter le règlement intérieur du club et de la salle ;</li>
+          <li>respecter le règlement intérieur de l’association et de la salle ;</li>
           <li>respecter les autres adhérents et l'encadrement ;</li>
           <li>prendre soin du matériel mis à disposition ;</li>
           <li>
@@ -103,7 +103,7 @@ export default function Page() {
         <p>
           Le bureau de l'association se réserve le droit d'exclure, sans remboursement, tout
           adhérent dont le comportement serait contraire au règlement intérieur, aux valeurs du
-          club ou qui mettrait en danger la sécurité des autres membres.
+          l’association ou qui mettrait en danger la sécurité des autres membres.
         </p>
       </section>
 

@@ -80,7 +80,7 @@ export default function MemberPanel({
       setNewsOptIn(next);
       // Mettre à jour la session en localStorage
       setMemberSession({ ...session, newsOptIn: next });
-      setNewsMsg(next ? "Vous recevrez les news du club." : "Vous ne recevrez plus les news.");
+      setNewsMsg(next ? "Vous recevrez les news de l’association." : "Vous ne recevrez plus les news.");
       setTimeout(() => setNewsMsg(null), 3000);
     } else {
       setNewsMsg("Erreur, réessayez.");
@@ -443,7 +443,7 @@ export default function MemberPanel({
                 ? <Bell className="w-4 h-4 text-emerald-500 shrink-0" />
                 : <BellOff className="w-4 h-4 text-slate-400 shrink-0" />}
               <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-700">News du club</p>
+                <p className="text-sm font-medium text-slate-700">News de l’association</p>
                 <p className="text-xs text-slate-400 truncate">
                   {newsOptIn ? "Activées — tournois, rappels, infos" : "Désactivées"}
                 </p>

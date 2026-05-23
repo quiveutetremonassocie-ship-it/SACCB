@@ -288,7 +288,7 @@ export default function Inscription({
             )}
             {progress >= 75 && progress < 90 && (
               <p className="text-xs text-amber-600 font-semibold mt-1.5">
-                🏃 Le club se remplit vite, ne tardez pas !
+                🏃 L’association se remplit vite, ne tardez pas !
               </p>
             )}
           </div>
@@ -298,7 +298,7 @@ export default function Inscription({
               <Lock className="w-12 h-12 text-red-400 mx-auto mb-4" />
               <h3 className="text-xl font-bold text-red-500 mb-2">Inscriptions closes</h3>
               <p className="text-slate-500 text-sm">
-                La période d&apos;inscription est terminée ou le club est complet. À bientôt !
+                La période d&apos;inscription est terminée ou l’association est complète. À bientôt !
               </p>
             </div>
           ) : done ? (
@@ -584,7 +584,7 @@ export default function Inscription({
                     <a href="/cgu" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-700">CGU</a>
                     {" "}et la{" "}
                     <a href="/politique-confidentialite" target="_blank" rel="noopener noreferrer" className="underline text-blue-600 hover:text-blue-700">politique de confidentialité</a>.
-                    Mes données sont utilisées uniquement pour la gestion du club.
+                    Mes données sont utilisées uniquement pour la gestion de l’association.
                   </span>
                 </span>
               </label>
@@ -598,9 +598,9 @@ export default function Inscription({
                   </div>
                 </div>
                 <span className="text-sm text-slate-600 leading-snug">
-                  <span className="font-medium text-slate-800">Recevoir les news du club</span>
+                  <span className="font-medium text-slate-800">Recevoir les news de l’association</span>
                   <br />
-                  <span className="text-xs text-slate-400">Nouveaux tournois, rappels d&apos;inscription, infos club</span>
+                  <span className="text-xs text-slate-400">Nouveaux tournois, rappels d&apos;inscription, infos association</span>
                 </span>
               </label>
 
@@ -616,7 +616,7 @@ export default function Inscription({
                   <span className="font-medium text-slate-800">Droit à l&apos;image</span>
                   <br />
                   <span className="text-xs text-slate-400">
-                    J&apos;autorise le SACCB à utiliser les photos et vidéos prises lors des événements du club (tournois, entraînements) à des fins de communication. Les photos publiées seront accessibles <strong>uniquement aux adhérents connectés</strong> à leur espace membre.
+                    J&apos;autorise le SACCB à utiliser les photos et vidéos prises lors des événements de l'association (tournois, entraînements) à des fins de communication. Les photos publiées seront accessibles <strong>uniquement aux adhérents connectés</strong> à leur espace membre.
                   </span>
                 </span>
               </label>

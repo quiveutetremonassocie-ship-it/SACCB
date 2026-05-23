@@ -23,7 +23,7 @@ export default function RecuModal({
           <img src="/logo.png" alt="Logo SACCB" className="w-20 h-20 object-contain shrink-0" />
           <div className="text-center flex-1">
             <h1 className="text-2xl text-blue-600 font-bold">SACCB - SAINTE ADRESSE</h1>
-            <p className="text-xs">Club de Badminton — Salle Paul Vatine</p>
+            <p className="text-xs">Association de Badminton — Salle Paul Vatine</p>
           </div>
         </div>
         <h2 className="text-center underline font-bold text-lg mb-8">REÇU DE COTISATION</h2>

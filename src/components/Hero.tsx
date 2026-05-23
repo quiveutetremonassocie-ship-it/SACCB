@@ -101,7 +101,7 @@ export default function Hero({
             className="text-[11px] uppercase tracking-[0.35em] text-amber-600 font-bold"
             style={{ fontFamily: "Oswald, sans-serif" }}
           >
-            Club de Badminton · Sainte-Adresse
+            Association de Badminton · Sainte-Adresse
           </span>
           <span className="h-px w-12 bg-gradient-to-l from-transparent to-amber-400/50" />
         </motion.div>
@@ -144,10 +144,10 @@ export default function Hero({
           transition={{ duration: 0.7, delay: 0.5 }}
           className="flex flex-col sm:flex-row gap-4 justify-center mb-6"
         >
-          {/* Adhérer au club : visible uniquement si inscriptions ouvertes ET visiteur non connecté */}
+          {/* Adhérer à l'association : visible uniquement si inscriptions ouvertes ET visiteur non connecté */}
           {inscOpen && !isMember && (
             <a href="#inscription" className="btn-sport">
-              <Trophy className="w-5 h-5" /> Adhérer au club
+              <Trophy className="w-5 h-5" /> Adhérer à l&apos;association
             </a>
           )}
           {/* Sondages & AG : visible uniquement si membre connecté ET section engagement activée */}

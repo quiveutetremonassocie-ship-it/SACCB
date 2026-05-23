@@ -44,7 +44,7 @@ export default function EditMembreModal({
                 {m.newsOptIn !== false
                   ? <Bell className="w-4 h-4 text-emerald-500" />
                   : <BellOff className="w-4 h-4 text-slate-400" />}
-                News du club
+                News de l’association
               </span>
               <button
                 type="button"
