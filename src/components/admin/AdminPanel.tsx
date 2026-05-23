@@ -79,6 +79,13 @@ export default function AdminPanel({
     return permissions.includes(section);
   }
 
+  // 👁️ Visibilité d'une section : si permissions définies, ne montre QUE celles-là
+  // (en lecture seule ou modifiable selon canEdit). Sinon montre tout.
+  function canSee(section: string): boolean {
+    if (!permissions || permissions.length === 0) return true;
+    return permissions.includes(section);
+  }
+
   const totals = useMemo(() => {
     let totalRecolte = 0,
       reste = 0,
@@ -270,18 +277,25 @@ export default function AdminPanel({
           </div>
         )}
 
-        {/* 🚀 Accès rapide aux sections (smooth scroll) */}
-        <QuickNav unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length} />
+        {/* 🚀 Accès rapide aux sections (smooth scroll) — filtré selon permissions */}
+        <QuickNav
+          unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
+          canSee={canSee}
+        />
 
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-          <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
-            <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
-          </div>
+          {canSee("comptabilite") && (
+            <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
+              <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
+            </div>
+          )}
 
-          <div id="admin-saison" className="scroll-mt-24">
-            <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
-          </div>
-          <StatsAdhesions totals={totals} />
+          {canSee("saison") && (
+            <div id="admin-saison" className="scroll-mt-24">
+              <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+            </div>
+          )}
+          {canSee("saison") && <StatsAdhesions totals={totals} />}
 
           <div id="admin-sauvegarde" className="lg:col-span-2 glass p-4 md:p-6 scroll-mt-24">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
@@ -328,28 +342,43 @@ export default function AdminPanel({
 
           <HelloAssoQR />
 
-          <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">
-            <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
-          </div>
-          <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
-            <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
-          </div>
-          <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
-            <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
-          </div>
-          <div id="admin-messages" className="lg:col-span-2 scroll-mt-24">
-            <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
-          </div>
-          <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
-            <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
-          </div>
-          <div id="admin-tournois" className="lg:col-span-2 scroll-mt-24">
-            <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
-          </div>
-          <div id="admin-inscriptions" className="lg:col-span-2 scroll-mt-24">
-            <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
-          </div>
-          <div id="admin-membres" className="lg:col-span-2 scroll-mt-24">
+          {canSee("actualites") && (
+            <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">
+              <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
+            </div>
+          )}
+          {canSee("engagement") && (
+            <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
+              <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
+            </div>
+          )}
+          {canSee("rules") && (
+            <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
+              <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
+            </div>
+          )}
+          {canSee("emailing") && (
+            <div id="admin-messages" className="lg:col-span-2 scroll-mt-24">
+              <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
+            </div>
+          )}
+          {canSee("emailing") && (
+            <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
+              <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
+            </div>
+          )}
+          {canSee("tournois") && (
+            <div id="admin-tournois" className="lg:col-span-2 scroll-mt-24">
+              <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
+            </div>
+          )}
+          {canSee("inscriptions") && (
+            <div id="admin-inscriptions" className="lg:col-span-2 scroll-mt-24">
+              <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
+            </div>
+          )}
+          {canSee("membres") && (
+            <div id="admin-membres" className="lg:col-span-2 scroll-mt-24">
             <MembresAdmin
               db={db}
               onPersist={safePersist}
@@ -359,7 +388,8 @@ export default function AdminPanel({
               adminCode={adminCode}
               readOnly={!canEdit("membres")}
             />
-          </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -409,24 +439,32 @@ export default function AdminPanel({
 }
 
 // 🚀 Barre de navigation rapide en haut de l'admin (smooth scroll vers les sections)
-function QuickNav({ unreadMessages = 0 }: { unreadMessages?: number }) {
+function QuickNav({
+  unreadMessages = 0,
+  canSee,
+}: {
+  unreadMessages?: number;
+  canSee: (section: string) => boolean;
+}) {
   function scrollTo(id: string) {
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  const items: { id: string; label: string; icon: React.ReactNode; color: string; badge?: number }[] = [
-    { id: "admin-membres", label: "Adhérents", icon: <Users className="w-4 h-4" />, color: "from-cyan-500 to-blue-500" },
-    { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined },
-    { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500" },
-    { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500" },
-    { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500" },
-    { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500" },
-    { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500" },
-    { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500" },
-    { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700" },
-    { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500" },
-    { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" },
+  // permission = key dans ADMIN_SECTIONS (cf types.ts). undefined = toujours visible.
+  const allItems: { id: string; label: string; icon: React.ReactNode; color: string; badge?: number; permission?: string }[] = [
+    { id: "admin-membres", label: "Adhérents", icon: <Users className="w-4 h-4" />, color: "from-cyan-500 to-blue-500", permission: "membres" },
+    { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined, permission: "emailing" },
+    { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500", permission: "emailing" },
+    { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "tournois" },
+    { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "inscriptions" },
+    { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500", permission: "comptabilite" },
+    { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500", permission: "actualites" },
+    { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500", permission: "engagement" },
+    { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
+    { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
+    { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
   ];
+  const items = allItems.filter((it) => !it.permission || canSee(it.permission));
   return (
     <div className="glass p-3 md:p-4 mb-4">
       <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 px-1">
