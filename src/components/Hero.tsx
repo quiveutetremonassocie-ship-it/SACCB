@@ -101,7 +101,7 @@ export default function Hero({
             className="text-[11px] uppercase tracking-[0.35em] text-amber-600 font-bold"
             style={{ fontFamily: "Oswald, sans-serif" }}
           >
-            Club de Badminton · Le Havre / Sainte-Adresse
+            Club de Badminton · Sainte-Adresse
           </span>
           <span className="h-px w-12 bg-gradient-to-l from-transparent to-amber-400/50" />
         </motion.div>
@@ -134,7 +134,7 @@ export default function Hero({
           transition={{ duration: 0.7, delay: 0.4 }}
           className="text-sm md:text-base text-slate-500 max-w-xl mx-auto mb-12"
         >
-          Le club de badminton du Havre situé à Sainte-Adresse. Esprit convivial, jeu pour tous les niveaux et tournois tout au long de l&apos;année.
+          Esprit convivial, jeu pour tous les niveaux et tournois tout au long de l&apos;année.
         </motion.p>
 
         {/* CTA principal (1 seul gros bouton selon contexte) */}

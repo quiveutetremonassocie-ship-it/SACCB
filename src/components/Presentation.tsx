@@ -30,18 +30,9 @@ export default function Presentation() {
           </div>
           <h2 className="font-display text-6xl md:text-7xl h-display mb-6">Qui sommes-nous ?</h2>
           <p className="text-slate-600 text-lg leading-relaxed">
-            Le <span className="text-[#1e3a5f] font-semibold">SACCB</span> est le club de badminton
-            du <span className="text-[#1e3a5f] font-semibold">Havre</span>, basé à{" "}
-            <span className="text-[#1e3a5f] font-semibold">Sainte-Adresse</span> à la salle Paul Vatine.
-            Un esprit convivial, du jeu pour tous les niveaux et une équipe accueillante qui vit
-            au rythme du volant depuis plusieurs saisons.
-          </p>
-          <p className="text-slate-500 text-sm leading-relaxed mt-4 max-w-2xl mx-auto">
-            Située en plein cœur de l&apos;agglomération havraise, notre association loi 1901
-            accueille adultes et étudiants de tout niveau, du loisir à la compétition.
-            Tournois doubles toute la saison, créneaux libres, ambiance sportive et conviviale.
-            Que tu habites Le Havre, Sainte-Adresse, Octeville-sur-Mer ou Montivilliers,
-            rejoins-nous !
+            Le <span className="text-[#1e3a5f] font-semibold">SACCB</span> est le club de badminton de
+            Sainte-Adresse. Un esprit convivial, du jeu pour tous les niveaux et une équipe
+            accueillante qui vit au rythme du volant depuis plusieurs saisons.
           </p>
 
           {/* Séparateur "court" */}
