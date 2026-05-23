@@ -311,6 +311,53 @@ async function sendBrevo(brevoKey: string, payload: EmailPayload): Promise<Respo
   }
 }
 
+// 📝 Helper de logging d'email dans emailHistory.
+// Centralise tout : appelé après chaque envoi (sendBrevo) pour qu'aucun mail
+// n'échappe à l'historique. Gère un append + trim à 200 entrées + écriture DB.
+async function logEmailToHistory(
+  // deno-lint-ignore no-explicit-any
+  supabaseAdmin: any,
+  entry: {
+    type: string;
+    subject: string;
+    body?: string;
+    recipients: string[];
+    sentBy?: string;
+    targetMode?: string;
+    status?: "sent" | "partial" | "failed";
+    sentCount?: number;
+    attachmentNames?: string[];
+  },
+): Promise<void> {
+  try {
+    // Lecture rapide du emailHistory existant
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return;
+    const d = data.data as Record<string, unknown>;
+    const history = (d.emailHistory || []) as Record<string, unknown>[];
+    history.push({
+      id: Date.now().toString() + "-" + Math.random().toString(36).slice(2, 7),
+      date: new Date().toISOString(),
+      type: entry.type,
+      subject: entry.subject.slice(0, 200),
+      body: (entry.body || "").slice(0, 2000),
+      recipientCount: entry.recipients.length,
+      recipientsPreview: entry.recipients.slice(0, 3),
+      targetMode: entry.targetMode || entry.type,
+      sentBy: entry.sentBy || "system",
+      status: entry.status || "sent",
+      sentCount: entry.sentCount ?? entry.recipients.length,
+      totalCount: entry.recipients.length,
+      attachmentNames: entry.attachmentNames,
+    });
+    // Conserver les 200 dernières entrées (anti-explosion DB)
+    d.emailHistory = history.slice(-200);
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+  } catch (e) {
+    console.warn("[logEmailToHistory] échec :", e);
+  }
+}
+
 // Helper async pour find par credentials (membres)
 async function findMembreByCredentials(
   membres: Record<string, unknown>[],
@@ -1404,6 +1451,15 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Aucun email envoyé. Erreur : " + lastError.slice(0, 200) });
     }
 
+    await logEmailToHistory(supabaseAdmin, {
+      type: "tournament_notification",
+      subject: `Nouveau tournoi : ${tournoi.name}`,
+      body: `Notification "nouveau tournoi" envoyée pour ${tournoi.name} (${tournoi.date || ""})`,
+      recipients: emails,
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+      status: sentCount < emails.length ? "partial" : "sent",
+      sentCount,
+    });
     return json({ ok: true, sent: sentCount, total: emails.length });
   }
 
@@ -1509,6 +1565,15 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Aucun email envoyé. Erreur : " + lastErrorSeason.slice(0, 200) });
     }
 
+    await logEmailToHistory(supabaseAdmin, {
+      type: "new_season",
+      subject: `Nouvelle saison ${currentData.y1}–${currentData.y2}`,
+      body: `Notification "nouvelle saison" envoyée aux anciens adhérents (renouvellement)`,
+      recipients: emails,
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+      status: sentCountSeason < emails.length ? "partial" : "sent",
+      sentCount: sentCountSeason,
+    });
     return json({ ok: true, sent: sentCountSeason, total: emails.length });
   }
 
@@ -1943,6 +2008,13 @@ Deno.serve(async (req) => {
       `,
     });
     if (!sendRes.ok) return json({ ok: false, reason: "Erreur d'envoi : " + sendRes.status });
+    await logEmailToHistory(supabaseAdmin, {
+      type: "payment_reminder",
+      subject: prenom ? `${prenom}, pensez à finaliser votre adhésion SACCB` : `Pensez à finaliser votre adhésion SACCB`,
+      body: `Rappel paiement adhésion saison ${y1}–${y2} envoyé à ${membre.nom}`,
+      recipients: [email],
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+    });
     return json({ ok: true });
   }
 
@@ -2015,6 +2087,13 @@ Deno.serve(async (req) => {
       `,
     });
 
+    await logEmailToHistory(supabaseAdmin, {
+      type: "code_reset",
+      subject: "🔑 Votre code SACCB a été réinitialisé",
+      body: `Réinitialisation du code de ${membre.nom} par un admin`,
+      recipients: [email],
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+    });
     return json({ ok: true });
   }
 
@@ -2217,6 +2296,13 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Erreur envoi email : " + errText });
     }
 
+    await logEmailToHistory(supabaseAdmin, {
+      type: "payment_confirmation",
+      subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
+      body: `Confirmation paiement envoyée à ${membre.nom} (${prix}€, ${membre.type})`,
+      recipients: [String(membre.email)],
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+    });
     return json({ ok: true });
   }
 
@@ -2291,6 +2377,13 @@ Deno.serve(async (req) => {
       // L'email est parti, c'est l'essentiel — on n'echoue pas si la sauvegarde echoue
     }
 
+    await logEmailToHistory(supabaseAdmin, {
+      type: "contact_form",
+      subject: `📩 Message de ${name} via saccb.fr`,
+      body: `Message reçu via le formulaire de contact de ${name} (${email}) : ${message.slice(0, 200)}${message.length > 200 ? "..." : ""}`,
+      recipients: toEmails,
+      sentBy: "system",
+    });
     return json({ ok: true });
   }
 
@@ -2477,6 +2570,13 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Erreur envoi email : " + errText });
     }
 
+    await logEmailToHistory(supabaseAdmin, {
+      type: "welcome",
+      subject: "🏸 Bienvenue au SACCB — Votre accès espace membre",
+      body: `Bienvenue + code provisoire envoyé à ${membre.nom}`,
+      recipients: [String(membre.email)],
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+    });
     return json({ ok: true });
   }
 

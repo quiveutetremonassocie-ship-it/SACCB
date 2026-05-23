@@ -5,7 +5,7 @@ import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, 
 import { DB } from "@/lib/types";
 import { adminSendEmail, adminDeleteEmailLog, adminClearEmailHistory } from "@/lib/db";
 
-type TargetMode = "all" | "paid" | "unpaid" | "news" | "custom";
+type TargetMode = "" | "all" | "paid" | "unpaid" | "news" | "custom";
 
 type Attachment = {
   filename: string;
@@ -31,7 +31,9 @@ export default function EmailingAdmin({
 }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
-  const [targetMode, setTargetMode] = useState<TargetMode>("paid");
+  // Volontairement vide au démarrage : on force l'admin à cliquer explicitement
+  // sur un mode pour éviter d'envoyer à "tous les payés" par inadvertance.
+  const [targetMode, setTargetMode] = useState<TargetMode>("");
   const [selectedMembreIds, setSelectedMembreIds] = useState<Set<string>>(new Set());
   const [search, setSearch] = useState("");
   const [extraEmails, setExtraEmails] = useState("");
@@ -175,6 +177,10 @@ export default function EmailingAdmin({
       setResult({ ok: false, text: "Le corps de l'email doit faire au moins 5 caractères." });
       return;
     }
+    if (!targetMode) {
+      setResult({ ok: false, text: "⚠️ Veuillez sélectionner à qui vous voulez envoyer le mail (Tous, Payés, Non-payés, News, ou Sélection)." });
+      return;
+    }
     if (recipientCount === 0) {
       setResult({ ok: false, text: "Aucun destinataire sélectionné." });
       return;
@@ -183,7 +189,22 @@ export default function EmailingAdmin({
       setResult({ ok: false, text: "Identifiants admin manquants. Reconnectez-vous." });
       return;
     }
-    if (!confirm(`Envoyer cet email à ${recipientCount} adhérent${recipientCount > 1 ? "s" : ""} ?\n\nSujet : ${subject}`)) return;
+    // Labels lisibles pour la confirmation
+    const targetLabels: Record<string, string> = {
+      all: "TOUS les adhérents (payés et non-payés)",
+      paid: "tous les adhérents PAYÉS",
+      unpaid: "tous les adhérents NON-PAYÉS",
+      news: "tous les adhérents PAYÉS abonnés aux news",
+      custom: "votre sélection manuelle",
+    };
+    const targetDesc = targetLabels[targetMode] || targetMode;
+    if (!confirm(
+      `⚠️ CONFIRMATION D'ENVOI\n\n` +
+      `Destinataires : ${recipientCount} personne${recipientCount > 1 ? "s" : ""}\n` +
+      `(${targetDesc})\n\n` +
+      `Sujet : ${subject}\n\n` +
+      `Confirmer l'envoi ?`
+    )) return;
 
     setSending(true);
     setResult(null);
@@ -248,7 +269,14 @@ export default function EmailingAdmin({
 
       {/* Sélection des destinataires */}
       <div className="mb-4">
-        <p className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-semibold">Destinataires</p>
+        <p className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-semibold">
+          Destinataires <span className="text-red-500 normal-case font-bold">*</span>
+          {!targetMode && (
+            <span className="ml-2 text-amber-600 font-bold normal-case tracking-normal text-xs">
+              ⚠️ Choisis un groupe avant d&apos;envoyer
+            </span>
+          )}
+        </p>
         <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 mb-3">
           <TargetButton active={targetMode === "all"} onClick={() => setTargetMode("all")} icon={<Users className="w-4 h-4" />} label="Tous" count={membres.length} />
           <TargetButton active={targetMode === "paid"} onClick={() => setTargetMode("paid")} icon={<CheckCircle2 className="w-4 h-4" />} label="Payés" count={membres.filter((m) => m.ok === true).length} color="emerald" />

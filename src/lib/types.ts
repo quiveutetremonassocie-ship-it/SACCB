@@ -182,11 +182,16 @@ export type EmailLog = {
   recipientCount: number;
   recipientsPreview: string[]; // 3 premiers destinataires pour aperçu
   targetMode: string; // all | paid | unpaid | news | custom
-  sentBy: string; // email de l'admin qui a envoyé
+  sentBy: string; // email de l'admin qui a envoyé OU "system" si automatique
   attachmentNames?: string[]; // noms des PJ (pas le contenu, pour économiser)
   status: "sent" | "partial" | "failed";
   sentCount?: number;
   totalCount?: number;
+  // Type d'email pour le filtrage : manual / welcome / payment_confirmation /
+  // payment_reminder / code_reset / code_forgot / contact_form / report_sent /
+  // engagement_notification / poll_notification / tournament_notification /
+  // season_reminder / tournament_reminder / new_season / cleanup_admin
+  type?: string;
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
