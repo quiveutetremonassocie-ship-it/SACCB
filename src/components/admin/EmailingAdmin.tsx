@@ -46,6 +46,22 @@ export default function EmailingAdmin({
 
   const history = (db.emailHistory || []).slice().reverse(); // plus récent en premier
 
+  // 🔍 Helper : résoudre une adresse email vers un nom (Prénom Nom de l'adhérent si match,
+  // sinon partie locale de l'email mise en forme, sinon valeur brute)
+  function resolveName(email?: string): string {
+    if (!email) return "—";
+    if (email === "system") return "Automatique (système)";
+    const lower = email.toLowerCase();
+    const membre = (db.membres ?? []).find((m) => (m.email || "").toLowerCase() === lower);
+    if (membre?.nom) return membre.nom;
+    const localPart = lower.split("@")[0];
+    if (localPart) {
+      const cleaned = localPart.replace(/[._-]+/g, " ").trim();
+      return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+    return email;
+  }
+
   async function deleteLog(logId: string) {
     if (!adminEmail || !adminCode) return;
     if (!confirm("Supprimer cette entrée de l'historique ?\n\n(L'email envoyé reste dans la boîte des destinataires, on supprime juste la trace ici.)")) return;
@@ -519,7 +535,13 @@ export default function EmailingAdmin({
                       <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 space-y-2">
                         <div className="text-xs text-slate-500">
                           <strong>Mode :</strong> {labelTargetMode(log.targetMode)}
-                          {log.sentBy && <> · <strong>Envoyé par :</strong> {log.sentBy}</>}
+                          {log.sentBy && (
+                            <>
+                              {" · "}
+                              <strong>Envoyé par :</strong>{" "}
+                              <span title={`Email enregistré : ${log.sentBy}`}>{resolveName(log.sentBy)}</span>
+                            </>
+                          )}
                         </div>
                         {log.recipientsPreview && log.recipientsPreview.length > 0 && (
                           <div className="text-xs text-slate-500">
