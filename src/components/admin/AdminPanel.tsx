@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
 import { adminExportBackup, adminImportBackup } from "@/lib/db";
 import Accounting from "./Accounting";
@@ -253,15 +253,20 @@ export default function AdminPanel({
           </div>
         )}
 
+        {/* 🚀 Accès rapide aux sections (smooth scroll) */}
+        <QuickNav unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length} />
+
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-          <div className="lg:col-span-2">
+          <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
             <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
           </div>
 
-          <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+          <div id="admin-saison" className="scroll-mt-24">
+            <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+          </div>
           <StatsAdhesions totals={totals} />
 
-          <div className="lg:col-span-2 glass p-4 md:p-6">
+          <div id="admin-sauvegarde" className="lg:col-span-2 glass p-4 md:p-6 scroll-mt-24">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500 !text-xs md:!text-sm">
@@ -306,28 +311,28 @@ export default function AdminPanel({
 
           <HelloAssoQR />
 
-          <div className="lg:col-span-2">
+          <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">
             <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
             <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
             <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-messages" className="lg:col-span-2 scroll-mt-24">
             <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
             <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-tournois" className="lg:col-span-2 scroll-mt-24">
             <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-inscriptions" className="lg:col-span-2 scroll-mt-24">
             <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
           </div>
-          <div className="lg:col-span-2">
+          <div id="admin-membres" className="lg:col-span-2 scroll-mt-24">
             <MembresAdmin
               db={db}
               onPersist={safePersist}
@@ -370,6 +375,54 @@ export default function AdminPanel({
           }}
         />
       )}
+    </div>
+  );
+}
+
+// 🚀 Barre de navigation rapide en haut de l'admin (smooth scroll vers les sections)
+function QuickNav({ unreadMessages = 0 }: { unreadMessages?: number }) {
+  function scrollTo(id: string) {
+    const el = document.getElementById(id);
+    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
+  const items: { id: string; label: string; icon: React.ReactNode; color: string; badge?: number }[] = [
+    { id: "admin-membres", label: "Adhérents", icon: <Users className="w-4 h-4" />, color: "from-cyan-500 to-blue-500" },
+    { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined },
+    { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500" },
+    { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500" },
+    { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500" },
+    { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500" },
+    { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500" },
+    { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500" },
+    { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700" },
+    { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500" },
+    { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" },
+  ];
+  return (
+    <div className="glass p-3 md:p-4 mb-4">
+      <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 px-1">
+        🚀 Accès rapide
+      </p>
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-2">
+        {items.map((it) => (
+          <button
+            key={it.id}
+            onClick={() => scrollTo(it.id)}
+            className={`relative flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl bg-gradient-to-br ${it.color} text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition`}
+            title={it.label}
+          >
+            {it.icon}
+            <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2">
+              {it.label}
+            </span>
+            {it.badge !== undefined && it.badge > 0 && (
+              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow border border-white">
+                {it.badge > 99 ? "99+" : it.badge}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
     </div>
   );
 }
