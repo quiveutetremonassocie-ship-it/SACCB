@@ -481,7 +481,7 @@ export default function SeasonSettings({
                         <Lock className="w-3 h-3 mr-1" /> Lecture seule
                       </button>
                     </div>
-                    <p className="text-xs text-slate-400">Sans sections cochées = accès complet (toutes sections modifiables)</p>
+                    <p className="text-xs text-slate-400">⚠️ Aucune section cochée = aucune section visible dans l&apos;admin pour cet utilisateur. Utilisez « Tout cocher » pour accès complet.</p>
                   </div>
                 )}
               </div>
@@ -644,7 +644,7 @@ export default function SeasonSettings({
                         <Lock className="w-3 h-3 mr-1" /> Lecture seule
                       </button>
                     </div>
-                    <p className="text-xs text-slate-400">Sans sections cochées = accès complet (toutes sections modifiables)</p>
+                    <p className="text-xs text-slate-400">⚠️ Aucune section cochée = aucune section visible dans l&apos;admin pour cet utilisateur. Utilisez « Tout cocher » pour accès complet.</p>
                   </div>
                 )}
               </div>

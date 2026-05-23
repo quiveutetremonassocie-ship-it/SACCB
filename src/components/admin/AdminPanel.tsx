@@ -75,14 +75,16 @@ export default function AdminPanel({
 
   function canEdit(section: string): boolean {
     if (readOnly) return false;
-    if (!permissions || permissions.length === 0) return true;
+    // permissions undefined = legacy / super-admin sans config = accès complet
+    if (permissions === undefined) return true;
+    // permissions [] (explicitement vide) = aucun accès
     return permissions.includes(section);
   }
 
-  // 👁️ Visibilité d'une section : si permissions définies, ne montre QUE celles-là
-  // (en lecture seule ou modifiable selon canEdit). Sinon montre tout.
+  // 👁️ Visibilité d'une section : si permissions explicitement vide [], rien n'est visible.
+  // Si undefined (jamais configuré), tout est visible (legacy super-admin).
   function canSee(section: string): boolean {
-    if (!permissions || permissions.length === 0) return true;
+    if (permissions === undefined) return true;
     return permissions.includes(section);
   }
 
@@ -282,6 +284,17 @@ export default function AdminPanel({
           unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
           canSee={canSee}
         />
+
+        {/* Avertissement si aucune section visible (permissions explicitement vides) */}
+        {permissions !== undefined && permissions.length === 0 && (
+          <div className="glass p-6 text-center my-4">
+            <p className="text-slate-700 font-semibold mb-2">🔒 Aucun accès configuré</p>
+            <p className="text-sm text-slate-500">
+              Votre compte admin n&apos;a accès à aucune section. Contactez le bureau du club pour
+              obtenir des permissions.
+            </p>
+          </div>
+        )}
 
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
           {canSee("comptabilite") && (
