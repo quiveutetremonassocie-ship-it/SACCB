@@ -23,6 +23,26 @@ export default function MessagesAdmin({
   const [openId, setOpenId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  // 🔍 Helper : résoudre une adresse email vers un prénom (lookup dans les membres + admins)
+  function resolveName(email?: string): string {
+    if (!email) return "";
+    const lower = email.toLowerCase();
+    // 1) Adhérent avec cet email
+    const membre = (db.membres ?? []).find((m) => (m.email || "").toLowerCase() === lower);
+    if (membre?.nom) {
+      // On prend juste le prénom (1er mot du nom complet) pour l'affichage compact
+      return membre.nom.trim().split(/\s+/)[0];
+    }
+    // 2) Admin credential (identifié par email seulement, pas de nom)
+    // → on affiche la partie locale de l'email (avant @) avec une capitale
+    const localPart = lower.split("@")[0];
+    if (localPart) {
+      const cleaned = localPart.replace(/[._-]+/g, " ").trim();
+      return cleaned.charAt(0).toUpperCase() + cleaned.slice(1);
+    }
+    return email;
+  }
+
   const { unrespondedCount, respondedCount, archivedCount, visible } = useMemo(() => {
     const visibleMessages = allMessages.filter((m) => showArchived || !m.archived);
     // Trier : non-répondus en premier, puis par date desc
@@ -172,9 +192,12 @@ export default function MessagesAdmin({
                     <p className="text-sm text-slate-600 mt-1 line-clamp-2">{m.message}</p>
                   )}
                   {isResponded && (
-                    <p className="text-[11px] text-emerald-700 mt-1 flex items-center gap-1">
+                    <p
+                      className="text-[11px] text-emerald-700 mt-1 flex items-center gap-1"
+                      title={`Email enregistré : ${m.respondedBy}`}
+                    >
                       <User className="w-3 h-3" />
-                      Répondu par <strong>{isMine ? "vous" : m.respondedBy}</strong>
+                      Répondu par <strong>{isMine ? "vous" : resolveName(m.respondedBy)}</strong>
                       {m.respondedAt && ` le ${new Date(m.respondedAt).toLocaleDateString("fr-FR")}`}
                     </p>
                   )}
