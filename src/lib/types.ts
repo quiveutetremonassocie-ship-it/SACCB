@@ -161,6 +161,8 @@ export type DB = {
   emailHistory?: EmailLog[];
   // Messages reçus via le formulaire de contact public (boîte de réception partagée)
   contactMessages?: ContactMessage[];
+  // Nom du président (utilisé dans les reçus, signatures, etc.)
+  presidentName?: string;
 };
 
 export type ContactMessage = {

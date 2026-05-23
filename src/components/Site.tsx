@@ -302,6 +302,7 @@ export default function Site() {
           inscOpen={db.insc_open}
           isMember={!!memberSession}
           engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
+          membresCount={membresCount}
         />
         <Presentation />
         <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />

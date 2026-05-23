@@ -1928,6 +1928,15 @@ Deno.serve(async (req) => {
             </div>
           `,
         }).catch(() => {});
+
+      // 📝 Logging dans l'historique des emails (best-effort)
+      await logEmailToHistory(supabaseAdmin, {
+        type: "code_forgot",
+        subject: "🔑 Votre code personnel SACCB",
+        body: `Réinitialisation du code suite à un "Code oublié ?" pour ${membre.nom}`,
+        recipients: [email],
+        sentBy: "system",
+      });
     }
 
     return json({ ok: true });
@@ -3243,6 +3252,15 @@ Deno.serve(async (req) => {
     }
 
     if (sentCount === 0) return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
+    await logEmailToHistory(supabaseAdmin, {
+      type: "poll_notification",
+      subject: `Nouveau sondage : ${pollQuestion}`,
+      body: `Notification d'un nouveau sondage envoyée aux adhérents (payés + news)`,
+      recipients: recipients.map((r) => r.email),
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+      status: sentCount < recipients.length ? "partial" : "sent",
+      sentCount,
+    });
     return json({ ok: true, sent: sentCount, total: recipients.length });
   }
 
@@ -3383,6 +3401,15 @@ Deno.serve(async (req) => {
     if (sentCount === 0) {
       return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
     }
+    await logEmailToHistory(supabaseAdmin, {
+      type: "engagement_notification",
+      subject: `${topic} au SACCB`,
+      body: `Notification "engagement ouvert" (${parts.join(" + ")}) envoyée aux adhérents`,
+      recipients: recipients.map((r) => r.email),
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+      status: sentCount < recipients.length ? "partial" : "sent",
+      sentCount,
+    });
     return json({ ok: true, sent: sentCount, total: recipients.length });
   }
 
@@ -3493,6 +3520,15 @@ Deno.serve(async (req) => {
     if (sentCount === 0) {
       return json({ ok: false, reason: "Aucun email envoyé. " + errors.slice(0, 3).join(" | ") });
     }
+    await logEmailToHistory(supabaseAdmin, {
+      type: "report_sent",
+      subject: `Compte-rendu : ${reportTitle}`,
+      body: `Envoi du compte-rendu "${reportTitle}" du ${reportDateFormatted} aux adhérents${reportPdfUrl ? " (avec PDF joint)" : ""}`,
+      recipients: recipients.map((r) => r.email),
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+      status: sentCount < recipients.length ? "partial" : "sent",
+      sentCount,
+    });
     return json({ ok: true, sent: sentCount, total: recipients.length });
   }
 

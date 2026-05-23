@@ -10,12 +10,16 @@ export default function Hero({
   inscOpen,
   isMember = false,
   engagementOpen = false,
+  membresCount = 0,
+  creneauxCount = 3,
 }: {
   seasonY1: number;
   seasonY2: number;
   inscOpen: boolean;
   isMember?: boolean;
   engagementOpen?: boolean; // true si au moins un des 2 toggles (pollsOpen ou agOpen) est activé
+  membresCount?: number;
+  creneauxCount?: number;
 }) {
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
@@ -190,8 +194,8 @@ export default function Hero({
           transition={{ duration: 0.8, delay: 0.7 }}
           className="grid grid-cols-3 gap-3 md:gap-6 max-w-3xl mx-auto"
         >
-          <StatCard icon={<Users2 className="w-4 h-4" />} value="65" label="Adhérents" />
-          <StatCard icon={<Calendar className="w-4 h-4" />} value="3" label="Créneaux / sem." />
+          <StatCard icon={<Users2 className="w-4 h-4" />} value={membresCount > 0 ? String(membresCount) : "—"} label="Adhérents" />
+          <StatCard icon={<Calendar className="w-4 h-4" />} value={String(creneauxCount)} label="Créneaux / sem." />
           <StatCard icon={<Flame className="w-4 h-4" />} value="∞" label="Smashs" />
         </motion.div>
 

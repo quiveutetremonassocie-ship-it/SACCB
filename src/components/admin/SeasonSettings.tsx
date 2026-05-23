@@ -29,6 +29,7 @@ export default function SeasonSettings({
   const currentQuota = db.quota ?? QUOTA_DEFAULT;
   const [quota, setQuota] = useState(currentQuota);
   const [whatsappLink, setWhatsappLink] = useState(db.whatsappLink || "");
+  const [presidentName, setPresidentName] = useState(db.presidentName || "");
   const [inscCloseDate, setInscCloseDate] = useState(db.insc_close_date || "");
   const [adminEmailInput, setAdminEmailInput] = useState("");
   const [contactEmailInput, setContactEmailInput] = useState("");
@@ -55,6 +56,7 @@ export default function SeasonSettings({
       quota: Number(quota),
       whatsappLink: whatsappLink.trim() || undefined,
       insc_close_date: inscCloseDate.trim() || undefined,
+      presidentName: presidentName.trim() || undefined,
     });
     alert("Paramètres mis à jour !");
   }
@@ -278,6 +280,21 @@ export default function SeasonSettings({
         </label>
         <input type="url" className="input w-full" placeholder="https://chat.whatsapp.com/..." value={whatsappLink} onChange={(e) => setWhatsappLink(e.target.value)} disabled={readOnly} />
         <p className="text-xs text-slate-400 mt-1">Affiché après paiement et dans l&apos;espace membre.</p>
+      </div>
+
+      <div className="mb-3">
+        <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          <ShieldCheck className="w-3 h-3" /> Nom du président
+        </label>
+        <input
+          type="text"
+          className="input w-full"
+          placeholder="Hernan Camara"
+          value={presidentName}
+          onChange={(e) => setPresidentName(e.target.value)}
+          disabled={readOnly}
+        />
+        <p className="text-xs text-slate-400 mt-1">Apparaît sur les reçus de cotisation. Laisse vide pour conserver le nom par défaut.</p>
       </div>
 
       {!readOnly && (
