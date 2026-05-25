@@ -926,7 +926,7 @@ Deno.serve(async (req) => {
         try {
           await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
-            to: [{ email }],
+            to: [email],
             subject: `Code de connexion admin SACCB : ${newCode}`,
             html: `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px"><h2 style="color:#1e3a5f">🔐 Code de connexion</h2><p>Votre code à usage unique pour accéder au panneau admin :</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;text-align:center;background:#f1f5f9;padding:16px;border-radius:8px">${newCode}</p><p style="color:#64748b;font-size:13px">Ce code est valable 10 minutes. Si vous n'êtes pas à l'origine de cette connexion, changez immédiatement votre mot de passe et prévenez le bureau.</p></div>`,
             text: `Votre code de connexion admin SACCB : ${newCode}\nValable 10 minutes.`,
