@@ -22,7 +22,9 @@ import Palmares from "./Palmares";
 import Engagement from "./Engagement";
 import Rules from "./Rules";
 
-export default function Site() {
+type SiteMode = "full" | "actualites" | "tournois" | "inscription";
+
+export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [db, setDb] = useState<DB>(emptyDB());
   const [membresCount, setMembresCount] = useState(0);
   const [adminOpen, setAdminOpen] = useState(false);
@@ -305,33 +307,39 @@ export default function Site() {
           </button>
         </div>
       )}
-      <main>
-        <Hero
-          seasonY1={db.y1}
-          seasonY2={db.y2}
-          inscOpen={db.insc_open}
-          isMember={!!memberSession}
-          engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
-          membresCount={membresCount}
-        />
+      <main className={mode !== "full" ? "pt-24 md:pt-28" : ""}>
+        {mode === "full" && (
+          <Hero
+            seasonY1={db.y1}
+            seasonY2={db.y2}
+            inscOpen={db.insc_open}
+            isMember={!!memberSession}
+            engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
+            membresCount={membresCount}
+          />
+        )}
         {/* Toggles de visibilité : undefined = visible (default), false = caché */}
-        {db.sectionsVisible?.presentation !== false && <Presentation />}
-        {db.sectionsVisible?.actualites !== false && (
+        {mode === "full" && db.sectionsVisible?.presentation !== false && <Presentation />}
+
+        {(mode === "full" || mode === "actualites") && db.sectionsVisible?.actualites !== false && (
           <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
         )}
-        <Engagement
-          polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
-          agItems={db.agItems ?? []}
-          reunionReports={db.reunionReports ?? []}
-          archives={db.archives ?? []}
-          pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
-          agOpen={db.agOpen === true || db.engagementOpen === true}
-          reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
-          memberSession={memberSession}
-          onLoginRequest={() => setMemberLoginOpen(true)}
-          onRefresh={async () => { await refreshPublic(); }}
-        />
-        {db.sectionsVisible?.rules !== false && (
+
+        {mode === "full" && (
+          <Engagement
+            polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
+            agItems={db.agItems ?? []}
+            reunionReports={db.reunionReports ?? []}
+            archives={db.archives ?? []}
+            pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
+            agOpen={db.agOpen === true || db.engagementOpen === true}
+            reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
+            memberSession={memberSession}
+            onLoginRequest={() => setMemberLoginOpen(true)}
+            onRefresh={async () => { await refreshPublic(); }}
+          />
+        )}
+        {mode === "full" && db.sectionsVisible?.rules !== false && (
           <Rules
             clubRules={db.clubRules ?? ""}
             clubRulesPdfUrl={db.clubRulesPdfUrl}
@@ -340,8 +348,9 @@ export default function Site() {
             onLoginRequest={() => setMemberLoginOpen(true)}
           />
         )}
-        {db.sectionsVisible?.horaires !== false && <Horaires />}
-        {db.sectionsVisible?.tournois !== false && (
+        {mode === "full" && db.sectionsVisible?.horaires !== false && <Horaires />}
+
+        {(mode === "full" || mode === "tournois") && db.sectionsVisible?.tournois !== false && (
           <Tournois
             db={db}
             memberSession={memberSession}
@@ -349,11 +358,11 @@ export default function Site() {
             membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
           />
         )}
-        {db.sectionsVisible?.palmares !== false && (
+        {mode === "full" && db.sectionsVisible?.palmares !== false && (
           <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
         )}
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
-        {!memberSession && db.sectionsVisible?.inscription !== false && (
+        {(mode === "full" || mode === "inscription") && !memberSession && db.sectionsVisible?.inscription !== false && (
           <Inscription
             db={db}
             membresCount={membresCount}
@@ -361,6 +370,15 @@ export default function Site() {
             prix={PRIX}
             onMembreAdded={() => setMembresCount((n) => n + 1)}
           />
+        )}
+
+        {/* Si membre connecté arrive sur /inscription, on lui montre un message */}
+        {mode === "inscription" && memberSession && (
+          <div className="max-w-2xl mx-auto py-20 px-6 text-center">
+            <p className="text-2xl font-display text-slate-700 mb-4">Tu es déjà adhérent ! 🏸</p>
+            <p className="text-slate-500 mb-6">Tu peux gérer ton adhésion depuis ton espace membre.</p>
+            <a href="/" className="btn-primary">← Retour à l'accueil</a>
+          </div>
         )}
       </main>
       <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
