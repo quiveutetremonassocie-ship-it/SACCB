@@ -1817,10 +1817,11 @@ Deno.serve(async (req) => {
         for (const recipient of unpaidRecipients) {
           const greeting = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
           const greetingText = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
-          // Sujet personnalisé : 'Marie, votre adhésion SACCB' au lieu de '⏰ Plus que X jours'
-          const subjectLabel = recipient.prenom
+          // Sujet personnalisé + préfixe selon l'urgence
+          const subjectPrefix = isUrgent ? "🚨 URGENT — " : "📢 ";
+          const subjectLabel = subjectPrefix + (recipient.prenom
             ? `${recipient.prenom}, votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`
-            : `Votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`;
+            : `Votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`);
           const closeFormattedSafe = closeFormatted;
           const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
           await sendBrevo(brevoKey, {
@@ -1842,6 +1843,9 @@ Deno.serve(async (req) => {
                   </div>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                  ${isUrgent
+                    ? '<div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">⚠️ Annonce importante</div>'
+                    : '<div style="display:inline-block;background:#dbeafe;color:#1e3a5f;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">📢 Annonce</div>'}
                   <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
                   <h2 style="color: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; margin-top: 0;">${headingLabel}</h2>
                   <p style="color: #475569;">Votre adhésion au SACCB pour la saison ${d.y1}–${d.y2} n'est pas encore finalisée.</p>
@@ -2168,16 +2172,17 @@ Deno.serve(async (req) => {
       },
       to: [email],
       subject: prenom
-        ? `${prenom}, pensez à finaliser votre adhésion SACCB`
-        : `Pensez à finaliser votre adhésion SACCB`,
+        ? `🚨 URGENT — ${prenom}, finalisez votre adhésion SACCB`
+        : `🚨 URGENT — Finalisez votre adhésion SACCB`,
       text: `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${y1}–${y2} n'a pas encore été finalisée.\n\n${inscCloseDate ? `Pour pouvoir continuer à jouer, le règlement doit être effectué avant le ${closeFormatted}.\n\n` : ""}Vous pouvez régler en ligne via HelloAsso ou par virement à Hernan. Toutes les infos sont dans votre espace membre.\n\nAccéder à votre espace : https://saccb.fr/?member=1\n\nSi vous avez un souci ou souhaitez en discuter, répondez simplement à cet email.\n\n--\nLe bureau du SACCB\ncontact@saccb.fr · saccb.fr`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-          <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
+          <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 24px; border-radius: 12px 12px 0 0;">
             <h1 style="color: white; margin: 0; font-size: 22px;">SACCB</h1>
-            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">Rappel cotisation</p>
+            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0; font-size: 13px;">⚠️ Rappel cotisation</p>
           </div>
           <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+            <div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">⚠️ Annonce importante</div>
             <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
             <p style="color: #475569;">Votre adhésion au SACCB pour la saison <strong>${y1}–${y2}</strong> n'a pas encore été finalisée.</p>
             ${inscCloseDate ? `<div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 16px 0;"><p style="margin: 0; color: #92400e; font-size: 14px;">⏰ Pour pouvoir continuer à jouer, le règlement doit être effectué avant le <strong>${closeFormatted}</strong>.</p></div>` : ""}
@@ -2187,7 +2192,7 @@ Deno.serve(async (req) => {
               <li>💵 Faire un <strong>virement à Hernan</strong></li>
             </ul>
             <p style="color: #475569;">Toutes les infos sont dans votre espace membre.</p>
-            <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; margin-top: 8px;">
+            <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #dc2626; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; margin-top: 8px;">
               🔑 Accéder à mon espace →
             </a>
             <p style="color: #64748b; font-size: 12px; margin-top: 20px;">
@@ -2411,10 +2416,10 @@ Deno.serve(async (req) => {
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
         to: [String(membre.email)],
-        subject: "🏸 Paiement confirmé — Bienvenue au SACCB !",
+        subject: "🎉 Paiement confirmé — Bienvenue au SACCB !",
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+            <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
@@ -2422,6 +2427,7 @@ Deno.serve(async (req) => {
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <div style="display:inline-block;background:#d1fae5;color:#065f46;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">🎉 Bonne nouvelle</div>
               <h2 style="color: #16a34a; margin-top: 0;">✅ Paiement confirmé !</h2>
               <p style="color: #475569;">Bonjour <strong>${membre.nom}</strong>,</p>
               <p style="color: #475569;">Votre paiement a bien été reçu. Votre adhésion au SACCB pour la saison ${currentData.y1}–${currentData.y2} est désormais <strong>validée</strong>.</p>
@@ -2716,10 +2722,10 @@ Deno.serve(async (req) => {
           "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
         },
         to: [String(membre.email)],
-        subject: "🏸 Bienvenue au SACCB — Votre accès espace membre",
+        subject: "🎉 Bienvenue au SACCB — Votre accès espace membre",
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-            <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+            <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
@@ -2727,7 +2733,8 @@ Deno.serve(async (req) => {
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-              <h2 style="color: #1e3a5f; margin-top: 0;">🎉 Bienvenue dans l’association, ${membre.nom} !</h2>
+              <div style="display:inline-block;background:#d1fae5;color:#065f46;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">🎉 Bienvenue</div>
+              <h2 style="color: #047857; margin-top: 0;">🎉 Bienvenue dans l’association, ${membre.nom} !</h2>
               <p style="color: #475569;">
                 Vous avez été inscrit(e) au SACCB pour la saison <strong>${currentData.y1}–${currentData.y2}</strong>.
                 Vous avez accès à votre espace membre sur le site de l'association.
