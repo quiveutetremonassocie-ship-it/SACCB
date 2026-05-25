@@ -122,12 +122,13 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
 export async function verifyMembre(
   email: string,
   code: string,
-  code2fa?: string
+  code2fa?: string,
+  resend2FA?: boolean
 ): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; codeJustReset?: boolean; requires2FA?: boolean; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code, code2fa: code2fa || "" }),
+    body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code, code2fa: code2fa || "", resend2FA: resend2FA === true }),
   });
   return res.json();
 }

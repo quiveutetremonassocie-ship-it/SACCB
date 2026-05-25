@@ -96,10 +96,28 @@ function clearLoginFailures(email: string): void {
   accountLockMap.delete(email);
 }
 
-// 🔑 2FA admin par email : map<email, {codeHash, expires}>
-const twoFAMap = new Map<string, { codeHash: string; expires: number }>();
+// 🔑 2FA admin par email : stocké en DB (les Edge Functions sont stateless,
+// une map en mémoire ne survit pas entre 2 invocations)
+type TwoFAEntry = { email: string; codeHash: string; expires: number };
 function generate2FACode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
+}
+function get2FAList(currentData: Record<string, unknown>): TwoFAEntry[] {
+  const list = (currentData.twoFAPending || []) as TwoFAEntry[];
+  // Purge automatique des entrées expirées
+  const now = Date.now();
+  return list.filter((e) => e && e.expires > now);
+}
+function set2FAEntry(currentData: Record<string, unknown>, email: string, codeHash: string): void {
+  const list = get2FAList(currentData).filter((e) => e.email !== email);
+  list.push({ email, codeHash, expires: Date.now() + 10 * 60_000 });
+  currentData.twoFAPending = list;
+}
+function find2FAEntry(currentData: Record<string, unknown>, email: string): TwoFAEntry | undefined {
+  return get2FAList(currentData).find((e) => e.email === email);
+}
+function delete2FAEntry(currentData: Record<string, unknown>, email: string): void {
+  currentData.twoFAPending = get2FAList(currentData).filter((e) => e.email !== email);
 }
 
 // Rate limiting inscription adhérent + inscription tournoi (max 5/heure par IP)
@@ -911,6 +929,7 @@ Deno.serve(async (req) => {
     const adminEmails = adminEmailEntries.map((e) => e.email);
 
     const require2FA = currentData.require2FA === true;
+    const resend2FA = body.resend2FA === true;
 
     // Vérifie / déclenche 2FA si activé. Retourne null si OK pour continuer,
     // sinon retourne une Response qu'il faut renvoyer directement.
@@ -918,11 +937,13 @@ Deno.serve(async (req) => {
       if (!require2FA) return null;
       const brevoKey = Deno.env.get("BREVO_API_KEY");
       if (!brevoKey) return null; // si pas d'email service, on skip pour pas bloquer
-      const entry = twoFAMap.get(email);
-      // Pas de code fourni → on génère + envoie
-      if (!code2fa) {
+
+      // Pas de code fourni OU demande explicite de renvoi → on génère + envoie
+      if (!code2fa || resend2FA) {
         const newCode = generate2FACode();
-        twoFAMap.set(email, { codeHash: await hashCode(newCode), expires: Date.now() + 10 * 60_000 });
+        set2FAEntry(currentData, email, await hashCode(newCode));
+        // Persister immédiatement (sinon une autre invocation ne verra pas le code)
+        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
         try {
           await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
@@ -932,18 +953,21 @@ Deno.serve(async (req) => {
             text: `Votre code de connexion admin SACCB : ${newCode}\nValable 10 minutes.`,
           });
         } catch { /* best-effort */ }
-        return json({ ok: false, requires2FA: true, reason: "Un code de connexion a été envoyé à votre email. Saisissez-le pour continuer." });
+        return json({ ok: false, requires2FA: true, reason: resend2FA ? "Nouveau code envoyé par email." : "Un code de connexion a été envoyé à votre email. Saisissez-le pour continuer." });
       }
-      // Code fourni → on vérifie
-      if (!entry || entry.expires < Date.now()) {
-        return json({ ok: false, requires2FA: true, reason: "Code expiré. Demandez-en un nouveau." });
+      // Code fourni → on vérifie depuis la DB
+      const entry = find2FAEntry(currentData, email);
+      if (!entry) {
+        return json({ ok: false, requires2FA: true, reason: "Code expiré ou inexistant. Demandez-en un nouveau." });
       }
       const ok2fa = await verifyCode(entry.codeHash, code2fa);
       if (!ok2fa) {
         recordLoginFailure(email);
         return json({ ok: false, requires2FA: true, reason: "Code 2FA incorrect." });
       }
-      twoFAMap.delete(email);
+      // Consomme l'entrée (usage unique) + persiste
+      delete2FAEntry(currentData, email);
+      await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
       return null; // OK, on continue
     }
 

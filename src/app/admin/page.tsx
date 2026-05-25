@@ -24,6 +24,7 @@ export default function AdminPage() {
   // 🔑 2FA
   const [needs2FA, setNeeds2FA] = useState(false);
   const [code2fa, setCode2fa] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0); // secondes restantes avant pouvoir redemander
 
   // Restaurer session depuis sessionStorage/localStorage
   useEffect(() => {
@@ -66,6 +67,8 @@ export default function AdminPage() {
     if (r.requires2FA) {
       setNeeds2FA(true);
       setError(r.reason || "Un code de connexion vous a été envoyé par email.");
+      // démarre cooldown 60s pour limiter le spam (sauf si c'était déjà ouvert)
+      if (!needs2FA) startResendCooldown();
       return;
     }
 
@@ -100,6 +103,29 @@ export default function AdminPage() {
       setAdminReady(true);
     } else {
       setError("Impossible de charger les données admin.");
+    }
+  }
+
+  function startResendCooldown() {
+    setResendCooldown(60);
+    const interval = setInterval(() => {
+      setResendCooldown((s) => {
+        if (s <= 1) { clearInterval(interval); return 0; }
+        return s - 1;
+      });
+    }, 1000);
+  }
+
+  async function handleResendCode() {
+    if (resendCooldown > 0) return;
+    setError("");
+    setCode2fa("");
+    const r = await verifyMembre(email.trim().toLowerCase(), code.trim(), "", true);
+    if (r.requires2FA) {
+      setError(r.reason || "Nouveau code envoyé.");
+      startResendCooldown();
+    } else if (!r.ok) {
+      setError(r.reason || "Erreur lors de l'envoi du nouveau code.");
     }
   }
 
@@ -201,7 +227,17 @@ export default function AdminPage() {
                   autoFocus
                   required
                 />
-                <p className="text-[11px] text-slate-500 mt-1">Code valable 10 minutes.</p>
+                <div className="flex items-center justify-between mt-1.5">
+                  <p className="text-[11px] text-slate-500">Code valable 10 min.</p>
+                  <button
+                    type="button"
+                    onClick={handleResendCode}
+                    disabled={resendCooldown > 0}
+                    className="text-[11px] text-emerald-600 hover:text-emerald-700 disabled:text-slate-300 disabled:cursor-not-allowed underline"
+                  >
+                    {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "📩 Renvoyer un code"}
+                  </button>
+                </div>
               </div>
             )}
 

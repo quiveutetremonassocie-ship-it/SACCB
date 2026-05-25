@@ -180,6 +180,9 @@ export type DB = {
   adminLoginLog?: { email: string; date: string; ip?: string }[];
   // 🔑 Activer la double authentification par email pour les admins
   require2FA?: boolean;
+  // 🔑 Codes 2FA en attente (purgés auto à l'expiration). Stockés en DB
+  // car les Edge Functions sont stateless.
+  twoFAPending?: { email: string; codeHash: string; expires: number }[];
 };
 
 export type AnalyticsDay = {
