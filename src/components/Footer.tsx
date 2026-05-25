@@ -29,15 +29,15 @@ export default function Footer({ year, onAdmin }: { year: number; onAdmin: () =>
           <Link href="/politique-confidentialite" className="hover:text-white transition">Politique de confidentialité</Link>
           <span className="text-white/20">•</span>
           {/* Lien admin volontairement invisible pour les visiteurs */}
-          <button
-            onClick={onAdmin}
+          <Link
+            href="/admin"
             className="opacity-0 hover:opacity-30 focus:opacity-30 transition-opacity text-white cursor-default select-none text-[10px]"
             title=""
             tabIndex={-1}
             aria-hidden="true"
           >
             ·
-          </button>
+          </Link>
         </div>
 
         <p className="text-center mt-6 text-xs text-white/70">

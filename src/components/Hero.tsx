@@ -151,7 +151,7 @@ export default function Hero({
         >
           {/* Adhérer à l'association : visible uniquement si inscriptions ouvertes ET visiteur non connecté */}
           {inscOpen && !isMember && (
-            <a href="#inscription" className="btn-sport">
+            <a href="/inscription" className="btn-sport">
               <Trophy className="w-5 h-5" /> Adhérer à l&apos;association
             </a>
           )}
@@ -174,19 +174,19 @@ export default function Hero({
           transition={{ duration: 0.7, delay: 0.6 }}
           className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 max-w-2xl mx-auto mb-16"
         >
-          <a href="#actualites" className="quick-link group">
+          <a href="/actualites" className="quick-link group">
             <Newspaper className="w-4 h-4 text-amber-500 group-hover:scale-110 transition" />
             <span>Actus</span>
           </a>
-          <a href="#tournois" className="quick-link group">
+          <a href="/tournois" className="quick-link group">
             <MapPin className="w-4 h-4 text-emerald-500 group-hover:scale-110 transition" />
             <span>Tournois</span>
           </a>
-          <a href="#horaires" className="quick-link group">
+          <a href="/#horaires" className="quick-link group">
             <Clock className="w-4 h-4 text-blue-500 group-hover:scale-110 transition" />
             <span>Horaires</span>
           </a>
-          <a href="#palmares" className="quick-link group">
+          <a href="/#palmares" className="quick-link group">
             <Award className="w-4 h-4 text-yellow-600 group-hover:scale-110 transition" />
             <span>Palmarès</span>
           </a>

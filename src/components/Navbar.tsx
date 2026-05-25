@@ -71,23 +71,23 @@ export default function Navbar({
               <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#1e3a5f] to-emerald-500 group-hover:w-full transition-all" />
             </Link>
           ))}
-          {isAdmin && onAdmin && (
-            <button
-              onClick={onAdmin}
+          {isAdmin && (
+            <Link
+              href="/admin"
               className="btn-ghost !px-4 !py-2.5 !text-xs flex items-center gap-1.5 !border-amber-400 !text-amber-700 hover:!bg-amber-50"
             >
               <ShieldCheck className="w-4 h-4" />
               Admin
-            </button>
+            </Link>
           )}
-          {!isAdmin && isMember && onAdminLogin && (
-            <button
-              onClick={onAdminLogin}
+          {!isAdmin && isMember && (
+            <Link
+              href="/admin"
               className="text-slate-300 hover:text-amber-500 transition p-1"
               title="Accès admin"
             >
               <ShieldCheck className="w-4 h-4" />
-            </button>
+            </Link>
           )}
           <button
             onClick={onMember}
@@ -119,23 +119,25 @@ export default function Navbar({
               {l.label}
             </Link>
           ))}
-          {isAdmin && onAdmin && (
-            <button
-              onClick={() => { setOpen(false); onAdmin(); }}
+          {isAdmin && (
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
               className="btn-ghost w-full !border-amber-400 !text-amber-700"
             >
               <ShieldCheck className="w-4 h-4" />
               Panneau Admin
-            </button>
+            </Link>
           )}
-          {!isAdmin && isMember && onAdminLogin && (
-            <button
-              onClick={() => { setOpen(false); onAdminLogin(); }}
+          {!isAdmin && isMember && (
+            <Link
+              href="/admin"
+              onClick={() => setOpen(false)}
               className="btn-ghost w-full !border-slate-200 !text-slate-400"
             >
               <ShieldCheck className="w-4 h-4" />
               Connexion Admin
-            </button>
+            </Link>
           )}
           <button
             onClick={() => { setOpen(false); onMember(); }}
