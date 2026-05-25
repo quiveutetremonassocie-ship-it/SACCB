@@ -1,18 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ShieldCheck, Eye, EyeOff, ArrowLeft, RefreshCw } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import { DB } from "@/lib/types";
 import { emptyDB, fetchAdminDBByMember, saveDBByMember } from "@/lib/db";
-import { getMemberSession, MemberSession, setMemberSession } from "@/lib/useMemberSession";
+import { getMemberSession, MemberSession, setMemberSession, clearMemberSession } from "@/lib/useMemberSession";
 import { verifyMembre } from "@/lib/db";
 import AdminPanel from "@/components/admin/AdminPanel";
 import Link from "next/link";
+
+// Stockage unifié pour le code admin (auparavant mélange sessionStorage/localStorage)
+const ADMIN_CODE_KEY = "saccb_admin_code";
+function getStoredAdminCode(): string | null {
+  // priorité localStorage (persistance), fallback sessionStorage (compat)
+  return (typeof window !== "undefined")
+    ? (localStorage.getItem(ADMIN_CODE_KEY) || sessionStorage.getItem(ADMIN_CODE_KEY))
+    : null;
+}
+function saveAdminCode(code: string) {
+  localStorage.setItem(ADMIN_CODE_KEY, code);
+  // nettoyer aussi sessionStorage pour éviter divergence
+  sessionStorage.removeItem(ADMIN_CODE_KEY);
+}
+function clearAdminCode() {
+  localStorage.removeItem(ADMIN_CODE_KEY);
+  sessionStorage.removeItem(ADMIN_CODE_KEY);
+}
 
 export default function AdminPage() {
   const [memberSession, setMemberSessionState] = useState<MemberSession | null>(null);
   const [db, setDb] = useState<DB>(emptyDB());
   const [adminReady, setAdminReady] = useState(false);
+  const [bootChecking, setBootChecking] = useState(true); // évite un flash de la page de login
   const memberAdminCode = useRef<string | null>(null);
 
   // Form
@@ -24,12 +43,17 @@ export default function AdminPage() {
   // 🔑 2FA
   const [needs2FA, setNeeds2FA] = useState(false);
   const [code2fa, setCode2fa] = useState("");
-  const [resendCooldown, setResendCooldown] = useState(0); // secondes restantes avant pouvoir redemander
+  const [resendCooldown, setResendCooldown] = useState(0);
+  // 🚀 Mode "déjà connecté en tant qu'admin mais pas de code admin en cache" :
+  // l'utilisateur saisit juste son mot de passe pour ré-authentifier
+  const [quickAuthMode, setQuickAuthMode] = useState(false);
 
-  // Restaurer session depuis sessionStorage/localStorage
+  // 🔄 Au chargement : tenter d'utiliser la session existante
   useEffect(() => {
     const session = getMemberSession();
-    const savedCode = sessionStorage.getItem("saccb_admin_code");
+    const savedCode = getStoredAdminCode();
+
+    // Cas 1 : session admin + code en cache → accès direct, aucune ressaisie
     if (session?.isAdmin && savedCode) {
       memberAdminCode.current = savedCode;
       setMemberSessionState(session);
@@ -37,9 +61,29 @@ export default function AdminPage() {
         if (data) {
           setDb(data.db);
           setAdminReady(true);
+        } else {
+          // Le code en cache n'est plus valide (changé, expiré, etc.) → on demande juste le mdp
+          clearAdminCode();
+          setEmail(session.email);
+          setQuickAuthMode(true);
         }
+        setBootChecking(false);
       });
+      return;
     }
+
+    // Cas 2 : session admin SANS code admin → mode "rapide" (juste le mot de passe)
+    if (session?.isAdmin && !savedCode) {
+      setEmail(session.email);
+      setMemberSessionState(session);
+      setQuickAuthMode(true);
+      setBootChecking(false);
+      return;
+    }
+
+    // Cas 3 : session membre simple (pas admin) → message + bouton retour
+    // Cas 4 : pas de session du tout → formulaire complet
+    setBootChecking(false);
   }, []);
 
   const persist = useCallback(async (next: DB) => {
@@ -63,11 +107,9 @@ export default function AdminPage() {
     const r = await verifyMembre(email.trim().toLowerCase(), code.trim(), code2fa.trim());
     setLoading(false);
 
-    // 🔑 2FA requise : on affiche le champ code email
     if (r.requires2FA) {
       setNeeds2FA(true);
       setError(r.reason || "Un code de connexion vous a été envoyé par email.");
-      // démarre cooldown 60s pour limiter le spam (sauf si c'était déjà ouvert)
       if (!needs2FA) startResendCooldown();
       return;
     }
@@ -93,7 +135,7 @@ export default function AdminPage() {
       expiry: Date.now() + 365 * 24 * 60 * 60 * 1000,
     };
     setMemberSession(sess);
-    sessionStorage.setItem("saccb_admin_code", code.trim());
+    saveAdminCode(code.trim());
     memberAdminCode.current = code.trim();
     setMemberSessionState(sess);
 
@@ -101,6 +143,7 @@ export default function AdminPage() {
     if (data) {
       setDb(data.db);
       setAdminReady(true);
+      setQuickAuthMode(false);
     } else {
       setError("Impossible de charger les données admin.");
     }
@@ -109,10 +152,7 @@ export default function AdminPage() {
   function startResendCooldown() {
     setResendCooldown(60);
     const interval = setInterval(() => {
-      setResendCooldown((s) => {
-        if (s <= 1) { clearInterval(interval); return 0; }
-        return s - 1;
-      });
+      setResendCooldown((s) => { if (s <= 1) { clearInterval(interval); return 0; } return s - 1; });
     }, 1000);
   }
 
@@ -130,13 +170,26 @@ export default function AdminPage() {
   }
 
   function handleClose() {
+    // Ferme juste le panel admin (le code reste en cache pour réaccès rapide)
     setAdminReady(false);
-    setMemberSessionState(null);
-    memberAdminCode.current = null;
-    sessionStorage.removeItem("saccb_admin_code");
-    setDb(emptyDB());
   }
 
+  function handleFullLogout() {
+    // Déconnexion totale : session + code admin
+    clearAdminCode();
+    clearMemberSession();
+    setAdminReady(false);
+    setMemberSessionState(null);
+    setQuickAuthMode(false);
+    memberAdminCode.current = null;
+    setDb(emptyDB());
+    setEmail("");
+    setCode("");
+    setNeeds2FA(false);
+    setCode2fa("");
+  }
+
+  // 🟢 Accès admin OK
   if (adminReady && memberSession) {
     return (
       <AdminPanel
@@ -147,6 +200,31 @@ export default function AdminPage() {
         adminEmail={memberSession.email}
         adminCode={memberAdminCode.current ?? undefined}
       />
+    );
+  }
+
+  // ⏳ Pendant le boot (évite le flash de la page de login)
+  if (bootChecking) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
+        <RefreshCw className="w-6 h-6 animate-spin text-slate-400" />
+      </div>
+    );
+  }
+
+  // 🚧 Cas "membre simple" connecté mais pas admin → on bloque clairement
+  if (memberSession && !memberSession.isAdmin && !quickAuthMode) {
+    return (
+      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
+        <div className="w-full max-w-sm text-center">
+          <div className="w-14 h-14 rounded-2xl bg-slate-200 flex items-center justify-center mx-auto mb-4">
+            <ShieldCheck className="w-7 h-7 text-slate-500" />
+          </div>
+          <p className="text-slate-700 font-semibold mb-2">Accès admin réservé</p>
+          <p className="text-sm text-slate-500 mb-6">Ton compte membre n&apos;a pas les droits d&apos;administration.</p>
+          <Link href="/" className="btn-primary">← Retour au site</Link>
+        </div>
+      </div>
     );
   }
 
@@ -167,28 +245,30 @@ export default function AdminPage() {
             </div>
             <div>
               <h1 className="font-display text-2xl tracking-wider text-slate-800">Admin SACCB</h1>
-              <p className="text-xs text-slate-400">Accès réservé aux administrateurs</p>
+              <p className="text-xs text-slate-400">
+                {quickAuthMode ? `Connecté en tant que ${email}` : "Accès réservé aux administrateurs"}
+              </p>
             </div>
           </div>
 
           <form onSubmit={handleLogin} className="space-y-4">
+            {!quickAuthMode && (
+              <div>
+                <label className="text-xs uppercase tracking-widest text-slate-400 mb-1.5 block">Email</label>
+                <input
+                  type="email"
+                  className="input w-full"
+                  placeholder="votre@email.fr"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                  autoComplete="email"
+                />
+              </div>
+            )}
             <div>
               <label className="text-xs uppercase tracking-widest text-slate-400 mb-1.5 block">
-                Email
-              </label>
-              <input
-                type="email"
-                className="input w-full"
-                placeholder="votre@email.fr"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                required
-                autoComplete="email"
-              />
-            </div>
-            <div>
-              <label className="text-xs uppercase tracking-widest text-slate-400 mb-1.5 block">
-                Code personnel
+                {quickAuthMode ? "Confirmer votre mot de passe" : "Code personnel"}
               </label>
               <div className="relative">
                 <input
@@ -199,6 +279,7 @@ export default function AdminPage() {
                   onChange={(e) => setCode(e.target.value)}
                   required
                   autoComplete="current-password"
+                  autoFocus={quickAuthMode}
                 />
                 <button
                   type="button"
@@ -247,22 +328,28 @@ export default function AdminPage() {
               </p>
             )}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className="btn-primary w-full"
-            >
+            <button type="submit" disabled={loading} className="btn-primary w-full">
               {loading ? (
                 <><RefreshCw className="w-4 h-4 animate-spin" /> Connexion...</>
               ) : (
-                <><ShieldCheck className="w-4 h-4" /> Accéder à l'admin</>
+                <><ShieldCheck className="w-4 h-4" /> Accéder à l&apos;admin</>
               )}
             </button>
+
+            {quickAuthMode && (
+              <button
+                type="button"
+                onClick={handleFullLogout}
+                className="w-full text-xs text-slate-400 hover:text-slate-600 transition flex items-center justify-center gap-1 mt-2"
+              >
+                <LogOut className="w-3 h-3" /> Se déconnecter de ce compte
+              </button>
+            )}
           </form>
         </div>
 
         <p className="text-center text-xs text-slate-400 mt-6">
-          SACCB · Panneau d'administration
+          SACCB · Panneau d&apos;administration
         </p>
       </div>
     </div>
