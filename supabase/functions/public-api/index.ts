@@ -3157,6 +3157,43 @@ Deno.serve(async (req) => {
     const subject = String(body.subject || "").slice(0, 300).replace(/[\r\n]/g, " ");
     const htmlBody = String(body.htmlBody || "").slice(0, 100_000);
     const targetMode = String(body.targetMode || "all"); // all | paid | unpaid | news | custom
+    const variant = String(body.variant || "default") as "urgent" | "annonce" | "bonne_nouvelle" | "info" | "default";
+
+    // 🎨 Templates visuels selon le type d'email choisi par l'admin
+    const variantConfig: Record<string, { headerBg: string; subjectPrefix: string; badge: string | null; intro: string | null }> = {
+      urgent: {
+        headerBg: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)",
+        subjectPrefix: "🚨 URGENT — ",
+        badge: '<div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">⚠️ Annonce importante</div>',
+        intro: null,
+      },
+      annonce: {
+        headerBg: "linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)",
+        subjectPrefix: "📢 ",
+        badge: '<div style="display:inline-block;background:#dbeafe;color:#1e3a5f;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">📢 Annonce</div>',
+        intro: null,
+      },
+      bonne_nouvelle: {
+        headerBg: "linear-gradient(135deg, #059669 0%, #047857 100%)",
+        subjectPrefix: "🎉 ",
+        badge: '<div style="display:inline-block;background:#d1fae5;color:#065f46;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">🎉 Bonne nouvelle</div>',
+        intro: null,
+      },
+      info: {
+        headerBg: "linear-gradient(135deg, #64748b 0%, #475569 100%)",
+        subjectPrefix: "ℹ️ ",
+        badge: '<div style="display:inline-block;background:#f1f5f9;color:#475569;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">ℹ️ Information</div>',
+        intro: null,
+      },
+      default: {
+        headerBg: "#1e3a5f",
+        subjectPrefix: "",
+        badge: null,
+        intro: null,
+      },
+    };
+    const vc = variantConfig[variant] || variantConfig.default;
+    const finalSubject = (vc.subjectPrefix + subject.trim()).slice(0, 300);
     const customEmails = Array.isArray(body.customEmails) ? body.customEmails as string[] : [];
     const extraEmails = Array.isArray(body.extraEmails) ? body.extraEmails as string[] : [];
     const attachments = Array.isArray(body.attachments) ? body.attachments as { filename: string; content: string; contentType?: string }[] : [];
@@ -3240,11 +3277,11 @@ Deno.serve(async (req) => {
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
           to: [recipientEmail],
-          subject: subject.trim(),
+          subject: finalSubject,
           text: plainTextA,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+              <div style="background: ${vc.headerBg}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
                 <div>
                   <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
@@ -3252,6 +3289,7 @@ Deno.serve(async (req) => {
                 </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                ${vc.badge || ""}
                 <p style="color: #475569; margin: 0 0 16px;">${greetingA}</p>
                 <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
 
@@ -3310,7 +3348,7 @@ Deno.serve(async (req) => {
       emailHistory.push({
         id: Date.now().toString(),
         date: new Date().toISOString(),
-        subject: subject.trim(),
+        subject: finalSubject,
         body: htmlBody.slice(0, 5000), // limite à 5000 chars pour pas exploser la DB
         recipientCount: recipientEmails.length,
         recipientsPreview: recipientEmails.slice(0, 3),
@@ -3320,6 +3358,7 @@ Deno.serve(async (req) => {
         status: errors.length > 0 ? "partial" : "sent",
         sentCount: totalSent,
         totalCount: recipientEmails.length,
+        variant, // 🎨 type d'email (urgent, annonce, etc.)
       });
       // Garder uniquement les 100 derniers (anti-explosion DB)
       const trimmed = emailHistory.slice(-100);

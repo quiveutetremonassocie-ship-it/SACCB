@@ -31,6 +31,8 @@ export default function EmailingAdmin({
 }) {
   const [subject, setSubject] = useState("");
   const [body, setBody] = useState("");
+  // 🎨 Type d'email (visuel + sujet préfixé)
+  const [variant, setVariant] = useState<"urgent" | "annonce" | "bonne_nouvelle" | "info" | "default">("default");
   // Volontairement vide au démarrage : on force l'admin à cliquer explicitement
   // sur un mode pour éviter d'envoyer à "tous les payés" par inadvertance.
   const [targetMode, setTargetMode] = useState<TargetMode>("");
@@ -250,6 +252,7 @@ export default function EmailingAdmin({
         content: a.content,
         contentType: a.contentType,
       })),
+      variant,
     });
     setSending(false);
 
@@ -385,6 +388,25 @@ export default function EmailingAdmin({
 
         <p className="text-sm text-slate-600 font-medium mt-3">
           📧 <strong>{recipientCount}</strong> destinataire{recipientCount > 1 ? "s" : ""} {recipientCount > 1 ? "seront" : "sera"} contacté{recipientCount > 1 ? "s" : ""}
+        </p>
+      </div>
+
+      {/* 🎨 Type d'email — sélecteur visuel */}
+      <div className="mb-4">
+        <label className="text-xs uppercase tracking-widest text-slate-500 mb-2 block font-semibold">Type d&apos;email</label>
+        <div className="grid grid-cols-2 md:grid-cols-5 gap-2">
+          <VariantButton current={variant} value="default" label="Standard" emoji="✉️" colorClass="from-slate-400 to-slate-500" onSelect={setVariant} disabled={readOnly} />
+          <VariantButton current={variant} value="annonce" label="Annonce" emoji="📢" colorClass="from-blue-500 to-blue-700" onSelect={setVariant} disabled={readOnly} />
+          <VariantButton current={variant} value="urgent" label="Urgent" emoji="🚨" colorClass="from-red-500 to-red-700" onSelect={setVariant} disabled={readOnly} />
+          <VariantButton current={variant} value="bonne_nouvelle" label="Bonne nouvelle" emoji="🎉" colorClass="from-emerald-500 to-emerald-700" onSelect={setVariant} disabled={readOnly} />
+          <VariantButton current={variant} value="info" label="Info" emoji="ℹ️" colorClass="from-slate-500 to-slate-700" onSelect={setVariant} disabled={readOnly} />
+        </div>
+        <p className="text-[11px] text-slate-500 mt-1.5">
+          {variant === "urgent" && "🚨 En-tête rouge, badge URGENT, sujet préfixé « 🚨 URGENT — »"}
+          {variant === "annonce" && "📢 En-tête bleu, badge ANNONCE, sujet préfixé « 📢 »"}
+          {variant === "bonne_nouvelle" && "🎉 En-tête vert, badge BONNE NOUVELLE, sujet préfixé « 🎉 »"}
+          {variant === "info" && "ℹ️ En-tête gris discret, badge INFO, sujet préfixé « ℹ️ »"}
+          {variant === "default" && "✉️ Design standard SACCB (sans badge, sans préfixe au sujet)"}
         </p>
       </div>
 
@@ -629,6 +651,42 @@ function TargetButton({
       {icon}
       <span className="text-xs font-semibold">{label}</span>
       <span className="text-[10px] opacity-80">{count}</span>
+    </button>
+  );
+}
+
+// 🎨 Bouton de sélection du type d'email (urgent / annonce / bonne nouvelle / info / standard)
+function VariantButton({
+  current,
+  value,
+  label,
+  emoji,
+  colorClass,
+  onSelect,
+  disabled,
+}: {
+  current: string;
+  value: "urgent" | "annonce" | "bonne_nouvelle" | "info" | "default";
+  label: string;
+  emoji: string;
+  colorClass: string;
+  onSelect: (v: "urgent" | "annonce" | "bonne_nouvelle" | "info" | "default") => void;
+  disabled?: boolean;
+}) {
+  const active = current === value;
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(value)}
+      disabled={disabled}
+      className={`flex flex-col items-center justify-center gap-1 px-2 py-2.5 rounded-xl border-2 transition text-center ${
+        active
+          ? `border-transparent bg-gradient-to-br ${colorClass} text-white shadow-md scale-[1.02]`
+          : "border-slate-200 bg-white hover:border-slate-400 text-slate-700"
+      } disabled:opacity-50 disabled:cursor-not-allowed`}
+    >
+      <span className="text-lg leading-none">{emoji}</span>
+      <span className="text-[11px] font-bold uppercase tracking-wider leading-tight">{label}</span>
     </button>
   );
 }

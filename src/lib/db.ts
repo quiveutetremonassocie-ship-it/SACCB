@@ -535,6 +535,8 @@ export async function fetchMyVotes(
 }
 
 // ─── Envoi d'un email personnalisé aux adhérents (avec pièces jointes) — AUTH ADMIN ───
+export type EmailVariant = "urgent" | "annonce" | "bonne_nouvelle" | "info" | "default";
+
 export async function adminSendEmail(args: {
   adminEmail: string;
   adminCode: string;
@@ -544,6 +546,7 @@ export async function adminSendEmail(args: {
   customEmails?: string[];
   extraEmails?: string[];
   attachments?: { filename: string; content: string; contentType?: string }[];
+  variant?: EmailVariant;
 }): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string; errors?: string[] }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
@@ -558,6 +561,7 @@ export async function adminSendEmail(args: {
       customEmails: args.customEmails ?? [],
       extraEmails: args.extraEmails ?? [],
       attachments: args.attachments ?? [],
+      variant: args.variant ?? "default",
     }),
   });
   return res.json();

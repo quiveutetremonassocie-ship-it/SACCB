@@ -222,6 +222,8 @@ export type EmailLog = {
   // engagement_notification / poll_notification / tournament_notification /
   // season_reminder / tournament_reminder / new_season / cleanup_admin
   type?: string;
+  // 🎨 Variante visuelle (urgent / annonce / bonne_nouvelle / info / default)
+  variant?: string;
 };
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
