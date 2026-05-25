@@ -4,27 +4,19 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck, Eye, EyeOff, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import { DB } from "@/lib/types";
 import { emptyDB, fetchAdminDBByMember, saveDBByMember } from "@/lib/db";
-import { getMemberSession, MemberSession, setMemberSession, clearMemberSession } from "@/lib/useMemberSession";
+import { getMemberSession, MemberSession, setMemberSession, clearMemberSession, sessionDurationMs } from "@/lib/useMemberSession";
 import { verifyMembre } from "@/lib/db";
 import AdminPanel from "@/components/admin/AdminPanel";
 import Link from "next/link";
 
-// Stockage unifié pour le code admin (auparavant mélange sessionStorage/localStorage)
-const ADMIN_CODE_KEY = "saccb_admin_code";
-function getStoredAdminCode(): string | null {
-  // priorité localStorage (persistance), fallback sessionStorage (compat)
-  return (typeof window !== "undefined")
-    ? (localStorage.getItem(ADMIN_CODE_KEY) || sessionStorage.getItem(ADMIN_CODE_KEY))
-    : null;
-}
-function saveAdminCode(code: string) {
-  localStorage.setItem(ADMIN_CODE_KEY, code);
-  // nettoyer aussi sessionStorage pour éviter divergence
-  sessionStorage.removeItem(ADMIN_CODE_KEY);
-}
-function clearAdminCode() {
-  localStorage.removeItem(ADMIN_CODE_KEY);
-  sessionStorage.removeItem(ADMIN_CODE_KEY);
+// 🔒 SÉCURITÉ : le code admin n'est PLUS persistant.
+// Il vit uniquement en mémoire (React ref) tant que la page admin est ouverte.
+// Dès qu'on quitte /admin ou recharge → re-saisie obligatoire du mot de passe.
+// Cleanup d'anciens caches au démarrage de la page (migration douce).
+function cleanupOldAdminCodeCache() {
+  if (typeof window === "undefined") return;
+  localStorage.removeItem("saccb_admin_code");
+  sessionStorage.removeItem("saccb_admin_code");
 }
 
 export default function AdminPage() {
@@ -48,41 +40,19 @@ export default function AdminPage() {
   // l'utilisateur saisit juste son mot de passe pour ré-authentifier
   const [quickAuthMode, setQuickAuthMode] = useState(false);
 
-  // 🔄 Au chargement : tenter d'utiliser la session existante
+  // 🔄 Au chargement : tenter d'utiliser la session existante.
+  // Le mdp n'est JAMAIS mis en cache → toujours demandé à l'entrée /admin.
   useEffect(() => {
+    cleanupOldAdminCodeCache(); // migration douce des anciens caches
     const session = getMemberSession();
-    const savedCode = getStoredAdminCode();
 
-    // Cas 1 : session admin + code en cache → accès direct, aucune ressaisie
-    if (session?.isAdmin && savedCode) {
-      memberAdminCode.current = savedCode;
-      setMemberSessionState(session);
-      fetchAdminDBByMember(session.email, savedCode).then((data) => {
-        if (data) {
-          setDb(data.db);
-          setAdminReady(true);
-        } else {
-          // Le code en cache n'est plus valide (changé, expiré, etc.) → on demande juste le mdp
-          clearAdminCode();
-          setEmail(session.email);
-          setQuickAuthMode(true);
-        }
-        setBootChecking(false);
-      });
-      return;
-    }
-
-    // Cas 2 : session admin SANS code admin → mode "rapide" (juste le mot de passe)
-    if (session?.isAdmin && !savedCode) {
+    // Session admin valide → mode rapide : juste le mot de passe (email pré-rempli, pas de 2FA)
+    if (session?.isAdmin) {
       setEmail(session.email);
       setMemberSessionState(session);
       setQuickAuthMode(true);
-      setBootChecking(false);
-      return;
     }
-
-    // Cas 3 : session membre simple (pas admin) → message + bouton retour
-    // Cas 4 : pas de session du tout → formulaire complet
+    // Sinon : formulaire complet (membre non-admin = écran d'erreur, pas de session = login complet)
     setBootChecking(false);
   }, []);
 
@@ -132,10 +102,10 @@ export default function AdminPage() {
       email: r.membre.email,
       paid: r.paid !== false,
       isAdmin: true,
-      expiry: Date.now() + 365 * 24 * 60 * 60 * 1000,
+      expiry: Date.now() + sessionDurationMs(true),
     };
     setMemberSession(sess);
-    saveAdminCode(code.trim());
+    // 🔒 PAS de cache du code admin — il reste UNIQUEMENT en mémoire
     memberAdminCode.current = code.trim();
     setMemberSessionState(sess);
 
@@ -170,13 +140,15 @@ export default function AdminPage() {
   }
 
   function handleClose() {
-    // Ferme juste le panel admin (le code reste en cache pour réaccès rapide)
+    // Ferme le panel admin et oublie le code en mémoire → re-saisie au prochain accès
+    memberAdminCode.current = null;
     setAdminReady(false);
+    setCode("");
   }
 
   function handleFullLogout() {
     // Déconnexion totale : session + code admin
-    clearAdminCode();
+    cleanupOldAdminCodeCache();
     clearMemberSession();
     setAdminReady(false);
     setMemberSessionState(null);

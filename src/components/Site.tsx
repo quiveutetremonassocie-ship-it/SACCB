@@ -82,17 +82,10 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     setMemberSession(session);
 
     if (session.isAdmin) {
-      // Admin membre : lire le code depuis la session (priorité) ou localStorage (fallback)
-      const savedCode = session.adminCode || localStorage.getItem("saccb_admin_code");
-      if (savedCode) {
-        memberAdminCode.current = savedCode;
-        // Remettre à jour localStorage pour compatibilité
-        localStorage.setItem("saccb_admin_code", savedCode);
-        setIsMemberAdmin(true);
-        fetchAdminDBByMember(session.email, savedCode).then((result) => {
-          if (result) { setDb(result.db); setMembresCount(result.db.membres.length); setIsReadOnlyAdmin(result.readOnly); setAdminPermissions(result.permissions); }
-        });
-      }
+      // 🔒 NOUVEAU : on n'auto-ouvre PLUS l'admin au boot.
+      // L'admin doit aller sur /admin et retaper son mot de passe.
+      // (Le code admin n'est plus stocké en cache localStorage.)
+      localStorage.removeItem("saccb_admin_code");
     } else {
       // Membre normal : vérifier en arrière-plan que le compte existe toujours en DB
       // Et synchroniser le statut paid (peut avoir changé si nouvelle saison ou validation admin)
@@ -246,25 +239,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     setMemberSession(session);
     setMemberLoginOpen(false);
 
-    if (session.isAdmin && adminCode) {
-      // Admin via espace membre : stocker le code en mémoire + sessionStorage, ouvrir l'admin
-      memberAdminCode.current = adminCode;
-      localStorage.setItem("saccb_admin_code", adminCode);
-      setIsMemberAdmin(true);
-      const result = await fetchAdminDBByMember(session.email, adminCode);
-      if (result) {
-        setDb(result.db);
-        setMembresCount(result.db.membres.length);
-        setIsReadOnlyAdmin(result.readOnly);
-        setAdminPermissions(result.permissions);
-        setAdminOpen(true);
-      } else {
-        // Fallback : ouvrir l'espace membre normalement
-        setMemberPanelOpen(true);
-      }
-    } else {
-      setMemberPanelOpen(true);
-    }
+    // 🔒 NOUVEAU : même si admin, on n'ouvre PLUS l'overlay admin automatiquement.
+    // Pour aller dans l'admin → cliquer sur le bouton "Admin" dans la navbar → /admin
+    // (qui demandera de retaper le mot de passe).
+    setMemberPanelOpen(true);
+    // On vide aussi tout cache éventuel
+    localStorage.removeItem("saccb_admin_code");
+    // adminCode est ignoré ici volontairement
+    void adminCode;
   };
 
   const onMemberPanelClose = () => {

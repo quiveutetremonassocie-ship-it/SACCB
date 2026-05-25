@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
 import { adminExportBackup, adminImportBackup } from "@/lib/db";
+import { getMemberSession } from "@/lib/useMemberSession";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
 import StatsAdhesions from "./StatsAdhesions";
@@ -281,6 +282,10 @@ export default function AdminPanel({
             <p className="text-sm text-amber-700 font-medium">Mode lecture seule — les modifications ne sont pas autorisées.</p>
           </div>
         )}
+
+        {/* 🕐 Indicateur d'expiration de session */}
+        <SessionExpiry />
+
 
         {/* 🔍 Recherche globale (Ctrl+K) */}
         <div className="flex justify-end mb-2">
@@ -565,6 +570,35 @@ function HelloAssoQR() {
           </div>
         </div>
       </div>
+    </div>
+  );
+}
+
+// 🕐 Affiche le temps restant avant expiration de la session admin (14j)
+function SessionExpiry() {
+  const [info, setInfo] = useState<{ daysLeft: number; expiry: number } | null>(null);
+  useEffect(() => {
+    const s = getMemberSession();
+    if (s?.expiry) {
+      const daysLeft = Math.ceil((s.expiry - Date.now()) / (24 * 60 * 60 * 1000));
+      setInfo({ daysLeft, expiry: s.expiry });
+    }
+  }, []);
+  if (!info) return null;
+  // Affichage uniquement si <= 5 jours restants (sinon trop verbeux)
+  if (info.daysLeft > 5) return null;
+  const isUrgent = info.daysLeft <= 2;
+  return (
+    <div className={`mb-4 rounded-xl px-4 py-2.5 flex items-center gap-2 ${
+      isUrgent
+        ? "bg-red-50 border border-red-200 text-red-700"
+        : "bg-amber-50 border border-amber-200 text-amber-700"
+    }`}>
+      <span className="text-base">🕐</span>
+      <p className="text-xs font-medium">
+        Ta session admin {info.daysLeft <= 0 ? "expire bientôt" : info.daysLeft === 1 ? "expire dans 1 jour" : `expire dans ${info.daysLeft} jours`}.
+        Tu devras te reconnecter (avec un nouveau code 2FA).
+      </p>
     </div>
   );
 }

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { UserCircle2, X, KeyRound, ShieldCheck } from "lucide-react";
 import { verifyMembre, publicForgotCode, memberChangeCode } from "@/lib/db";
-import { MemberSession, setMemberSession } from "@/lib/useMemberSession";
+import { MemberSession, setMemberSession, sessionDurationMs } from "@/lib/useMemberSession";
 
 type View = "login" | "forgot" | "resetPrompt" | "changeCode";
 
@@ -56,7 +56,7 @@ export default function MemberLoginModal({
     const { session, adminCode } = pendingSession;
     setMemberSession(session);
     if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
-    onSuccess({ ...session, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, adminCode);
+    onSuccess({ ...session, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
     resetAll();
   }
 
@@ -92,7 +92,7 @@ export default function MemberLoginModal({
     // Sinon connexion normale
     setMemberSession(session);
     if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
-    onSuccess({ ...session, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, adminCode);
+    onSuccess({ ...session, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
     resetAll();
   }
 
@@ -138,7 +138,7 @@ export default function MemberLoginModal({
     // Et on finalise la connexion
     if (!pendingSession) return;
     setMemberSession(pendingSession.session);
-    onSuccess({ ...pendingSession.session, expiry: Date.now() + 365 * 24 * 60 * 60 * 1000 }, pendingSession.adminCode);
+    onSuccess({ ...pendingSession.session, expiry: Date.now() + sessionDurationMs(pendingSession.session.isAdmin === true) }, pendingSession.adminCode);
     resetAll();
   }
 

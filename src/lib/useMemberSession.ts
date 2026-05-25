@@ -1,7 +1,13 @@
-// Gestion de la session membre dans localStorage (1 an)
+// Gestion de la session membre dans localStorage avec rotation périodique :
+// - 👑 Admin : 14 jours (compte sensible, on renouvelle le 2FA souvent)
+// - 🏸 Membre normal : 60 jours (pas la peine de les embêter trop souvent)
 
 const STORAGE_KEY = "saccb_member_session";
-const ONE_YEAR = 365 * 24 * 60 * 60 * 1000;
+const ADMIN_SESSION_MS = 14 * 24 * 60 * 60 * 1000;
+const MEMBER_SESSION_MS = 60 * 24 * 60 * 60 * 1000;
+export function sessionDurationMs(isAdmin: boolean): number {
+  return isAdmin ? ADMIN_SESSION_MS : MEMBER_SESSION_MS;
+}
 
 export type MemberSession = {
   membreId: string;
@@ -36,7 +42,7 @@ export function setMemberSession(
 ): void {
   const session: MemberSession = {
     ...membre,
-    expiry: Date.now() + ONE_YEAR,
+    expiry: Date.now() + sessionDurationMs(membre.isAdmin === true),
   };
   localStorage.setItem(STORAGE_KEY, JSON.stringify(session));
 }
