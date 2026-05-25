@@ -64,6 +64,44 @@ function isLoginRateLimited(ip: string): boolean {
   return entry.count > 10;
 }
 
+// 🔒 Verrouillage par compte (email) : 5 échecs en 15 min → bloqué 30 min
+// (complémentaire au rate-limit par IP : protège même si l'attaquant change d'IP)
+const accountLockMap = new Map<string, { fails: number; lockUntil: number; firstFail: number }>();
+
+function isAccountLocked(email: string): { locked: boolean; minutesLeft?: number } {
+  const e = accountLockMap.get(email);
+  if (!e) return { locked: false };
+  const now = Date.now();
+  if (e.lockUntil > now) {
+    return { locked: true, minutesLeft: Math.ceil((e.lockUntil - now) / 60_000) };
+  }
+  return { locked: false };
+}
+
+function recordLoginFailure(email: string): void {
+  const now = Date.now();
+  const e = accountLockMap.get(email);
+  if (!e || now - e.firstFail > 900_000) {
+    // reset la fenêtre toutes les 15 min
+    accountLockMap.set(email, { fails: 1, lockUntil: 0, firstFail: now });
+    return;
+  }
+  e.fails++;
+  if (e.fails >= 5) {
+    e.lockUntil = now + 1_800_000; // bloqué 30 min
+  }
+}
+
+function clearLoginFailures(email: string): void {
+  accountLockMap.delete(email);
+}
+
+// 🔑 2FA admin par email : map<email, {codeHash, expires}>
+const twoFAMap = new Map<string, { codeHash: string; expires: number }>();
+function generate2FACode(): string {
+  return String(Math.floor(100000 + Math.random() * 900000));
+}
+
 // Rate limiting inscription adhérent + inscription tournoi (max 5/heure par IP)
 // Protège contre les bots qui spammeraient des inscriptions automatiques
 const registrationLimitMap = new Map<string, { count: number; reset: number }>();
@@ -698,6 +736,49 @@ Deno.serve(async (req) => {
 
   const action = body.action as string;
 
+  // ─── ACTION: Track view (analytics ultra-léger, sans cookie, anonyme) ───
+  if (action === "track_view") {
+    const rawPath = String(body.path || "/").slice(0, 100);
+    const path = rawPath.split("?")[0].split("#")[0] || "/";
+    const refRaw = String(body.referrer || "").slice(0, 200);
+    const ua = String(req.headers.get("user-agent") || "").toLowerCase();
+    const device = /mobile|android|iphone|ipad/i.test(ua) ? "mobile" : /tablet/i.test(ua) ? "tablet" : "desktop";
+    let ref = "direct";
+    if (refRaw && refRaw !== "null") {
+      try {
+        const u = new URL(refRaw);
+        ref = u.hostname.replace(/^www\./, "");
+        if (ref.includes("saccb.fr")) ref = "interne";
+      } catch { ref = "direct"; }
+    }
+    const today = new Date().toISOString().slice(0, 10);
+    try {
+      const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+      if (!data) return json({ ok: true });
+      const d = data.data as Record<string, unknown>;
+      const list = ((d.analyticsDaily || []) as Record<string, unknown>[]);
+      let entry = list.find((e) => e.date === today) as undefined | {
+        date: string; views: number; paths: Record<string, number>; refs: Record<string, number>; devices: Record<string, number>;
+      };
+      if (!entry) {
+        entry = { date: today, views: 0, paths: {}, refs: {}, devices: {} };
+        list.push(entry);
+      }
+      entry.views = (entry.views || 0) + 1;
+      entry.paths = entry.paths || {};
+      entry.paths[path] = (entry.paths[path] || 0) + 1;
+      entry.refs = entry.refs || {};
+      entry.refs[ref] = (entry.refs[ref] || 0) + 1;
+      entry.devices = entry.devices || {};
+      entry.devices[device] = (entry.devices[device] || 0) + 1;
+      const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
+      const cutoffStr = cutoff.toISOString().slice(0, 10);
+      d.analyticsDaily = list.filter((e) => String(e.date) >= cutoffStr);
+      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    } catch (_e) {}
+    return json({ ok: true });
+  }
+
   // ─── ACTION: Récupérer les données publiques ───
   if (action === "fetch_public") {
     const { data, error } = await supabaseAdmin
@@ -805,8 +886,15 @@ Deno.serve(async (req) => {
 
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));
+    const code2fa = sanitize(String(body.code2fa || ""));
 
     if (!email || !code) return json({ ok: false, reason: "Email et code requis." }, 400);
+
+    // 🔒 Compte bloqué après 5 tentatives ratées ?
+    const lockStatus = isAccountLocked(email);
+    if (lockStatus.locked) {
+      return json({ ok: false, reason: `Compte temporairement bloqué après plusieurs tentatives. Réessayez dans ${lockStatus.minutesLeft} min ou contactez l'association.` }, 429);
+    }
 
     const { data, error } = await supabaseAdmin
       .from("saccb_db")
@@ -822,13 +910,61 @@ Deno.serve(async (req) => {
     const adminEmailEntries = parseAdminEmails(currentData.adminEmails as unknown[] || []);
     const adminEmails = adminEmailEntries.map((e) => e.email);
 
+    const require2FA = currentData.require2FA === true;
+
+    // Vérifie / déclenche 2FA si activé. Retourne null si OK pour continuer,
+    // sinon retourne une Response qu'il faut renvoyer directement.
+    async function handle2FA(): Promise<Response | null> {
+      if (!require2FA) return null;
+      const brevoKey = Deno.env.get("BREVO_API_KEY");
+      if (!brevoKey) return null; // si pas d'email service, on skip pour pas bloquer
+      const entry = twoFAMap.get(email);
+      // Pas de code fourni → on génère + envoie
+      if (!code2fa) {
+        const newCode = generate2FACode();
+        twoFAMap.set(email, { codeHash: await hashCode(newCode), expires: Date.now() + 10 * 60_000 });
+        try {
+          await sendBrevo(brevoKey, {
+            from: "SACCB <contact@saccb.fr>",
+            to: [{ email }],
+            subject: `Code de connexion admin SACCB : ${newCode}`,
+            html: `<div style="font-family:sans-serif;max-width:480px;margin:auto;padding:24px;border:1px solid #e2e8f0;border-radius:12px"><h2 style="color:#1e3a5f">🔐 Code de connexion</h2><p>Votre code à usage unique pour accéder au panneau admin :</p><p style="font-size:32px;font-weight:bold;letter-spacing:6px;text-align:center;background:#f1f5f9;padding:16px;border-radius:8px">${newCode}</p><p style="color:#64748b;font-size:13px">Ce code est valable 10 minutes. Si vous n'êtes pas à l'origine de cette connexion, changez immédiatement votre mot de passe et prévenez le bureau.</p></div>`,
+            text: `Votre code de connexion admin SACCB : ${newCode}\nValable 10 minutes.`,
+          });
+        } catch { /* best-effort */ }
+        return json({ ok: false, requires2FA: true, reason: "Un code de connexion a été envoyé à votre email. Saisissez-le pour continuer." });
+      }
+      // Code fourni → on vérifie
+      if (!entry || entry.expires < Date.now()) {
+        return json({ ok: false, requires2FA: true, reason: "Code expiré. Demandez-en un nouveau." });
+      }
+      const ok2fa = await verifyCode(entry.codeHash, code2fa);
+      if (!ok2fa) {
+        recordLoginFailure(email);
+        return json({ ok: false, requires2FA: true, reason: "Code 2FA incorrect." });
+      }
+      twoFAMap.delete(email);
+      return null; // OK, on continue
+    }
+
     // Vérifier d'abord les credentials admin indépendants (pas besoin d'être adhérent)
     const adminCred = await findAdminCredByCredentials(adminCredentials, email, code);
     if (adminCred) {
+      clearLoginFailures(email);
+      // 🔑 Gate 2FA admin si activé
+      const gate = await handle2FA();
+      if (gate) return gate;
       // Migration douce du code en clair → hashé
       if (!isHashedCode(adminCred.code)) {
         await migrateCodeIfNeeded(supabaseAdmin, currentData, { type: "adminCred", email, plainCode: code });
       }
+      // 🔐 Log de connexion admin (audit trail, 50 dernières conservées)
+      try {
+        const log = ((currentData.adminLoginLog || []) as { email: string; date: string; ip?: string }[]);
+        log.unshift({ email, date: new Date().toISOString(), ip });
+        currentData.adminLoginLog = log.slice(0, 50);
+        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+      } catch { /* best-effort */ }
       return json({
         ok: true,
         paid: true,
@@ -841,8 +977,10 @@ Deno.serve(async (req) => {
     const membre = await findMembreByCredentials(membres, email, code);
 
     if (!membre) {
+      recordLoginFailure(email);
       return json({ ok: false, reason: "Email ou code incorrect." });
     }
+    clearLoginFailures(email);
 
     // Migration douce du code en clair → hashé
     if (!isHashedCode(String(membre.code || ""))) {
@@ -852,6 +990,22 @@ Deno.serve(async (req) => {
     const isAdmin = adminEmails.includes(email);
     const codeJustReset = membre.codeJustReset === true;
 
+    // 🔑 Gate 2FA pour admin via membre
+    if (isAdmin) {
+      const gate = await handle2FA();
+      if (gate) return gate;
+    }
+
+    // 🔐 Log de connexion admin (audit trail, 50 dernières conservées)
+    if (isAdmin) {
+      try {
+        const log = ((currentData.adminLoginLog || []) as { email: string; date: string; ip?: string }[]);
+        log.unshift({ email, date: new Date().toISOString(), ip });
+        currentData.adminLoginLog = log.slice(0, 50);
+        // sera persisté en même temps que codeJustReset ci-dessous
+      } catch { /* best-effort */ }
+    }
+
     // Si le flag est levé, on le retire en base : la popup ne s'affichera qu'une fois après reset
     if (codeJustReset) {
       const idx = membres.findIndex((m) => m.id === membre.id);
@@ -859,8 +1013,13 @@ Deno.serve(async (req) => {
         const { codeJustReset: _drop, ...rest } = membres[idx] as Record<string, unknown>;
         membres[idx] = rest;
         currentData.membres = membres;
-        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
       }
+    }
+    // Persist si nécessaire (codeJustReset OU log admin ajouté)
+    if (codeJustReset || isAdmin) {
+      try {
+        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+      } catch { /* best-effort */ }
     }
 
     return json({
@@ -1099,6 +1258,10 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Inscription publique ───
   if (action === "add_membre") {
+    // 🛡️ Honeypot anti-bot
+    if (body.website || body.hp_url) {
+      return json({ ok: true }); // fake success
+    }
     // 🔒 SÉCURITÉ : rate limit pour empêcher le spam d'inscriptions automatiques
     if (isRegistrationRateLimited(ip)) {
       return json({ ok: false, reason: "Trop de tentatives d'inscription. Réessayez dans une heure." }, 429);
@@ -2029,6 +2192,36 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Réinitialiser le code d'un adhérent depuis l'admin ───
   // Génère un nouveau code aléatoire, le hash, l'envoie par email et lève le flag codeJustReset
+  // 🔓 Déblocage manuel d'un compte verrouillé après 5 échecs (admin only)
+  if (action === "admin_unlock_account") {
+    const targetEmail = sanitize(String(body.targetEmail || "")).toLowerCase();
+    if (!targetEmail) return json({ ok: false, reason: "Email cible manquant." }, 400);
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const currentData = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+    clearLoginFailures(targetEmail);
+    return json({ ok: true });
+  }
+
+  // 🔍 Récupère la liste des comptes actuellement bloqués (admin only)
+  if (action === "admin_list_locked_accounts") {
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const currentData = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+    const now = Date.now();
+    const locked: { email: string; minutesLeft: number }[] = [];
+    for (const [email, e] of accountLockMap.entries()) {
+      if (e.lockUntil > now) {
+        locked.push({ email, minutesLeft: Math.ceil((e.lockUntil - now) / 60_000) });
+      }
+    }
+    return json({ ok: true, locked });
+  }
+
   if (action === "admin_reset_code") {
     const membreId = String(body.membreId || "");
     if (!membreId) return json({ ok: false, reason: "membreId manquant." }, 400);
@@ -2317,6 +2510,10 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Formulaire de contact public ───
   if (action === "contact") {
+    // 🛡️ Honeypot anti-bot : champ caché qui doit rester vide. Si rempli = bot → on simule un succès.
+    if (body.website || body.hp_url) {
+      return json({ ok: true }); // fake success pour ne pas alerter le bot
+    }
     // Rate limit spécifique contact : max 3 par heure par IP
     if (isContactRateLimited(ip)) {
       return json({ ok: false, reason: "Trop de messages envoyés. Réessayez dans une heure." }, 429);

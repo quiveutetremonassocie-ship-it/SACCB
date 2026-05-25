@@ -297,6 +297,26 @@ export default function SeasonSettings({
         <p className="text-xs text-slate-400 mt-1">Apparaît sur les reçus de cotisation. Laisse vide pour conserver le nom par défaut.</p>
       </div>
 
+      {/* 🔑 Toggle 2FA admin */}
+      <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
+        <label className="flex items-start gap-2 cursor-pointer">
+          <input
+            type="checkbox"
+            checked={db.require2FA === true}
+            disabled={readOnly}
+            onChange={(e) => onPersist({ ...db, require2FA: e.target.checked })}
+            className="mt-0.5"
+          />
+          <div className="flex-1">
+            <span className="text-sm font-semibold text-slate-800">🔐 Double authentification admin (2FA)</span>
+            <p className="text-xs text-slate-600 mt-0.5">
+              Quand activée, chaque connexion admin envoie un code à 6 chiffres par email à saisir avant d&apos;accéder au panneau.
+              Très fortement recommandé pour les comptes ayant tous les droits.
+            </p>
+          </div>
+        </label>
+      </div>
+
       {/* 👁️ Toggles de visibilité des sections du site public */}
       <SectionVisibilityToggles db={db} onPersist={onPersist} readOnly={readOnly} />
 

@@ -7,6 +7,9 @@ import { adminExportBackup, adminImportBackup } from "@/lib/db";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
 import StatsAdhesions from "./StatsAdhesions";
+import StatsVisites from "./StatsVisites";
+import LockedAccounts from "./LockedAccounts";
+import GlobalSearch from "./GlobalSearch";
 import TournoisAdmin from "./TournoisAdmin";
 import InscriptionsAdmin from "./InscriptionsAdmin";
 import MembresAdmin from "./MembresAdmin";
@@ -279,6 +282,11 @@ export default function AdminPanel({
           </div>
         )}
 
+        {/* 🔍 Recherche globale (Ctrl+K) */}
+        <div className="flex justify-end mb-2">
+          <GlobalSearch db={db} />
+        </div>
+
         {/* 🚀 Accès rapide aux sections (smooth scroll) — filtré selon permissions */}
         <QuickNav
           unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
@@ -309,6 +317,16 @@ export default function AdminPanel({
             </div>
           )}
           {canSee("saison") && <StatsAdhesions totals={totals} />}
+          {canSee("saison") && (
+            <div className="lg:col-span-2 scroll-mt-24" id="admin-analytics">
+              <StatsVisites analyticsDaily={db.analyticsDaily} />
+            </div>
+          )}
+          {canSee("saison") && adminEmail && adminCode && (
+            <div className="lg:col-span-2">
+              <LockedAccounts adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+            </div>
+          )}
 
           <div id="admin-sauvegarde" className="lg:col-span-2 glass p-4 md:p-6 scroll-mt-24">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>

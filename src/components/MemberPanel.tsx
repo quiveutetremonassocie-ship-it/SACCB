@@ -664,7 +664,7 @@ function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y
       </div>
       <div className="flex items-end justify-between mt-6">
         <span className="text-xs uppercase tracking-widest text-white/60">{type}</span>
-        <span className="font-display text-lg text-white/40">ST-ADRESSE</span>
+        <span className="font-display text-lg text-white/70">ST-ADRESSE</span>
       </div>
     </div>
   );

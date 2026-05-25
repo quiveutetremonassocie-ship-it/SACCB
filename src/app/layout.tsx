@@ -112,6 +112,54 @@ const jsonLd = {
   sameAs: ["https://saccb.fr"],
 };
 
+// FAQ JSON-LD : boost SEO (rich results Google + meilleure visibilité sur requêtes longue traîne)
+const faqJsonLd = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: [
+    {
+      "@type": "Question",
+      name: "Où se trouve le club de badminton de Sainte-Adresse ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Le SACCB s'entraîne à la Salle Paul Vatine, à Sainte-Adresse (76310), en Normandie. Les créneaux sont accessibles aux adultes et étudiants.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Comment s'inscrire au SACCB ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "L'inscription se fait directement en ligne sur saccb.fr via le formulaire d'inscription. Le paiement peut être effectué en ligne (HelloAsso) ou par virement. Une fois validée, vous recevez votre code d'accès à l'espace membre.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Quel est le tarif de l'adhésion ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "L'adhésion annuelle est de 50 € pour les adultes et 30 € pour les étudiants. Elle couvre toute la saison sportive et l'accès à tous les créneaux.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Faut-il un niveau particulier pour s'inscrire ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Non, l'association accueille tous les niveaux, du débutant au compétiteur. L'ambiance est conviviale et l'objectif est avant tout de prendre du plaisir sur le terrain.",
+      },
+    },
+    {
+      "@type": "Question",
+      name: "Le club organise-t-il des tournois ?",
+      acceptedAnswer: {
+        "@type": "Answer",
+        text: "Oui, le SACCB organise et participe à plusieurs tournois de double (mixte, homme, dame) durant la saison. Les inscriptions se font via l'espace membre du site.",
+      },
+    },
+  ],
+};
+
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="fr">
@@ -129,6 +177,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script
           type="application/ld+json"
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+        />
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(faqJsonLd) }}
         />
       </head>
       <body>

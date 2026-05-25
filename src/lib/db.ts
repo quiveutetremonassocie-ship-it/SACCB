@@ -43,6 +43,20 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
   };
 }
 
+// ─── Analytics : ping léger pour compter une page vue (best-effort, sans bloquer) ───
+export async function trackView(path: string, referrer: string): Promise<void> {
+  try {
+    await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "track_view", path, referrer }),
+      keepalive: true,
+    });
+  } catch {
+    // best-effort : on ne fait rien si ça échoue (analytics non critique)
+  }
+}
+
 // ─── Données admin (authentifié via Supabase Auth — protégé par RLS) ───
 export async function fetchAdminDB(): Promise<DB | null> {
   const { data: { session } } = await supabaseClient.auth.getSession();
@@ -84,6 +98,7 @@ export async function publicAddMembre(membre: {
   newsOptIn?: boolean;
   photoConsent?: boolean;
   grouped?: boolean; // true = inscription groupée, ne pas écraser les autres membres du même email
+  website?: string; // honeypot anti-bot (doit rester vide)
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
@@ -106,12 +121,13 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
 // ─── Vérification membre (connexion espace membre) ───
 export async function verifyMembre(
   email: string,
-  code: string
-): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; codeJustReset?: boolean; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
+  code: string,
+  code2fa?: string
+): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; codeJustReset?: boolean; requires2FA?: boolean; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code }),
+    body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code, code2fa: code2fa || "" }),
   });
   return res.json();
 }
@@ -315,6 +331,33 @@ export async function adminResetMemberCode(
   return res.json();
 }
 
+// 🔓 Déblocage manuel d'un compte verrouillé après 5 échecs
+export async function adminUnlockAccount(
+  targetEmail: string,
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_unlock_account", targetEmail, adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
+// 🔍 Liste des comptes actuellement bloqués
+export async function adminListLockedAccounts(
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; locked?: { email: string; minutesLeft: number }[]; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_list_locked_accounts", adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
 // ─── Envoyer email de confirmation (virement validé par admin) — AUTH ADMIN REQUISE ───
 export async function adminSendConfirmation(membreId: string, adminEmail: string, adminCode: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
@@ -366,11 +409,11 @@ export async function saveDBByMember(email: string, code: string, db: DB): Promi
 }
 
 // ─── Formulaire de contact public ───
-export async function publicContact(name: string, email: string, message: string): Promise<{ ok: boolean; reason?: string }> {
+export async function publicContact(name: string, email: string, message: string, hp: string = ""): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "contact", name, email, message }),
+    body: JSON.stringify({ action: "contact", name, email, message, website: hp }),
   });
   return res.json();
 }

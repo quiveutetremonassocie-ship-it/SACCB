@@ -50,6 +50,9 @@ export default function Inscription({
   const [sharedCode, setSharedCode] = useState("");
   // Si décoché : chaque personne a son propre email + mot de passe
   const [sameAccount, setSameAccount] = useState(true);
+  // 🛡️ Anti-bot
+  const [honeypot, setHoneypot] = useState("");
+  const [formOpenedAt] = useState(Date.now());
   const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
@@ -117,6 +120,13 @@ export default function Inscription({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!db.insc_open) return;
+
+    // 🛡️ Anti-bot : honeypot rempli ou soumission trop rapide (<3s)
+    if (honeypot) return;
+    if (Date.now() - formOpenedAt < 3000) {
+      alert("Veuillez prendre quelques secondes pour vérifier vos informations avant de valider.");
+      return;
+    }
 
     const tel = sharedTel.trim();
 
@@ -213,6 +223,7 @@ export default function Inscription({
         newsOptIn,
         photoConsent,
         grouped: isGrouped,
+        website: honeypot,
       });
       results.push(r);
       if (!r.ok) break;
@@ -356,6 +367,10 @@ export default function Inscription({
             )
           ) : (
             <form onSubmit={handleSubmit} className="space-y-5">
+              {/* 🛡️ Honeypot anti-bot — invisible pour les humains */}
+              <div style={{ position: "absolute", left: "-9999px", top: "auto", width: 1, height: 1, overflow: "hidden" }} aria-hidden="true">
+                <label>Ne pas remplir : <input type="text" name="website" tabIndex={-1} autoComplete="off" value={honeypot} onChange={(e) => setHoneypot(e.target.value)} /></label>
+              </div>
 
               {/* ── Adhérents ── */}
               <div>
@@ -664,7 +679,7 @@ function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y
       </div>
       <div className="flex items-end justify-between mt-6">
         <span className="text-xs uppercase tracking-widest text-white/60">{type}</span>
-        <span className="font-display text-lg text-white/40">ST-ADRESSE</span>
+        <span className="font-display text-lg text-white/70">ST-ADRESSE</span>
       </div>
     </div>
   );

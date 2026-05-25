@@ -174,6 +174,20 @@ export type DB = {
     presentation?: boolean;
     inscription?: boolean;
   };
+  // 📊 Analytics : compteurs journaliers (limite 90 jours, plus anciens auto-supprimés)
+  analyticsDaily?: AnalyticsDay[];
+  // 🔐 Log des connexions admin réussies (50 dernières max)
+  adminLoginLog?: { email: string; date: string; ip?: string }[];
+  // 🔑 Activer la double authentification par email pour les admins
+  require2FA?: boolean;
+};
+
+export type AnalyticsDay = {
+  date: string; // YYYY-MM-DD
+  views: number;
+  paths?: Record<string, number>;
+  refs?: Record<string, number>;
+  devices?: Record<string, number>;
 };
 
 export type ContactMessage = {

@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites } from "@/lib/db";
+import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
@@ -108,6 +108,16 @@ export default function Site() {
         }
       });
     }
+  }, []);
+
+  // Analytics : ping discret au chargement (best-effort)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    // Évite de logger les visites admin/membre via params
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("admin") === "1" || params.get("member") === "1") return;
+    const path = window.location.pathname + (window.location.hash || "");
+    trackView(path, document.referrer || "");
   }, []);
 
   useEffect(() => {

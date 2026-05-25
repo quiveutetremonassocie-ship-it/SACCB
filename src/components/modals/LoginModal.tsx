@@ -36,7 +36,7 @@ export default function LoginModal({
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm relative">
         <button
           onClick={onClose}
-          className="absolute top-3 right-3 text-white/40 hover:text-white p-2"
+          className="absolute top-3 right-3 text-white/70 hover:text-white p-2"
           aria-label="Fermer"
         >
           <X />

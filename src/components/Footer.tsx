@@ -40,7 +40,7 @@ export default function Footer({ year, onAdmin }: { year: number; onAdmin: () =>
           </button>
         </div>
 
-        <p className="text-center mt-6 text-xs text-white/40">
+        <p className="text-center mt-6 text-xs text-white/70">
           © {year} SACCB — Sainte-Adresse · Salle Paul Vatine
         </p>
       </div>
@@ -72,7 +72,7 @@ function ContactForm() {
 
     setLoading(true);
     setError("");
-    const r = await publicContact(nom.trim(), email.trim(), message.trim());
+    const r = await publicContact(nom.trim(), email.trim(), message.trim(), honeypot);
     setLoading(false);
     if (r.ok) {
       setSent(true);
@@ -88,7 +88,7 @@ function ContactForm() {
         <CheckCircle2 className="w-12 h-12 text-emerald-400 mx-auto mb-3" />
         <p className="text-white font-semibold text-lg">Message envoyé !</p>
         <p className="text-white/60 text-sm mt-2">Nous vous répondrons dans les plus brefs délais.</p>
-        <button onClick={() => setSent(false)} className="mt-4 text-xs text-white/40 hover:text-white/70 transition underline">
+        <button onClick={() => setSent(false)} className="mt-4 text-xs text-white/70 hover:text-white/70 transition underline">
           Envoyer un autre message
         </button>
       </div>
@@ -142,7 +142,7 @@ function ContactForm() {
           required
           maxLength={1000}
         />
-        <p className="text-xs text-white/30 text-right mt-0.5">{message.length}/1000</p>
+        <p className="text-xs text-white/60 text-right mt-0.5">{message.length}/1000</p>
       </div>
       {error && <p className="text-red-400 text-sm">{error}</p>}
       <button

@@ -21,6 +21,9 @@ export default function AdminPage() {
   const [showCode, setShowCode] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  // 🔑 2FA
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [code2fa, setCode2fa] = useState("");
 
   // Restaurer session depuis sessionStorage/localStorage
   useEffect(() => {
@@ -56,8 +59,15 @@ export default function AdminPage() {
     e.preventDefault();
     setError("");
     setLoading(true);
-    const r = await verifyMembre(email.trim().toLowerCase(), code.trim());
+    const r = await verifyMembre(email.trim().toLowerCase(), code.trim(), code2fa.trim());
     setLoading(false);
+
+    // 🔑 2FA requise : on affiche le champ code email
+    if (r.requires2FA) {
+      setNeeds2FA(true);
+      setError(r.reason || "Un code de connexion vous a été envoyé par email.");
+      return;
+    }
 
     if (!r.ok || !r.membre) {
       setError(r.reason || "Email ou code incorrect.");
@@ -67,6 +77,8 @@ export default function AdminPage() {
       setError("Ce compte n'a pas accès à l'administration.");
       return;
     }
+    setNeeds2FA(false);
+    setCode2fa("");
 
     const sess: MemberSession = {
       membreId: r.membre.id,
@@ -172,8 +184,29 @@ export default function AdminPage() {
               </div>
             </div>
 
+            {needs2FA && (
+              <div>
+                <label className="text-xs uppercase tracking-widest text-emerald-600 mb-1.5 block">
+                  🔑 Code reçu par email
+                </label>
+                <input
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]{6}"
+                  maxLength={6}
+                  className="input w-full text-center text-2xl tracking-[8px] font-mono"
+                  placeholder="000000"
+                  value={code2fa}
+                  onChange={(e) => setCode2fa(e.target.value.replace(/\D/g, ""))}
+                  autoFocus
+                  required
+                />
+                <p className="text-[11px] text-slate-500 mt-1">Code valable 10 minutes.</p>
+              </div>
+            )}
+
             {error && (
-              <p className="text-red-500 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+              <p className={`text-xs rounded-lg px-3 py-2 ${needs2FA ? "text-emerald-700 bg-emerald-50 border border-emerald-200" : "text-red-500 bg-red-50 border border-red-200"}`}>
                 {error}
               </p>
             )}
