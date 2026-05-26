@@ -1,6 +1,7 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight } from "lucide-react";
+import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
@@ -281,6 +282,28 @@ export default function MemberPanel({
             )}
           </div>
         </div>
+
+        {/* 👑 Bouton d'accès admin (uniquement si le compte a les droits) */}
+        {session.isAdmin && (
+          <Link
+            href="/admin"
+            onClick={onBack}
+            className="group mb-6 block bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl p-4 shadow-md hover:shadow-lg transition"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                <ShieldCheck className="w-6 h-6 text-white" />
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="font-bold text-sm leading-tight">Accéder à l&apos;admin</p>
+                <p className="text-[11px] text-white/85 leading-tight mt-0.5">
+                  Tu devras juste confirmer ton mot de passe
+                </p>
+              </div>
+              <ArrowRight className="w-5 h-5 text-white group-hover:translate-x-1 transition" />
+            </div>
+          </Link>
+        )}
 
         {/* Renouvellement si non payé pour cette saison */}
         {session.paid === false && (
