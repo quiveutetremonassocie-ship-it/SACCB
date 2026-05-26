@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search, History, Trash2, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
 import { DB } from "@/lib/types";
 import { adminSendEmail, adminDeleteEmailLog, adminClearEmailHistory } from "@/lib/db";
@@ -42,11 +42,35 @@ export default function EmailingAdmin({
   const [attachments, setAttachments] = useState<Attachment[]>([]);
   const [sending, setSending] = useState(false);
   const [result, setResult] = useState<{ ok: boolean; text: string } | null>(null);
-  const [historyOpen, setHistoryOpen] = useState(false);
+  const [historyManualOpen, setHistoryManualOpen] = useState(false);
+  const [historyAutoOpen, setHistoryAutoOpen] = useState(false);
   const [openLogId, setOpenLogId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // 📩 Réponse à un message reçu : on récupère le contexte depuis sessionStorage
+  // (déposé par MessagesAdmin quand on clique sur l'enveloppe "Répondre")
+  useEffect(() => {
+    try {
+      const raw = sessionStorage.getItem("saccb_pending_reply");
+      if (!raw) return;
+      sessionStorage.removeItem("saccb_pending_reply");
+      const reply = JSON.parse(raw) as { email: string; name: string; subject: string; quote: string };
+      setSubject(reply.subject || "");
+      setBody(`Bonjour ${reply.name},\n\n\n\n--- Votre message ---\n${reply.quote}`);
+      setTargetMode("custom"); // mode "sélection manuelle" requis pour utiliser extraEmails seul
+      setExtraEmails(reply.email);
+      // Défile vers le formulaire après un court délai (le temps que tout se rende)
+      setTimeout(() => {
+        document.getElementById("emailing-form-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    } catch {}
+  }, []);
+
   const history = (db.emailHistory || []).slice().reverse(); // plus récent en premier
+  // Sépare manuels (admin) vs automatiques (système). Logs sans 'type' = legacy admin envoyés via la zone manuelle.
+  const isManualLog = (l: typeof history[number]) => !l.type || l.type === "manual";
+  const manualHistory = history.filter(isManualLog);
+  const autoHistory = history.filter((l) => !isManualLog(l));
 
   // 🔍 Helper : résoudre une adresse email vers UN PRÉNOM uniquement
   // (1er mot du nom complet de l'adhérent, sinon partie locale de l'email)
@@ -87,7 +111,8 @@ export default function EmailingAdmin({
   function reuseLog(log: typeof history[number]) {
     setSubject(log.subject);
     setBody(log.body || "");
-    setHistoryOpen(false);
+    setHistoryManualOpen(false);
+    setHistoryAutoOpen(false);
     // Scroll vers le haut du formulaire
     setTimeout(() => {
       document.getElementById("emailing-form-top")?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -498,116 +523,142 @@ export default function EmailingAdmin({
         </button>
       )}
 
-      {/* ─── HISTORIQUE DES EMAILS ENVOYÉS ─── */}
-      {history.length > 0 && (
-        <div className="mt-6 border-t border-slate-200 pt-4">
+      {/* ─── HISTORIQUE DES EMAILS — SCISSION : MANUELS vs AUTOMATIQUES ─── */}
+      {history.length > 0 && !readOnly && (
+        <div className="mt-6 border-t border-slate-200 pt-4 flex justify-end">
           <button
-            onClick={() => setHistoryOpen(!historyOpen)}
-            className="w-full flex items-center justify-between bg-slate-50 hover:bg-slate-100 border border-slate-200 rounded-xl px-4 py-3 transition"
+            onClick={clearHistory}
+            className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2 py-1"
           >
-            <span className="flex items-center gap-2 text-sm font-semibold text-slate-700">
-              <History className="w-4 h-4 text-slate-500" />
-              Historique des emails envoyés ({history.length})
-            </span>
-            {historyOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+            <Trash2 className="w-3.5 h-3.5" /> Vider tout l&apos;historique
           </button>
+        </div>
+      )}
 
-          {historyOpen && (
+      {/* 👤 Manuels — emails écrits et envoyés par un admin */}
+      {manualHistory.length > 0 && (
+        <div className="mt-3">
+          <button
+            onClick={() => setHistoryManualOpen(!historyManualOpen)}
+            className="w-full flex items-center justify-between bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl px-4 py-3 transition"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-emerald-800">
+              <Mail className="w-4 h-4 text-emerald-600" />
+              👤 Emails envoyés manuellement ({manualHistory.length})
+            </span>
+            {historyManualOpen ? <ChevronUp className="w-4 h-4 text-emerald-700" /> : <ChevronDown className="w-4 h-4 text-emerald-700" />}
+          </button>
+          {historyManualOpen && (
             <div className="mt-3 space-y-2">
-              {!readOnly && history.length > 1 && (
-                <div className="flex justify-end">
-                  <button
-                    onClick={clearHistory}
-                    className="text-xs text-red-600 hover:text-red-800 font-medium flex items-center gap-1 px-2 py-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Vider tout l'historique
-                  </button>
-                </div>
-              )}
-              {history.map((log) => {
-                const date = new Date(log.date);
-                const isOpen = openLogId === log.id;
-                return (
-                  <div key={log.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
-                    <div className="flex items-center gap-2 p-3">
-                      <button
-                        onClick={() => setOpenLogId(isOpen ? null : log.id)}
-                        className="flex-1 flex items-center gap-3 min-w-0 text-left"
-                      >
-                        <div className={`w-2 h-2 rounded-full shrink-0 ${log.status === "sent" ? "bg-emerald-500" : log.status === "partial" ? "bg-amber-500" : "bg-red-500"}`} />
-                        <div className="min-w-0 flex-1">
-                          <p className="text-sm font-semibold text-slate-800 truncate">{log.subject}</p>
-                          <p className="text-xs text-slate-400">
-                            {date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} à {date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
-                            {" · "}
-                            <strong>{log.sentCount ?? log.recipientCount}</strong> destinataire{(log.sentCount ?? log.recipientCount) > 1 ? "s" : ""}
-                            {log.status === "partial" && <span className="text-amber-600"> (partiel)</span>}
-                            {log.status === "failed" && <span className="text-red-600"> (échec)</span>}
-                          </p>
-                        </div>
-                        {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
-                      </button>
-                      {!readOnly && (
-                        <button
-                          onClick={() => deleteLog(log.id)}
-                          className="text-red-400 hover:text-red-600 p-1.5 rounded shrink-0"
-                          title="Supprimer cette entrée"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      )}
-                    </div>
-                    {isOpen && (
-                      <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 space-y-2">
-                        <div className="text-xs text-slate-500">
-                          <strong>Mode :</strong> {labelTargetMode(log.targetMode)}
-                          {log.sentBy && (
-                            <>
-                              {" · "}
-                              <strong>Envoyé par :</strong>{" "}
-                              <span title={`Email enregistré : ${log.sentBy}`}>{resolveName(log.sentBy)}</span>
-                            </>
-                          )}
-                        </div>
-                        {log.recipientsPreview && log.recipientsPreview.length > 0 && (
-                          <div className="text-xs text-slate-500">
-                            <strong>Aperçu destinataires :</strong> {log.recipientsPreview.join(", ")}
-                            {log.recipientCount > log.recipientsPreview.length && ` … (+${log.recipientCount - log.recipientsPreview.length} autres)`}
-                          </div>
-                        )}
-                        {log.attachmentNames && log.attachmentNames.length > 0 && (
-                          <div className="text-xs text-slate-500 flex items-center gap-1">
-                            <Paperclip className="w-3 h-3" />
-                            {log.attachmentNames.join(", ")}
-                          </div>
-                        )}
-                        {log.body && (
-                          <div className="bg-white border border-slate-200 rounded-lg p-3 mt-2">
-                            <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-1">Contenu</p>
-                            <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
-                              {log.body}
-                            </p>
-                          </div>
-                        )}
-                        {!readOnly && (
-                          <button
-                            onClick={() => reuseLog(log)}
-                            className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2"
-                          >
-                            ↻ Ré-utiliser ce contenu (sujet + message)
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {manualHistory.map((log) => renderLogItem(log))}
             </div>
           )}
         </div>
       )}
+
+      {/* 🤖 Automatiques — emails envoyés par le système */}
+      {autoHistory.length > 0 && (
+        <div className="mt-3">
+          <button
+            onClick={() => setHistoryAutoOpen(!historyAutoOpen)}
+            className="w-full flex items-center justify-between bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl px-4 py-3 transition"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-sky-800">
+              <History className="w-4 h-4 text-sky-600" />
+              🤖 Emails envoyés automatiquement ({autoHistory.length})
+            </span>
+            {historyAutoOpen ? <ChevronUp className="w-4 h-4 text-sky-700" /> : <ChevronDown className="w-4 h-4 text-sky-700" />}
+          </button>
+          {historyAutoOpen && (
+            <div className="mt-3 space-y-2">
+              {autoHistory.map((log) => renderLogItem(log))}
+            </div>
+          )}
+        </div>
+      )}
+
     </div>
   );
+
+  // 🧩 Helper : rendu d'une ligne d'historique (utilisé par les 2 sections manuels/auto)
+  function renderLogItem(log: typeof history[number]) {
+    const date = new Date(log.date);
+    const isOpen = openLogId === log.id;
+    return (
+      <div key={log.id} className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="flex items-center gap-2 p-3">
+          <button
+            onClick={() => setOpenLogId(isOpen ? null : log.id)}
+            className="flex-1 flex items-center gap-3 min-w-0 text-left"
+          >
+            <div className={`w-2 h-2 rounded-full shrink-0 ${log.status === "sent" ? "bg-emerald-500" : log.status === "partial" ? "bg-amber-500" : "bg-red-500"}`} />
+            <div className="min-w-0 flex-1">
+              <p className="text-sm font-semibold text-slate-800 truncate">{log.subject}</p>
+              <p className="text-xs text-slate-400">
+                {date.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })} à {date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}
+                {" · "}
+                <strong>{log.sentCount ?? log.recipientCount}</strong> destinataire{(log.sentCount ?? log.recipientCount) > 1 ? "s" : ""}
+                {log.status === "partial" && <span className="text-amber-600"> (partiel)</span>}
+                {log.status === "failed" && <span className="text-red-600"> (échec)</span>}
+              </p>
+            </div>
+            {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+          </button>
+          {!readOnly && (
+            <button
+              onClick={() => deleteLog(log.id)}
+              className="text-red-400 hover:text-red-600 p-1.5 rounded shrink-0"
+              title="Supprimer cette entrée"
+            >
+              <Trash2 className="w-4 h-4" />
+            </button>
+          )}
+        </div>
+        {isOpen && (
+          <div className="px-4 py-3 border-t border-slate-100 bg-slate-50 space-y-2">
+            <div className="text-xs text-slate-500">
+              <strong>Mode :</strong> {labelTargetMode(log.targetMode)}
+              {log.sentBy && (
+                <>
+                  {" · "}
+                  <strong>Envoyé par :</strong>{" "}
+                  <span title={`Email enregistré : ${log.sentBy}`}>{resolveName(log.sentBy)}</span>
+                </>
+              )}
+            </div>
+            {log.recipientsPreview && log.recipientsPreview.length > 0 && (
+              <div className="text-xs text-slate-500">
+                <strong>Aperçu destinataires :</strong> {log.recipientsPreview.join(", ")}
+                {log.recipientCount > log.recipientsPreview.length && ` … (+${log.recipientCount - log.recipientsPreview.length} autres)`}
+              </div>
+            )}
+            {log.attachmentNames && log.attachmentNames.length > 0 && (
+              <div className="text-xs text-slate-500 flex items-center gap-1">
+                <Paperclip className="w-3 h-3" />
+                {log.attachmentNames.join(", ")}
+              </div>
+            )}
+            {log.body && (
+              <div className="bg-white border border-slate-200 rounded-lg p-3 mt-2">
+                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold mb-1">Contenu</p>
+                <p className="text-xs text-slate-700 whitespace-pre-wrap leading-relaxed max-h-40 overflow-y-auto">
+                  {log.body}
+                </p>
+              </div>
+            )}
+            {!readOnly && (
+              <button
+                onClick={() => reuseLog(log)}
+                className="text-xs text-blue-600 hover:text-blue-800 font-medium mt-2"
+              >
+                ↻ Ré-utiliser ce contenu (sujet + message)
+              </button>
+            )}
+          </div>
+        )}
+      </div>
+    );
+  }
 }
 
 function labelTargetMode(mode: string): string {

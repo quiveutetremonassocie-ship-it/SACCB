@@ -90,9 +90,22 @@ export default function MessagesAdmin({
   }
 
   function replyMailto(m: ContactMessage) {
-    const subject = encodeURIComponent(`Re: votre message au SACCB`);
-    const body = encodeURIComponent(`Bonjour ${m.name},\n\n\n\n---\nVotre message du ${new Date(m.createdAt).toLocaleDateString("fr-FR")} :\n${m.message}\n`);
-    window.location.href = `mailto:${m.email}?subject=${subject}&body=${body}`;
+    // 📩 Pré-remplit le formulaire d'envoi d'email (section "Envoi d'emails")
+    // avec destinataire + sujet + le message original cité, puis y défile.
+    try {
+      sessionStorage.setItem("saccb_pending_reply", JSON.stringify({
+        email: m.email,
+        name: m.name,
+        subject: `Re: votre message au SACCB`,
+        quote: `Votre message du ${new Date(m.createdAt).toLocaleDateString("fr-FR")} :\n${m.message}`,
+        messageId: m.id,
+      }));
+    } catch {}
+    // Défile vers la section emailing (ancre #admin-emailing existante dans AdminPanel)
+    setTimeout(() => {
+      const target = document.getElementById("admin-emailing");
+      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
   }
 
   return (

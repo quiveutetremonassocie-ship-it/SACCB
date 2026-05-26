@@ -3399,7 +3399,8 @@ Deno.serve(async (req) => {
         status: errors.length > 0 ? "partial" : "sent",
         sentCount: totalSent,
         totalCount: recipientEmails.length,
-        variant, // 🎨 type d'email (urgent, annonce, etc.)
+        variant, // 🎨 style visuel (urgent, annonce, etc.)
+        type: "manual", // 👤 envoyé manuellement par un admin (vs automatique)
       });
       // Garder uniquement les 100 derniers (anti-explosion DB)
       const trimmed = emailHistory.slice(-100);
