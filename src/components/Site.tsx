@@ -275,10 +275,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         onAdmin={onReopenAdmin}
         onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
       />
-      {/* Bannière de réinscription : visible aux adhérents connectés non-payés
-          (qu'on ait fermé les inscriptions ou non : un membre existant doit
-          toujours pouvoir finaliser son paiement) */}
-      {memberSession && memberSession.paid !== true && (
+      {/* Bannière de réinscription : visible uniquement aux adhérents connectés non-payés */}
+      {memberSession && memberSession.paid !== true && db.insc_open && (
         <div className="fixed top-[72px] inset-x-0 z-40 bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg border-b border-amber-600/30 px-4 py-3 flex items-center justify-center gap-3 flex-wrap text-center">
           <span className="text-sm md:text-base text-white font-semibold">
             ⏳ Adhésion saison {db.y1}–{db.y2} à renouveler !
