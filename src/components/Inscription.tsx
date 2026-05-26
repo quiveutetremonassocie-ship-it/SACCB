@@ -7,9 +7,25 @@ import confetti from "canvas-confetti";
 import { DB } from "@/lib/types";
 import { publicAddMembre, publicMarkPaid } from "@/lib/db";
 
-const HELLOASSO_BASE_URL =
-  "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte";
-const HELLOASSO_URL = `${HELLOASSO_BASE_URL}?backUrl=${encodeURIComponent("https://saccb.fr/?payment=success")}`;
+// 🎫 3 campagnes HelloAsso selon les types de personnes inscrites :
+//  - tarif-adulte    = MIXTE (adulte + étudiant dans la même inscription)
+//  - tarif-adulte-1  = ADULTE seul
+//  - tarif-etudiant  = ÉTUDIANT seul
+const HELLOASSO_BASE = "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements";
+const HELLOASSO_BACK = encodeURIComponent("https://saccb.fr/?payment=success");
+const HELLOASSO_URLS = {
+  mixte: `${HELLOASSO_BASE}/tarif-adulte?backUrl=${HELLOASSO_BACK}`,
+  adulte: `${HELLOASSO_BASE}/tarif-adulte-1?backUrl=${HELLOASSO_BACK}`,
+  etudiant: `${HELLOASSO_BASE}/tarif-etudiant?backUrl=${HELLOASSO_BACK}`,
+} as const;
+
+function pickHelloAssoUrl(personnes: { type: "Adulte" | "Etudiant" }[]): string {
+  const hasAdulte = personnes.some((p) => p.type === "Adulte");
+  const hasEtudiant = personnes.some((p) => p.type === "Etudiant");
+  if (hasAdulte && hasEtudiant) return HELLOASSO_URLS.mixte;
+  if (hasEtudiant) return HELLOASSO_URLS.etudiant;
+  return HELLOASSO_URLS.adulte; // adulte seul (ou fallback)
+}
 
 type PaymentMode = "online" | "virement";
 type PersonType = "Adulte" | "Etudiant";
@@ -240,7 +256,7 @@ export default function Inscription({
       const ids = results.map(r => r.membreId || "").filter(Boolean);
       localStorage.setItem("saccb_pending_membre_ids", JSON.stringify(ids));
       localStorage.setItem("saccb_pending_personnes", JSON.stringify(personnes));
-      window.location.href = HELLOASSO_URL;
+      window.location.href = pickHelloAssoUrl(personnes);
       return;
     }
 
