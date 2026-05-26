@@ -21,6 +21,10 @@ export default function MemberLoginModal({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [view, setView] = useState<View>("login");
+  // 🔑 2FA admin (déclenché côté serveur si le compte est admin + require2FA activé)
+  const [needs2FA, setNeeds2FA] = useState(false);
+  const [code2fa, setCode2fa] = useState("");
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   // Code oublié
   const [forgotEmail, setForgotEmail] = useState("");
@@ -49,6 +53,29 @@ export default function MemberLoginModal({
     setNewCode("");
     setNewCode2("");
     setChangeError("");
+    setNeeds2FA(false);
+    setCode2fa("");
+    setResendCooldown(0);
+  }
+
+  function startResendCooldown() {
+    setResendCooldown(60);
+    const i = setInterval(() => {
+      setResendCooldown((s) => { if (s <= 1) { clearInterval(i); return 0; } return s - 1; });
+    }, 1000);
+  }
+
+  async function handleResend2FA() {
+    if (resendCooldown > 0) return;
+    setError("");
+    setCode2fa("");
+    const r = await verifyMembre(email, code, "", true);
+    if (r.requires2FA) {
+      setError(r.reason || "Nouveau code envoyé.");
+      startResendCooldown();
+    } else if (!r.ok) {
+      setError(r.reason || "Erreur lors de l'envoi.");
+    }
   }
 
   function finalizeLogin() {
@@ -64,8 +91,18 @@ export default function MemberLoginModal({
     e.preventDefault();
     setError("");
     setLoading(true);
-    const r = await verifyMembre(email, code);
+    const r = await verifyMembre(email, code, code2fa);
     setLoading(false);
+
+    // 🔑 Le serveur demande un code 2FA (compte admin avec require2FA activé)
+    if (r.requires2FA) {
+      const wasAlreadyShown = needs2FA;
+      setNeeds2FA(true);
+      setError(r.reason || "Un code de connexion vous a été envoyé par email.");
+      if (!wasAlreadyShown) startResendCooldown();
+      return;
+    }
+
     if (!r.ok || !r.membre) {
       setError(r.reason || "Email ou code incorrect.");
       return;
@@ -193,9 +230,43 @@ export default function MemberLoginModal({
                 value={code}
                 onChange={(e) => setCode(e.target.value)}
                 required
+                disabled={needs2FA}
               />
+
+              {/* 🔑 Champ 2FA : affiché uniquement quand le serveur le réclame (admins) */}
+              {needs2FA && (
+                <div>
+                  <label className="text-xs uppercase tracking-widest text-emerald-600 mb-1.5 block">
+                    🔑 Code reçu par email
+                  </label>
+                  <input
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]{6}"
+                    maxLength={6}
+                    className="input w-full text-center text-2xl tracking-[8px] font-mono"
+                    placeholder="000000"
+                    value={code2fa}
+                    onChange={(e) => setCode2fa(e.target.value.replace(/\D/g, ""))}
+                    autoFocus
+                    required
+                  />
+                  <div className="flex items-center justify-between mt-1.5">
+                    <p className="text-[11px] text-slate-500">Code valable 10 min.</p>
+                    <button
+                      type="button"
+                      onClick={handleResend2FA}
+                      disabled={resendCooldown > 0}
+                      className="text-[11px] text-emerald-600 hover:text-emerald-700 disabled:text-slate-300 disabled:cursor-not-allowed underline"
+                    >
+                      {resendCooldown > 0 ? `Renvoyer dans ${resendCooldown}s` : "📩 Renvoyer un code"}
+                    </button>
+                  </div>
+                </div>
+              )}
+
               {error && (
-                <p className="text-red-500 text-xs bg-red-50 border border-red-200 rounded-lg px-3 py-2">
+                <p className={`text-xs rounded-lg px-3 py-2 ${needs2FA ? "text-emerald-700 bg-emerald-50 border border-emerald-200" : "text-red-500 bg-red-50 border border-red-200"}`}>
                   {error}
                 </p>
               )}
