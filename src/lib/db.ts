@@ -119,18 +119,59 @@ export async function publicRegisterTournoi(tournoiId: string, p1: string, p2: s
 }
 
 // ─── Vérification membre (connexion espace membre) ───
+// 🛡️ Trust token 2FA : émis par le serveur après un 2FA réussi, permet de
+// skipper le 2FA pour ce compte pendant 14 jours (re-auth /admin → juste mdp).
+// Stocké séparément par email pour gérer plusieurs comptes sur le même navigateur.
+const TRUST_TOKEN_KEY = "saccb_tfa_trust";
+export function getTrustToken(email: string): string {
+  if (typeof window === "undefined") return "";
+  try {
+    const raw = localStorage.getItem(TRUST_TOKEN_KEY);
+    if (!raw) return "";
+    const map = JSON.parse(raw) as Record<string, string>;
+    return map[email.toLowerCase().trim()] || "";
+  } catch { return ""; }
+}
+export function setTrustToken(email: string, token: string): void {
+  if (typeof window === "undefined") return;
+  try {
+    const raw = localStorage.getItem(TRUST_TOKEN_KEY);
+    const map = (raw ? JSON.parse(raw) : {}) as Record<string, string>;
+    map[email.toLowerCase().trim()] = token;
+    localStorage.setItem(TRUST_TOKEN_KEY, JSON.stringify(map));
+  } catch {}
+}
+export function clearTrustToken(email?: string): void {
+  if (typeof window === "undefined") return;
+  if (!email) { localStorage.removeItem(TRUST_TOKEN_KEY); return; }
+  try {
+    const raw = localStorage.getItem(TRUST_TOKEN_KEY);
+    if (!raw) return;
+    const map = JSON.parse(raw) as Record<string, string>;
+    delete map[email.toLowerCase().trim()];
+    localStorage.setItem(TRUST_TOKEN_KEY, JSON.stringify(map));
+  } catch {}
+}
+
 export async function verifyMembre(
   email: string,
   code: string,
   code2fa?: string,
   resend2FA?: boolean
-): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; codeJustReset?: boolean; requires2FA?: boolean; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
+): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; codeJustReset?: boolean; requires2FA?: boolean; trustToken?: string; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
+  const normalizedEmail = email.toLowerCase().trim();
+  const trustToken = getTrustToken(normalizedEmail);
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "verify_membre", email: email.toLowerCase().trim(), code, code2fa: code2fa || "", resend2FA: resend2FA === true }),
+    body: JSON.stringify({ action: "verify_membre", email: normalizedEmail, code, code2fa: code2fa || "", resend2FA: resend2FA === true, trustToken }),
   });
-  return res.json();
+  const result = await res.json();
+  // Si le serveur renvoie un trust token (frais après 2FA), on le stocke
+  if (result.ok && result.trustToken) {
+    setTrustToken(normalizedEmail, result.trustToken);
+  }
+  return result;
 }
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───

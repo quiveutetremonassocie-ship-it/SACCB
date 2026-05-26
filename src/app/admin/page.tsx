@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { ShieldCheck, Eye, EyeOff, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
 import { DB } from "@/lib/types";
-import { emptyDB, fetchAdminDBByMember, saveDBByMember } from "@/lib/db";
+import { emptyDB, fetchAdminDBByMember, saveDBByMember, clearTrustToken } from "@/lib/db";
 import { getMemberSession, MemberSession, setMemberSession, clearMemberSession, sessionDurationMs } from "@/lib/useMemberSession";
 import { verifyMembre } from "@/lib/db";
 import AdminPanel from "@/components/admin/AdminPanel";
@@ -147,8 +147,9 @@ export default function AdminPage() {
   }
 
   function handleFullLogout() {
-    // Déconnexion totale : session + code admin
+    // Déconnexion totale : session + code admin + trust token 2FA
     cleanupOldAdminCodeCache();
+    clearTrustToken(); // tous les comptes
     clearMemberSession();
     setAdminReady(false);
     setMemberSessionState(null);

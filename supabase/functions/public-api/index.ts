@@ -99,6 +99,25 @@ function clearLoginFailures(email: string): void {
 // 🔑 2FA admin par email : stocké en DB (les Edge Functions sont stateless,
 // une map en mémoire ne survit pas entre 2 invocations)
 type TwoFAEntry = { email: string; codeHash: string; expires: number };
+// 🛡️ Token de confiance émis après un 2FA réussi : permet au client (même
+// navigateur) de skipper le 2FA pendant 14 jours. Stocké server-side pour
+// éviter qu'un attaquant ne forge un token.
+type TfaTrust = { email: string; token: string; expires: number };
+function getTrustList(d: Record<string, unknown>): TfaTrust[] {
+  const now = Date.now();
+  return ((d.tfaTrusted || []) as TfaTrust[]).filter((t) => t && t.expires > now);
+}
+function isTrustTokenValid(d: Record<string, unknown>, email: string, token: string): boolean {
+  if (!token) return false;
+  return getTrustList(d).some((t) => t.email === email && t.token === token);
+}
+async function issueTrustToken(d: Record<string, unknown>, email: string): Promise<string> {
+  const token = crypto.randomUUID();
+  const list = getTrustList(d).filter((t) => t.email !== email); // 1 token actif par email
+  list.push({ email, token, expires: Date.now() + 14 * 24 * 60 * 60 * 1000 });
+  d.tfaTrusted = list;
+  return token;
+}
 function generate2FACode(): string {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -905,6 +924,7 @@ Deno.serve(async (req) => {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));
     const code2fa = sanitize(String(body.code2fa || ""));
+    const trustToken = String(body.trustToken || "").trim();
 
     if (!email || !code) return json({ ok: false, reason: "Email et code requis." }, 400);
 
@@ -930,11 +950,22 @@ Deno.serve(async (req) => {
 
     const require2FA = currentData.require2FA === true;
     const resend2FA = body.resend2FA === true;
+    // Le serveur émettra (ou ré-émettra) un trust token après un 2FA réussi,
+    // ou ré-utilisera celui passé par le client s'il est encore valide.
+    let issuedTrustToken: string | null = null;
 
     // Vérifie / déclenche 2FA si activé. Retourne null si OK pour continuer,
     // sinon retourne une Response qu'il faut renvoyer directement.
     async function handle2FA(): Promise<Response | null> {
       if (!require2FA) return null;
+
+      // 🛡️ Si le client envoie un trust token valide → on saute le 2FA
+      // (ré-auth depuis le même navigateur dans les 14 jours suivant le 1er 2FA)
+      if (trustToken && isTrustTokenValid(currentData, email, trustToken)) {
+        issuedTrustToken = trustToken; // on renvoie le même au client
+        return null;
+      }
+
       const brevoKey = Deno.env.get("BREVO_API_KEY");
       if (!brevoKey) return null; // si pas d'email service, on skip pour pas bloquer
 
@@ -965,8 +996,9 @@ Deno.serve(async (req) => {
         recordLoginFailure(email);
         return json({ ok: false, requires2FA: true, reason: "Code 2FA incorrect." });
       }
-      // Consomme l'entrée (usage unique) + persiste
+      // Consomme l'entrée (usage unique) + émet un trust token + persiste
       delete2FAEntry(currentData, email);
+      issuedTrustToken = await issueTrustToken(currentData, email);
       await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
       return null; // OK, on continue
     }
@@ -994,6 +1026,7 @@ Deno.serve(async (req) => {
         paid: true,
         isAdmin: true,
         membre: { id: "admin-" + email, nom: email, type: "Adulte", email },
+        trustToken: issuedTrustToken ?? undefined,
       });
     }
 
@@ -1058,6 +1091,7 @@ Deno.serve(async (req) => {
         email: membre.email,
         newsOptIn: membre.newsOptIn !== false, // true par défaut pour les anciens comptes
       },
+      trustToken: issuedTrustToken ?? undefined,
     });
   }
 
