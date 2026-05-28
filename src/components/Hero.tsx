@@ -12,6 +12,7 @@ export default function Hero({
   engagementOpen = false,
   membresCount = 0,
   creneauxCount = 3,
+  foundedYear = 2022,
 }: {
   seasonY1: number;
   seasonY2: number;
@@ -20,7 +21,9 @@ export default function Hero({
   engagementOpen?: boolean; // true si au moins un des 2 toggles (pollsOpen ou agOpen) est activé
   membresCount?: number;
   creneauxCount?: number;
+  foundedYear?: number;
 }) {
+  const anneesExistence = new Date().getFullYear() - foundedYear + 1;
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
       {/* Image badminton avec overlay clair */}
@@ -197,10 +200,11 @@ export default function Hero({
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="grid grid-cols-2 gap-4 md:gap-6 max-w-xl mx-auto"
+          className="grid grid-cols-3 gap-3 md:gap-5 max-w-2xl mx-auto"
         >
           <StatCard icon={<Users2 className="w-4 h-4" />} value={membresCount > 0 ? String(membresCount) : "—"} label="Adhérents" />
           <StatCard icon={<Calendar className="w-4 h-4" />} value={String(creneauxCount)} label="Créneaux / sem." />
+          <StatCard icon={<Trophy className="w-4 h-4" />} value={`${anneesExistence} ans`} label="D'existence" />
         </motion.div>
 
         <motion.a
