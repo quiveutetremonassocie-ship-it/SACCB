@@ -1,52 +1,61 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useCallback } from "react";
 import { ChevronUp, ChevronDown } from "lucide-react";
 
 export default function ScrollButton() {
-  const [atBottom, setAtBottom] = useState(false);
-  const [visible, setVisible] = useState(false);
+  const btnRef = useRef<HTMLButtonElement>(null);
+  const iconUpRef = useRef<SVGSVGElement>(null);
+  const iconDownRef = useRef<SVGSVGElement>(null);
+  const atBottomRef = useRef(false);
 
   useEffect(() => {
+    let raf = 0;
     function onScroll() {
-      const scrollY = window.scrollY;
-      const windowH = window.innerHeight;
-      const docH = document.documentElement.scrollHeight;
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        const btn = btnRef.current;
+        if (!btn) return;
 
-      // Visible après avoir scrollé un peu (200px)
-      setVisible(scrollY > 200);
+        const scrollY = window.scrollY;
+        const windowH = window.innerHeight;
+        const docH = document.documentElement.scrollHeight;
+        const isVisible = scrollY > 200;
+        const isBottom = scrollY + windowH >= docH - 150;
 
-      // Considéré "en bas" si on est à moins de 150px du fond
-      setAtBottom(scrollY + windowH >= docH - 150);
+        btn.style.display = isVisible ? "flex" : "none";
+        atBottomRef.current = isBottom;
+
+        if (iconUpRef.current && iconDownRef.current) {
+          iconUpRef.current.style.display = isBottom ? "block" : "none";
+          iconDownRef.current.style.display = isBottom ? "none" : "block";
+        }
+      });
     }
 
     window.addEventListener("scroll", onScroll, { passive: true });
     onScroll();
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
   }, []);
 
-  function handleClick() {
-    if (atBottom) {
+  const handleClick = useCallback(() => {
+    if (atBottomRef.current) {
       window.scrollTo({ top: 0, behavior: "smooth" });
     } else {
       window.scrollTo({ top: document.documentElement.scrollHeight, behavior: "smooth" });
     }
-  }
-
-  if (!visible) return null;
+  }, []);
 
   return (
     <button
+      ref={btnRef}
       onClick={handleClick}
-      className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-[#1e3a5f]/90 hover:bg-[#1e3a5f] text-white shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-300 flex items-center justify-center group"
-      title={atBottom ? "Remonter en haut" : "Descendre en bas"}
-      aria-label={atBottom ? "Remonter en haut" : "Descendre en bas"}
+      style={{ display: "none" }}
+      className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-[#1e3a5f]/90 hover:bg-[#1e3a5f] text-white shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-300 items-center justify-center group"
+      aria-label="Scroll"
     >
-      {atBottom ? (
-        <ChevronUp className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" />
-      ) : (
-        <ChevronDown className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" />
-      )}
+      <ChevronUp ref={iconUpRef} className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" style={{ display: "none" }} />
+      <ChevronDown ref={iconDownRef} className="w-5 h-5 group-hover:translate-y-0.5 transition-transform" style={{ display: "block" }} />
     </button>
   );
 }
