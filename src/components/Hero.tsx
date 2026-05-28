@@ -1,8 +1,45 @@
 "use client";
 
+import { useEffect, useRef, useState } from "react";
 import { motion } from "framer-motion";
 import { ChevronDown, MapPin, Trophy, Users2, Calendar, Megaphone, Newspaper, Clock, Mail, Award } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
+
+function useCountUp(target: number, duration = 1800) {
+  const [count, setCount] = useState(0);
+  const [started, setStarted] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const obs = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setStarted(true); obs.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    obs.observe(el);
+    return () => obs.disconnect();
+  }, []);
+
+  useEffect(() => {
+    if (!started || target === 0) return;
+    const steps = 50;
+    const increment = target / steps;
+    let current = 0;
+    const interval = setInterval(() => {
+      current += increment;
+      if (current >= target) {
+        setCount(target);
+        clearInterval(interval);
+      } else {
+        setCount(Math.floor(current));
+      }
+    }, duration / steps);
+    return () => clearInterval(interval);
+  }, [started, target, duration]);
+
+  return { count, ref };
+}
 
 export default function Hero({
   seasonY1,
@@ -202,9 +239,9 @@ export default function Hero({
           transition={{ duration: 0.8, delay: 0.7 }}
           className="grid grid-cols-3 gap-3 md:gap-5 max-w-2xl mx-auto"
         >
-          <StatCard icon={<Users2 className="w-4 h-4" />} value={membresCount > 0 ? String(membresCount) : "—"} label="Adhérents" />
-          <StatCard icon={<Calendar className="w-4 h-4" />} value={String(creneauxCount)} label="Créneaux / sem." />
-          <StatCard icon={<Trophy className="w-4 h-4" />} value={`${anneesExistence} ans`} label="D'existence" />
+          <AnimatedStatCard icon={<Users2 className="w-4 h-4" />} target={membresCount} label="Adhérents" />
+          <AnimatedStatCard icon={<Calendar className="w-4 h-4" />} target={creneauxCount} label="Créneaux / sem." />
+          <AnimatedStatCard icon={<Trophy className="w-4 h-4" />} target={anneesExistence} suffix=" ans" label="D'existence" />
         </motion.div>
 
         <motion.a
@@ -221,17 +258,20 @@ export default function Hero({
   );
 }
 
-function StatCard({
+function AnimatedStatCard({
   icon,
-  value,
+  target,
+  suffix = "",
   label,
 }: {
   icon: React.ReactNode;
-  value: string;
+  target: number;
+  suffix?: string;
   label: string;
 }) {
+  const { count, ref } = useCountUp(target);
   return (
-    <div className="stat-box text-left">
+    <div className="stat-box text-left" ref={ref}>
       <div className="flex items-center gap-2 text-amber-500 mb-1">
         {icon}
         <span
@@ -244,7 +284,7 @@ function StatCard({
       <div
         className="text-4xl md:text-5xl font-display text-transparent bg-clip-text bg-gradient-to-b from-[#1e3a5f] to-[#2d5a8e]"
       >
-        {value}
+        {target > 0 ? `${count}${suffix}` : "—"}
       </div>
     </div>
   );
