@@ -184,6 +184,91 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
+        {/* Splash screen HTML natif — s'affiche AVANT React */}
+        <div
+          id="splash"
+          style={{
+            position: "fixed", inset: 0, zIndex: 99999,
+            display: "flex", alignItems: "center", justifyContent: "center",
+            background: "linear-gradient(135deg, #1e3a5f 0%, #0f2440 50%, #1e3a5f 100%)",
+          }}
+        >
+          <div style={{ textAlign: "center" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt=""
+              width={80}
+              height={80}
+              style={{ borderRadius: 16, opacity: 0.9, marginBottom: 20 }}
+            />
+            <div
+              style={{
+                fontFamily: "Oswald, sans-serif",
+                fontSize: "3rem",
+                letterSpacing: "0.3em",
+                backgroundImage: "linear-gradient(to right, #fff, #93c5fd, #6ee7b7)",
+                WebkitBackgroundClip: "text",
+                WebkitTextFillColor: "transparent",
+                marginBottom: 8,
+              }}
+            >
+              SACCB
+            </div>
+            <div
+              style={{
+                fontFamily: "Oswald, sans-serif",
+                fontSize: "0.65rem",
+                letterSpacing: "0.35em",
+                textTransform: "uppercase",
+                color: "rgba(255,255,255,0.45)",
+              }}
+            >
+              Badminton &middot; Sainte-Adresse
+            </div>
+            <div
+              style={{
+                width: 180, height: 3, borderRadius: 3,
+                background: "rgba(255,255,255,0.1)",
+                margin: "24px auto 0",
+                overflow: "hidden",
+              }}
+            >
+              <div
+                id="splash-bar"
+                style={{
+                  width: "0%", height: "100%", borderRadius: 3,
+                  background: "linear-gradient(to right, #60a5fa, #34d399)",
+                }}
+              />
+            </div>
+          </div>
+        </div>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function(){
+                var s = document.getElementById('splash');
+                var b = document.getElementById('splash-bar');
+                if (sessionStorage.getItem('saccb_splash_done')) {
+                  s && s.remove();
+                  return;
+                }
+                // Anime la barre
+                if (b) { b.style.transition = 'width 1.5s ease-in-out'; requestAnimationFrame(function(){ b.style.width = '100%'; }); }
+                // Fondu de sortie après 2s
+                setTimeout(function(){
+                  if (s) {
+                    s.style.transition = 'opacity 0.5s ease';
+                    s.style.opacity = '0';
+                    setTimeout(function(){ s.remove(); }, 500);
+                  }
+                  sessionStorage.setItem('saccb_splash_done', '1');
+                }, 2000);
+              })();
+            `,
+          }}
+        />
         {children}
       </body>
     </html>

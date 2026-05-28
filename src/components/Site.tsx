@@ -26,7 +26,6 @@ import ContactSection from "./ContactSection";
 import BureauPublic from "./BureauPublic";
 import ScrollButton from "./ScrollButton";
 import FadeInSection from "./FadeInSection";
-import SplashScreen from "./SplashScreen";
 import WaveDivider from "./WaveDivider";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
@@ -275,7 +274,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
   return (
     <>
-      <SplashScreen />
       <Navbar
         onMember={onMemberButtonClick}
         isMember={!!memberSession}
