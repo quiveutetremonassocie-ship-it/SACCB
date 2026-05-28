@@ -1,7 +1,7 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { ChevronDown, MapPin, Trophy, Flame, Users2, Calendar, Megaphone, Newspaper, Clock, Mail, Award } from "lucide-react";
+import { ChevronDown, MapPin, Trophy, Users2, Calendar, Megaphone, Newspaper, Clock, Mail, Award } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
 
 export default function Hero({
@@ -197,11 +197,10 @@ export default function Hero({
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, delay: 0.7 }}
-          className="grid grid-cols-3 gap-3 md:gap-6 max-w-3xl mx-auto"
+          className="grid grid-cols-2 gap-4 md:gap-6 max-w-xl mx-auto"
         >
           <StatCard icon={<Users2 className="w-4 h-4" />} value={membresCount > 0 ? String(membresCount) : "—"} label="Adhérents" />
           <StatCard icon={<Calendar className="w-4 h-4" />} value={String(creneauxCount)} label="Créneaux / sem." />
-          <StatCard icon={<Flame className="w-4 h-4" />} value="∞" label="Smashs" />
         </motion.div>
 
         <motion.a

@@ -21,8 +21,9 @@ import MemberPanel from "./MemberPanel";
 import Palmares from "./Palmares";
 import Engagement from "./Engagement";
 import Rules from "./Rules";
+import ContactSection from "./ContactSection";
 
-type SiteMode = "full" | "actualites" | "tournois" | "inscription";
+type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
 
 export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -352,6 +353,10 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             prix={PRIX}
             onMembreAdded={() => setMembresCount((n) => n + 1)}
           />
+        )}
+
+        {mode === "contact" && (
+          <ContactSection whatsappLink={db.whatsappLink} />
         )}
 
         {/* Si membre connecté arrive sur /inscription, on lui montre un message */}
