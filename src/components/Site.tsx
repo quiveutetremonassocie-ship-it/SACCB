@@ -24,6 +24,7 @@ import Engagement from "./Engagement";
 import Rules from "./Rules";
 import ContactSection from "./ContactSection";
 import BureauPublic from "./BureauPublic";
+import ScrollButton from "./ScrollButton";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
 
@@ -425,6 +426,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           permissions={isMemberAdmin ? adminPermissions : undefined}
         />
       )}
+      <ScrollButton />
     </>
   );
 }

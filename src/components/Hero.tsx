@@ -23,7 +23,7 @@ export default function Hero({
   creneauxCount?: number;
   foundedYear?: number;
 }) {
-  const anneesExistence = new Date().getFullYear() - foundedYear + 1;
+  const anneesExistence = new Date().getFullYear() - foundedYear;
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
       {/* Image badminton avec overlay clair */}
