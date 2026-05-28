@@ -43,6 +43,11 @@ export type InscritTournoi = {
   tournoiId: string;
   joueurs: string;
   resultat?: string | null; // ex: "3/25" (3ème sur 25 équipes)
+  covoiturage?: {
+    seats: number; // nombre de places proposées (0 = ne propose pas)
+    depart?: string; // lieu de départ approximatif
+    contact?: string; // moyen de contact (tel ou "via WhatsApp")
+  } | null;
 };
 
 export type ActualiteImage = {
@@ -178,11 +183,27 @@ export type DB = {
   analyticsDaily?: AnalyticsDay[];
   // 🔐 Log des connexions admin réussies (50 dernières max)
   adminLoginLog?: { email: string; date: string; ip?: string }[];
+  // 👔 Membres du bureau (visibles par les adhérents connectés)
+  bureauMembers?: BureauMember[];
   // 🔑 Activer la double authentification par email pour les admins
   require2FA?: boolean;
   // 🔑 Codes 2FA en attente (purgés auto à l'expiration). Stockés en DB
   // car les Edge Functions sont stateless.
   twoFAPending?: { email: string; codeHash: string; expires: number }[];
+  // 💾 Backup email automatique mensuel
+  backupEmailConfig?: {
+    enabled: boolean;
+    email: string; // email de destination
+    lastSentAt?: string; // ISO timestamp du dernier envoi
+  };
+};
+
+export type BureauMember = {
+  id: string;
+  prenom: string;
+  nom: string;
+  role: string; // ex: "Président", "Trésorier", "Secrétaire"
+  description?: string; // petit mot / mission de la personne
 };
 
 export type AnalyticsDay = {
@@ -237,6 +258,7 @@ export const ADMIN_SECTIONS = [
   { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
   { key: "engagement",   label: "Sondages & AG",        emoji: "📣" },
   { key: "rules",        label: "Règles de l'association",       emoji: "📜" },
+  { key: "bureau",       label: "Membres du bureau",    emoji: "👔" },
   { key: "emailing",     label: "Envoi d'emails",       emoji: "📧" },
   { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
 ] as const;

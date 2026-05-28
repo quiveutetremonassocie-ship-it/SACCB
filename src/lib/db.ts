@@ -40,6 +40,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     clubRules: d.clubRules ?? "",
     clubRulesPdfUrl: d.clubRulesPdfUrl ?? undefined,
     clubRulesPdfName: d.clubRulesPdfName ?? undefined,
+    bureauMembers: d.bureauMembers ?? [],
   };
 }
 
@@ -604,6 +605,36 @@ export async function adminSendEmail(args: {
       attachments: args.attachments ?? [],
       variant: args.variant ?? "default",
     }),
+  });
+  return res.json();
+}
+
+// ─── Envoyer une sauvegarde par email — AUTH ADMIN REQUISE ───
+export async function adminSendBackupEmail(
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "send_backup_email", adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
+// ─── Inscription tournoi avec covoiturage (via Edge Function) ───
+export async function publicRegisterTournoiWithCovoiturage(
+  tournoiId: string,
+  p1: string,
+  p2: string,
+  email: string,
+  code: string,
+  covoiturage?: { seats: number; depart?: string; contact?: string } | null
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "register_tournoi", tournoiId, p1, p2, email: email.toLowerCase().trim(), code, covoiturage: covoiturage || undefined }),
   });
   return res.json();
 }

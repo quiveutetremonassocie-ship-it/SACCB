@@ -1,11 +1,12 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus } from "lucide-react";
+import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone } from "lucide-react";
 import { useState } from "react";
 import { DB, Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
-import { publicRegisterTournoi } from "@/lib/db";
+import { publicRegisterTournoiWithCovoiturage } from "@/lib/db";
 import { MemberSession } from "@/lib/useMemberSession";
+import { MiniCalendarBadge } from "./MiniCalendar";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -374,8 +375,15 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
 }) {
   const isFull = !!(t.quota && inscrits.length >= t.quota);
   const [submitting, setSubmitting] = useState(false);
+  const [showCovoiturage, setShowCovoiturage] = useState(false);
+  const [covoSeats, setCovoSeats] = useState("");
+  const [covoDepart, setCovoDepart] = useState("");
+  const [covoContact, setCovoContact] = useState("");
   const daysLeft = getDaysLeft(t.dateLimit);
   const inscriptionsClosed = t.closed === true || (daysLeft !== null && daysLeft < 0);
+
+  // Offres de covoiturage pour ce tournoi
+  const covoiturageOffers = inscrits.filter((i) => i.covoiturage && i.covoiturage.seats > 0);
 
   async function regT(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -387,13 +395,16 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
     if (!p1 || !p2) { setSubmitting(false); return; }
     const code = memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) {
-      alert("Vous devez être connecté à votre espace membre pour vous inscrire à un tournoi.");
+      alert("Vous devez etre connecte a votre espace membre pour vous inscrire a un tournoi.");
       setSubmitting(false);
       return;
     }
+    const covo = showCovoiturage && covoSeats && parseInt(covoSeats) > 0
+      ? { seats: parseInt(covoSeats), depart: covoDepart || undefined, contact: covoContact || undefined }
+      : null;
     try {
-      const r = await publicRegisterTournoi(t.id, p1, p2, memberSession.email, code);
-      if (r.ok) { alert(`Inscription enregistrée pour ${t.name} !`); (e.target as HTMLFormElement).reset(); window.location.reload(); }
+      const r = await publicRegisterTournoiWithCovoiturage(t.id, p1, p2, memberSession.email, code, covo);
+      if (r.ok) { alert(`Inscription enregistree pour ${t.name} !`); (e.target as HTMLFormElement).reset(); window.location.reload(); }
       else alert(r.reason || "Erreur.");
     } finally { setSubmitting(false); }
   }
@@ -403,26 +414,32 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
       <div className={`relative p-7 border-l-4 ${inscriptionsClosed ? "border-red-400" : "border-emerald-500"}`}>
         <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl ${inscriptionsClosed ? "from-red-100/40" : "from-emerald-100/40"} to-transparent rounded-full blur-2xl pointer-events-none`} />
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-          <div>
-            <h3 className="font-display text-3xl text-slate-800 tracking-wider">{t.name}</h3>
-            <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500">
-              <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {t.date}</span>
-              {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-red-50 text-red-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
-              {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-red-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
+          <div className="flex gap-4 items-start">
+            {/* Mini calendrier */}
+            <MiniCalendarBadge dateStr={t.date} />
+            <div>
+              <h3 className="font-display text-3xl text-slate-800 tracking-wider">{t.name}</h3>
+              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500">
+                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {t.date}</span>
+                {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-red-50 text-red-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
+                {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-red-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
+              </div>
+              {t.dateLimit && !inscriptionsClosed && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
+              <button
+                onClick={() => downloadIcs(t)}
+                className="mt-3 inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition"
+                title="Telecharge un fichier .ics a ouvrir avec Google Calendar / iPhone / Outlook"
+              >
+                <CalendarPlus className="w-3.5 h-3.5" />
+                Ajouter a mon agenda
+              </button>
             </div>
-            {t.dateLimit && !inscriptionsClosed && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
-            <button
-              onClick={() => downloadIcs(t)}
-              className="mt-3 inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition"
-              title="Télécharge un fichier .ics à ouvrir avec Google Calendar / iPhone / Outlook"
-            >
-              <CalendarPlus className="w-3.5 h-3.5" />
-              Ajouter à mon agenda
-            </button>
           </div>
-          {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
-          {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermées</span>}
-          {!isFull && !inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold uppercase flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Inscriptions ouvertes</span>}
+          <div className="flex flex-col items-end gap-2">
+            {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
+            {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermees</span>}
+            {!isFull && !inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold uppercase flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Inscriptions ouvertes</span>}
+          </div>
         </div>
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
           {memberSession ? (
@@ -449,6 +466,32 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
             </div>
           )}
         </div>
+        {/* Offres de covoiturage */}
+        {memberSession && covoiturageOffers.length > 0 && (
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
+            <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold mb-2 flex items-center gap-1.5">
+              <Car className="w-3.5 h-3.5" /> Covoiturage ({covoiturageOffers.length} offre{covoiturageOffers.length > 1 ? "s" : ""})
+            </p>
+            <div className="space-y-2">
+              {covoiturageOffers.map((i) => (
+                <div key={i.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 text-sm border border-blue-100">
+                  <span className="text-blue-600 font-bold shrink-0">{i.covoiturage!.seats} place{i.covoiturage!.seats > 1 ? "s" : ""}</span>
+                  <span className="text-slate-600 truncate">{i.joueurs}</span>
+                  {i.covoiturage!.depart && (
+                    <span className="flex items-center gap-1 text-xs text-slate-400 shrink-0">
+                      <MapPin className="w-3 h-3" /> {i.covoiturage!.depart}
+                    </span>
+                  )}
+                  {i.covoiturage!.contact && (
+                    <span className="flex items-center gap-1 text-xs text-slate-400 shrink-0">
+                      <Phone className="w-3 h-3" /> {i.covoiturage!.contact}
+                    </span>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
         {inscriptionsClosed ? (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
             <p className="text-amber-800 text-sm">
@@ -484,8 +527,57 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
                 ))}
               </datalist>
               <p className="text-xs text-slate-400">
-                💡 Commencez à taper le prénom pour voir la liste des adhérents et éviter les fautes de frappe.
+                Commencez a taper le prenom pour voir la liste des adherents et eviter les fautes de frappe.
               </p>
+              {/* Covoiturage */}
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showCovoiturage}
+                    onChange={(e) => setShowCovoiturage(e.target.checked)}
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                  />
+                  <Car className="w-4 h-4 text-blue-600" />
+                  <span className="text-sm font-medium text-slate-700">Je propose des places en covoiturage</span>
+                </label>
+                {showCovoiturage && (
+                  <div className="mt-3 space-y-2">
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="text-xs text-slate-500 block mb-1">Places</label>
+                        <input
+                          className="input !text-sm"
+                          type="number"
+                          min="1"
+                          max="7"
+                          value={covoSeats}
+                          onChange={(e) => setCovoSeats(e.target.value)}
+                          placeholder="2"
+                        />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="text-xs text-slate-500 block mb-1">Depart depuis</label>
+                        <input
+                          className="input !text-sm"
+                          value={covoDepart}
+                          onChange={(e) => setCovoDepart(e.target.value)}
+                          placeholder="Sainte-Adresse"
+                        />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-500 block mb-1">Contact (optionnel)</label>
+                      <input
+                        className="input !text-sm"
+                        value={covoContact}
+                        onChange={(e) => setCovoContact(e.target.value)}
+                        placeholder="Tel ou via WhatsApp"
+                      />
+                    </div>
+                  </div>
+                )}
+              </div>
               <button type="submit" className="btn-primary w-full" disabled={submitting}>{submitting ? "Envoi..." : "S'inscrire"}</button>
             </form>
           ) : memberSession && memberSession.paid !== true ? (

@@ -22,6 +22,7 @@ import Palmares from "./Palmares";
 import Engagement from "./Engagement";
 import Rules from "./Rules";
 import ContactSection from "./ContactSection";
+import StatsPubliques from "./StatsPubliques";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
 
@@ -344,6 +345,33 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {mode === "full" && db.sectionsVisible?.palmares !== false && (
           <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
         )}
+        {/* Stats publiques animées */}
+        {mode === "full" && (() => {
+          const allTournois = [
+            ...(db.config_tournois ?? []),
+            ...(db.archives ?? []).flatMap((a) => a.config_tournois ?? []),
+          ];
+          const allInscrits = [
+            ...(db.inscrits_tournoi ?? []),
+            ...(db.archives ?? []).flatMap((a) => a.inscrits_tournoi ?? []),
+          ];
+          const podiums = allInscrits.filter((i) => {
+            if (!i.resultat) return false;
+            const m = i.resultat.trim().match(/^(\d+)\/\d+$/);
+            return m && parseInt(m[1]) <= 3;
+          }).length;
+          const firstYear = Math.min(db.y1, ...(db.archives ?? []).map((a) => a.y1));
+          const anneesExistence = new Date().getFullYear() - firstYear + 1;
+          return (
+            <StatsPubliques
+              membresCount={membresCount}
+              tournoiCount={allTournois.length}
+              anneesExistence={anneesExistence > 0 ? anneesExistence : 1}
+              podiumsCount={podiums}
+            />
+          );
+        })()}
+
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
         {(mode === "full" || mode === "inscription") && !memberSession && db.sectionsVisible?.inscription !== false && (
           <Inscription
@@ -387,6 +415,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           configTournois={db.config_tournois ?? []}
           inscritsTournoi={db.inscrits_tournoi ?? []}
           archives={db.archives ?? []}
+          bureauMembers={db.bureauMembers ?? []}
           onClose={onMemberPanelClose}
           onBack={onMemberPanelBack}
           autoOpenProcuration={autoOpenProcuration}

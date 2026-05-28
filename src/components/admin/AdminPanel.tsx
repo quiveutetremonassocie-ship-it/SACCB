@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
-import { adminExportBackup, adminImportBackup } from "@/lib/db";
+import { adminExportBackup, adminImportBackup, adminSendBackupEmail } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
@@ -17,6 +17,7 @@ import MembresAdmin from "./MembresAdmin";
 import ActualitesAdmin from "./ActualitesAdmin";
 import EngagementAdmin from "./EngagementAdmin";
 import RulesAdmin from "./RulesAdmin";
+import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
 import MessagesAdmin from "./MessagesAdmin";
 import RecuModal from "./RecuModal";
@@ -371,9 +372,11 @@ export default function AdminPanel({
               )}
             </div>
             <p className="text-xs text-slate-500 mt-3 leading-relaxed">
-              💡 <strong>Sauvegarde JSON</strong> télécharge tout (utile avant un changement risqué).
-              <span className="text-red-500"> <strong>Restaurer</strong> écrase la base avec un fichier JSON — irréversible, double confirmation requise.</span>
+              Sauvegarde JSON telecharge tout (utile avant un changement risque).
+              <span className="text-red-500"> <strong>Restaurer</strong> ecrase la base avec un fichier JSON (irreversible, double confirmation requise).</span>
             </p>
+            {/* Backup par email */}
+            <BackupEmailSection db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />
           </div>
 
           <HelloAssoQR />
@@ -401,6 +404,11 @@ export default function AdminPanel({
           {canSee("emailing") && (
             <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
               <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
+            </div>
+          )}
+          {canSee("bureau") && (
+            <div id="admin-bureau" className="lg:col-span-2 scroll-mt-24">
+              <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
             </div>
           )}
           {canSee("tournois") && (
@@ -569,6 +577,120 @@ function HelloAssoQR() {
             </a>
           </div>
         </div>
+      </div>
+    </div>
+  );
+}
+
+// 💾 Configuration de la sauvegarde automatique par email
+function BackupEmailSection({
+  db,
+  onPersist,
+  adminEmail,
+  adminCode,
+  readOnly,
+}: {
+  db: DB;
+  onPersist: (db: DB) => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
+  readOnly?: boolean;
+}) {
+  const config = db.backupEmailConfig ?? { enabled: false, email: "" };
+  const [email, setEmail] = useState(config.email || adminEmail || "");
+  const [enabled, setEnabled] = useState(config.enabled);
+  const [sending, setSending] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function saveConfig() {
+    if (readOnly) return;
+    if (enabled && (!email || !email.includes("@"))) {
+      setMsg("Email invalide.");
+      return;
+    }
+    setSaving(true);
+    setMsg(null);
+    await onPersist({
+      ...db,
+      backupEmailConfig: {
+        enabled,
+        email: email.trim(),
+        lastSentAt: config.lastSentAt,
+      },
+    });
+    setSaving(false);
+    setMsg("Configuration sauvegardee !");
+    setTimeout(() => setMsg(null), 3000);
+  }
+
+  async function sendNow() {
+    if (!adminEmail || !adminCode) {
+      setMsg("Identifiants admin manquants.");
+      return;
+    }
+    setSending(true);
+    setMsg(null);
+    const r = await adminSendBackupEmail(adminEmail, adminCode);
+    setSending(false);
+    if (r.ok) {
+      setMsg("Sauvegarde envoyee par email !");
+    } else {
+      setMsg("Erreur : " + (r.reason || "inconnue"));
+    }
+    setTimeout(() => setMsg(null), 5000);
+  }
+
+  return (
+    <div className="mt-4 bg-sky-50 border border-sky-200 rounded-xl p-4">
+      <h4 className="text-sm font-semibold text-slate-800 mb-3 flex items-center gap-2">
+        <Mail className="w-4 h-4 text-sky-600" />
+        Sauvegarde automatique par email (mensuelle)
+      </h4>
+      <div className="space-y-3">
+        <div className="flex items-center gap-3">
+          <label className="flex items-center gap-2 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={enabled}
+              onChange={(e) => setEnabled(e.target.checked)}
+              disabled={readOnly}
+              className="w-4 h-4 rounded border-slate-300 text-sky-600"
+            />
+            <span className="text-sm text-slate-700">Activer l&apos;envoi mensuel</span>
+          </label>
+        </div>
+        <div className="flex gap-2">
+          <input
+            className="input flex-1 !text-sm"
+            type="email"
+            value={email}
+            onChange={(e) => setEmail(e.target.value)}
+            placeholder="email@exemple.fr"
+            disabled={readOnly}
+          />
+          {!readOnly && (
+            <button onClick={saveConfig} disabled={saving} className="btn-primary !px-4 !py-2 !text-xs">
+              {saving ? "..." : "Sauver"}
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={sendNow}
+            disabled={sending || !adminEmail || !adminCode}
+            className="btn-primary !bg-gradient-to-r !from-sky-500 !to-blue-600 !text-xs inline-flex items-center gap-1.5"
+          >
+            <Send className="w-3.5 h-3.5" />
+            {sending ? "Envoi en cours..." : "Envoyer une sauvegarde maintenant"}
+          </button>
+        </div>
+        {config.lastSentAt && (
+          <p className="text-xs text-slate-400">
+            Dernier envoi : {new Date(config.lastSentAt).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </p>
+        )}
+        {msg && <p className="text-xs font-semibold text-sky-700">{msg}</p>}
       </div>
     </div>
   );
