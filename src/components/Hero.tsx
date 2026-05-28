@@ -62,12 +62,20 @@ export default function Hero({
 }) {
   const anneesExistence = new Date().getFullYear() - foundedYear;
 
-  // Parallax : l'image bouge plus lentement que le scroll
-  const [scrollY, setScrollY] = useState(0);
+  // Parallax : manipulation DOM directe (pas de re-render React)
+  const parallaxRef = useRef<HTMLImageElement>(null);
   useEffect(() => {
-    function onScroll() { setScrollY(window.scrollY); }
+    let raf = 0;
+    function onScroll() {
+      cancelAnimationFrame(raf);
+      raf = requestAnimationFrame(() => {
+        if (parallaxRef.current) {
+          parallaxRef.current.style.transform = `translateY(${window.scrollY * -0.2}px)`;
+        }
+      });
+    }
     window.addEventListener("scroll", onScroll, { passive: true });
-    return () => window.removeEventListener("scroll", onScroll);
+    return () => { window.removeEventListener("scroll", onScroll); cancelAnimationFrame(raf); };
   }, []);
 
   return (
@@ -76,10 +84,10 @@ export default function Hero({
       <div className="absolute inset-0 pointer-events-none">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
+          ref={parallaxRef}
           src="/salle.png"
           alt="Salle Paul Vatine — Sainte-Adresse"
           className="w-full h-[120%] object-cover opacity-60 will-change-transform"
-          style={{ transform: `translateY(${scrollY * -0.2}px)` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/55 to-[#f8fafc]" />
         <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-transparent to-white/60" />
