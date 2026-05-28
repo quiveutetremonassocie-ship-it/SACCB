@@ -25,6 +25,7 @@ import Rules from "./Rules";
 import ContactSection from "./ContactSection";
 import BureauPublic from "./BureauPublic";
 import ScrollButton from "./ScrollButton";
+import FadeInSection from "./FadeInSection";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
 
@@ -318,66 +319,86 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           />
         )}
         {/* Toggles de visibilité : undefined = visible (default), false = caché */}
-        {mode === "full" && db.sectionsVisible?.presentation !== false && <Presentation />}
+        {mode === "full" && db.sectionsVisible?.presentation !== false && (
+          <FadeInSection><Presentation /></FadeInSection>
+        )}
 
         {(mode === "full" || mode === "actualites") && db.sectionsVisible?.actualites !== false && (
-          <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
+          <FadeInSection>
+            <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
+          </FadeInSection>
         )}
 
         {mode === "full" && (
-          <Engagement
-            polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
-            agItems={db.agItems ?? []}
-            reunionReports={db.reunionReports ?? []}
-            archives={db.archives ?? []}
-            pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
-            agOpen={db.agOpen === true || db.engagementOpen === true}
-            reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
-            memberSession={memberSession}
-            onLoginRequest={() => setMemberLoginOpen(true)}
-            onRefresh={async () => { await refreshPublic(); }}
-          />
+          <FadeInSection>
+            <Engagement
+              polls={(db as unknown as { polls?: import("@/lib/types").Poll[] & { voteCounts?: Record<number, number>; totalVotes?: number }[] }).polls ?? []}
+              agItems={db.agItems ?? []}
+              reunionReports={db.reunionReports ?? []}
+              archives={db.archives ?? []}
+              pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
+              agOpen={db.agOpen === true || db.engagementOpen === true}
+              reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
+              memberSession={memberSession}
+              onLoginRequest={() => setMemberLoginOpen(true)}
+              onRefresh={async () => { await refreshPublic(); }}
+            />
+          </FadeInSection>
         )}
         {mode === "full" && db.sectionsVisible?.rules !== false && (
-          <Rules
-            clubRules={db.clubRules ?? ""}
-            clubRulesPdfUrl={db.clubRulesPdfUrl}
-            clubRulesPdfName={db.clubRulesPdfName}
-            memberSession={memberSession}
-            onLoginRequest={() => setMemberLoginOpen(true)}
-          />
+          <FadeInSection>
+            <Rules
+              clubRules={db.clubRules ?? ""}
+              clubRulesPdfUrl={db.clubRulesPdfUrl}
+              clubRulesPdfName={db.clubRulesPdfName}
+              memberSession={memberSession}
+              onLoginRequest={() => setMemberLoginOpen(true)}
+            />
+          </FadeInSection>
         )}
-        {mode === "full" && db.sectionsVisible?.horaires !== false && <Horaires />}
+        {mode === "full" && db.sectionsVisible?.horaires !== false && (
+          <FadeInSection><Horaires /></FadeInSection>
+        )}
 
         {(mode === "full" || mode === "tournois") && db.sectionsVisible?.tournois !== false && (
-          <Tournois
-            db={db}
-            memberSession={memberSession}
-            onLoginRequest={() => setMemberLoginOpen(true)}
-            membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
-          />
+          <FadeInSection>
+            <Tournois
+              db={db}
+              memberSession={memberSession}
+              onLoginRequest={() => setMemberLoginOpen(true)}
+              membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
+            />
+          </FadeInSection>
         )}
         {mode === "full" && db.sectionsVisible?.palmares !== false && (
-          <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
+          <FadeInSection>
+            <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
+          </FadeInSection>
         )}
         {/* Bureau — visible uniquement pour les membres connectés */}
         {mode === "full" && memberSession && (db.bureauMembers ?? []).length > 0 && (
-          <BureauPublic members={db.bureauMembers!} />
+          <FadeInSection>
+            <BureauPublic members={db.bureauMembers!} />
+          </FadeInSection>
         )}
 
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
         {(mode === "full" || mode === "inscription") && !memberSession && db.sectionsVisible?.inscription !== false && (
-          <Inscription
-            db={db}
-            membresCount={membresCount}
-            quota={db.quota ?? QUOTA_DEFAULT}
-            prix={PRIX}
-            onMembreAdded={() => setMembresCount((n) => n + 1)}
-          />
+          <FadeInSection>
+            <Inscription
+              db={db}
+              membresCount={membresCount}
+              quota={db.quota ?? QUOTA_DEFAULT}
+              prix={PRIX}
+              onMembreAdded={() => setMembresCount((n) => n + 1)}
+            />
+          </FadeInSection>
         )}
 
         {mode === "contact" && (
-          <ContactSection whatsappLink={db.whatsappLink} />
+          <FadeInSection>
+            <ContactSection whatsappLink={db.whatsappLink} />
+          </FadeInSection>
         )}
 
         {/* Si membre connecté arrive sur /inscription, on lui montre un message */}
@@ -389,7 +410,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           </div>
         )}
       </main>
-      <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
+      <FadeInSection>
+        <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
+      </FadeInSection>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
       <ResetPasswordModal open={resetOpen} onClose={() => setResetOpen(false)} />
