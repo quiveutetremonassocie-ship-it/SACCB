@@ -1,11 +1,11 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight, Users } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
-import { Tournoi, InscritTournoi, SeasonArchive, BureauMember } from "@/lib/types";
+import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 
 export default function MemberPanel({
@@ -17,7 +17,6 @@ export default function MemberPanel({
   configTournois = [],
   inscritsTournoi = [],
   archives = [],
-  bureauMembers = [],
   onClose,
   onBack,
   autoOpenProcuration = false,
@@ -31,7 +30,6 @@ export default function MemberPanel({
   configTournois?: Tournoi[];
   inscritsTournoi?: InscritTournoi[];
   archives?: SeasonArchive[];
-  bureauMembers?: BureauMember[];
   onClose: () => void;
   onBack?: () => void;
   autoOpenProcuration?: boolean;
@@ -640,11 +638,6 @@ export default function MemberPanel({
           </div>
         )}
 
-        {/* Membres du bureau */}
-        {bureauMembers.length > 0 && (
-          <BureauSection members={bureauMembers} />
-        )}
-
         {/* WhatsApp — uniquement pour les membres ayant payé */}
         {whatsappLink && session.paid === true ? (
           <a
@@ -713,36 +706,3 @@ function ResultBadge({ resultat, total }: { resultat: string; total: number }) {
   return <span className="text-xs font-semibold text-slate-600">{rank}e / {tot}</span>;
 }
 
-function BureauSection({ members }: { members: BureauMember[] }) {
-  const [open, setOpen] = useState(false);
-  return (
-    <div className="mb-4">
-      <button
-        onClick={() => setOpen(!open)}
-        className="flex items-center justify-between w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
-      >
-        <span className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-indigo-500" />
-          Membres du bureau ({members.length})
-        </span>
-        {open ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
-      </button>
-      {open && (
-        <div className="mt-2 space-y-2">
-          {members.map((m) => (
-            <div key={m.id} className="flex items-start gap-3 bg-slate-50 border border-slate-100 rounded-xl p-3">
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold shrink-0 text-sm">
-                {m.prenom.charAt(0).toUpperCase()}
-              </div>
-              <div className="min-w-0 flex-1">
-                <p className="text-sm font-semibold text-slate-800">{m.prenom} {m.nom}</p>
-                <p className="text-xs text-indigo-600 font-medium">{m.role}</p>
-                {m.description && <p className="text-xs text-slate-500 mt-1">{m.description}</p>}
-              </div>
-            </div>
-          ))}
-        </div>
-      )}
-    </div>
-  );
-}

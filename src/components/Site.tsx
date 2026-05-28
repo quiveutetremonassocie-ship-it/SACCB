@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
+import Link from "next/link";
 import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
@@ -23,6 +24,7 @@ import Engagement from "./Engagement";
 import Rules from "./Rules";
 import ContactSection from "./ContactSection";
 import StatsPubliques from "./StatsPubliques";
+import BureauPublic from "./BureauPublic";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
 
@@ -292,6 +294,19 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         </div>
       )}
       <main className={mode !== "full" ? "pt-24 md:pt-28" : ""}>
+        {mode !== "full" && (
+          <div className="max-w-7xl mx-auto px-6 pt-2 pb-4">
+            <Link
+              href="/"
+              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#1e3a5f] transition group"
+            >
+              <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
+              </svg>
+              Retour au site
+            </Link>
+          </div>
+        )}
         {mode === "full" && (
           <Hero
             seasonY1={db.y1}
@@ -345,6 +360,11 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {mode === "full" && db.sectionsVisible?.palmares !== false && (
           <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
         )}
+        {/* Bureau — visible uniquement pour les membres connectés */}
+        {mode === "full" && memberSession && (db.bureauMembers ?? []).length > 0 && (
+          <BureauPublic members={db.bureauMembers!} />
+        )}
+
         {/* Stats publiques animées */}
         {mode === "full" && (() => {
           const allTournois = [
@@ -415,7 +435,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           configTournois={db.config_tournois ?? []}
           inscritsTournoi={db.inscrits_tournoi ?? []}
           archives={db.archives ?? []}
-          bureauMembers={db.bureauMembers ?? []}
           onClose={onMemberPanelClose}
           onBack={onMemberPanelBack}
           autoOpenProcuration={autoOpenProcuration}
