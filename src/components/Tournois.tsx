@@ -7,6 +7,7 @@ import { DB, Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import { publicRegisterTournoiWithCovoiturage } from "@/lib/db";
 import { MemberSession } from "@/lib/useMemberSession";
 import { MiniCalendarBadge } from "./MiniCalendar";
+import TiltCard from "./TiltCard";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -109,7 +110,7 @@ export default function Tournois({
                 {upcoming.map((t) => {
                   const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
                   return (
-                    <TournoiCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} />
+                    <TiltCard key={t.id}><TournoiCard t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} /></TiltCard>
                   );
                 })}
               </div>

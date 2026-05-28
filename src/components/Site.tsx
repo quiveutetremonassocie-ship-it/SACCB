@@ -26,6 +26,8 @@ import ContactSection from "./ContactSection";
 import BureauPublic from "./BureauPublic";
 import ScrollButton from "./ScrollButton";
 import FadeInSection from "./FadeInSection";
+import SplashScreen from "./SplashScreen";
+import WaveDivider from "./WaveDivider";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
 
@@ -273,6 +275,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
   return (
     <>
+      <SplashScreen />
       <Navbar
         onMember={onMemberButtonClick}
         isMember={!!memberSession}
@@ -318,6 +321,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             membresCount={membresCount}
           />
         )}
+        {/* Vague de transition Hero → Présentation */}
+        {mode === "full" && <WaveDivider variant="wave1" fillColor="#f8fafc" className="-mt-1" />}
+
         {/* Toggles de visibilité : undefined = visible (default), false = caché */}
         {mode === "full" && db.sectionsVisible?.presentation !== false && (
           <FadeInSection><Presentation /></FadeInSection>
@@ -360,6 +366,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <FadeInSection><Horaires /></FadeInSection>
         )}
 
+        {/* Vague de transition avant Tournois */}
+        {mode === "full" && <WaveDivider variant="wave2" fillColor="#f0fdf4" />}
+
         {(mode === "full" || mode === "tournois") && db.sectionsVisible?.tournois !== false && (
           <FadeInSection>
             <Tournois
@@ -381,6 +390,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             <BureauPublic members={db.bureauMembers!} />
           </FadeInSection>
         )}
+
+        {/* Vague de transition avant Inscription */}
+        {mode === "full" && <WaveDivider variant="wave3" fillColor="#eff6ff" />}
 
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
         {(mode === "full" || mode === "inscription") && !memberSession && db.sectionsVisible?.inscription !== false && (

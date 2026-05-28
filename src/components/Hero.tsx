@@ -61,15 +61,25 @@ export default function Hero({
   foundedYear?: number;
 }) {
   const anneesExistence = new Date().getFullYear() - foundedYear;
+
+  // Parallax : l'image bouge plus lentement que le scroll
+  const [scrollY, setScrollY] = useState(0);
+  useEffect(() => {
+    function onScroll() { setScrollY(window.scrollY); }
+    window.addEventListener("scroll", onScroll, { passive: true });
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden pt-24 pb-16">
-      {/* Image badminton avec overlay clair */}
+      {/* Image badminton avec overlay clair + parallaxe */}
       <div className="absolute inset-0 pointer-events-none">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img
           src="/salle.png"
           alt="Salle Paul Vatine — Sainte-Adresse"
-          className="w-full h-full object-cover opacity-60"
+          className="w-full h-[120%] object-cover opacity-60 will-change-transform"
+          style={{ transform: `translateY(${scrollY * -0.2}px)` }}
         />
         <div className="absolute inset-0 bg-gradient-to-b from-white/40 via-white/55 to-[#f8fafc]" />
         <div className="absolute inset-0 bg-gradient-to-r from-white/70 via-transparent to-white/60" />
