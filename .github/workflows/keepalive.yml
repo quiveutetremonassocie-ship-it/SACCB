@@ -1,22 +1,36 @@
-name: Supabase Keepalive
+name: Keepalive (anti-pause Supabase + GitHub)
 
 on:
   schedule:
-    # Ping toutes les 3 jours à 9h UTC
-    - cron: "0 9 */3 * *"
-  workflow_dispatch: # Permet de lancer manuellement si besoin
+    # Toutes les 3 jours a 8h UTC — empeche Supabase de pauser le projet
+    - cron: "0 8 */3 * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
-  ping:
+  keepalive:
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
+
+      # 1. Ping Supabase pour empecher la pause du projet gratuit (7j inactivite)
       - name: Ping Supabase Edge Function
         run: |
-          curl -s -o /dev/null -w "%{http_code}" \
+          STATUS=$(curl -s -o /dev/null -w "%{http_code}" \
             -X POST \
             -H "Content-Type: application/json" \
-            -H "apikey: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
-            -H "Authorization: Bearer ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
             -d '{"action":"fetch_public"}' \
-            "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/public-api"
-          echo " — Supabase keepalive OK"
+            "https://jsceiujlopxgsjlxbvyu.supabase.co/functions/v1/public-api")
+          echo "Supabase ping: HTTP $STATUS"
+
+      # 2. Commit vide pour garder le repo actif (GitHub desactive les crons apres 60j sans commit)
+      - name: Keep repo active
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git commit --allow-empty -m "chore: keepalive ping [skip ci]"
+          git push
