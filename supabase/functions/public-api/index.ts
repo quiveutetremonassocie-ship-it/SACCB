@@ -4015,35 +4015,27 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: Ping / Keepalive (appelé par UptimeRobot toutes les 24h) ───
-  // Déclenche les rappels automatiques + le check backup mensuel en une seule requête
   if (action === "ping") {
+    const baseUrl = req.url.split("?")[0];
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    // Copier les headers d'auth pour les appels internes
+    const apikey = req.headers.get("apikey");
+    const auth = req.headers.get("authorization");
+    if (apikey) headers["apikey"] = apikey;
+    if (auth) headers["authorization"] = auth;
+
     const results: Record<string, unknown> = { ok: true, ts: new Date().toISOString() };
 
-    // 1. Rappels automatiques (inscription + tournois)
+    // 1. Rappels auto
     try {
-      const brevoKey = Deno.env.get("BREVO_API_KEY");
-      if (brevoKey) {
-        const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
-        if (data) {
-          // On simule un appel interne à check_reminders en appelant l'URL elle-même
-          const remindersRes = await fetch(req.url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", ...Object.fromEntries(req.headers.entries()) },
-            body: JSON.stringify({ action: "check_reminders" }),
-          });
-          results.reminders = await remindersRes.json().catch(() => "done");
-        }
-      }
+      const r = await fetch(baseUrl, { method: "POST", headers, body: JSON.stringify({ action: "check_reminders" }) });
+      results.reminders = await r.json().catch(() => ({ status: r.status }));
     } catch (e) { results.remindersError = String(e); }
 
-    // 2. Backup email auto mensuel
+    // 2. Backup auto
     try {
-      const backupRes = await fetch(req.url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json", ...Object.fromEntries(req.headers.entries()) },
-        body: JSON.stringify({ action: "check_backup_email" }),
-      });
-      results.backup = await backupRes.json().catch(() => "done");
+      const r = await fetch(baseUrl, { method: "POST", headers, body: JSON.stringify({ action: "check_backup_email" }) });
+      results.backup = await r.json().catch(() => ({ status: r.status }));
     } catch (e) { results.backupError = String(e); }
 
     return json(results);
