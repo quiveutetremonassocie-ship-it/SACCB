@@ -4014,32 +4014,5 @@ Deno.serve(async (req) => {
     return json({ ok: true, presentationMode: !currentMode });
   }
 
-  // ─── ACTION: Ping / Keepalive (appelé par UptimeRobot toutes les 24h) ───
-  if (action === "ping") {
-    const baseUrl = req.url.split("?")[0];
-    const headers: Record<string, string> = { "Content-Type": "application/json" };
-    // Copier les headers d'auth pour les appels internes
-    const apikey = req.headers.get("apikey");
-    const auth = req.headers.get("authorization");
-    if (apikey) headers["apikey"] = apikey;
-    if (auth) headers["authorization"] = auth;
-
-    const results: Record<string, unknown> = { ok: true, ts: new Date().toISOString() };
-
-    // 1. Rappels auto
-    try {
-      const r = await fetch(baseUrl, { method: "POST", headers, body: JSON.stringify({ action: "check_reminders" }) });
-      results.reminders = await r.json().catch(() => ({ status: r.status }));
-    } catch (e) { results.remindersError = String(e); }
-
-    // 2. Backup auto
-    try {
-      const r = await fetch(baseUrl, { method: "POST", headers, body: JSON.stringify({ action: "check_backup_email" }) });
-      results.backup = await r.json().catch(() => ({ status: r.status }));
-    } catch (e) { results.backupError = String(e); }
-
-    return json(results);
-  }
-
   return json({ error: "Action inconnue" }, 400);
 });
