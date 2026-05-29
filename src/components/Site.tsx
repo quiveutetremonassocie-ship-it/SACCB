@@ -283,9 +283,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       <Navbar
         onMember={db.presentationMode ? () => {} : onMemberButtonClick}
         isMember={db.presentationMode ? false : !!memberSession}
-        isAdmin={db.presentationMode ? false : isMemberAdmin}
-        onAdmin={db.presentationMode ? undefined : onReopenAdmin}
-        onAdminLogin={db.presentationMode ? undefined : (() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true))}
+        isAdmin={isMemberAdmin}
+        onAdmin={onReopenAdmin}
+        onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
       />
       {/* Bannière de réinscription : visible uniquement aux adhérents connectés non-payés */}
       {!db.presentationMode && memberSession && memberSession.paid !== true && db.insc_open && (
