@@ -315,6 +315,55 @@ export default function EmailingAdmin({
         </div>
       </div>
 
+      {/* Modèles d'emails pré-écrits */}
+      {!readOnly && (
+        <div className="mb-5">
+          <p className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-semibold">Modeles rapides</p>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+            <TemplateButton
+              emoji="💳"
+              label="Rappel paiement"
+              onClick={() => {
+                setSubject("Rappel — Adhesion SACCB a renouveler");
+                setBody("Bonjour,\n\nNous vous rappelons que votre adhesion pour la saison en cours n'a pas encore ete reglee.\n\nPour finaliser votre inscription, rendez-vous sur votre espace membre : https://saccb.fr/?member=1\n\nVous pouvez payer en ligne via HelloAsso ou par virement en contactant Hernan.\n\nN'hesitez pas a nous contacter si vous avez des questions.\n\nSportivement,\nLe bureau du SACCB");
+                setVariant("urgent");
+                setTargetMode("unpaid");
+              }}
+            />
+            <TemplateButton
+              emoji="🏸"
+              label="Info tournoi"
+              onClick={() => {
+                setSubject("Prochain tournoi SACCB");
+                setBody("Bonjour a tous,\n\nNous vous informons qu'un tournoi approche !\n\n📅 Date : [A COMPLETER]\n📍 Lieu : [A COMPLETER]\n⏰ Date limite d'inscription : [A COMPLETER]\n\nPour vous inscrire, rendez-vous dans la section Tournois de votre espace membre : https://saccb.fr/tournois\n\nN'oubliez pas de trouver votre binome !\n\nSportivement,\nLe bureau du SACCB");
+                setVariant("annonce");
+                setTargetMode("paid");
+              }}
+            />
+            <TemplateButton
+              emoji="📋"
+              label="Info generale"
+              onClick={() => {
+                setSubject("Information SACCB");
+                setBody("Bonjour a tous,\n\n[VOTRE MESSAGE ICI]\n\nN'hesitez pas a nous contacter pour toute question.\n\nSportivement,\nLe bureau du SACCB");
+                setVariant("info");
+                setTargetMode("news");
+              }}
+            />
+            <TemplateButton
+              emoji="🎉"
+              label="Bonne nouvelle"
+              onClick={() => {
+                setSubject("Bonne nouvelle au SACCB !");
+                setBody("Bonjour a tous,\n\nNous avons le plaisir de vous annoncer :\n\n[VOTRE BONNE NOUVELLE ICI]\n\nMerci a tous pour votre engagement et votre bonne humeur !\n\nSportivement,\nLe bureau du SACCB");
+                setVariant("bonne_nouvelle");
+                setTargetMode("paid");
+              }}
+            />
+          </div>
+        </div>
+      )}
+
       {/* Sélection des destinataires */}
       <div className="mb-4">
         <p className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-semibold">
@@ -702,6 +751,20 @@ function TargetButton({
       {icon}
       <span className="text-xs font-semibold">{label}</span>
       <span className="text-[10px] opacity-80">{count}</span>
+    </button>
+  );
+}
+
+// 📝 Bouton de modèle d'email
+function TemplateButton({ emoji, label, onClick }: { emoji: string; label: string; onClick: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="flex items-center gap-2 px-3 py-2.5 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 hover:border-slate-400 transition text-left"
+    >
+      <span className="text-lg">{emoji}</span>
+      <span className="text-xs font-semibold text-slate-700">{label}</span>
     </button>
   );
 }
