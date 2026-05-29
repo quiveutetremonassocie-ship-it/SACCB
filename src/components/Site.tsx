@@ -337,6 +337,17 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             isMember={!!memberSession}
             engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
             membresCount={membresCount}
+            nextTournoi={(() => {
+              const now = new Date().toISOString().slice(0, 10);
+              const upcoming = (db.config_tournois ?? [])
+                .filter((t) => {
+                  if (!t.date) return false;
+                  const d = /^\d{4}-\d{2}-\d{2}/.test(t.date) ? t.date : (() => { const [dd,mm,yy] = t.date.split("/"); return `${yy}-${mm}-${dd}`; })();
+                  return d >= now;
+                })
+                .sort((a, b) => a.date.localeCompare(b.date));
+              return upcoming[0] ? { name: upcoming[0].name, date: upcoming[0].date } : null;
+            })()}
           />
         )}
         {/* Vague de transition Hero → Présentation */}

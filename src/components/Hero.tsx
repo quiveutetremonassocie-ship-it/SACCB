@@ -50,6 +50,7 @@ export default function Hero({
   membresCount = 0,
   creneauxCount = 3,
   foundedYear = 2022,
+  nextTournoi,
 }: {
   seasonY1: number;
   seasonY2: number;
@@ -59,6 +60,7 @@ export default function Hero({
   membresCount?: number;
   creneauxCount?: number;
   foundedYear?: number;
+  nextTournoi?: { name: string; date: string } | null;
 }) {
   const anneesExistence = new Date().getFullYear() - foundedYear;
 
@@ -225,6 +227,9 @@ export default function Hero({
           )}
         </motion.div>
 
+        {/* Compte à rebours prochain tournoi */}
+        {nextTournoi && <CountdownBanner name={nextTournoi.name} dateStr={nextTournoi.date} />}
+
         {/* Menu rapide (raccourcis vers les sections principales) */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -305,5 +310,69 @@ function AnimatedStatCard({
         {target > 0 ? `${count}${suffix}` : "—"}
       </div>
     </div>
+  );
+}
+
+function CountdownBanner({ name, dateStr }: { name: string; dateStr: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, mins: 0 });
+  const [expired, setExpired] = useState(false);
+
+  useEffect(() => {
+    function calc() {
+      // Parse ISO ou DD/MM/YYYY
+      let target: Date;
+      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
+        target = new Date(dateStr);
+      } else {
+        const [d, m, y] = dateStr.split("/").map(Number);
+        target = new Date(y, m - 1, d);
+      }
+      const diff = target.getTime() - Date.now();
+      if (diff <= 0) { setExpired(true); return; }
+      setTimeLeft({
+        days: Math.floor(diff / 86400000),
+        hours: Math.floor((diff % 86400000) / 3600000),
+        mins: Math.floor((diff % 3600000) / 60000),
+      });
+    }
+    calc();
+    const interval = setInterval(calc, 60000);
+    return () => clearInterval(interval);
+  }, [dateStr]);
+
+  if (expired) return null;
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.6, delay: 0.55 }}
+      className="mb-8"
+    >
+      <a
+        href="/tournois"
+        className="inline-flex items-center gap-4 bg-white/80 backdrop-blur-md border border-emerald-200 rounded-2xl px-5 py-3 shadow-sm hover:shadow-md transition group"
+      >
+        <span className="text-xs uppercase tracking-widest text-emerald-600 font-bold" style={{ fontFamily: "Oswald, sans-serif" }}>
+          Prochain tournoi
+        </span>
+        <span className="text-sm font-semibold text-slate-700 group-hover:text-emerald-700 transition">{name}</span>
+        <span className="flex items-center gap-1.5">
+          <TimeBox value={timeLeft.days} label="j" />
+          <span className="text-slate-300">:</span>
+          <TimeBox value={timeLeft.hours} label="h" />
+          <span className="text-slate-300">:</span>
+          <TimeBox value={timeLeft.mins} label="m" />
+        </span>
+      </a>
+    </motion.div>
+  );
+}
+
+function TimeBox({ value, label }: { value: number; label: string }) {
+  return (
+    <span className="bg-[#1e3a5f] text-white text-sm font-mono font-bold px-2 py-1 rounded-lg min-w-[36px] text-center">
+      {String(value).padStart(2, "0")}<span className="text-[10px] text-blue-300 ml-0.5">{label}</span>
+    </span>
   );
 }
