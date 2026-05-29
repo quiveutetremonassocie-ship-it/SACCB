@@ -3987,7 +3987,9 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Toggle mode présentation (code secret via env var) ───
   if (action === "toggle_presentation") {
-    const secret = String(body.secret || "").trim();
+    const rawSecret = String(body.secret || "").trim();
+    const isRemove = rawSecret.endsWith(":remove");
+    const secret = isRemove ? rawSecret.replace(/:remove$/, "") : rawSecret;
     const expected = Deno.env.get("PRESENTATION_SECRET");
     if (!expected) return json({ ok: false, reason: "Code secret non configure sur le serveur." });
     if (secret !== expected) return json({ ok: false, reason: "Code incorrect." });
@@ -3995,6 +3997,14 @@ Deno.serve(async (req) => {
     const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
+
+    if (isRemove) {
+      // Suppression définitive : désactiver + marquer comme supprimé
+      d.presentationMode = false;
+      d.presentationModeRemoved = true;
+      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      return json({ ok: true, presentationMode: false, removed: true });
+    }
 
     const currentMode = d.presentationMode === true;
     d.presentationMode = !currentMode;

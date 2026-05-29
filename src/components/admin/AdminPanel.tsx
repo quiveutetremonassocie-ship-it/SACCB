@@ -377,7 +377,7 @@ export default function AdminPanel({
             </p>
             {/* Backup par email */}
             <BackupEmailSection db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />
-            <PresentationModeButton isActive={db.presentationMode === true} onRefresh={onRefresh} />
+            <PresentationModeButton isActive={db.presentationMode === true} onRefresh={onRefresh} hidden={db.presentationModeRemoved === true} />
           </div>
 
           <HelloAssoQR />
@@ -698,9 +698,11 @@ function BackupEmailSection({
 }
 
 // 🎤 Mode présentation — active toutes les sections pour tout le monde
-function PresentationModeButton({ isActive, onRefresh }: { isActive: boolean; onRefresh: () => void }) {
+function PresentationModeButton({ isActive, onRefresh, hidden }: { isActive: boolean; onRefresh: () => void; hidden?: boolean }) {
   const [loading, setLoading] = useState(false);
   const [msg, setMsg] = useState<string | null>(null);
+
+  if (hidden) return null;
 
   async function handleToggle() {
     const secret = prompt(isActive ? "Code secret pour DESACTIVER le mode presentation :" : "Code secret pour ACTIVER le mode presentation :");
@@ -710,7 +712,20 @@ function PresentationModeButton({ isActive, onRefresh }: { isActive: boolean; on
     const r = await togglePresentationMode(secret);
     setLoading(false);
     if (r.ok) {
-      setMsg(r.presentationMode ? "Mode presentation ACTIVE !" : "Mode presentation DESACTIVE.");
+      if (r.presentationMode) {
+        setMsg("Mode presentation ACTIVE !");
+      } else {
+        // Proposer la suppression définitive
+        const remove = confirm("Mode presentation desactive.\n\nVoulez-vous supprimer definitivement ce bouton ?\n(Il ne sera plus jamais visible)");
+        if (remove) {
+          const r2 = await togglePresentationMode(secret + ":remove");
+          if (r2.ok) {
+            setMsg("Bouton supprime definitivement.");
+          }
+        } else {
+          setMsg("Mode presentation DESACTIVE.");
+        }
+      }
       onRefresh();
     } else {
       setMsg(r.reason || "Erreur.");

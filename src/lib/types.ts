@@ -196,6 +196,9 @@ export type DB = {
     email: string; // email de destination
     lastSentAt?: string; // ISO timestamp du dernier envoi
   };
+  // 🎤 Mode présentation : toutes les sections visibles pour tout le monde
+  presentationMode?: boolean;
+  presentationModeRemoved?: boolean;
 };
 
 export type BureauMember = {
