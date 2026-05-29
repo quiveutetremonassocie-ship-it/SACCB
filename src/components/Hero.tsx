@@ -318,17 +318,31 @@ function CountdownBanner({ name, dateStr }: { name: string; dateStr: string }) {
   const [expired, setExpired] = useState(false);
 
   useEffect(() => {
-    function calc() {
-      // Parse ISO ou DD/MM/YYYY
-      let target: Date;
-      if (/^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-        target = new Date(dateStr);
-      } else {
-        const [d, m, y] = dateStr.split("/").map(Number);
-        target = new Date(y, m - 1, d);
+    const MOIS: Record<string, number> = {
+      janvier: 0, fevrier: 1, mars: 2, avril: 3, mai: 4, juin: 5,
+      juillet: 6, aout: 7, septembre: 8, octobre: 9, novembre: 10, decembre: 11,
+      "février": 1, "août": 7, "décembre": 11,
+    };
+
+    function parseDateFr(s: string): Date {
+      // ISO: 2026-06-20
+      if (/^\d{4}-\d{2}-\d{2}/.test(s)) return new Date(s);
+      // DD/MM/YYYY
+      const slashMatch = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+      if (slashMatch) return new Date(+slashMatch[3], +slashMatch[2] - 1, +slashMatch[1]);
+      // Texte français: "Samedi 20 Juin 2026" ou "20 juin 2026"
+      const frMatch = s.match(/(\d{1,2})\s+([a-zéûî]+)\s+(\d{4})/i);
+      if (frMatch) {
+        const month = MOIS[frMatch[2].toLowerCase()];
+        if (month !== undefined) return new Date(+frMatch[3], month, +frMatch[1]);
       }
+      return new Date(s); // fallback natif
+    }
+
+    function calc() {
+      const target = parseDateFr(dateStr);
       const diff = target.getTime() - Date.now();
-      if (diff <= 0) { setExpired(true); return; }
+      if (isNaN(diff) || diff <= 0) { setExpired(true); return; }
       setTimeLeft({
         days: Math.floor(diff / 86400000),
         hours: Math.floor((diff % 86400000) / 3600000),

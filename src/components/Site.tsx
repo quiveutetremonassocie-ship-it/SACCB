@@ -338,14 +338,24 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
             membresCount={membresCount}
             nextTournoi={(() => {
+              const MOIS: Record<string, string> = {
+                janvier:"01",fevrier:"02",mars:"03",avril:"04",mai:"05",juin:"06",
+                juillet:"07",aout:"08",septembre:"09",octobre:"10",novembre:"11",decembre:"12",
+                "février":"02","août":"08","décembre":"12",
+              };
+              function toISO(s: string): string {
+                if (/^\d{4}-\d{2}-\d{2}/.test(s)) return s.slice(0,10);
+                const slash = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+                if (slash) return `${slash[3]}-${slash[2].padStart(2,"0")}-${slash[1].padStart(2,"0")}`;
+                const fr = s.match(/(\d{1,2})\s+([a-zéûî]+)\s+(\d{4})/i);
+                if (fr) { const m = MOIS[fr[2].toLowerCase()]; if (m) return `${fr[3]}-${m}-${fr[1].padStart(2,"0")}`; }
+                return "";
+              }
               const now = new Date().toISOString().slice(0, 10);
               const upcoming = (db.config_tournois ?? [])
-                .filter((t) => {
-                  if (!t.date) return false;
-                  const d = /^\d{4}-\d{2}-\d{2}/.test(t.date) ? t.date : (() => { const [dd,mm,yy] = t.date.split("/"); return `${yy}-${mm}-${dd}`; })();
-                  return d >= now;
-                })
-                .sort((a, b) => a.date.localeCompare(b.date));
+                .map((t) => ({ ...t, _iso: toISO(t.date || "") }))
+                .filter((t) => t._iso && t._iso >= now)
+                .sort((a, b) => a._iso.localeCompare(b._iso));
               return upcoming[0] ? { name: upcoming[0].name, date: upcoming[0].date } : null;
             })()}
           />

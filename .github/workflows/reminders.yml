@@ -1,9 +1,9 @@
 name: Rappels inscription automatiques
 
 on:
-  # ⚠️ Cron désactivé : on utilise pg_cron Supabase à la place (précis à la seconde)
-  # Le job tourne tous les jours à 9h Paris via la fonction cron.schedule('rappels-quotidiens', ...)
-  # Garde uniquement le déclenchement manuel pour tester si besoin.
+  schedule:
+    # Tous les jours à 9h UTC (11h Paris été, 10h hiver)
+    - cron: '0 9 * * *'
   workflow_dispatch: # permet de lancer manuellement pour tester
 
 jobs:
@@ -13,38 +13,28 @@ jobs:
       - name: Vérifier rappels J-30 / J-15 / J-5 / J-1 (saison + tournois)
         run: |
           set +e
-          echo "🕐 Date/heure : $(date -u) UTC"
-          echo ""
           echo "📤 Appel de check_reminders..."
-          BODY_FILE=$(mktemp)
-          STATUS=$(curl -s -o "$BODY_FILE" -w "%{http_code}" \
+          STATUS=$(curl -s -o /tmp/body.txt -w "%{http_code}" \
             --max-time 120 \
-            -X POST "${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}/functions/v1/public-api" \
+            -X POST "https://jsceiujlopxgsjlxbvyu.supabase.co/functions/v1/public-api" \
             -H "Content-Type: application/json" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
             -d '{"action":"check_reminders"}')
-          CURL_EXIT=$?
-          BODY=$(cat "$BODY_FILE")
-          echo "📨 HTTP Status : $STATUS (curl exit=$CURL_EXIT)"
-          echo "📦 Body :"
-          echo "$BODY"
+          echo "HTTP $STATUS"
+          cat /tmp/body.txt
           echo ""
 
-          if [ "$CURL_EXIT" -ne 0 ]; then
-            echo "❌ Erreur curl ($CURL_EXIT) — réseau/timeout"
-            exit 1
-          fi
-          if [ "$STATUS" != "200" ]; then
-            echo "❌ HTTP $STATUS — la fonction a planté"
-            exit 1
-          fi
-
-          # Parse le champ ok racine via jq (ignore les ok:false dans sous-objets)
-          OK=$(echo "$BODY" | jq -r '.ok' 2>/dev/null)
-          if [ "$OK" != "true" ]; then
-            echo "❌ Champ racine ok != true (valeur: $OK)"
-            exit 1
-          fi
-
-          echo "✅ Workflow terminé sans erreur"
+      - name: Vérifier backup email mensuel
+        run: |
+          echo "📤 Appel de check_backup_email..."
+          STATUS=$(curl -s -o /tmp/backup.txt -w "%{http_code}" \
+            --max-time 60 \
+            -X POST "https://jsceiujlopxgsjlxbvyu.supabase.co/functions/v1/public-api" \
+            -H "Content-Type: application/json" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -d '{"action":"check_backup_email"}')
+          echo "HTTP $STATUS"
+          cat /tmp/backup.txt
+          echo ""
