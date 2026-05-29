@@ -34,11 +34,13 @@ export default function Tournois({
   memberSession,
   onLoginRequest,
   membreNoms = [],
+  readOnly = false,
 }: {
   db: DB;
   memberSession: MemberSession | null;
   onLoginRequest: () => void;
   membreNoms?: string[];
+  readOnly?: boolean;
 }) {
   const tournois = db.config_tournois ?? [];
   const upcoming = tournois.filter((t) => !isTermine(t));
@@ -110,7 +112,7 @@ export default function Tournois({
                 {upcoming.map((t) => {
                   const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
                   return (
-                    <TiltCard key={t.id}><TournoiCard t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} /></TiltCard>
+                    <TiltCard key={t.id}><TournoiCard t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} readOnly={readOnly} /></TiltCard>
                   );
                 })}
               </div>
@@ -371,8 +373,8 @@ function downloadIcs(t: Tournoi) {
   URL.revokeObjectURL(link.href);
 }
 
-function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = [] }: {
-  t: Tournoi; inscrits: InscritTournoi[]; memberSession: MemberSession | null; onLoginRequest: () => void; membreNoms?: string[];
+function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = [], readOnly = false }: {
+  t: Tournoi; inscrits: InscritTournoi[]; memberSession: MemberSession | null; onLoginRequest: () => void; membreNoms?: string[]; readOnly?: boolean;
 }) {
   const isFull = !!(t.quota && inscrits.length >= t.quota);
   const [submitting, setSubmitting] = useState(false);
@@ -500,7 +502,11 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
             </p>
           </div>
         ) : !isFull && (
-          memberSession && memberSession.paid === true ? (
+          readOnly ? (
+            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
+              <p className="text-emerald-700 text-sm font-medium">Les inscriptions se font depuis l&apos;espace membre sur <strong>saccb.fr</strong></p>
+            </div>
+          ) : memberSession && memberSession.paid === true ? (
             <form onSubmit={regT} className="space-y-3">
               <div className="grid sm:grid-cols-2 gap-3">
                 <input

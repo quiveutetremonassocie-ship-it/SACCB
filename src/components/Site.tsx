@@ -272,6 +272,19 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     setMemberPanelOpen(false);
   };
 
+  // 🎤 Session fictive pour le mode présentation (tout afficher comme un adhérent payé)
+  const presentationSession: MemberSession | null = db.presentationMode ? {
+    membreId: "presentation",
+    nom: "Visiteur",
+    type: "Adulte",
+    email: "presentation@saccb.fr",
+    expiry: Date.now() + 86400000,
+    paid: true,
+    isAdmin: false,
+  } : null;
+  // En mode présentation, on utilise la fausse session pour l'affichage
+  const displaySession = db.presentationMode ? presentationSession : memberSession;
+
   return (
     <>
       {/* Bandeau mode présentation */}
@@ -349,7 +362,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
               agOpen={db.agOpen === true || db.engagementOpen === true}
               reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
-              memberSession={db.presentationMode ? null : memberSession}
+              memberSession={displaySession}
               onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
               onRefresh={async () => { await refreshPublic(); }}
             />
@@ -361,7 +374,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               clubRules={db.clubRules ?? ""}
               clubRulesPdfUrl={db.clubRulesPdfUrl}
               clubRulesPdfName={db.clubRulesPdfName}
-              memberSession={db.presentationMode ? null : memberSession}
+              memberSession={displaySession}
               onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
             />
           </FadeInSection>
@@ -377,15 +390,16 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <FadeInSection>
             <Tournois
               db={db}
-              memberSession={db.presentationMode ? null : memberSession}
+              memberSession={displaySession}
               onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
               membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
+              readOnly={db.presentationMode === true}
             />
           </FadeInSection>
         )}
         {mode === "full" && (db.presentationMode || db.sectionsVisible?.palmares !== false) && (
           <FadeInSection>
-            <Palmares db={db} memberSession={db.presentationMode ? null : memberSession} onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)} />
+            <Palmares db={db} memberSession={displaySession} onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)} />
           </FadeInSection>
         )}
         {/* Bureau — visible pour membres connectés OU mode présentation */}
