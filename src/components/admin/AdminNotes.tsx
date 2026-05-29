@@ -4,6 +4,19 @@ import { useState } from "react";
 import { StickyNote, Plus, Trash2, Clock, Pencil } from "lucide-react";
 import { DB, AdminNote } from "@/lib/types";
 
+function resolvePrenom(email: string | undefined, db: DB): string {
+  if (!email) return "Admin";
+  const membre = (db.membres ?? []).find((m) => (m.email || "").toLowerCase() === email.toLowerCase());
+  if (membre?.nom) {
+    // Premier mot du nom = prénom
+    return membre.nom.trim().split(/\s+/)[0];
+  }
+  // Fallback : partie avant @ sans ponctuation
+  const local = email.split("@")[0];
+  const first = local.split(/[._-]/)[0];
+  return first.charAt(0).toUpperCase() + first.slice(1);
+}
+
 export default function AdminNotes({
   db,
   onPersist,
@@ -27,7 +40,7 @@ export default function AdminNotes({
     const note: AdminNote = {
       id: crypto.randomUUID(),
       content: newContent.trim(),
-      author: adminEmail || "Admin",
+      author: resolvePrenom(adminEmail, db),
       createdAt: new Date().toISOString(),
     };
     await onPersist({ ...db, adminNotes: [note, ...notes] });
