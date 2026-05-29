@@ -4014,5 +4014,40 @@ Deno.serve(async (req) => {
     return json({ ok: true, presentationMode: !currentMode });
   }
 
+  // ─── ACTION: Ping / Keepalive (appelé par UptimeRobot toutes les 24h) ───
+  // Déclenche les rappels automatiques + le check backup mensuel en une seule requête
+  if (action === "ping") {
+    const results: Record<string, unknown> = { ok: true, ts: new Date().toISOString() };
+
+    // 1. Rappels automatiques (inscription + tournois)
+    try {
+      const brevoKey = Deno.env.get("BREVO_API_KEY");
+      if (brevoKey) {
+        const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+        if (data) {
+          // On simule un appel interne à check_reminders en appelant l'URL elle-même
+          const remindersRes = await fetch(req.url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", ...Object.fromEntries(req.headers.entries()) },
+            body: JSON.stringify({ action: "check_reminders" }),
+          });
+          results.reminders = await remindersRes.json().catch(() => "done");
+        }
+      }
+    } catch (e) { results.remindersError = String(e); }
+
+    // 2. Backup email auto mensuel
+    try {
+      const backupRes = await fetch(req.url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json", ...Object.fromEntries(req.headers.entries()) },
+        body: JSON.stringify({ action: "check_backup_email" }),
+      });
+      results.backup = await backupRes.json().catch(() => "done");
+    } catch (e) { results.backupError = String(e); }
+
+    return json(results);
+  }
+
   return json({ error: "Action inconnue" }, 400);
 });
