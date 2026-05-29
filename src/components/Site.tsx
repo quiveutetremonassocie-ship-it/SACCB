@@ -41,6 +41,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   // Quand un mail "engagement AG" est cliqué via ?member=1&procuration=1, on ouvre le panneau membre
   // PUIS on auto-ouvre la modale procuration. Cet etat est consume par MemberPanel via une prop.
   const [autoOpenProcuration, setAutoOpenProcuration] = useState(false);
+  const [demoPanelOpen, setDemoPanelOpen] = useState(false);
   const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
   const [privateActualites, setPrivateActualites] = useState<import("@/lib/types").Actualite[]>([]);
 
@@ -294,8 +295,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         </div>
       )}
       <Navbar
-        onMember={db.presentationMode ? () => {} : onMemberButtonClick}
-        isMember={db.presentationMode ? false : !!memberSession}
+        onMember={db.presentationMode ? () => setDemoPanelOpen(true) : onMemberButtonClick}
+        isMember={db.presentationMode ? true : !!memberSession}
         isAdmin={isMemberAdmin}
         onAdmin={onReopenAdmin}
         onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
@@ -467,6 +468,65 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           onProcurationOpened={() => setAutoOpenProcuration(false)}
         />
       )}
+      {/* Panneau démo en mode présentation */}
+      {db.presentationMode && demoPanelOpen && (
+        <div className="fixed inset-0 z-[4500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto">
+          <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm my-auto">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center">
+                  <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                </div>
+                <div>
+                  <h3 className="font-display text-xl tracking-wider text-slate-800">Espace membre</h3>
+                  <p className="text-xs text-slate-400">Mode presentation</p>
+                </div>
+              </div>
+              <button onClick={() => setDemoPanelOpen(false)} className="text-slate-400 hover:text-slate-600 transition">
+                <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" /></svg>
+              </button>
+            </div>
+
+            {/* Carte membre démo */}
+            <div className="mb-6">
+              <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
+                <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
+                <div className="font-display text-xl text-blue-400 tracking-widest border-b border-white/10 pb-2 mb-4">MEMBRE OFFICIEL SACCB</div>
+                <div className="text-2xl font-bold uppercase text-white">Visiteur Demo</div>
+                <div className="text-xs uppercase tracking-widest text-white/50 mt-1">Saison {db.y1}–{db.y2}</div>
+                <div className="flex items-end justify-between mt-6">
+                  <span className="text-xs uppercase tracking-widest text-white/60">Adulte</span>
+                  <span className="font-display text-lg text-white/70">ST-ADRESSE</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Bouton admin visiteur */}
+            <Link
+              href="/admin"
+              onClick={() => setDemoPanelOpen(false)}
+              className="group mb-4 block bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white rounded-2xl p-4 shadow-md hover:shadow-lg transition"
+            >
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+                  <svg className="w-6 h-6 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" /></svg>
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="font-bold text-sm leading-tight">Voir le panneau admin</p>
+                  <p className="text-[11px] text-white/85 leading-tight mt-0.5">Mode visiteur — consultation uniquement</p>
+                </div>
+                <svg className="w-5 h-5 text-white group-hover:translate-x-1 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" /></svg>
+              </div>
+            </Link>
+
+            <p className="text-xs text-center text-slate-400 mt-4">
+              Ceci est un apercu en mode presentation.
+              <br />Les donnees sensibles ne sont pas affichees.
+            </p>
+          </div>
+        </div>
+      )}
+
       {adminOpen && (
         <AdminPanel
           db={db}
