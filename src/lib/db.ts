@@ -41,6 +41,8 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     clubRulesPdfUrl: d.clubRulesPdfUrl ?? undefined,
     clubRulesPdfName: d.clubRulesPdfName ?? undefined,
     bureauMembers: d.bureauMembers ?? [],
+    presentationMode: d.presentationMode === true,
+    sectionsVisible: d.sectionsVisible ?? {},
   };
 }
 
