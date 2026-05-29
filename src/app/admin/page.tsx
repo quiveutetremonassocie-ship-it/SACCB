@@ -1,9 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import { ShieldCheck, Eye, EyeOff, ArrowLeft, RefreshCw, LogOut } from "lucide-react";
+import { ShieldCheck, Eye, EyeOff, ArrowLeft, RefreshCw, LogOut, Users } from "lucide-react";
 import { DB } from "@/lib/types";
-import { emptyDB, fetchAdminDBByMember, saveDBByMember, clearTrustToken } from "@/lib/db";
+import { emptyDB, fetchAdminDBByMember, saveDBByMember, clearTrustToken, fetchPublicDB } from "@/lib/db";
 import { getMemberSession, MemberSession, setMemberSession, clearMemberSession, sessionDurationMs } from "@/lib/useMemberSession";
 import { verifyMembre } from "@/lib/db";
 import AdminPanel from "@/components/admin/AdminPanel";
@@ -39,20 +39,26 @@ export default function AdminPage() {
   // 🚀 Mode "déjà connecté en tant qu'admin mais pas de code admin en cache" :
   // l'utilisateur saisit juste son mot de passe pour ré-authentifier
   const [quickAuthMode, setQuickAuthMode] = useState(false);
+  // 🎤 Mode visiteur (présentation) : admin en lecture seule sans login
+  const [presentationMode, setPresentationMode] = useState(false);
+  const [visitorMode, setVisitorMode] = useState(false);
 
-  // 🔄 Au chargement : tenter d'utiliser la session existante.
-  // Le mdp n'est JAMAIS mis en cache → toujours demandé à l'entrée /admin.
+  // 🔄 Au chargement : tenter d'utiliser la session existante + vérifier mode présentation
   useEffect(() => {
-    cleanupOldAdminCodeCache(); // migration douce des anciens caches
+    cleanupOldAdminCodeCache();
     const session = getMemberSession();
 
-    // Session admin valide → mode rapide : juste le mot de passe (email pré-rempli, pas de 2FA)
     if (session?.isAdmin) {
       setEmail(session.email);
       setMemberSessionState(session);
       setQuickAuthMode(true);
     }
-    // Sinon : formulaire complet (membre non-admin = écran d'erreur, pas de session = login complet)
+
+    // Vérifier si le mode présentation est actif
+    fetchPublicDB().then((d) => {
+      if (d.presentationMode) setPresentationMode(true);
+    }).catch(() => {});
+
     setBootChecking(false);
   }, []);
 
@@ -176,6 +182,19 @@ export default function AdminPage() {
     );
   }
 
+  // 🎤 Mode visiteur : admin en lecture seule (présentation)
+  if (visitorMode) {
+    return (
+      <AdminPanel
+        db={db}
+        onClose={() => { setVisitorMode(false); setDb(emptyDB()); }}
+        onPersist={async () => {}}
+        onRefresh={async () => {}}
+        readOnly={true}
+      />
+    );
+  }
+
   // ⏳ Pendant le boot (évite le flash de la page de login)
   if (bootChecking) {
     return (
@@ -201,6 +220,14 @@ export default function AdminPage() {
     );
   }
 
+  async function enterVisitorMode() {
+    setLoading(true);
+    const d = await fetchPublicDB();
+    setDb({ ...emptyDB(), ...d } as DB);
+    setVisitorMode(true);
+    setLoading(false);
+  }
+
   return (
     <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center p-6">
       <div className="w-full max-w-sm">
@@ -210,6 +237,23 @@ export default function AdminPage() {
         >
           <ArrowLeft className="w-4 h-4" /> Retour au site
         </Link>
+
+        {/* Bouton mode visiteur si présentation active */}
+        {presentationMode && (
+          <button
+            onClick={enterVisitorMode}
+            disabled={loading}
+            className="w-full mb-4 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold rounded-2xl p-5 shadow-lg transition flex items-center gap-4"
+          >
+            <div className="w-12 h-12 rounded-xl bg-white/20 flex items-center justify-center shrink-0">
+              <Users className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-sm">Mode visiteur</p>
+              <p className="text-[11px] text-white/80">Voir l&apos;admin en consultation uniquement</p>
+            </div>
+          </button>
+        )}
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8">
           <div className="flex items-center gap-3 mb-6">
