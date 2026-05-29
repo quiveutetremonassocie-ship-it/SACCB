@@ -3872,7 +3872,7 @@ Deno.serve(async (req) => {
     const backupJson = JSON.stringify(d, null, 2);
     const backupBase64 = btoa(unescape(encodeURIComponent(backupJson)));
     const ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
-    const filename = `saccb_backup_${ts}.json`;
+    const filename = `saccb_backup_${ts}.txt`;
 
     // Compter les stats
     const nbMembres = Array.isArray(d.membres) ? (d.membres as unknown[]).length : 0;
@@ -3947,7 +3947,7 @@ Deno.serve(async (req) => {
     const backupJson = JSON.stringify(d, null, 2);
     const backupBase64 = btoa(unescape(encodeURIComponent(backupJson)));
     const ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, "-");
-    const filename = `saccb_auto_backup_${ts}.json`;
+    const filename = `saccb_auto_backup_${ts}.txt`;
     const nbMembres = Array.isArray(d.membres) ? (d.membres as unknown[]).length : 0;
     const nbTournois = Array.isArray(d.config_tournois) ? (d.config_tournois as unknown[]).length : 0;
 
