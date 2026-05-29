@@ -274,15 +274,21 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
   return (
     <>
+      {/* Bandeau mode présentation */}
+      {db.presentationMode && (
+        <div className="fixed top-0 inset-x-0 z-[60] bg-gradient-to-r from-amber-500 to-orange-500 text-white text-center py-1.5 text-xs font-bold tracking-widest uppercase shadow-md">
+          Mode Presentation — Consultation uniquement
+        </div>
+      )}
       <Navbar
-        onMember={onMemberButtonClick}
-        isMember={!!memberSession}
-        isAdmin={isMemberAdmin}
-        onAdmin={onReopenAdmin}
-        onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
+        onMember={db.presentationMode ? () => {} : onMemberButtonClick}
+        isMember={db.presentationMode ? false : !!memberSession}
+        isAdmin={db.presentationMode ? false : isMemberAdmin}
+        onAdmin={db.presentationMode ? undefined : onReopenAdmin}
+        onAdminLogin={db.presentationMode ? undefined : (() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true))}
       />
       {/* Bannière de réinscription : visible uniquement aux adhérents connectés non-payés */}
-      {memberSession && memberSession.paid !== true && db.insc_open && (
+      {!db.presentationMode && memberSession && memberSession.paid !== true && db.insc_open && (
         <div className="fixed top-[72px] inset-x-0 z-40 bg-gradient-to-r from-amber-500 to-orange-500 shadow-lg border-b border-amber-600/30 px-4 py-3 flex items-center justify-center gap-3 flex-wrap text-center">
           <span className="text-sm md:text-base text-white font-semibold">
             ⏳ Adhésion saison {db.y1}–{db.y2} à renouveler !
@@ -343,8 +349,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               pollsOpen={db.pollsOpen === true || db.engagementOpen === true}
               agOpen={db.agOpen === true || db.engagementOpen === true}
               reportsOpen={db.reportsOpen === true || (db.reportsOpen === undefined && (db.pollsOpen === true || db.engagementOpen === true))}
-              memberSession={memberSession}
-              onLoginRequest={() => setMemberLoginOpen(true)}
+              memberSession={db.presentationMode ? null : memberSession}
+              onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
               onRefresh={async () => { await refreshPublic(); }}
             />
           </FadeInSection>
@@ -355,8 +361,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               clubRules={db.clubRules ?? ""}
               clubRulesPdfUrl={db.clubRulesPdfUrl}
               clubRulesPdfName={db.clubRulesPdfName}
-              memberSession={memberSession}
-              onLoginRequest={() => setMemberLoginOpen(true)}
+              memberSession={db.presentationMode ? null : memberSession}
+              onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
             />
           </FadeInSection>
         )}
@@ -371,15 +377,15 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <FadeInSection>
             <Tournois
               db={db}
-              memberSession={memberSession}
-              onLoginRequest={() => setMemberLoginOpen(true)}
+              memberSession={db.presentationMode ? null : memberSession}
+              onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
               membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
             />
           </FadeInSection>
         )}
         {mode === "full" && (db.presentationMode || db.sectionsVisible?.palmares !== false) && (
           <FadeInSection>
-            <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
+            <Palmares db={db} memberSession={db.presentationMode ? null : memberSession} onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)} />
           </FadeInSection>
         )}
         {/* Bureau — visible pour membres connectés OU mode présentation */}
@@ -395,13 +401,28 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
         {(mode === "full" || mode === "inscription") && (!memberSession || db.presentationMode) && (db.presentationMode || db.sectionsVisible?.inscription !== false) && (
           <FadeInSection>
-            <Inscription
-              db={db}
-              membresCount={membresCount}
-              quota={db.quota ?? QUOTA_DEFAULT}
-              prix={PRIX}
-              onMembreAdded={() => setMembresCount((n) => n + 1)}
-            />
+            {db.presentationMode ? (
+              <section id="inscription" className="py-20 md:py-28 text-center">
+                <div className="max-w-2xl mx-auto px-6">
+                  <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-4">
+                    Inscription
+                  </div>
+                  <h2 className="font-display text-3xl md:text-4xl text-slate-800 tracking-wider mb-4">Rejoignez le SACCB</h2>
+                  <p className="text-slate-500 mb-4">Adulte {PRIX.Adulte}&euro; / Etudiant {PRIX.Etudiant}&euro; par saison</p>
+                  <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-6 py-3 inline-block">
+                    Les inscriptions se font directement sur le site — rendez-vous sur <strong>saccb.fr</strong>
+                  </p>
+                </div>
+              </section>
+            ) : (
+              <Inscription
+                db={db}
+                membresCount={membresCount}
+                quota={db.quota ?? QUOTA_DEFAULT}
+                prix={PRIX}
+                onMembreAdded={() => setMembresCount((n) => n + 1)}
+              />
+            )}
           </FadeInSection>
         )}
 
