@@ -8,6 +8,34 @@ import ArchiveEditModal from "./ArchiveEditModal";
 
 const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
 
+// 🎭 Rôles prédéfinis avec permissions pré-sélectionnées
+const ADMIN_ROLES = [
+  {
+    key: "president",
+    label: "President",
+    emoji: "👑",
+    permissions: ["membres", "comptabilite", "tournois", "actualites", "inscriptions", "engagement", "rules", "bureau", "emailing", "saison"],
+  },
+  {
+    key: "tresorier",
+    label: "Tresorier",
+    emoji: "💰",
+    permissions: ["membres", "comptabilite", "inscriptions", "saison"],
+  },
+  {
+    key: "secretaire",
+    label: "Secretaire",
+    emoji: "📝",
+    permissions: ["membres", "actualites", "emailing", "engagement", "bureau", "rules"],
+  },
+  {
+    key: "responsable_tournois",
+    label: "Resp. tournois",
+    emoji: "🏸",
+    permissions: ["tournois", "inscriptions", "emailing"],
+  },
+];
+
 export default function SeasonSettings({
   db,
   onPersist,
@@ -461,7 +489,33 @@ export default function SeasonSettings({
                 </div>
                 {isExpanded && (
                   <div className="border-t border-slate-200 bg-white px-3 py-3 space-y-2">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Sections autorisées en modification</p>
+                    {/* Rôles prédéfinis */}
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Role</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                      {ADMIN_ROLES.map((role) => {
+                        const isActive = !entry.readOnly && role.permissions.length === perms.length && role.permissions.every((p) => perms.includes(p));
+                        return (
+                          <button
+                            key={role.key}
+                            onClick={async () => {
+                              const newEmails = (db.adminEmails ?? []).map((x) =>
+                                x.email === entry.email ? { ...x, readOnly: false, permissions: [...role.permissions] } : x
+                              );
+                              await onPersist({ ...db, adminEmails: newEmails });
+                            }}
+                            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl border-2 transition text-center text-xs ${
+                              isActive ? "border-blue-500 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 bg-white hover:border-slate-400 text-slate-600"
+                            }`}
+                          >
+                            <span className="text-base">{role.emoji}</span>
+                            <span className="font-semibold">{role.label}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{role.permissions.length} sections</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-3">Sections autorisees</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {ADMIN_SECTIONS.map((s) => {
                         const checked = !entry.readOnly && perms.includes(s.key);
@@ -507,7 +561,7 @@ export default function SeasonSettings({
                         }}
                         className="btn-ghost !px-3 !py-1 !text-xs"
                       >
-                        Tout décocher
+                        Tout decocher
                       </button>
                       <button
                         onClick={async () => {
@@ -521,7 +575,7 @@ export default function SeasonSettings({
                         <Lock className="w-3 h-3 mr-1" /> Lecture seule
                       </button>
                     </div>
-                    <p className="text-xs text-slate-400">⚠️ Aucune section cochée = aucune section visible dans l&apos;admin pour cet utilisateur. Utilisez « Tout cocher » pour accès complet.</p>
+                    <p className="text-xs text-slate-400">Choisis un role pour pre-remplir, puis ajuste les sections si besoin.</p>
                   </div>
                 )}
               </div>
@@ -624,7 +678,33 @@ export default function SeasonSettings({
                 </div>
                 {isExpanded && (
                   <div className="border-t border-amber-200 bg-white px-3 py-3 space-y-2">
-                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Sections autorisées en modification</p>
+                    {/* Rôles prédéfinis */}
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Role</p>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
+                      {ADMIN_ROLES.map((role) => {
+                        const isActive = !cred.readOnly && role.permissions.length === perms.length && role.permissions.every((p) => perms.includes(p));
+                        return (
+                          <button
+                            key={role.key}
+                            onClick={async () => {
+                              const newCreds = (db.adminCredentials ?? []).map((c) =>
+                                c.email === cred.email ? { ...c, readOnly: false, permissions: [...role.permissions] } : c
+                              );
+                              await onPersist({ ...db, adminCredentials: newCreds });
+                            }}
+                            className={`flex flex-col items-center gap-1 px-2 py-2 rounded-xl border-2 transition text-center text-xs ${
+                              isActive ? "border-blue-500 bg-blue-50 text-blue-700 font-bold" : "border-slate-200 bg-white hover:border-slate-400 text-slate-600"
+                            }`}
+                          >
+                            <span className="text-base">{role.emoji}</span>
+                            <span className="font-semibold">{role.label}</span>
+                            <span className="text-[10px] text-slate-400 font-normal">{role.permissions.length} sections</span>
+                          </button>
+                        );
+                      })}
+                    </div>
+
+                    <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mt-3">Sections autorisees</p>
                     <div className="grid grid-cols-2 gap-1.5">
                       {ADMIN_SECTIONS.map((s) => {
                         const checked = !cred.readOnly && perms.includes(s.key);
@@ -670,7 +750,7 @@ export default function SeasonSettings({
                         }}
                         className="btn-ghost !px-3 !py-1 !text-xs"
                       >
-                        Tout décocher
+                        Tout decocher
                       </button>
                       <button
                         onClick={async () => {
@@ -684,7 +764,7 @@ export default function SeasonSettings({
                         <Lock className="w-3 h-3 mr-1" /> Lecture seule
                       </button>
                     </div>
-                    <p className="text-xs text-slate-400">⚠️ Aucune section cochée = aucune section visible dans l&apos;admin pour cet utilisateur. Utilisez « Tout cocher » pour accès complet.</p>
+                    <p className="text-xs text-slate-400">Choisis un role pour pre-remplir, puis ajuste les sections si besoin.</p>
                   </div>
                 )}
               </div>
