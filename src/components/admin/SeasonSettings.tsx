@@ -493,13 +493,21 @@ export default function SeasonSettings({
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Role</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
                       {ADMIN_ROLES.map((role) => {
-                        const isActive = !entry.readOnly && role.permissions.length === perms.length && role.permissions.every((p) => perms.includes(p));
+                        const isActive = !entry.readOnly && role.permissions.every((p) => perms.includes(p));
                         return (
                           <button
                             key={role.key}
                             onClick={async () => {
+                              let newPerms: string[];
+                              if (isActive) {
+                                // Retirer les permissions de ce rôle
+                                newPerms = perms.filter((p) => !role.permissions.includes(p));
+                              } else {
+                                // Ajouter les permissions de ce rôle (sans doublons)
+                                newPerms = [...new Set([...perms, ...role.permissions])];
+                              }
                               const newEmails = (db.adminEmails ?? []).map((x) =>
-                                x.email === entry.email ? { ...x, readOnly: false, permissions: [...role.permissions] } : x
+                                x.email === entry.email ? { ...x, readOnly: false, permissions: newPerms } : x
                               );
                               await onPersist({ ...db, adminEmails: newEmails });
                             }}
@@ -682,13 +690,19 @@ export default function SeasonSettings({
                     <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest">Role</p>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-1.5">
                       {ADMIN_ROLES.map((role) => {
-                        const isActive = !cred.readOnly && role.permissions.length === perms.length && role.permissions.every((p) => perms.includes(p));
+                        const isActive = !cred.readOnly && role.permissions.every((p) => perms.includes(p));
                         return (
                           <button
                             key={role.key}
                             onClick={async () => {
+                              let newPerms: string[];
+                              if (isActive) {
+                                newPerms = perms.filter((p) => !role.permissions.includes(p));
+                              } else {
+                                newPerms = [...new Set([...perms, ...role.permissions])];
+                              }
                               const newCreds = (db.adminCredentials ?? []).map((c) =>
-                                c.email === cred.email ? { ...c, readOnly: false, permissions: [...role.permissions] } : c
+                                c.email === cred.email ? { ...c, readOnly: false, permissions: newPerms } : c
                               );
                               await onPersist({ ...db, adminCredentials: newCreds });
                             }}
