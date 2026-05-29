@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { StickyNote, Plus, Trash2, Clock } from "lucide-react";
+import { StickyNote, Plus, Trash2, Clock, Pencil } from "lucide-react";
 import { DB, AdminNote } from "@/lib/types";
 
 export default function AdminNotes({
@@ -162,13 +162,22 @@ export default function AdminNotes({
                       <span>{formatDate(note.updatedAt || note.createdAt)}</span>
                     </div>
                     {!readOnly && (
-                      <button
-                        onClick={() => deleteNote(note.id)}
-                        className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition p-1"
-                        title="Supprimer"
-                      >
-                        <Trash2 className="w-3.5 h-3.5" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
+                        <button
+                          onClick={() => startEdit(note)}
+                          className="text-blue-400 hover:text-blue-600 transition p-1"
+                          title="Modifier"
+                        >
+                          <Pencil className="w-3.5 h-3.5" />
+                        </button>
+                        <button
+                          onClick={() => deleteNote(note.id)}
+                          className="text-red-400 hover:text-red-600 transition p-1"
+                          title="Supprimer"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
                     )}
                   </div>
                 </>
