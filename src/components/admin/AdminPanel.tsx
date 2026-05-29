@@ -24,6 +24,7 @@ import RecuModal from "./RecuModal";
 import EmargementModal from "./EmargementModal";
 import EditMembreModal from "./EditMembreModal";
 import EditBinomeModal from "./EditBinomeModal";
+import AdminNotes from "./AdminNotes";
 
 export default function AdminPanel({
   db,
@@ -381,6 +382,9 @@ export default function AdminPanel({
           </div>
 
           <HelloAssoQR />
+
+          {/* Bloc-notes partagé */}
+          <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
 
           {canSee("actualites") && (
             <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">

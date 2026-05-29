@@ -199,6 +199,16 @@ export type DB = {
   // 🎤 Mode présentation : toutes les sections visibles pour tout le monde
   presentationMode?: boolean;
   presentationModeRemoved?: boolean;
+  // 📝 Bloc-notes partagé entre admins
+  adminNotes?: AdminNote[];
+};
+
+export type AdminNote = {
+  id: string;
+  content: string;
+  author: string; // nom ou email de l'admin
+  createdAt: string;
+  updatedAt?: string;
 };
 
 export type BureauMember = {
