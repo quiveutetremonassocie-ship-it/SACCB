@@ -502,12 +502,8 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
             </p>
           </div>
         ) : !isFull && (
-          readOnly ? (
-            <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-center">
-              <p className="text-emerald-700 text-sm font-medium">Les inscriptions se font depuis l&apos;espace membre sur <strong>saccb.fr</strong></p>
-            </div>
-          ) : memberSession && memberSession.paid === true ? (
-            <form onSubmit={regT} className="space-y-3">
+          memberSession && memberSession.paid === true ? (
+            <form onSubmit={readOnly ? (e: React.FormEvent) => { e.preventDefault(); alert("Mode presentation : les inscriptions sont desactivees."); } : regT} className="space-y-3">
               <div className="grid sm:grid-cols-2 gap-3">
                 <input
                   className="input"

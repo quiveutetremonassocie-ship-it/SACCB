@@ -415,28 +415,13 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
         {(mode === "full" || mode === "inscription") && (!memberSession || db.presentationMode) && (db.presentationMode || db.sectionsVisible?.inscription !== false) && (
           <FadeInSection>
-            {db.presentationMode ? (
-              <section id="inscription" className="py-20 md:py-28 text-center">
-                <div className="max-w-2xl mx-auto px-6">
-                  <div className="inline-flex items-center gap-2 bg-emerald-100 text-emerald-700 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-4">
-                    Inscription
-                  </div>
-                  <h2 className="font-display text-3xl md:text-4xl text-slate-800 tracking-wider mb-4">Rejoignez le SACCB</h2>
-                  <p className="text-slate-500 mb-4">Adulte {PRIX.Adulte}&euro; / Etudiant {PRIX.Etudiant}&euro; par saison</p>
-                  <p className="text-sm text-amber-600 bg-amber-50 border border-amber-200 rounded-xl px-6 py-3 inline-block">
-                    Les inscriptions se font directement sur le site — rendez-vous sur <strong>saccb.fr</strong>
-                  </p>
-                </div>
-              </section>
-            ) : (
-              <Inscription
-                db={db}
-                membresCount={membresCount}
-                quota={db.quota ?? QUOTA_DEFAULT}
-                prix={PRIX}
-                onMembreAdded={() => setMembresCount((n) => n + 1)}
-              />
-            )}
+            <Inscription
+              db={db}
+              membresCount={membresCount}
+              quota={db.quota ?? QUOTA_DEFAULT}
+              prix={PRIX}
+              onMembreAdded={db.presentationMode ? () => {} : () => setMembresCount((n) => n + 1)}
+            />
           </FadeInSection>
         )}
 
