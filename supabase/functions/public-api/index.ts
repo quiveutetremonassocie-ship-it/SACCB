@@ -875,6 +875,8 @@ Deno.serve(async (req) => {
       clubRulesPdfUrl: d.clubRulesPdfUrl ?? null,
       clubRulesPdfName: d.clubRulesPdfName ?? null,
       bureauMembers: d.bureauMembers ?? [],
+      presentationMode: d.presentationMode === true,
+      sectionsVisible: d.sectionsVisible ?? {},
     });
   }
 
@@ -3876,35 +3878,31 @@ Deno.serve(async (req) => {
     const nbMembres = Array.isArray(d.membres) ? (d.membres as unknown[]).length : 0;
     const nbTournois = Array.isArray(d.config_tournois) ? (d.config_tournois as unknown[]).length : 0;
 
-    // Envoyer via Brevo
-    const sendRes = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "api-key": brevoKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sender: { name: "SACCB Backup", email: "noreply@saccb.fr" },
-        to: [{ email: destEmail }],
-        subject: `Sauvegarde SACCB — ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`,
-        htmlContent: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px 20px;">
-            <div style="background: #1e3a5f; border-radius: 12px; padding: 20px 24px; text-align: center; margin-bottom: 24px;">
-              <h1 style="margin: 0; color: white; font-size: 20px;">Sauvegarde SACCB</h1>
-            </div>
-            <p style="color: #334155; font-size: 14px; line-height: 1.6;">
-              Voici la sauvegarde complete de la base de donnees SACCB au <strong>${new Date().toLocaleDateString("fr-FR")}</strong>.
-            </p>
-            <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; margin: 16px 0;">
-              <p style="margin: 0; font-size: 13px; color: #475569;">
-                <strong>${nbMembres}</strong> adherent${nbMembres > 1 ? "s" : ""} |
-                <strong>${nbTournois}</strong> tournoi${nbTournois > 1 ? "s" : ""}
-              </p>
-            </div>
-            <p style="color: #64748b; font-size: 12px;">
-              Le fichier JSON en piece jointe peut etre utilise pour restaurer la base via le panneau admin (bouton "Restaurer").
+    // Envoyer via sendBrevo (avec fallback Resend)
+    const sendRes = await sendBrevo(brevoKey, {
+      from: "SACCB Backup <contact@saccb.fr>",
+      to: [destEmail],
+      subject: `Sauvegarde SACCB — ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px 20px;">
+          <div style="background: #1e3a5f; border-radius: 12px; padding: 20px 24px; text-align: center; margin-bottom: 24px;">
+            <h1 style="margin: 0; color: white; font-size: 20px;">Sauvegarde SACCB</h1>
+          </div>
+          <p style="color: #334155; font-size: 14px; line-height: 1.6;">
+            Voici la sauvegarde complete de la base de donnees SACCB au <strong>${new Date().toLocaleDateString("fr-FR")}</strong>.
+          </p>
+          <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; font-size: 13px; color: #475569;">
+              <strong>${nbMembres}</strong> adherent${nbMembres > 1 ? "s" : ""} |
+              <strong>${nbTournois}</strong> tournoi${nbTournois > 1 ? "s" : ""}
             </p>
           </div>
-        `,
-        attachment: [{ content: backupBase64, name: filename }],
-      }),
+          <p style="color: #64748b; font-size: 12px;">
+            Le fichier JSON en piece jointe peut etre utilise pour restaurer la base via le panneau admin (bouton "Restaurer").
+          </p>
+        </div>
+      `,
+      attachments: [{ filename, content: backupBase64 }],
     });
 
     if (!sendRes.ok) {
@@ -3953,34 +3951,30 @@ Deno.serve(async (req) => {
     const nbMembres = Array.isArray(d.membres) ? (d.membres as unknown[]).length : 0;
     const nbTournois = Array.isArray(d.config_tournois) ? (d.config_tournois as unknown[]).length : 0;
 
-    const sendRes = await fetch("https://api.brevo.com/v3/smtp/email", {
-      method: "POST",
-      headers: { "api-key": brevoKey, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sender: { name: "SACCB Backup Auto", email: "noreply@saccb.fr" },
-        to: [{ email: destEmail }],
-        subject: `[Auto] Sauvegarde SACCB — ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`,
-        htmlContent: `
-          <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px 20px;">
-            <div style="background: linear-gradient(135deg, #059669, #047857); border-radius: 12px; padding: 20px 24px; text-align: center; margin-bottom: 24px;">
-              <h1 style="margin: 0; color: white; font-size: 20px;">Sauvegarde automatique SACCB</h1>
-            </div>
-            <p style="color: #334155; font-size: 14px; line-height: 1.6;">
-              Sauvegarde mensuelle automatique du <strong>${new Date().toLocaleDateString("fr-FR")}</strong>.
-            </p>
-            <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; margin: 16px 0;">
-              <p style="margin: 0; font-size: 13px; color: #475569;">
-                <strong>${nbMembres}</strong> adherent${nbMembres > 1 ? "s" : ""} |
-                <strong>${nbTournois}</strong> tournoi${nbTournois > 1 ? "s" : ""}
-              </p>
-            </div>
-            <p style="color: #64748b; font-size: 12px;">
-              Cet email est envoye automatiquement chaque mois. Vous pouvez desactiver cette fonctionnalite dans les parametres de sauvegarde du panneau admin.
+    const sendRes = await sendBrevo(brevoKey, {
+      from: "SACCB Backup Auto <contact@saccb.fr>",
+      to: [destEmail],
+      subject: `[Auto] Sauvegarde SACCB — ${new Date().toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}`,
+      html: `
+        <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 500px; margin: 0 auto; padding: 30px 20px;">
+          <div style="background: linear-gradient(135deg, #059669, #047857); border-radius: 12px; padding: 20px 24px; text-align: center; margin-bottom: 24px;">
+            <h1 style="margin: 0; color: white; font-size: 20px;">Sauvegarde automatique SACCB</h1>
+          </div>
+          <p style="color: #334155; font-size: 14px; line-height: 1.6;">
+            Sauvegarde mensuelle automatique du <strong>${new Date().toLocaleDateString("fr-FR")}</strong>.
+          </p>
+          <div style="background: #f1f5f9; border-radius: 8px; padding: 16px; margin: 16px 0;">
+            <p style="margin: 0; font-size: 13px; color: #475569;">
+              <strong>${nbMembres}</strong> adherent${nbMembres > 1 ? "s" : ""} |
+              <strong>${nbTournois}</strong> tournoi${nbTournois > 1 ? "s" : ""}
             </p>
           </div>
-        `,
-        attachment: [{ content: backupBase64, name: filename }],
-      }),
+          <p style="color: #64748b; font-size: 12px;">
+            Cet email est envoye automatiquement chaque mois. Vous pouvez desactiver cette fonctionnalite dans les parametres de sauvegarde du panneau admin.
+          </p>
+        </div>
+      `,
+      attachments: [{ filename, content: backupBase64 }],
     });
 
     if (!sendRes.ok) return json({ ok: false, reason: "Erreur d'envoi." });
@@ -3989,6 +3983,25 @@ Deno.serve(async (req) => {
     await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
 
     return json({ ok: true, message: "Backup automatique envoye." });
+  }
+
+  // ─── ACTION: Toggle mode présentation (code secret via env var) ───
+  if (action === "toggle_presentation") {
+    const secret = String(body.secret || "").trim();
+    const expected = Deno.env.get("PRESENTATION_SECRET");
+    if (!expected) return json({ ok: false, reason: "Code secret non configure sur le serveur." });
+    if (secret !== expected) return json({ ok: false, reason: "Code incorrect." });
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+
+    const currentMode = d.presentationMode === true;
+    d.presentationMode = !currentMode;
+
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+
+    return json({ ok: true, presentationMode: !currentMode });
   }
 
   return json({ error: "Action inconnue" }, 400);

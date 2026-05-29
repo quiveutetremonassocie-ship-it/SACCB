@@ -622,6 +622,18 @@ export async function adminSendBackupEmail(
   return res.json();
 }
 
+// ─── Toggle mode présentation (code secret) ───
+export async function togglePresentationMode(
+  secret: string
+): Promise<{ ok: boolean; presentationMode?: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "toggle_presentation", secret }),
+  });
+  return res.json();
+}
+
 // ─── Inscription tournoi avec covoiturage (via Edge Function) ───
 export async function publicRegisterTournoiWithCovoiturage(
   tournoiId: string,

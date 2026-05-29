@@ -322,12 +322,12 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {/* Vague de transition Hero → Présentation */}
         {mode === "full" && <WaveDivider variant="wave1" fillColor="#f8fafc" className="-mt-1" />}
 
-        {/* Toggles de visibilité : undefined = visible (default), false = caché */}
-        {mode === "full" && db.sectionsVisible?.presentation !== false && (
+        {/* Mode présentation : toutes les sections visibles. Sinon on respecte les toggles. */}
+        {mode === "full" && (db.presentationMode || db.sectionsVisible?.presentation !== false) && (
           <FadeInSection><Presentation /></FadeInSection>
         )}
 
-        {(mode === "full" || mode === "actualites") && db.sectionsVisible?.actualites !== false && (
+        {(mode === "full" || mode === "actualites") && (db.presentationMode || db.sectionsVisible?.actualites !== false) && (
           <FadeInSection>
             <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
           </FadeInSection>
@@ -349,7 +349,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             />
           </FadeInSection>
         )}
-        {mode === "full" && db.sectionsVisible?.rules !== false && (
+        {mode === "full" && (db.presentationMode || db.sectionsVisible?.rules !== false) && (
           <FadeInSection>
             <Rules
               clubRules={db.clubRules ?? ""}
@@ -360,14 +360,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             />
           </FadeInSection>
         )}
-        {mode === "full" && db.sectionsVisible?.horaires !== false && (
+        {mode === "full" && (db.presentationMode || db.sectionsVisible?.horaires !== false) && (
           <FadeInSection><Horaires /></FadeInSection>
         )}
 
         {/* Vague de transition avant Tournois */}
         {mode === "full" && <WaveDivider variant="wave2" fillColor="#f0fdf4" />}
 
-        {(mode === "full" || mode === "tournois") && db.sectionsVisible?.tournois !== false && (
+        {(mode === "full" || mode === "tournois") && (db.presentationMode || db.sectionsVisible?.tournois !== false) && (
           <FadeInSection>
             <Tournois
               db={db}
@@ -377,13 +377,13 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             />
           </FadeInSection>
         )}
-        {mode === "full" && db.sectionsVisible?.palmares !== false && (
+        {mode === "full" && (db.presentationMode || db.sectionsVisible?.palmares !== false) && (
           <FadeInSection>
             <Palmares db={db} memberSession={memberSession} onLoginRequest={() => setMemberLoginOpen(true)} />
           </FadeInSection>
         )}
-        {/* Bureau — visible uniquement pour les membres connectés */}
-        {mode === "full" && memberSession && (db.bureauMembers ?? []).length > 0 && (
+        {/* Bureau — visible pour membres connectés OU mode présentation */}
+        {mode === "full" && (memberSession || db.presentationMode) && (db.bureauMembers ?? []).length > 0 && (
           <FadeInSection>
             <BureauPublic members={db.bureauMembers!} />
           </FadeInSection>
@@ -393,7 +393,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {mode === "full" && <WaveDivider variant="wave3" fillColor="#eff6ff" />}
 
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
-        {(mode === "full" || mode === "inscription") && !memberSession && db.sectionsVisible?.inscription !== false && (
+        {(mode === "full" || mode === "inscription") && (!memberSession || db.presentationMode) && (db.presentationMode || db.sectionsVisible?.inscription !== false) && (
           <FadeInSection>
             <Inscription
               db={db}

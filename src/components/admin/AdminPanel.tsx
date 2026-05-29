@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send } from "lucide-react";
 import { DB, Membre, PRIX } from "@/lib/types";
-import { adminExportBackup, adminImportBackup, adminSendBackupEmail } from "@/lib/db";
+import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
@@ -377,6 +377,7 @@ export default function AdminPanel({
             </p>
             {/* Backup par email */}
             <BackupEmailSection db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />
+            <PresentationModeButton isActive={db.presentationMode === true} onRefresh={onRefresh} />
           </div>
 
           <HelloAssoQR />
@@ -692,6 +693,54 @@ function BackupEmailSection({
         )}
         {msg && <p className="text-xs font-semibold text-sky-700">{msg}</p>}
       </div>
+    </div>
+  );
+}
+
+// 🎤 Mode présentation — active toutes les sections pour tout le monde
+function PresentationModeButton({ isActive, onRefresh }: { isActive: boolean; onRefresh: () => void }) {
+  const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState<string | null>(null);
+
+  async function handleToggle() {
+    const secret = prompt(isActive ? "Code secret pour DESACTIVER le mode presentation :" : "Code secret pour ACTIVER le mode presentation :");
+    if (!secret) return;
+    setLoading(true);
+    setMsg(null);
+    const r = await togglePresentationMode(secret);
+    setLoading(false);
+    if (r.ok) {
+      setMsg(r.presentationMode ? "Mode presentation ACTIVE !" : "Mode presentation DESACTIVE.");
+      onRefresh();
+    } else {
+      setMsg(r.reason || "Erreur.");
+    }
+    setTimeout(() => setMsg(null), 4000);
+  }
+
+  return (
+    <div className={`mt-4 rounded-xl p-4 border ${isActive ? "bg-amber-50 border-amber-300" : "bg-slate-50 border-slate-200"}`}>
+      <h4 className="text-sm font-semibold text-slate-800 mb-2 flex items-center gap-2">
+        <Eye className="w-4 h-4 text-amber-600" />
+        Mode Presentation
+      </h4>
+      <p className="text-xs text-slate-500 mb-3">
+        {isActive
+          ? "ACTIF — Toutes les sections sont visibles pour tout le monde."
+          : "Quand active, toutes les sections du site deviennent visibles pour tous les visiteurs (ideal pour une presentation)."}
+      </p>
+      <button
+        onClick={handleToggle}
+        disabled={loading}
+        className={`text-xs font-semibold px-4 py-2 rounded-lg transition ${
+          isActive
+            ? "bg-red-500 hover:bg-red-600 text-white"
+            : "bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white"
+        }`}
+      >
+        {loading ? "..." : isActive ? "Desactiver le mode presentation" : "Activer le mode presentation"}
+      </button>
+      {msg && <p className={`text-xs font-semibold mt-2 ${isActive ? "text-amber-700" : "text-emerald-600"}`}>{msg}</p>}
     </div>
   );
 }
