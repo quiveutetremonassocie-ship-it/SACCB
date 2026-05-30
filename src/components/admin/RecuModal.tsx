@@ -1,7 +1,7 @@
 "use client";
 
 import { Printer, X } from "lucide-react";
-import { DB, Membre, PRIX } from "@/lib/types";
+import { DB, Membre, getEffectivePrix } from "@/lib/types";
 
 export default function RecuModal({
   membre,
@@ -12,7 +12,8 @@ export default function RecuModal({
   db: DB;
   onClose: () => void;
 }) {
-  const montant = membre.type === "Etudiant" ? PRIX.Etudiant : PRIX.Adulte;
+  const effectivePrix = getEffectivePrix(db);
+  const montant = membre.type === "Etudiant" ? effectivePrix.Etudiant : effectivePrix.Adulte;
   const date = new Date().toLocaleDateString("fr-FR");
 
   return (

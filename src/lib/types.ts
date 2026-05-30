@@ -201,6 +201,28 @@ export type DB = {
   presentationModeRemoved?: boolean;
   // 📝 Bloc-notes partagé entre admins
   adminNotes?: AdminNote[];
+  // ⚙️ Configuration dynamique du club (modifiable dans l'admin)
+  clubConfig?: ClubConfig;
+};
+
+export type ScheduleSlot = {
+  jour: string;  // ex: "Lundi", "Jeudi", "Samedi"
+  heure: string; // ex: "18h30 → Fermeture"
+};
+
+export type ClubConfig = {
+  prixAdulte?: number;      // default 50
+  prixEtudiant?: number;    // default 30
+  horaires?: ScheduleSlot[];// default: Lundi/Jeudi/Samedi
+  salleName?: string;       // default "Salle Paul Vatine"
+  salleAdresse?: string;    // default "30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse"
+  foundedYear?: number;     // default 2022
+  helloassoUrls?: {
+    page?: string;     // page principale de l'asso sur HelloAsso
+    mixte?: string;
+    adulte?: string;
+    etudiant?: string;
+  };
 };
 
 export type AdminNote = {
@@ -262,6 +284,38 @@ export type EmailLog = {
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
 export const QUOTA_DEFAULT = 65;
+
+// Retourne les prix effectifs (DB ou défaut)
+export function getEffectivePrix(db: DB): { Adulte: number; Etudiant: number } {
+  return {
+    Adulte: db.clubConfig?.prixAdulte ?? PRIX.Adulte,
+    Etudiant: db.clubConfig?.prixEtudiant ?? PRIX.Etudiant,
+  };
+}
+
+// Retourne les horaires effectifs (DB ou défaut)
+export const DEFAULT_HORAIRES: ScheduleSlot[] = [
+  { jour: "Lundi", heure: "18h30 → Fermeture" },
+  { jour: "Jeudi", heure: "18h30 → Fermeture" },
+  { jour: "Samedi", heure: "17h30 → Fermeture" },
+];
+
+export function getEffectiveHoraires(db: DB): ScheduleSlot[] {
+  const h = db.clubConfig?.horaires;
+  return h && h.length > 0 ? h : DEFAULT_HORAIRES;
+}
+
+export function getEffectiveConfig(db: DB) {
+  return {
+    prix: getEffectivePrix(db),
+    horaires: getEffectiveHoraires(db),
+    creneauxCount: (db.clubConfig?.horaires?.length ?? DEFAULT_HORAIRES.length),
+    salleName: db.clubConfig?.salleName || "Salle Paul Vatine",
+    salleAdresse: db.clubConfig?.salleAdresse || "30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse",
+    foundedYear: db.clubConfig?.foundedYear ?? 2022,
+    helloassoUrls: db.clubConfig?.helloassoUrls ?? {},
+  };
+}
 
 export const ADMIN_SECTIONS = [
   { key: "membres",      label: "Membres",             emoji: "👥" },

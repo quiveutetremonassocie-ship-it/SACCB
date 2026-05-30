@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send } from "lucide-react";
-import { DB, Membre, PRIX } from "@/lib/types";
+import { DB, Membre, getEffectivePrix } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
 import Accounting from "./Accounting";
@@ -102,7 +102,8 @@ export default function AdminPanel({
       ePayes = 0,
       eTotal = 0;
     db.membres.forEach((m) => {
-      const prix = m.type === "Etudiant" ? PRIX.Etudiant : PRIX.Adulte;
+      const effectivePrix = getEffectivePrix(db);
+      const prix = m.type === "Etudiant" ? effectivePrix.Etudiant : effectivePrix.Adulte;
       if (m.type === "Adulte") aTotal++;
       else eTotal++;
       if (m.ok) {
@@ -381,7 +382,7 @@ export default function AdminPanel({
             <PresentationModeButton isActive={db.presentationMode === true} onRefresh={onRefresh} hidden={db.presentationModeRemoved === true} />
           </div>
 
-          <HelloAssoQR />
+          <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
 
           {/* Bloc-notes partagé */}
           <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
@@ -543,10 +544,11 @@ function QuickNav({
   );
 }
 
-const HELLOASSO_URL =
+const DEFAULT_HELLOASSO_URL =
   "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte";
 
-function HelloAssoQR() {
+function HelloAssoQR({ helloassoPageUrl }: { helloassoPageUrl?: string }) {
+  const HELLOASSO_URL = helloassoPageUrl || DEFAULT_HELLOASSO_URL;
   const linkRef = useRef<HTMLAnchorElement>(null);
 
   function downloadQR() {

@@ -877,6 +877,7 @@ Deno.serve(async (req) => {
       bureauMembers: d.bureauMembers ?? [],
       presentationMode: d.presentationMode === true,
       sectionsVisible: d.sectionsVisible ?? {},
+      clubConfig: d.clubConfig ?? {},
     });
   }
 

@@ -43,6 +43,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     bureauMembers: d.bureauMembers ?? [],
     presentationMode: d.presentationMode === true,
     sectionsVisible: d.sectionsVisible ?? {},
+    clubConfig: d.clubConfig ?? undefined,
   };
 }
 

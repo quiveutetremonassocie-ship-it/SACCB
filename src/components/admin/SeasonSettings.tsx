@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock, ListChecks } from "lucide-react";
-import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS } from "@/lib/types";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock, ListChecks, Building2, ChevronDown } from "lucide-react";
+import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS, ClubConfig, ScheduleSlot, DEFAULT_HORAIRES } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
 import ArchiveEditModal from "./ArchiveEditModal";
 
@@ -344,6 +344,9 @@ export default function SeasonSettings({
           </div>
         </label>
       </div>
+
+      {/* ⚙️ Configuration du club */}
+      <ClubConfigSection db={db} onPersist={onPersist} readOnly={readOnly} />
 
       {/* 👁️ Toggles de visibilité des sections du site public */}
       <SectionVisibilityToggles db={db} onPersist={onPersist} readOnly={readOnly} />
@@ -976,6 +979,262 @@ function SectionVisibilityToggles({
           );
         })}
       </div>
+    </div>
+  );
+}
+
+// ⚙️ Configuration du club (prix, horaires, salle, etc.)
+function ClubConfigSection({
+  db,
+  onPersist,
+  readOnly,
+}: {
+  db: DB;
+  onPersist: (db: DB) => Promise<void>;
+  readOnly?: boolean;
+}) {
+  const config = db.clubConfig ?? {};
+  const [prixAdulte, setPrixAdulte] = useState(config.prixAdulte ?? 50);
+  const [prixEtudiant, setPrixEtudiant] = useState(config.prixEtudiant ?? 30);
+  const [salleName, setSalleName] = useState(config.salleName ?? "Salle Paul Vatine");
+  const [salleAdresse, setSalleAdresse] = useState(config.salleAdresse ?? "30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse");
+  const [foundedYear, setFoundedYear] = useState(config.foundedYear ?? 2022);
+  const [horaires, setHoraires] = useState<ScheduleSlot[]>(
+    config.horaires && config.horaires.length > 0 ? config.horaires : DEFAULT_HORAIRES
+  );
+  const [helloassoPage, setHelloassoPage] = useState(config.helloassoUrls?.page ?? "");
+  const [helloassoMixte, setHelloassoMixte] = useState(config.helloassoUrls?.mixte ?? "");
+  const [helloassoAdulte, setHelloassoAdulte] = useState(config.helloassoUrls?.adulte ?? "");
+  const [helloassoEtudiant, setHelloassoEtudiant] = useState(config.helloassoUrls?.etudiant ?? "");
+  const [expanded, setExpanded] = useState(false);
+
+  function updateSlot(idx: number, field: "jour" | "heure", value: string) {
+    setHoraires((prev) => prev.map((s, i) => (i === idx ? { ...s, [field]: value } : s)));
+  }
+
+  function addSlot() {
+    setHoraires((prev) => [...prev, { jour: "", heure: "" }]);
+  }
+
+  function removeSlot(idx: number) {
+    setHoraires((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function save() {
+    const newConfig: ClubConfig = {
+      prixAdulte,
+      prixEtudiant,
+      salleName: salleName.trim() || undefined,
+      salleAdresse: salleAdresse.trim() || undefined,
+      foundedYear,
+      horaires: horaires.filter((s) => s.jour.trim() && s.heure.trim()),
+      helloassoUrls:
+        helloassoPage.trim() || helloassoMixte.trim() || helloassoAdulte.trim() || helloassoEtudiant.trim()
+          ? {
+              page: helloassoPage.trim() || undefined,
+              mixte: helloassoMixte.trim() || undefined,
+              adulte: helloassoAdulte.trim() || undefined,
+              etudiant: helloassoEtudiant.trim() || undefined,
+            }
+          : undefined,
+    };
+    await onPersist({ ...db, clubConfig: newConfig });
+    alert("Configuration du club mise a jour !");
+  }
+
+  return (
+    <div className="mb-4 mt-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
+      <button
+        onClick={() => setExpanded(!expanded)}
+        className="w-full flex items-center justify-between"
+      >
+        <p className="text-xs uppercase tracking-widest text-blue-700 font-semibold flex items-center gap-1">
+          <Building2 className="w-3 h-3" /> Configuration du club
+        </p>
+        <ChevronDown className={`w-4 h-4 text-blue-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
+      </button>
+
+      {expanded && (
+        <div className="mt-3 space-y-4">
+          {/* Prix */}
+          <div>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest mb-2">Tarifs</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Adulte</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    className="input flex-1"
+                    value={prixAdulte}
+                    min={0}
+                    onChange={(e) => setPrixAdulte(Number(e.target.value))}
+                    disabled={readOnly}
+                  />
+                  <span className="text-slate-400 text-sm">&euro;</span>
+                </div>
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-1 block">Etudiant</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    className="input flex-1"
+                    value={prixEtudiant}
+                    min={0}
+                    onChange={(e) => setPrixEtudiant(Number(e.target.value))}
+                    disabled={readOnly}
+                  />
+                  <span className="text-slate-400 text-sm">&euro;</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Horaires */}
+          <div>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest mb-2">
+              Horaires d&apos;entrainement ({horaires.length} {horaires.length > 1 ? "créneaux" : "créneau"})
+            </p>
+            <div className="space-y-2">
+              {horaires.map((slot, idx) => (
+                <div key={idx} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    className="input flex-1"
+                    placeholder="Jour (ex: Lundi)"
+                    value={slot.jour}
+                    onChange={(e) => updateSlot(idx, "jour", e.target.value)}
+                    disabled={readOnly}
+                  />
+                  <input
+                    type="text"
+                    className="input flex-1"
+                    placeholder="Horaire (ex: 18h30 → 22h)"
+                    value={slot.heure}
+                    onChange={(e) => updateSlot(idx, "heure", e.target.value)}
+                    disabled={readOnly}
+                  />
+                  {!readOnly && horaires.length > 1 && (
+                    <button
+                      onClick={() => removeSlot(idx)}
+                      className="text-red-400 hover:text-red-600 transition shrink-0"
+                      title="Supprimer ce créneau"
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            {!readOnly && (
+              <button
+                onClick={addSlot}
+                className="mt-2 text-xs text-blue-600 hover:text-blue-800 flex items-center gap-1 transition"
+              >
+                <Plus className="w-3 h-3" /> Ajouter un créneau
+              </button>
+            )}
+            <p className="text-xs text-slate-400 mt-1">Le nombre de créneaux s&apos;affiche automatiquement sur le site.</p>
+          </div>
+
+          {/* Salle */}
+          <div>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest mb-2">Lieu d&apos;entrainement</p>
+            <input
+              type="text"
+              className="input w-full mb-2"
+              placeholder="Nom de la salle"
+              value={salleName}
+              onChange={(e) => setSalleName(e.target.value)}
+              disabled={readOnly}
+            />
+            <input
+              type="text"
+              className="input w-full"
+              placeholder="Adresse complète"
+              value={salleAdresse}
+              onChange={(e) => setSalleAdresse(e.target.value)}
+              disabled={readOnly}
+            />
+          </div>
+
+          {/* Année de fondation */}
+          <div>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest mb-2">Année de fondation</p>
+            <input
+              type="number"
+              className="input w-32"
+              value={foundedYear}
+              min={2000}
+              max={2099}
+              onChange={(e) => setFoundedYear(Number(e.target.value))}
+              disabled={readOnly}
+            />
+            <p className="text-xs text-slate-400 mt-1">Sert a calculer le nombre d&apos;années d&apos;existence affiche sur le site.</p>
+          </div>
+
+          {/* Liens HelloAsso */}
+          <div>
+            <p className="text-xs font-semibold text-slate-600 uppercase tracking-widest mb-2">Liens HelloAsso (optionnel)</p>
+            <p className="text-xs text-slate-400 mb-2">
+              Laissez vide pour utiliser les liens par défaut. Modifiez si vous créez de nouveaux événements HelloAsso.
+            </p>
+            <div className="space-y-2">
+              <div>
+                <label className="text-xs text-slate-500 mb-0.5 block">Page principale de l&apos;asso</label>
+                <input
+                  type="url"
+                  className="input w-full !text-xs"
+                  placeholder="https://www.helloasso.com/associations/..."
+                  value={helloassoPage}
+                  onChange={(e) => setHelloassoPage(e.target.value)}
+                  disabled={readOnly}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-0.5 block">Mixte (adulte + étudiant)</label>
+                <input
+                  type="url"
+                  className="input w-full !text-xs"
+                  placeholder="https://www.helloasso.com/..."
+                  value={helloassoMixte}
+                  onChange={(e) => setHelloassoMixte(e.target.value)}
+                  disabled={readOnly}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-0.5 block">Adulte seul</label>
+                <input
+                  type="url"
+                  className="input w-full !text-xs"
+                  placeholder="https://www.helloasso.com/..."
+                  value={helloassoAdulte}
+                  onChange={(e) => setHelloassoAdulte(e.target.value)}
+                  disabled={readOnly}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-0.5 block">Étudiant seul</label>
+                <input
+                  type="url"
+                  className="input w-full !text-xs"
+                  placeholder="https://www.helloasso.com/..."
+                  value={helloassoEtudiant}
+                  onChange={(e) => setHelloassoEtudiant(e.target.value)}
+                  disabled={readOnly}
+                />
+              </div>
+            </div>
+          </div>
+
+          {!readOnly && (
+            <button onClick={save} className="btn-accent w-full">
+              <Check className="w-4 h-4" /> Enregistrer la configuration
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

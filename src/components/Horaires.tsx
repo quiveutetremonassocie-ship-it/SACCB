@@ -3,8 +3,29 @@
 import { motion } from "framer-motion";
 import { Clock, Wallet, MapPin } from "lucide-react";
 import Shuttlecock from "./Shuttlecock";
+import { ScheduleSlot } from "@/lib/types";
 
-export default function Horaires() {
+export default function Horaires({
+  horaires,
+  prixAdulte = 50,
+  prixEtudiant = 30,
+  salleName = "Salle Paul Vatine",
+  salleAdresse = "30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse",
+}: {
+  horaires?: ScheduleSlot[];
+  prixAdulte?: number;
+  prixEtudiant?: number;
+  salleName?: string;
+  salleAdresse?: string;
+}) {
+  const slots = horaires && horaires.length > 0
+    ? horaires
+    : [
+        { jour: "Lundi", heure: "18h30 → Fermeture" },
+        { jour: "Jeudi", heure: "18h30 → Fermeture" },
+        { jour: "Samedi", heure: "17h30 → Fermeture" },
+      ];
+
   return (
     <section id="horaires" className="bg-section-wrap bg-schedule relative">
       <div className="section-pad relative">
@@ -21,7 +42,7 @@ export default function Horaires() {
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Horaires & Tarifs</h2>
           <p className="text-slate-500 max-w-xl mx-auto">
-            Trois créneaux par semaine, pour tous les niveaux.
+            {slots.length} {slots.length > 1 ? "créneaux" : "créneau"} par semaine, pour tous les niveaux.
           </p>
         </motion.div>
 
@@ -32,9 +53,9 @@ export default function Horaires() {
             accent="from-blue-500 to-cyan-500"
           >
             <div className="space-y-3">
-              <ScheduleRow days="Lundi" time="18h30 → Fermeture" />
-              <ScheduleRow days="Jeudi" time="18h30 → Fermeture" />
-              <ScheduleRow days="Samedi" time="17h30 → Fermeture" />
+              {slots.map((s, i) => (
+                <ScheduleRow key={i} days={s.jour} time={s.heure} />
+              ))}
             </div>
           </Card>
 
@@ -43,8 +64,8 @@ export default function Horaires() {
             title="Tarifs annuels"
             accent="from-emerald-500 to-teal-500"
           >
-            <PriceRow label="Adulte" price="50" />
-            <PriceRow label="Étudiant" price="30" last />
+            <PriceRow label="Adulte" price={String(prixAdulte)} />
+            <PriceRow label="Étudiant" price={String(prixEtudiant)} last />
           </Card>
         </div>
 
@@ -53,10 +74,8 @@ export default function Horaires() {
           title="Où nous trouver"
           accent="from-purple-500 to-pink-500"
         >
-          <p className="text-slate-800 text-lg font-semibold">Salle Paul Vatine</p>
-          <p className="text-slate-400 text-sm mt-1">
-            30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse
-          </p>
+          <p className="text-slate-800 text-lg font-semibold">{salleName}</p>
+          <p className="text-slate-400 text-sm mt-1">{salleAdresse}</p>
         </Card>
       </div>
     </section>
@@ -94,7 +113,7 @@ function PriceRow({ label, price, last }: { label: string; price: string; last?:
         <span className="font-display text-4xl text-transparent bg-clip-text bg-gradient-to-b from-[#1e3a5f] to-[#2d5a8e]">
           {price}
         </span>
-        <span className="text-lg text-slate-400">€</span>
+        <span className="text-lg text-slate-400">&euro;</span>
       </div>
     </div>
   );

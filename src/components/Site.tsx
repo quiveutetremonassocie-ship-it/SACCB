@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { DB, PRIX, QUOTA_DEFAULT } from "@/lib/types";
+import { DB, QUOTA_DEFAULT, getEffectiveConfig } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
@@ -337,6 +337,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             isMember={!!memberSession}
             engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
             membresCount={membresCount}
+            creneauxCount={getEffectiveConfig(db).creneauxCount}
+            foundedYear={getEffectiveConfig(db).foundedYear}
             nextTournoi={(() => {
               const MOIS: Record<string, string> = {
                 janvier:"01",fevrier:"02",mars:"03",avril:"04",mai:"05",juin:"06",
@@ -402,7 +404,15 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           </FadeInSection>
         )}
         {mode === "full" && (db.presentationMode || db.sectionsVisible?.horaires !== false) && (
-          <FadeInSection><Horaires /></FadeInSection>
+          <FadeInSection>
+            <Horaires
+              horaires={getEffectiveConfig(db).horaires}
+              prixAdulte={getEffectiveConfig(db).prix.Adulte}
+              prixEtudiant={getEffectiveConfig(db).prix.Etudiant}
+              salleName={getEffectiveConfig(db).salleName}
+              salleAdresse={getEffectiveConfig(db).salleAdresse}
+            />
+          </FadeInSection>
         )}
 
         {/* Vague de transition avant Tournois */}
@@ -441,7 +451,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               db={db}
               membresCount={membresCount}
               quota={db.quota ?? QUOTA_DEFAULT}
-              prix={PRIX}
+              prix={getEffectiveConfig(db).prix}
               onMembreAdded={db.presentationMode ? () => {} : () => setMembresCount((n) => n + 1)}
             />
           </FadeInSection>
@@ -487,6 +497,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           onBack={onMemberPanelBack}
           autoOpenProcuration={autoOpenProcuration}
           onProcurationOpened={() => setAutoOpenProcuration(false)}
+          helloassoUrls={db.clubConfig?.helloassoUrls}
         />
       )}
       {/* Panneau démo en mode présentation */}

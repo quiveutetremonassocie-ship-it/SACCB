@@ -21,6 +21,7 @@ export default function MemberPanel({
   onBack,
   autoOpenProcuration = false,
   onProcurationOpened,
+  helloassoUrls,
 }: {
   session: MemberSession;
   y1: number;
@@ -34,6 +35,7 @@ export default function MemberPanel({
   onBack?: () => void;
   autoOpenProcuration?: boolean;
   onProcurationOpened?: () => void;
+  helloassoUrls?: { mixte?: string; adulte?: string; etudiant?: string };
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
@@ -316,8 +318,8 @@ export default function MemberPanel({
             <div className="space-y-2">
               <a
                 href={session.type === "Etudiant"
-                  ? "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-etudiant"
-                  : "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte-1"}
+                  ? (helloassoUrls?.etudiant || "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-etudiant")
+                  : (helloassoUrls?.adulte || "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte-1")}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center justify-center gap-2 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-4 py-2.5 rounded-xl transition text-sm w-full shadow-sm"

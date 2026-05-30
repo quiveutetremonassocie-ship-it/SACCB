@@ -13,18 +13,26 @@ import { publicAddMembre, publicMarkPaid } from "@/lib/db";
 //  - tarif-etudiant  = ÉTUDIANT seul
 const HELLOASSO_BASE = "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements";
 const HELLOASSO_BACK = encodeURIComponent("https://saccb.fr/?payment=success");
-const HELLOASSO_URLS = {
+const DEFAULT_HELLOASSO_URLS = {
   mixte: `${HELLOASSO_BASE}/tarif-adulte?backUrl=${HELLOASSO_BACK}`,
   adulte: `${HELLOASSO_BASE}/tarif-adulte-1?backUrl=${HELLOASSO_BACK}`,
   etudiant: `${HELLOASSO_BASE}/tarif-etudiant?backUrl=${HELLOASSO_BACK}`,
 } as const;
 
-function pickHelloAssoUrl(personnes: { type: "Adulte" | "Etudiant" }[]): string {
+function pickHelloAssoUrl(
+  personnes: { type: "Adulte" | "Etudiant" }[],
+  customUrls?: { mixte?: string; adulte?: string; etudiant?: string },
+): string {
+  const urls = {
+    mixte: customUrls?.mixte || DEFAULT_HELLOASSO_URLS.mixte,
+    adulte: customUrls?.adulte || DEFAULT_HELLOASSO_URLS.adulte,
+    etudiant: customUrls?.etudiant || DEFAULT_HELLOASSO_URLS.etudiant,
+  };
   const hasAdulte = personnes.some((p) => p.type === "Adulte");
   const hasEtudiant = personnes.some((p) => p.type === "Etudiant");
-  if (hasAdulte && hasEtudiant) return HELLOASSO_URLS.mixte;
-  if (hasEtudiant) return HELLOASSO_URLS.etudiant;
-  return HELLOASSO_URLS.adulte; // adulte seul (ou fallback)
+  if (hasAdulte && hasEtudiant) return urls.mixte;
+  if (hasEtudiant) return urls.etudiant;
+  return urls.adulte; // adulte seul (ou fallback)
 }
 
 type PaymentMode = "online" | "virement";
@@ -256,7 +264,7 @@ export default function Inscription({
       const ids = results.map(r => r.membreId || "").filter(Boolean);
       localStorage.setItem("saccb_pending_membre_ids", JSON.stringify(ids));
       localStorage.setItem("saccb_pending_personnes", JSON.stringify(personnes));
-      window.location.href = pickHelloAssoUrl(personnes);
+      window.location.href = pickHelloAssoUrl(personnes, db.clubConfig?.helloassoUrls);
       return;
     }
 
