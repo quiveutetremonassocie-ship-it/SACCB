@@ -876,6 +876,7 @@ Deno.serve(async (req) => {
       clubRulesPdfName: d.clubRulesPdfName ?? null,
       bureauMembers: d.bureauMembers ?? [],
       presentationMode: d.presentationMode === true,
+      maintenanceMode: d.maintenanceMode === true,
       sectionsVisible: d.sectionsVisible ?? {},
       clubConfig: d.clubConfig ?? {},
     });

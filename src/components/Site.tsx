@@ -286,6 +286,59 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   // En mode présentation, on utilise la fausse session pour l'affichage
   const displaySession = db.presentationMode ? presentationSession : memberSession;
 
+  // 🔧 Mode maintenance : page bloquante pour les visiteurs (admin reste accessible)
+  if (db.maintenanceMode && !adminOpen) {
+    return (
+      <>
+        <Navbar
+          onMember={() => {}}
+          isMember={false}
+          isAdmin={isMemberAdmin}
+          onAdmin={onReopenAdmin}
+          onAdminLogin={() => setLoginOpen(true)}
+        />
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#1e3a5f] to-slate-900 text-white px-6 relative overflow-hidden">
+          {/* Fond décoratif */}
+          <div className="absolute inset-0 opacity-10">
+            <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full blur-[120px]" />
+            <div className="absolute bottom-1/4 right-1/4 w-80 h-80 bg-emerald-500 rounded-full blur-[100px]" />
+          </div>
+          <div className="relative text-center max-w-lg z-10">
+            <div className="text-6xl mb-6">🔧</div>
+            <h1 className="font-display text-4xl md:text-5xl tracking-wider mb-4">
+              Maintenance en cours
+            </h1>
+            <p className="text-slate-300 text-lg mb-2">
+              Le site est temporairement indisponible pour maintenance.
+            </p>
+            <p className="text-slate-400 text-sm">
+              Nous serons de retour très bientôt. Merci de votre patience !
+            </p>
+            <div className="mt-8 flex items-center justify-center gap-2 text-slate-500 text-xs">
+              <div className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+              Travaux en cours...
+            </div>
+          </div>
+        </div>
+        {/* Modales admin toujours accessibles */}
+        <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
+        <MemberLoginModal open={memberLoginOpen} onClose={() => setMemberLoginOpen(false)} onSuccess={onMemberLoginSuccess} />
+        {adminOpen && (
+          <AdminPanel
+            db={db}
+            onClose={onCloseAdmin}
+            onPersist={persist}
+            onRefresh={refreshAdmin}
+            adminEmail={isMemberAdmin ? memberSession?.email : supabaseAdminEmail}
+            adminCode={isMemberAdmin ? (memberAdminCode.current ?? undefined) : undefined}
+            readOnly={isMemberAdmin ? isReadOnlyAdmin : false}
+            permissions={isMemberAdmin ? adminPermissions : undefined}
+          />
+        )}
+      </>
+    );
+  }
+
   return (
     <>
       {/* Bandeau mode présentation */}

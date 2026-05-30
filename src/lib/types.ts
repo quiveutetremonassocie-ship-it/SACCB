@@ -199,6 +199,8 @@ export type DB = {
   // 🎤 Mode présentation : toutes les sections visibles pour tout le monde
   presentationMode?: boolean;
   presentationModeRemoved?: boolean;
+  // 🔧 Mode maintenance : bloque l'accès au site public
+  maintenanceMode?: boolean;
   // 📝 Bloc-notes partagé entre admins
   adminNotes?: AdminNote[];
   // ⚙️ Configuration dynamique du club (modifiable dans l'admin)

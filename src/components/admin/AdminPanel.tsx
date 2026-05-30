@@ -286,6 +286,30 @@ export default function AdminPanel({
           </div>
         )}
 
+        {/* 🔧 Bandeau mode maintenance */}
+        {db.maintenanceMode && (
+          <div className="mb-4 bg-red-50 border-2 border-red-400 rounded-xl px-4 py-3 flex items-center justify-between gap-3 animate-pulse-slow">
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🔧</span>
+              <div>
+                <p className="text-sm text-red-700 font-bold uppercase tracking-wide">Site en maintenance</p>
+                <p className="text-xs text-red-600">Les visiteurs ne peuvent pas acceder au site. Pensez a desactiver le mode maintenance quand vous avez termine.</p>
+              </div>
+            </div>
+            {!readOnly && (
+              <button
+                onClick={async () => {
+                  if (!confirm("Désactiver le mode maintenance et rendre le site accessible ?")) return;
+                  await safePersist({ ...db, maintenanceMode: false });
+                }}
+                className="shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+              >
+                Desactiver
+              </button>
+            )}
+          </div>
+        )}
+
         {/* 🕐 Indicateur d'expiration de session */}
         <SessionExpiry />
 
@@ -380,6 +404,33 @@ export default function AdminPanel({
             {/* Backup par email */}
             <BackupEmailSection db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />
             <PresentationModeButton isActive={db.presentationMode === true} onRefresh={onRefresh} hidden={db.presentationModeRemoved === true} />
+            {/* 🔧 Mode maintenance */}
+            {!readOnly && (
+              <div className={`mt-3 p-3 rounded-xl border ${db.maintenanceMode ? "bg-red-50 border-red-300" : "bg-slate-50 border-slate-200"}`}>
+                <div className="flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-2 min-w-0">
+                    <span className="text-lg">🔧</span>
+                    <div className="min-w-0">
+                      <p className="text-sm font-semibold text-slate-700">Mode maintenance</p>
+                      <p className="text-xs text-slate-500">Bloque l&apos;acces au site pour les visiteurs</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={async () => {
+                      const newVal = !db.maintenanceMode;
+                      const msg = newVal
+                        ? "Activer le mode maintenance ?\n\nLe site sera inaccessible pour tous les visiteurs."
+                        : "Désactiver le mode maintenance ?\n\nLe site redeviendra accessible.";
+                      if (!confirm(msg)) return;
+                      await safePersist({ ...db, maintenanceMode: newVal });
+                    }}
+                    className={`shrink-0 relative inline-block w-12 h-6 rounded-full transition-colors ${db.maintenanceMode ? "bg-red-500" : "bg-slate-300"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${db.maintenanceMode ? "translate-x-6" : ""}`} />
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
           <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
