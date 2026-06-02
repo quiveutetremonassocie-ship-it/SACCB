@@ -9,9 +9,12 @@ import {
   ArrowUp,
   ArrowDown,
   Eye,
+  EyeOff,
   X,
   Lock,
   Globe,
+  ChevronDown,
+  ChevronUp,
 } from "lucide-react";
 import { DB, Actualite, ActualiteImage, actualiteImages } from "@/lib/types";
 import { supabaseClient, ACTU_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
@@ -35,8 +38,17 @@ export default function ActualitesAdmin({
   const [isPrivate, setIsPrivate] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
-  const [showPreview, setShowPreview] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
+  const [expandedActu, setExpandedActu] = useState<Set<string>>(new Set());
   const fileInput = useRef<HTMLInputElement>(null);
+
+  function toggleExpanded(id: string) {
+    setExpandedActu((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  }
 
   const list = db.actualites || [];
 
@@ -241,13 +253,38 @@ export default function ActualitesAdmin({
             <Newspaper className="w-5 h-5 text-white" />
           </div>
           <h3 className="font-display text-2xl tracking-wider text-slate-800">Actualités</h3>
+          <span className="text-xs text-slate-400 font-medium">{list.length}</span>
         </div>
-        <button
-          onClick={() => setShowPreview((s) => !s)}
-          className="btn-primary !bg-gradient-to-r !from-slate-600 !to-slate-700 !px-4 !py-2 !text-xs"
-        >
-          <Eye className="w-4 h-4" /> {showPreview ? "Masquer" : "Afficher"} l'aperçu
-        </button>
+        <div className="flex gap-2">
+          {list.length > 0 && (
+            <button
+              onClick={() => {
+                if (expandedActu.size === list.length) setExpandedActu(new Set());
+                else setExpandedActu(new Set(list.map((a) => a.id)));
+              }}
+              className="btn-ghost !px-3 !py-1.5 !text-xs"
+            >
+              {expandedActu.size === list.length ? (
+                <><ChevronUp className="w-3.5 h-3.5" /> Tout replier</>
+              ) : (
+                <><ChevronDown className="w-3.5 h-3.5" /> Tout déplier</>
+              )}
+            </button>
+          )}
+          {list.length > 0 && (
+            <button
+              onClick={() => setShowPreview((s) => !s)}
+              className={`!px-3 !py-1.5 !text-xs rounded-lg border font-semibold flex items-center gap-1.5 transition ${
+                showPreview
+                  ? "bg-amber-50 border-amber-300 text-amber-700"
+                  : "bg-slate-50 border-slate-200 text-slate-500 hover:border-slate-400"
+              }`}
+            >
+              {showPreview ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              Aperçu
+            </button>
+          )}
+        </div>
       </div>
 
       {/* AJOUT */}
@@ -329,63 +366,75 @@ export default function ActualitesAdmin({
         </div>
       </div>}
 
-      {/* LISTE */}
-      <div className="space-y-4 mb-5">
+      {/* LISTE (dépliable) */}
+      <div className="space-y-2 mb-5">
         {list.length === 0 && (
           <p className="text-center text-slate-400 py-6 text-sm">Aucune actualité pour le moment</p>
         )}
         {list.map((a, i) => {
           const imgs = actualiteImages(a);
+          const isOpen = expandedActu.has(a.id);
           return (
-            <div key={a.id} className="bg-slate-50 rounded-2xl p-4 border border-slate-200">
-              <div className="flex gap-4 mb-3">
-                <div className="relative w-32 h-32 shrink-0 rounded-xl overflow-hidden bg-slate-200">
+            <div key={a.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+              {/* En-tête cliquable (toujours visible) */}
+              <button
+                onClick={() => toggleExpanded(a.id)}
+                className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 transition text-left"
+              >
+                <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-slate-200">
                   {imgs[0] && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={imgs[0].url}
-                      alt={a.title}
-                      className="w-full h-full object-cover"
-                    />
-                  )}
-                  {imgs.length > 1 && (
-                    <div className="absolute bottom-1 right-1 px-2 py-0.5 rounded-full bg-black/70 text-[10px] text-white font-semibold">
-                      +{imgs.length - 1}
-                    </div>
+                    <img src={imgs[0].url} alt="" className="w-full h-full object-cover" />
                   )}
                 </div>
-                <div className="flex-1 min-w-0 space-y-2">
-                  <input
-                    className="input w-full !text-sm"
-                    value={a.title}
-                    onChange={(e) => updateField(a.id, "title", e.target.value)}
-                  />
-                  <textarea
-                    className="input w-full !text-xs min-h-[60px] resize-y"
-                    value={a.description}
-                    onChange={(e) => updateField(a.id, "description", e.target.value)}
-                  />
-                  <div className="flex items-center gap-2 flex-wrap">
-                    {!readOnly && (
-                      <button
-                        onClick={() => move(a.id, -1)}
-                        disabled={i === 0}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-slate-800 truncate">{a.title}</p>
+                  <p className="text-[10px] text-slate-400 flex items-center gap-2">
+                    {imgs.length} image{imgs.length > 1 ? "s" : ""}
+                    {a.private && <span className="text-purple-500 font-semibold">🔒 Membres</span>}
+                  </p>
+                </div>
+                <div className="flex items-center gap-1.5 shrink-0">
+                  {!readOnly && (
+                    <>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); move(a.id, -1); }}
+                        className={`p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition ${i === 0 ? "opacity-30 pointer-events-none" : "cursor-pointer"}`}
                         title="Monter"
                       >
                         <ArrowUp className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                    {!readOnly && (
-                      <button
-                        onClick={() => move(a.id, 1)}
-                        disabled={i === list.length - 1}
-                        className="p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-700 disabled:opacity-30 disabled:cursor-not-allowed"
+                      </span>
+                      <span
+                        onClick={(e) => { e.stopPropagation(); move(a.id, 1); }}
+                        className={`p-1 rounded text-slate-400 hover:text-slate-600 hover:bg-slate-200 transition ${i === list.length - 1 ? "opacity-30 pointer-events-none" : "cursor-pointer"}`}
                         title="Descendre"
                       >
                         <ArrowDown className="w-3.5 h-3.5" />
-                      </button>
-                    )}
+                      </span>
+                    </>
+                  )}
+                  {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
+                </div>
+              </button>
+
+              {/* Contenu déplié */}
+              {isOpen && (
+                <div className="border-t border-slate-200 p-4 space-y-3">
+                  <div className="space-y-2">
+                    <input
+                      className="input w-full !text-sm"
+                      value={a.title}
+                      onChange={(e) => updateField(a.id, "title", e.target.value)}
+                      disabled={readOnly}
+                    />
+                    <textarea
+                      className="input w-full !text-xs min-h-[60px] resize-y"
+                      value={a.description}
+                      onChange={(e) => updateField(a.id, "description", e.target.value)}
+                      disabled={readOnly}
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 flex-wrap">
                     {!readOnly && (
                       <button
                         onClick={() => updatePrivate(a.id, !a.private)}
@@ -409,67 +458,67 @@ export default function ActualitesAdmin({
                       </button>
                     )}
                   </div>
-                </div>
-              </div>
 
-              {/* Galerie d'images */}
-              <div className="border-t border-slate-200 pt-3">
-                <div className="flex items-center justify-between mb-2">
-                  <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
-                    Galerie ({imgs.length})
-                  </p>
-                  {!readOnly && (
-                    <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
-                      <Upload className="w-3 h-3" /> Ajouter des images
-                      <input
-                        type="file"
-                        accept="image/*"
-                        multiple
-                        className="hidden"
-                        onChange={(e) => addImagesTo(a.id, e.target.files)}
-                      />
-                    </label>
-                  )}
-                </div>
-                <div className="flex gap-2 flex-wrap">
-                  {imgs.map((img, idx) => (
-                    <div key={idx} className="relative group">
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img
-                        src={img.url}
-                        alt=""
-                        className={`w-20 h-20 object-cover rounded-lg border-2 ${
-                          idx === 0
-                            ? "border-yellow-400 ring-2 ring-yellow-400/20"
-                            : "border-slate-200"
-                        }`}
-                      />
-                      {idx === 0 && (
-                        <div className="absolute top-0.5 left-0.5 px-1.5 py-0.5 rounded bg-yellow-400 text-black text-[9px] font-bold uppercase">
-                          Principale
-                        </div>
+                  {/* Galerie d'images */}
+                  <div className="border-t border-slate-200 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
+                        Galerie ({imgs.length})
+                      </p>
+                      {!readOnly && (
+                        <label className="inline-flex items-center gap-1 text-xs text-blue-600 hover:text-blue-500 cursor-pointer bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-200">
+                          <Upload className="w-3 h-3" /> Ajouter des images
+                          <input
+                            type="file"
+                            accept="image/*"
+                            multiple
+                            className="hidden"
+                            onChange={(e) => addImagesTo(a.id, e.target.files)}
+                          />
+                        </label>
                       )}
-                      <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1">
-                        {idx !== 0 && (
-                          <button
-                            onClick={() => setMainImage(a.id, idx)}
-                            className="text-[9px] uppercase tracking-wider text-yellow-300 hover:text-yellow-200 font-bold"
-                          >
-                            ★ Définir principale
-                          </button>
-                        )}
-                        <button
-                          onClick={() => removeImage(a.id, idx)}
-                          className="text-red-400 hover:text-red-300"
-                          title="Supprimer"
-                        >
-                          <Trash2 className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
                     </div>
-                  ))}
+                    <div className="flex gap-2 flex-wrap">
+                      {imgs.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          {/* eslint-disable-next-line @next/next/no-img-element */}
+                          <img
+                            src={img.url}
+                            alt=""
+                            className={`w-20 h-20 object-cover rounded-lg border-2 ${
+                              idx === 0
+                                ? "border-yellow-400 ring-2 ring-yellow-400/20"
+                                : "border-slate-200"
+                            }`}
+                          />
+                          {idx === 0 && (
+                            <div className="absolute top-0.5 left-0.5 px-1.5 py-0.5 rounded bg-yellow-400 text-black text-[9px] font-bold uppercase">
+                              Principale
+                            </div>
+                          )}
+                          <div className="absolute inset-0 bg-black/70 rounded-lg opacity-0 group-hover:opacity-100 transition flex flex-col items-center justify-center gap-1">
+                            {idx !== 0 && (
+                              <button
+                                onClick={() => setMainImage(a.id, idx)}
+                                className="text-[9px] uppercase tracking-wider text-yellow-300 hover:text-yellow-200 font-bold"
+                              >
+                                ★ Principale
+                              </button>
+                            )}
+                            <button
+                              onClick={() => removeImage(a.id, idx)}
+                              className="text-red-400 hover:text-red-300"
+                              title="Supprimer"
+                            >
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-              </div>
+              )}
             </div>
           );
         })}
