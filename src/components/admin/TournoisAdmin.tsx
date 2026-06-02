@@ -344,13 +344,19 @@ export default function TournoisAdmin({
 
   // Form pour ajouter un inscrit manuellement à un tournoi existant
   const [addingInscritTo, setAddingInscritTo] = useState<string | null>(null);
-  const [newInscritJoueurs, setNewInscritJoueurs] = useState("");
+  const [newInscritJoueur1, setNewInscritJoueur1] = useState("");
+  const [newInscritJoueur2, setNewInscritJoueur2] = useState("");
   const [newInscritResultat, setNewInscritResultat] = useState("");
+
+  // Liste des noms d'adhérents pour l'autocomplétion
+  const membreNoms = (db.membres ?? []).map((m) => m.nom).filter(Boolean).sort();
 
   async function addInscritManuel(tournoiId: string) {
     if (readOnly) return;
-    const joueurs = newInscritJoueurs.trim();
-    if (!joueurs) { alert("Saisissez le nom des joueurs (ex: 'Marie / Paul')"); return; }
+    const j1 = newInscritJoueur1.trim();
+    const j2 = newInscritJoueur2.trim();
+    if (!j1 || !j2) { alert("Les deux joueurs sont requis."); return; }
+    const joueurs = `${j1} / ${j2}`;
     const newInscrit = {
       id: Date.now().toString(),
       tournoiId,
@@ -362,7 +368,8 @@ export default function TournoisAdmin({
       inscrits_tournoi: [...(db.inscrits_tournoi || []), newInscrit],
     };
     await onPersist(next);
-    setNewInscritJoueurs("");
+    setNewInscritJoueur1("");
+    setNewInscritJoueur2("");
     setNewInscritResultat("");
     setAddingInscritTo(null);
   }
@@ -568,7 +575,7 @@ export default function TournoisAdmin({
                           {/* Bouton ajouter un inscrit manuellement */}
                           {!readOnly && addingInscritTo !== t.id && (
                             <button
-                              onClick={() => { setAddingInscritTo(t.id); setNewInscritJoueurs(""); setNewInscritResultat(""); }}
+                              onClick={() => { setAddingInscritTo(t.id); setNewInscritJoueur1(""); setNewInscritJoueur2(""); setNewInscritResultat(""); }}
                               className="w-full flex items-center justify-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 border border-dashed border-slate-300 hover:border-blue-400 rounded-lg py-1.5 transition mt-1"
                             >
                               <Plus className="w-3 h-3" /> Ajouter un binôme manuellement
@@ -576,13 +583,31 @@ export default function TournoisAdmin({
                           )}
                           {!readOnly && addingInscritTo === t.id && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1.5 mt-1">
-                              <input
-                                className="input !text-xs w-full"
-                                placeholder="Joueurs (ex: Marie / Paul)"
-                                value={newInscritJoueurs}
-                                onChange={(e) => setNewInscritJoueurs(e.target.value)}
-                                autoFocus
-                              />
+                              <div className="grid grid-cols-2 gap-1.5">
+                                <input
+                                  className="input !text-xs w-full"
+                                  placeholder="Joueur 1"
+                                  list="admin-membres-list"
+                                  value={newInscritJoueur1}
+                                  onChange={(e) => setNewInscritJoueur1(e.target.value)}
+                                  autoFocus
+                                  autoComplete="off"
+                                />
+                                <input
+                                  className="input !text-xs w-full"
+                                  placeholder="Joueur 2"
+                                  list="admin-membres-list"
+                                  value={newInscritJoueur2}
+                                  onChange={(e) => setNewInscritJoueur2(e.target.value)}
+                                  autoComplete="off"
+                                />
+                              </div>
+                              <datalist id="admin-membres-list">
+                                {membreNoms.map((nom) => (
+                                  <option key={nom} value={nom} />
+                                ))}
+                              </datalist>
+                              <p className="text-[10px] text-slate-400">Tapez le début du nom pour voir les adhérents.</p>
                               <input
                                 className="input !text-xs w-full"
                                 placeholder="Résultat (optionnel, ex: 3/16)"
