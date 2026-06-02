@@ -104,7 +104,28 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
     setTimeout(() => setPaused(false), 3000);
   }, [n]);
 
-  if (n === 0) return null;
+  if (n === 0) return (
+    <section id="actualites" className="bg-section-wrap bg-news relative">
+      <div className="section-pad relative">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+          className="text-center"
+        >
+          <div className="sport-label mb-5">
+            <span className="sport-label-dot" />
+            <span className="sport-label-text text-amber-600">En ce moment</span>
+          </div>
+          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Actualités</h2>
+          <p className="text-slate-500 max-w-xl mx-auto">
+            Aucune actualité pour le moment. Revenez bientôt !
+          </p>
+        </motion.div>
+      </div>
+    </section>
+  );
 
   const current = actualites[index];
   const currentMain = actualiteImages(current)[0];

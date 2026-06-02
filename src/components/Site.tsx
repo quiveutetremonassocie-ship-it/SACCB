@@ -433,9 +433,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <FadeInSection><Presentation /></FadeInSection>
         )}
 
-        {(mode === "full" || mode === "actualites") && (db.presentationMode || db.sectionsVisible?.actualites !== false) && (
+        {(mode === "actualites" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.actualites !== false))) && (
           <FadeInSection>
-            <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={memberSession} />
+            <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={displaySession} />
           </FadeInSection>
         )}
 
@@ -481,7 +481,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {/* Vague de transition avant Tournois */}
         {mode === "full" && <WaveDivider variant="wave2" fillColor="#f0fdf4" />}
 
-        {(mode === "full" || mode === "tournois") && (db.presentationMode || db.sectionsVisible?.tournois !== false) && (
+        {(mode === "tournois" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.tournois !== false))) && (
           <FadeInSection>
             <Tournois
               db={db}
@@ -508,7 +508,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {mode === "full" && <WaveDivider variant="wave3" fillColor="#eff6ff" />}
 
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
-        {(mode === "full" || mode === "inscription") && (!memberSession || db.presentationMode) && (db.presentationMode || db.sectionsVisible?.inscription !== false) && (
+        {(mode === "inscription" || (mode === "full" && (!memberSession || db.presentationMode) && (db.presentationMode || db.sectionsVisible?.inscription !== false))) && (
           <FadeInSection>
             <Inscription
               db={db}
