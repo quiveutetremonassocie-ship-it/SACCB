@@ -325,7 +325,7 @@ export default function EmailingAdmin({
               label="Rappel paiement"
               onClick={() => {
                 setSubject("Rappel — Adhesion SACCB a renouveler");
-                setBody("Bonjour,\n\nNous vous rappelons que votre adhesion pour la saison en cours n'a pas encore ete reglee.\n\nPour finaliser votre inscription, rendez-vous sur votre espace membre : https://saccb.fr/?member=1\n\nVous pouvez payer en ligne via HelloAsso ou par virement en contactant Hernan.\n\nN'hesitez pas a nous contacter si vous avez des questions.\n\nSportivement,\nLe bureau du SACCB");
+                setBody("Bonjour,\n\nNous vous rappelons que votre adhesion pour la saison en cours n'a pas encore ete reglee.\n\nPour finaliser votre inscription, rendez-vous sur votre espace membre : https://saccb.fr/?member=1\n\nVous pouvez payer en ligne via HelloAsso ou par virement en contactant un membre du bureau.\n\nN'hesitez pas a nous contacter si vous avez des questions.\n\nSportivement,\nLe bureau du SACCB");
                 setVariant("urgent");
                 setTargetMode("unpaid");
               }}

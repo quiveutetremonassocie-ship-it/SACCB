@@ -498,7 +498,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
         {inscriptionsClosed ? (
           <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
             <p className="text-amber-800 text-sm">
-              💬 <strong>Vous souhaitez participer à ce tournoi ?</strong> Contactez <strong>Hernan</strong> ou un membre du bureau — il est peut-être encore possible de vous inscrire.
+              💬 <strong>Vous souhaitez participer à ce tournoi ?</strong> Contactez un <strong>membre du bureau</strong> — il est peut-être encore possible de vous inscrire.
             </p>
           </div>
         ) : !isFull && (

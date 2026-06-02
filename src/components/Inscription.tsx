@@ -370,7 +370,7 @@ export default function Inscription({
                   <p className="text-amber-700 text-sm font-semibold mb-1">Paiement en attente</p>
                   <p className="text-slate-600 text-sm">
                     Merci. Pour finaliser {done.personnes.length > 1 ? "vos adhésions" : "votre adhésion"}, veuillez vous
-                    rapprocher de <strong className="text-slate-800">Hernan</strong> au prochain
+                    rapprocher d&apos;un <strong className="text-slate-800">membre du bureau</strong> au prochain
                     entraînement afin de procéder au règlement par virement bancaire.
                   </p>
                 </div>
@@ -602,7 +602,7 @@ export default function Inscription({
                       <Banknote className={`w-4 h-4 ${mode === "virement" ? "text-amber-500" : "text-slate-400"}`} />
                       <span className="font-semibold text-sm text-slate-800">Virement bancaire</span>
                     </div>
-                    <p className="text-xs text-slate-500">Règlement auprès de Hernan</p>
+                    <p className="text-xs text-slate-500">Règlement auprès d&apos;un membre du bureau</p>
                   </button>
                 </div>
               </div>
