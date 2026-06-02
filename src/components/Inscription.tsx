@@ -368,11 +368,14 @@ export default function Inscription({
                 </h3>
                 <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-left">
                   <p className="text-amber-700 text-sm font-semibold mb-1">Paiement en attente</p>
-                  <p className="text-slate-600 text-sm">
+                  <p className="text-slate-600 text-sm mb-2">
                     Merci. Pour finaliser {done.personnes.length > 1 ? "vos adhésions" : "votre adhésion"}, veuillez vous
-                    rapprocher d&apos;un <strong className="text-slate-800">membre du bureau</strong> au prochain
-                    entraînement afin de procéder au règlement par virement bancaire.
+                    rapprocher d&apos;un membre du bureau au prochain
+                    entraînement afin de procéder au règlement.
                   </p>
+                  <a href="/contact" className="inline-flex items-center gap-1.5 text-sm font-semibold text-amber-700 hover:text-amber-900 underline underline-offset-2 transition">
+                    📩 Nous contacter
+                  </a>
                 </div>
                 <div className="space-y-3">
                   {done.personnes.map((p, i) => (

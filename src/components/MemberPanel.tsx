@@ -326,16 +326,12 @@ export default function MemberPanel({
               >
                 💳 Payer en ligne (HelloAsso)
               </a>
-              <button
-                onClick={() => alert(
-                  "💵 Paiement par virement\n\n" +
-                  "Rapprochez-vous d'un membre du bureau (voir la section Bureau sur le site) au prochain entraînement pour effectuer le règlement.\n\n" +
-                  "Une fois validé par le bureau, votre adhésion sera marquée comme payée et vous recevrez un email de confirmation."
-                )}
+              <a
+                href="/contact"
                 className="flex items-center justify-center gap-2 bg-white hover:bg-amber-100 border-2 border-amber-300 text-amber-800 font-semibold px-4 py-2.5 rounded-xl transition text-sm w-full"
               >
-                💵 Régler par virement (voir Bureau)
-              </button>
+                💵 Régler par virement — Nous contacter
+              </a>
             </div>
             <p className="text-xs text-amber-600 mt-3 text-center">
               <RefreshCw className="w-3 h-3 inline mr-1" />
