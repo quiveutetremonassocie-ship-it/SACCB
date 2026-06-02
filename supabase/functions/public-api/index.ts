@@ -904,7 +904,7 @@ Deno.serve(async (req) => {
 
     // Vérifier que le membre existe et que le code est correct
     const matchedMembre = await findMembreByCredentials(membres, email, code);
-    const membre = matchedMembre && String(matchedMembre.id || "") === membreId && matchedMembre.ok === true ? matchedMembre : undefined;
+    const membre = matchedMembre && String(matchedMembre.id || "") === membreId ? matchedMembre : undefined;
     const matchedAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
     const isAdmin = !!matchedAdminCred;
 
