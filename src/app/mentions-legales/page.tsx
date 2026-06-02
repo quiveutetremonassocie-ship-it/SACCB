@@ -1,4 +1,5 @@
 import LegalLayout from "@/components/LegalLayout";
+import PresidentName from "@/components/PresidentName";
 
 export const metadata = {
   title: "Mentions légales — SACCB",
@@ -26,7 +27,7 @@ export default function Page() {
             <strong>Numéro RNA / W :</strong> W762011355
           </li>
           <li>
-            <strong>Directeur de la publication :</strong> Le/La Président(e) en exercice de l&apos;association
+            <strong>Directeur de la publication :</strong> <PresidentName fallback="Le/La Président(e) en exercice" />, Président(e)
           </li>
           <li>
             <strong>Contact :</strong>{" "}

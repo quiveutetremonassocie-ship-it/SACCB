@@ -1,4 +1,5 @@
 import LegalLayout from "@/components/LegalLayout";
+import PresidentName from "@/components/PresidentName";
 
 export const metadata = {
   title: "Politique de confidentialité — SACCB",
@@ -14,12 +15,12 @@ export default function Page() {
         <h2>1. Responsable du traitement</h2>
         <p>
           Le responsable du traitement des données personnelles collectées sur le site saccb.fr
-          est l'association <strong>Sainte-Adresse Côte Caux Badminton (SACCB)</strong>,
-          représentée par son/sa Président(e) en exercice.
+          est l&apos;association <strong>Sainte-Adresse Côte Caux Badminton (SACCB)</strong>,
+          représentée par <strong><PresidentName /></strong>, Président(e).
         </p>
         <p>
           <strong>Contact :</strong>{" "}
-          <a href="mailto:hernancm68@hotmail.com">hernancm68@hotmail.com</a>
+          <a href="mailto:contact@saccb.fr">contact@saccb.fr</a>
         </p>
       </section>
 
