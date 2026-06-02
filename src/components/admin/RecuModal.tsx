@@ -29,7 +29,7 @@ export default function RecuModal({
         </div>
         <h2 className="text-center underline font-bold text-lg mb-8">REÇU DE COTISATION</h2>
         <p className="mb-4">
-          Je soussigné, <strong>{db.presidentName?.trim() || "Hernan Camara"}</strong>,
+          Je soussigné, <strong>{db.presidentName?.trim() || "Le/La Président(e)"}</strong>,
           Président de l&apos;association SACCB, certifie avoir reçu la somme de :
         </p>
         <p className="text-center text-3xl font-bold mb-8">{montant} €</p>

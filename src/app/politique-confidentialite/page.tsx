@@ -15,7 +15,7 @@ export default function Page() {
         <p>
           Le responsable du traitement des données personnelles collectées sur le site saccb.fr
           est l'association <strong>Sainte-Adresse Côte Caux Badminton (SACCB)</strong>,
-          représentée par son Président, Hernan Camara.
+          représentée par son/sa Président(e) en exercice.
         </p>
         <p>
           <strong>Contact :</strong>{" "}

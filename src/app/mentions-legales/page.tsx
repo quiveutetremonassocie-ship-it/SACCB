@@ -26,7 +26,7 @@ export default function Page() {
             <strong>Numéro RNA / W :</strong> W762011355
           </li>
           <li>
-            <strong>Directeur de la publication :</strong> Hernan Camara, Président
+            <strong>Directeur de la publication :</strong> Le/La Président(e) en exercice de l&apos;association
           </li>
           <li>
             <strong>Contact :</strong>{" "}
