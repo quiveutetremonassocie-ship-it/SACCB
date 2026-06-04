@@ -77,6 +77,9 @@ export default function Inscription({
   // 🛡️ Anti-bot
   const [honeypot, setHoneypot] = useState("");
   const [formOpenedAt] = useState(Date.now());
+  // ⚠️ Modale d'avertissement "parler au bureau" — affichée 1 fois avant 1ère validation
+  const [bureauWarningOpen, setBureauWarningOpen] = useState(false);
+  const [bureauWarningAccepted, setBureauWarningAccepted] = useState(false);
   const whatsappLink = db.whatsappLink || null;
 
   const remaining = quota - membresCount;
@@ -144,6 +147,13 @@ export default function Inscription({
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
     if (!db.insc_open) return;
+
+    // ⚠️ Si la modale "parler au bureau" n'a pas encore été acceptée, on l'affiche.
+    // Le formulaire ne sera soumis qu'après confirmation.
+    if (!bureauWarningAccepted) {
+      setBureauWarningOpen(true);
+      return;
+    }
 
     // 🛡️ Anti-bot : honeypot rempli ou soumission trop rapide (<3s)
     if (honeypot) return;
@@ -689,6 +699,58 @@ export default function Inscription({
           )}
         </motion.div>
       </div>
+
+      {/* ⚠️ Modale d'avertissement "parler au bureau" — affichée 1 fois avant 1ère validation */}
+      {bureauWarningOpen && (
+        <div className="fixed inset-0 z-[6000] flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 md:p-7">
+            <div className="flex items-start gap-3 mb-4">
+              <div className="w-11 h-11 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                <span className="text-2xl">⚠️</span>
+              </div>
+              <div>
+                <h3 className="font-display text-xl text-slate-800 tracking-wide leading-tight">Avant de continuer</h3>
+                <p className="text-xs text-slate-500 mt-1">Une étape importante</p>
+              </div>
+            </div>
+            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
+              <p className="text-sm text-slate-700 leading-relaxed">
+                Avant de finaliser votre inscription, merci de prendre contact avec un <strong>membre du bureau</strong> pour qu&apos;il puisse <strong>accepter ou refuser</strong> votre adhésion.
+              </p>
+              <p className="text-xs text-slate-600 leading-relaxed mt-2">
+                Cela nous permet de discuter avec vous, vérifier la disponibilité des créneaux et vous accueillir au mieux. Sans cet accord préalable, votre paiement pourrait être annulé.
+              </p>
+              <p className="text-xs text-amber-700 mt-3">
+                👉 Contactez-nous via la <a href="/contact" className="underline font-semibold">page contact</a> si ce n&apos;est pas déjà fait.
+              </p>
+            </div>
+            <div className="flex flex-col sm:flex-row gap-2">
+              <button
+                type="button"
+                onClick={() => setBureauWarningOpen(false)}
+                className="flex-1 px-4 py-2.5 rounded-xl border border-slate-300 text-slate-700 hover:bg-slate-50 text-sm font-medium transition"
+              >
+                Annuler
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setBureauWarningAccepted(true);
+                  setBureauWarningOpen(false);
+                  // Re-soumettre le formulaire (l'utilisateur a déjà cliqué Valider)
+                  setTimeout(() => {
+                    const form = document.querySelector("form") as HTMLFormElement | null;
+                    if (form) form.requestSubmit();
+                  }, 50);
+                }}
+                className="flex-1 px-4 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold transition shadow-sm"
+              >
+                ✓ J&apos;ai compris, continuer
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }

@@ -2,6 +2,7 @@
 
 import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
+import TshirtOrderForm from "./TshirtOrderForm";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
@@ -363,6 +364,26 @@ export default function MemberPanel({
             Faites une capture d&apos;écran pour la conserver.
           </p>
         </div>
+
+        {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
+        {(() => {
+          const code = session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+          if (!code) return null;
+          // Split du nom complet en prénom + nom (le 1er mot = prénom, le reste = nom)
+          const fullName = (session.nom || "").trim();
+          const parts = fullName.split(/\s+/);
+          const prenom = parts[0] || "";
+          const nom = parts.slice(1).join(" ") || "";
+          return (
+            <TshirtOrderForm
+              email={session.email}
+              code={code}
+              membreId={session.membreId}
+              defaultNom={nom}
+              defaultPrenom={prenom}
+            />
+          );
+        })()}
 
         {/* 📊 Stats perso (uniquement si au moins une participation) */}
         {personalStats.totalAllTime > 0 && (

@@ -880,6 +880,7 @@ Deno.serve(async (req) => {
       maintenanceMode: d.maintenanceMode === true,
       sectionsVisible: d.sectionsVisible ?? {},
       clubConfig: d.clubConfig ?? {},
+      tshirtOpen: d.tshirtOpen === true,
     });
   }
 
@@ -3096,6 +3097,86 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: Voter à un sondage (membre authentifié) ───
+  // 👕 Commande de t-shirt par un membre connecté
+  if (action === "tshirt_order") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const nom = sanitize(String(body.nom || "")).slice(0, 80);
+    const prenom = sanitize(String(body.prenom || "")).slice(0, 80);
+    const taille = String(body.taille || "");
+    const nomFloque = sanitize(String(body.nomFloque || "")).slice(0, 30);
+
+    const TAILLES = ["XS", "S", "M", "L", "XL"];
+    if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
+    if (!nom || !prenom) return json({ ok: false, reason: "Nom et prénom requis." }, 400);
+    if (!TAILLES.includes(taille)) return json({ ok: false, reason: "Taille invalide." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre) return json({ ok: false, reason: "Email ou code incorrect." }, 403);
+    if (String(membre.id) !== membreId) return json({ ok: false, reason: "Session périmée." }, 403);
+    if (membre.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour commander." }, 403);
+    if (d.tshirtOpen !== true) return json({ ok: false, reason: "Les commandes de t-shirts ne sont pas ouvertes." }, 403);
+
+    const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
+    // 1 commande par membre uniquement (modifier si déjà existante)
+    const existingIdx = orders.findIndex((o) => o.membreId === membreId);
+    const newOrder = {
+      id: existingIdx !== -1 ? orders[existingIdx].id : `tshirt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      membreId,
+      nom,
+      prenom,
+      taille,
+      nomFloque: nomFloque || undefined,
+      createdAt: existingIdx !== -1 ? orders[existingIdx].createdAt : new Date().toISOString(),
+      status: existingIdx !== -1 ? orders[existingIdx].status : "pending",
+      saison: `${d.y1}-${d.y2}`,
+    };
+    if (existingIdx !== -1) orders[existingIdx] = newOrder;
+    else orders.push(newOrder);
+
+    d.tshirtOrders = orders;
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
+  }
+
+  // 👕 Récupère la commande t-shirt du membre connecté
+  if (action === "tshirt_my_order") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
+    const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
+    const my = orders.find((o) => o.membreId === membreId) || null;
+    return json({ ok: true, order: my, open: d.tshirtOpen === true });
+  }
+
+  // 👕 [ADMIN] Supprime une commande t-shirt
+  if (action === "admin_delete_tshirt_order") {
+    const orderId = String(body.orderId || "");
+    if (!orderId) return json({ ok: false, reason: "orderId manquant." }, 400);
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    d.tshirtOrders = ((d.tshirtOrders || []) as Record<string, unknown>[]).filter((o) => o.id !== orderId);
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true });
+  }
+
   if (action === "vote_poll") {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));

@@ -16,6 +16,7 @@ import InscriptionsAdmin from "./InscriptionsAdmin";
 import MembresAdmin from "./MembresAdmin";
 import ActualitesAdmin from "./ActualitesAdmin";
 import EngagementAdmin from "./EngagementAdmin";
+import TshirtAdmin from "./TshirtAdmin";
 import RulesAdmin from "./RulesAdmin";
 import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
@@ -446,6 +447,11 @@ export default function AdminPanel({
           {canSee("engagement") && (
             <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
               <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
+            </div>
+          )}
+          {canSee("engagement") && (
+            <div id="admin-tshirts" className="lg:col-span-2 scroll-mt-24">
+              <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
             </div>
           )}
           {canSee("rules") && (

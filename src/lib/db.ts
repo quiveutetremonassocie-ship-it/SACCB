@@ -46,7 +46,46 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     maintenanceMode: d.maintenanceMode === true,
     sectionsVisible: d.sectionsVisible ?? {},
     clubConfig: d.clubConfig ?? undefined,
+    tshirtOpen: d.tshirtOpen === true,
   };
+}
+
+// 👕 Récupère ma commande t-shirt
+export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "tshirt_my_order", email, code, membreId }),
+  });
+  return res.json();
+}
+
+// 👕 Soumet/met à jour ma commande t-shirt
+export async function memberSubmitTshirtOrder(args: {
+  email: string;
+  code: string;
+  membreId: string;
+  nom: string;
+  prenom: string;
+  taille: "XS" | "S" | "M" | "L" | "XL";
+  nomFloque?: string;
+}): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "tshirt_order", ...args }),
+  });
+  return res.json();
+}
+
+// 👕 [ADMIN] Supprime une commande t-shirt
+export async function adminDeleteTshirtOrder(adminEmail: string, adminCode: string, orderId: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_delete_tshirt_order", orderId, adminEmail, adminCode }),
+  });
+  return res.json();
 }
 
 // ─── Analytics : ping léger pour compter une page vue (best-effort, sans bloquer) ───

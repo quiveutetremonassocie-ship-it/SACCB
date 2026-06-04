@@ -101,6 +101,20 @@ export type AGItem = {
   resolved?: boolean;
 };
 
+// 👕 Commande de t-shirt par un adhérent
+export type TshirtOrder = {
+  id: string;
+  membreId?: string;       // si commandé depuis l'espace membre (lien avec l'adhérent)
+  nom: string;
+  prenom: string;
+  taille: "XS" | "S" | "M" | "L" | "XL";
+  nomFloque?: string;      // nom/surnom à floquer sur le t-shirt (optionnel)
+  createdAt: string;       // ISO timestamp
+  status?: "pending" | "ordered" | "delivered"; // pour suivi admin
+  notes?: string;          // note admin libre
+  saison?: string;
+};
+
 export type ReunionReport = {
   id: string;
   title: string;
@@ -157,6 +171,9 @@ export type DB = {
   pollsOpen?: boolean;   // Sondages visibles côté public
   agOpen?: boolean;      // Section AG (questions + idées) visible côté public
   reportsOpen?: boolean; // Comptes-rendus de réunion visibles côté public (dissocié des sondages)
+  // 👕 Commande de t-shirts (membres connectés uniquement)
+  tshirtOpen?: boolean; // Section commande t-shirt visible/ouverte dans l'espace membre
+  tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;
