@@ -611,9 +611,27 @@ function FormerMembersSection({
                       <p className="text-sm font-medium text-slate-700 truncate">{fm.nom}</p>
                       <p className="text-xs text-slate-400">{fm.email} · {fm.type}</p>
                     </div>
-                    <p className="text-[10px] text-red-400 shrink-0 ml-2">
-                      {new Date(fm.removedAt).toLocaleDateString("fr-FR")}
-                    </p>
+                    <div className="flex items-center gap-1.5 shrink-0 ml-2">
+                      <p className="text-[10px] text-red-400">
+                        {new Date(fm.removedAt).toLocaleDateString("fr-FR")}
+                      </p>
+                      {!readOnly && (
+                        <button
+                          onClick={async () => {
+                            const updated = (db.formerMembers ?? []).filter((_, j) => {
+                              // Trouver l'index global de cet élément
+                              const globalIdx = formerMembers.indexOf(fm);
+                              return j !== globalIdx;
+                            });
+                            await onPersist({ ...db, formerMembers: updated });
+                          }}
+                          className="text-red-400 hover:text-red-600 transition p-0.5"
+                          title="Retirer de la liste"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
                   </div>
                 ))}
               </div>
