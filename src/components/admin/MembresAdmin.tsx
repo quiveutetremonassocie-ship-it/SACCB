@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound, AlarmClock } from "lucide-react";
-import { DB, Membre } from "@/lib/types";
+import { DB, Membre, FormerMember } from "@/lib/types";
 import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder } from "@/lib/db";
 
 export default function MembresAdmin({
@@ -543,6 +543,99 @@ export default function MembresAdmin({
           </tbody>
         </table>
       </div>
+
+      {/* 👋 Anciens membres (non réadhérés) */}
+      {(db.formerMembers ?? []).length > 0 && (
+        <FormerMembersSection formerMembers={db.formerMembers!} db={db} onPersist={onPersist} readOnly={readOnly} />
+      )}
+    </div>
+  );
+}
+
+function FormerMembersSection({
+  formerMembers,
+  db,
+  onPersist,
+  readOnly,
+}: {
+  formerMembers: FormerMember[];
+  db: DB;
+  onPersist: (db: DB) => Promise<void>;
+  readOnly?: boolean;
+}) {
+  const [open, setOpen] = useState(false);
+
+  // Grouper par saison
+  const bySaison = useMemo(() => {
+    const map = new Map<string, FormerMember[]>();
+    for (const fm of formerMembers) {
+      const key = fm.saison || "Inconnue";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(fm);
+    }
+    return Array.from(map.entries()).reverse();
+  }, [formerMembers]);
+
+  return (
+    <div className="mt-6 pt-5 border-t border-red-200">
+      <button
+        onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between"
+      >
+        <div className="flex items-center gap-2">
+          <span className="text-lg">👋</span>
+          <div>
+            <p className="text-sm font-semibold text-red-700">
+              Anciens membres non réadhérés ({formerMembers.length})
+            </p>
+            <p className="text-xs text-red-400">Personnes supprimées après date limite — à retirer du groupe WhatsApp</p>
+          </div>
+        </div>
+        <span className={`text-red-400 transition-transform ${open ? "rotate-180" : ""}`}>▼</span>
+      </button>
+
+      {open && (
+        <div className="mt-3 space-y-4">
+          {bySaison.map(([saison, members]) => (
+            <div key={saison}>
+              <p className="text-xs font-semibold text-slate-500 uppercase tracking-widest mb-2">
+                Saison {saison}
+              </p>
+              <div className="space-y-1">
+                {members.map((fm, i) => (
+                  <div
+                    key={`${fm.email}-${i}`}
+                    className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-slate-700 truncate">{fm.nom}</p>
+                      <p className="text-xs text-slate-400">{fm.email} · {fm.type}</p>
+                    </div>
+                    <p className="text-[10px] text-red-400 shrink-0 ml-2">
+                      {new Date(fm.removedAt).toLocaleDateString("fr-FR")}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          ))}
+
+          {!readOnly && (
+            <button
+              onClick={async () => {
+                if (!confirm(
+                  `Vider la liste des ${formerMembers.length} ancien(s) membre(s) ?\n\n` +
+                  `Faites-le uniquement après les avoir retirés du groupe WhatsApp.`
+                )) return;
+                await onPersist({ ...db, formerMembers: [] });
+              }}
+              className="btn-danger !text-xs w-full"
+            >
+              <Trash2 className="w-3.5 h-3.5" /> Vider la liste (après nettoyage WhatsApp)
+            </button>
+          )}
+        </div>
+      )}
     </div>
   );
 }

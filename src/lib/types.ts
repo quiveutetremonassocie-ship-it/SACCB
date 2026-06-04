@@ -199,6 +199,8 @@ export type DB = {
   // 🎤 Mode présentation : toutes les sections visibles pour tout le monde
   presentationMode?: boolean;
   presentationModeRemoved?: boolean;
+  // 👋 Anciens membres supprimés (non-payés après date limite)
+  formerMembers?: FormerMember[];
   // 🔧 Mode maintenance : bloque l'accès au site public
   maintenanceMode?: boolean;
   // 📝 Bloc-notes partagé entre admins
@@ -225,6 +227,14 @@ export type ClubConfig = {
     adulte?: string;
     etudiant?: string;
   };
+};
+
+export type FormerMember = {
+  nom: string;
+  email: string;
+  type: "Adulte" | "Etudiant";
+  removedAt: string;   // ISO date de suppression
+  saison: string;      // ex: "2025-2026"
 };
 
 export type AdminNote = {

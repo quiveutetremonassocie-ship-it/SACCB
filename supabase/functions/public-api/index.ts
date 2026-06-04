@@ -1943,11 +1943,26 @@ Deno.serve(async (req) => {
     if (!remindersDisabled && !isNaN(daysLeft) && daysLeft < 0) {
       const before = membres.length;
       const kept = membres.filter((m) => m.ok === true);
-      if (kept.length < before) {
+      const removed = membres.filter((m) => m.ok !== true);
+      if (removed.length > 0) {
+        // Sauvegarder les anciens membres avant suppression
+        const formerMembers = ((d.formerMembers || []) as Record<string, unknown>[]);
+        const nowISO = new Date().toISOString();
+        const saison = `${d.y1}-${d.y2}`;
+        for (const m of removed) {
+          formerMembers.push({
+            nom: String(m.nom || ""),
+            email: String(m.email || ""),
+            type: String(m.type || "Adulte"),
+            removedAt: nowISO,
+            saison,
+          });
+        }
+        d.formerMembers = formerMembers;
         d.membres = kept;
         d.insc_open = false;
         await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
-        results.cleanup = { removed: before - kept.length };
+        results.cleanup = { removed: removed.length };
       }
     }
 
@@ -2895,10 +2910,25 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
     const before = membres.length;
     const kept = membres.filter((m) => m.ok === true); // on garde uniquement les payés
-    const removed = before - kept.length;
+    const removedList = membres.filter((m) => m.ok !== true);
+    const removed = removedList.length;
 
     if (removed === 0) return json({ ok: true, removed: 0, reason: "Aucun membre à supprimer." });
 
+    // Sauvegarder les anciens membres avant suppression
+    const formerMembers = ((d.formerMembers || []) as Record<string, unknown>[]);
+    const nowISO = new Date().toISOString();
+    const saison = `${d.y1}-${d.y2}`;
+    for (const m of removedList) {
+      formerMembers.push({
+        nom: String(m.nom || ""),
+        email: String(m.email || ""),
+        type: String(m.type || "Adulte"),
+        removedAt: nowISO,
+        saison,
+      });
+    }
+    d.formerMembers = formerMembers;
     d.membres = kept;
     const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
