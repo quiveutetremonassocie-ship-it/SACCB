@@ -3,6 +3,9 @@
 import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight } from "lucide-react";
 import Link from "next/link";
 import TshirtOrderForm from "./TshirtOrderForm";
+import RecuModal from "./admin/RecuModal";
+import { PRIX } from "@/lib/types";
+import type { ClubConfig, Membre } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
@@ -23,6 +26,8 @@ export default function MemberPanel({
   autoOpenProcuration = false,
   onProcurationOpened,
   helloassoUrls,
+  presidentName,
+  clubConfig,
 }: {
   session: MemberSession;
   y1: number;
@@ -37,10 +42,13 @@ export default function MemberPanel({
   autoOpenProcuration?: boolean;
   onProcurationOpened?: () => void;
   helloassoUrls?: { mixte?: string; adulte?: string; etudiant?: string };
+  presidentName?: string;
+  clubConfig?: ClubConfig;
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
   const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
+  const [recuOpen, setRecuOpen] = useState(false);
 
   function toggleTournoi(id: string) {
     setOpenTournois(prev => {
@@ -364,6 +372,17 @@ export default function MemberPanel({
             Faites une capture d&apos;écran pour la conserver.
           </p>
         </div>
+
+        {/* 📄 Justificatif d'adhésion (uniquement pour les membres payés) */}
+        {session.paid !== false && (
+          <button
+            onClick={() => setRecuOpen(true)}
+            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+          >
+            <FileSignature className="w-4 h-4" />
+            Mon justificatif d&apos;adhésion
+          </button>
+        )}
 
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
         {(() => {
@@ -689,6 +708,27 @@ export default function MemberPanel({
           y1={y1}
           y2={y2}
           onClose={() => setShowProcuration(false)}
+        />
+      )}
+
+      {/* 📄 Justificatif d'adhésion (mêmes données que côté admin) */}
+      {recuOpen && (
+        <RecuModal
+          membre={{
+            id: session.membreId,
+            nom: session.nom,
+            email: session.email,
+            type: (session.type as "Adulte" | "Etudiant") || "Adulte",
+            ok: true,
+          } as Membre}
+          overrides={{
+            y1,
+            y2,
+            presidentName,
+            montantAdulte: clubConfig?.prixAdulte ?? PRIX.Adulte,
+            montantEtudiant: clubConfig?.prixEtudiant ?? PRIX.Etudiant,
+          }}
+          onClose={() => setRecuOpen(false)}
         />
       )}
     </div>

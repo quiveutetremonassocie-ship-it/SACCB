@@ -561,6 +561,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           autoOpenProcuration={autoOpenProcuration}
           onProcurationOpened={() => setAutoOpenProcuration(false)}
           helloassoUrls={db.clubConfig?.helloassoUrls}
+          presidentName={db.presidentName}
+          clubConfig={db.clubConfig}
         />
       )}
       {/* Panneau démo en mode présentation */}
