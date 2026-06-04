@@ -12,24 +12,22 @@ export default function TshirtOrderForm({
   email,
   code,
   membreId,
-  defaultNom,
   defaultPrenom,
+  defaultNom,
 }: {
   email: string;
   code: string;
   membreId: string;
-  defaultNom: string;
   defaultPrenom: string;
+  defaultNom: string;
 }) {
-  const [open, setOpen] = useState(false); // section ouverte côté admin (true = on peut commander)
+  const [open, setOpen] = useState(false);
+  const [price, setPrice] = useState<number | null>(null);
   const [order, setOrder] = useState<TshirtOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
 
-  // Form
-  const [nom, setNom] = useState(defaultNom);
-  const [prenom, setPrenom] = useState(defaultPrenom);
   const [taille, setTaille] = useState<Taille>("M");
   const [nomFloque, setNomFloque] = useState("");
   const [editMode, setEditMode] = useState(false);
@@ -41,10 +39,9 @@ export default function TshirtOrderForm({
       setLoading(false);
       if (r.ok) {
         setOpen(r.open === true);
+        setPrice(typeof r.price === "number" ? r.price : null);
         if (r.order) {
           setOrder(r.order);
-          setNom(r.order.nom);
-          setPrenom(r.order.prenom);
           setTaille(r.order.taille as Taille);
           setNomFloque(r.order.nomFloque || "");
         }
@@ -55,16 +52,13 @@ export default function TshirtOrderForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
-    if (!nom.trim() || !prenom.trim()) {
-      setMsg({ ok: false, text: "Nom et prénom requis." });
-      return;
-    }
     setSaving(true);
     setMsg(null);
+    // Le serveur ignore nom/prenom du body et utilise ceux du compte membre, on les envoie quand même pour le typage
     const r = await memberSubmitTshirtOrder({
       email, code, membreId,
-      nom: nom.trim(),
-      prenom: prenom.trim(),
+      nom: defaultNom,
+      prenom: defaultPrenom,
       taille,
       nomFloque: nomFloque.trim() || undefined,
     });
@@ -74,8 +68,8 @@ export default function TshirtOrderForm({
       setOrder({
         id: order?.id || "tmp",
         membreId,
-        nom: nom.trim(),
-        prenom: prenom.trim(),
+        nom: defaultNom,
+        prenom: defaultPrenom,
         taille,
         nomFloque: nomFloque.trim() || undefined,
         createdAt: order?.createdAt || new Date().toISOString(),
@@ -86,17 +80,21 @@ export default function TshirtOrderForm({
     }
   }
 
-  // Section pas ouverte ou en cours de chargement → rien
   if (loading) return null;
   if (!open) return null;
 
-  // Commande déjà passée (et pas en mode édition) → afficher le récap
+  // Récap commande existante (mode lecture)
   if (order && !editMode) {
     return (
       <div className="mb-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4">
-        <div className="flex items-center gap-2 mb-2">
-          <Shirt className="w-4 h-4 text-amber-600" />
-          <p className="text-xs uppercase tracking-widest text-amber-700 font-semibold">Commande T-shirt</p>
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center gap-2">
+            <Shirt className="w-4 h-4 text-amber-600" />
+            <p className="text-xs uppercase tracking-widest text-amber-700 font-semibold">Ma commande T-shirt</p>
+          </div>
+          {price !== null && (
+            <span className="text-xs font-bold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">{price}€</span>
+          )}
         </div>
         <div className="bg-white border border-amber-200 rounded-xl p-3 text-sm space-y-1">
           <p><strong>Nom :</strong> {order.prenom} {order.nom}</p>
@@ -114,39 +112,27 @@ export default function TshirtOrderForm({
     );
   }
 
+  // Formulaire (commande ou modification)
   return (
     <div className="mb-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4">
-      <div className="flex items-center gap-2 mb-3">
-        <Shirt className="w-4 h-4 text-amber-600" />
-        <p className="text-xs uppercase tracking-widest text-amber-700 font-semibold">
-          {order ? "Modifier ma commande T-shirt" : "Commander un T-shirt SACCB"}
-        </p>
-      </div>
-      <form onSubmit={handleSubmit} className="space-y-2">
-        <div className="grid grid-cols-2 gap-2">
-          <div>
-            <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Prénom</label>
-            <input
-              type="text"
-              value={prenom}
-              onChange={(e) => setPrenom(e.target.value)}
-              className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500"
-              required
-              maxLength={80}
-            />
-          </div>
-          <div>
-            <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Nom</label>
-            <input
-              type="text"
-              value={nom}
-              onChange={(e) => setNom(e.target.value)}
-              className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500"
-              required
-              maxLength={80}
-            />
-          </div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Shirt className="w-4 h-4 text-amber-600" />
+          <p className="text-xs uppercase tracking-widest text-amber-700 font-semibold">
+            {order ? "Modifier ma commande" : "Commander un T-shirt SACCB"}
+          </p>
         </div>
+        {price !== null && (
+          <span className="text-xs font-bold text-amber-800 bg-amber-200/60 px-2 py-0.5 rounded-full">{price}€</span>
+        )}
+      </div>
+
+      {/* Récap nom (lecture seule, vient du compte) */}
+      <div className="bg-white/70 border border-amber-200 rounded-lg p-2 mb-2 text-xs text-slate-600">
+        Commande pour : <strong className="text-slate-800">{defaultPrenom} {defaultNom}</strong>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-2">
         <div>
           <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Taille</label>
           <select
@@ -167,7 +153,7 @@ export default function TshirtOrderForm({
             type="text"
             value={nomFloque}
             onChange={(e) => setNomFloque(e.target.value)}
-            placeholder="Ex: Gabin, GB, 🏸..."
+            placeholder="Ex: Gabin, GB, ton surnom..."
             className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500"
             maxLength={30}
           />
@@ -193,7 +179,7 @@ export default function TshirtOrderForm({
             disabled={saving}
             className="flex-1 bg-amber-600 hover:bg-amber-700 text-white text-sm font-semibold rounded-lg py-2 transition shadow-sm disabled:opacity-50"
           >
-            {saving ? "Envoi..." : order ? "Mettre à jour" : "Commander"}
+            {saving ? "Envoi..." : order ? "Mettre à jour" : `Commander${price !== null ? ` (${price}€)` : ""}`}
           </button>
         </div>
       </form>

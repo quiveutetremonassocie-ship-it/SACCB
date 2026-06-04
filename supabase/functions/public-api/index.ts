@@ -881,6 +881,7 @@ Deno.serve(async (req) => {
       sectionsVisible: d.sectionsVisible ?? {},
       clubConfig: d.clubConfig ?? {},
       tshirtOpen: d.tshirtOpen === true,
+      tshirtPrice: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
     });
   }
 
@@ -3102,14 +3103,11 @@ Deno.serve(async (req) => {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));
     const membreId = String(body.membreId || "");
-    const nom = sanitize(String(body.nom || "")).slice(0, 80);
-    const prenom = sanitize(String(body.prenom || "")).slice(0, 80);
     const taille = String(body.taille || "");
     const nomFloque = sanitize(String(body.nomFloque || "")).slice(0, 30);
 
     const TAILLES = ["XS", "S", "M", "L", "XL"];
     if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
-    if (!nom || !prenom) return json({ ok: false, reason: "Nom et prénom requis." }, 400);
     if (!TAILLES.includes(taille)) return json({ ok: false, reason: "Taille invalide." }, 400);
 
     const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
@@ -3122,6 +3120,12 @@ Deno.serve(async (req) => {
     if (String(membre.id) !== membreId) return json({ ok: false, reason: "Session périmée." }, 403);
     if (membre.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour commander." }, 403);
     if (d.tshirtOpen !== true) return json({ ok: false, reason: "Les commandes de t-shirts ne sont pas ouvertes." }, 403);
+
+    // 🔒 SÉCURITÉ : on prend nom/prénom UNIQUEMENT depuis le compte du membre, pas du client
+    const fullName = String(membre.nom || "").trim();
+    const parts = fullName.split(/\s+/);
+    const prenom = parts[0] || "";
+    const nom = parts.slice(1).join(" ") || "";
 
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
     // 1 commande par membre uniquement (modifier si déjà existante)
@@ -3160,7 +3164,12 @@ Deno.serve(async (req) => {
     if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
     const my = orders.find((o) => o.membreId === membreId) || null;
-    return json({ ok: true, order: my, open: d.tshirtOpen === true });
+    return json({
+      ok: true,
+      order: my,
+      open: d.tshirtOpen === true,
+      price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
+    });
   }
 
   // 👕 [ADMIN] Supprime une commande t-shirt

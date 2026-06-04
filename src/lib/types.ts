@@ -173,6 +173,7 @@ export type DB = {
   reportsOpen?: boolean; // Comptes-rendus de réunion visibles côté public (dissocié des sondages)
   // 👕 Commande de t-shirts (membres connectés uniquement)
   tshirtOpen?: boolean; // Section commande t-shirt visible/ouverte dans l'espace membre
+  tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;

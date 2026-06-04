@@ -24,7 +24,10 @@ export default function TshirtAdmin({
 }) {
   const orders = (db.tshirtOrders || []).slice().sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
   const open = db.tshirtOpen === true;
+  const price = typeof db.tshirtPrice === "number" ? db.tshirtPrice : null;
   const [saving, setSaving] = useState(false);
+  const [priceInput, setPriceInput] = useState<string>(price !== null ? String(price) : "");
+  const [savingPrice, setSavingPrice] = useState(false);
 
   // Totaux par taille
   const totals = useMemo(() => {
@@ -33,11 +36,26 @@ export default function TshirtAdmin({
     return t;
   }, [orders]);
 
+  const totalRecette = price !== null ? orders.length * price : null;
+
   async function toggleOpen() {
     if (readOnly) return;
     setSaving(true);
     await onPersist({ ...db, tshirtOpen: !open });
     setSaving(false);
+  }
+
+  async function savePrice() {
+    if (readOnly) return;
+    const v = priceInput.trim();
+    const newPrice = v === "" ? undefined : Number(v.replace(",", "."));
+    if (v !== "" && (isNaN(newPrice as number) || (newPrice as number) < 0)) {
+      alert("Prix invalide.");
+      return;
+    }
+    setSavingPrice(true);
+    await onPersist({ ...db, tshirtPrice: newPrice });
+    setSavingPrice(false);
   }
 
   async function handleDelete(orderId: string) {
@@ -102,6 +120,50 @@ export default function TshirtAdmin({
           </p>
         </div>
       )}
+
+      {/* 💰 Prix unitaire du t-shirt (optionnel) */}
+      <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl p-3">
+        <label className="text-xs uppercase tracking-widest text-amber-700 font-semibold mb-2 block">
+          💰 Prix unitaire (€) — facultatif
+        </label>
+        <div className="flex gap-2 items-center">
+          <input
+            type="number"
+            step="0.5"
+            min="0"
+            placeholder="ex: 15"
+            value={priceInput}
+            onChange={(e) => setPriceInput(e.target.value)}
+            disabled={readOnly}
+            className="flex-1 text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500 bg-white"
+          />
+          {!readOnly && (
+            <button
+              onClick={savePrice}
+              disabled={savingPrice}
+              className="text-xs bg-amber-600 hover:bg-amber-700 text-white font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50"
+            >
+              {savingPrice ? "..." : "Enregistrer"}
+            </button>
+          )}
+          {price !== null && (
+            <button
+              onClick={() => { setPriceInput(""); savePrice(); }}
+              disabled={savingPrice || readOnly}
+              className="text-xs text-slate-500 hover:text-slate-700 px-2"
+              title="Retirer le prix"
+            >
+              ✕
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-slate-500 mt-1.5">
+          Le prix s&apos;affiche dans la commande côté membre. Laisser vide pour ne pas afficher de prix.
+          {totalRecette !== null && orders.length > 0 && (
+            <> <strong className="text-amber-800">Recette estimée : {totalRecette.toFixed(2)}€</strong> ({orders.length} × {price}€)</>
+          )}
+        </p>
+      </div>
 
       {/* Totaux par taille */}
       {orders.length > 0 && (

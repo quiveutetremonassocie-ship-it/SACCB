@@ -51,7 +51,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
 }
 
 // 👕 Récupère ma commande t-shirt
-export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; reason?: string }> {
+export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
