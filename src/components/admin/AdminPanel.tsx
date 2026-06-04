@@ -257,10 +257,10 @@ export default function AdminPanel({
   return (
     <div ref={scrollContainerRef} className="fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto">
       <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10">
-        <div className="flex items-center justify-between mb-4 md:mb-6 sticky top-0 z-10 -mx-4 md:-mx-6 lg:-mx-10 px-3 md:px-6 lg:px-10 py-2 md:py-3 bg-[#f8fafc]/95 backdrop-blur-xl border-b border-slate-200">
+        <div className="flex items-center justify-between mb-6 sticky top-0 z-10 -mx-4 md:-mx-6 lg:-mx-10 px-4 md:px-6 lg:px-10 py-3 bg-[#f8fafc]/95 backdrop-blur-xl border-b border-slate-200">
           <div>
-            <p className="text-[10px] md:text-xs uppercase tracking-widest text-blue-600 font-semibold">Panel</p>
-            <h2 className="font-display text-xl md:text-4xl tracking-wider text-slate-800">Gestion SACCB</h2>
+            <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold">Panel</p>
+            <h2 className="font-display text-2xl md:text-4xl tracking-wider text-slate-800">Gestion SACCB</h2>
           </div>
           <div className="flex items-center gap-2">
             <button
@@ -336,7 +336,7 @@ export default function AdminPanel({
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-3 md:gap-6">
+        <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
           {canSee("comptabilite") && (
             <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
               <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
@@ -362,12 +362,12 @@ export default function AdminPanel({
 
           <div id="admin-sauvegarde" className="lg:col-span-2 glass p-4 md:p-6 scroll-mt-24">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
-            <div className="grid grid-cols-2 gap-2 md:grid-cols-4 md:gap-3">
-              <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500 !text-[10px] md:!text-sm !px-2 md:!px-4">
-                <FileSpreadsheet className="w-3.5 h-3.5 md:w-4 md:h-4" /> CSV
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500 !text-xs md:!text-sm">
+                <FileSpreadsheet className="w-4 h-4" /> Exporter CSV
               </button>
-              <button onClick={() => setEmargementOpen(true)} className="btn-primary !bg-gradient-to-r !from-amber-500 !to-orange-500 !text-[10px] md:!text-sm !px-2 md:!px-4">
-                <FileText className="w-3.5 h-3.5 md:w-4 md:h-4" /> Émargement
+              <button onClick={() => setEmargementOpen(true)} className="btn-primary !bg-gradient-to-r !from-amber-500 !to-orange-500 !text-xs md:!text-sm">
+                <FileText className="w-4 h-4" /> Émargement
               </button>
               <button
                 onClick={downloadJSONBackup}
@@ -567,30 +567,11 @@ function QuickNav({
   ];
   const items = allItems.filter((it) => !it.permission || canSee(it.permission));
   return (
-    <div className="glass p-2.5 md:p-4 mb-4">
-      <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-2 px-1 hidden md:block">
+    <div className="glass p-3 md:p-4 mb-4">
+      <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 px-1">
         🚀 Accès rapide
       </p>
-      {/* Mobile : scroll horizontal compact */}
-      <div className="flex gap-1.5 overflow-x-auto pb-1 md:hidden scrollbar-hide">
-        {items.map((it) => (
-          <button
-            key={it.id}
-            onClick={() => scrollTo(it.id)}
-            className={`relative flex items-center gap-1.5 px-2.5 py-2 rounded-lg bg-gradient-to-br ${it.color} text-white shadow-sm shrink-0`}
-          >
-            {it.icon}
-            <span className="text-[11px] font-semibold whitespace-nowrap">{it.label}</span>
-            {it.badge !== undefined && it.badge > 0 && (
-              <span className="min-w-[16px] h-4 px-0.5 rounded-full bg-red-500 text-white text-[9px] font-bold flex items-center justify-center">
-                {it.badge > 99 ? "99+" : it.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-      {/* Desktop : grille */}
-      <div className="hidden md:grid grid-cols-6 lg:grid-cols-11 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-2">
         {items.map((it) => (
           <button
             key={it.id}
