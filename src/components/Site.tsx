@@ -400,7 +400,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             seasonY2={db.y2}
             inscOpen={db.insc_open}
             isMember={!!memberSession}
-            engagementOpen={db.pollsOpen === true || db.agOpen === true || db.reportsOpen === true || db.engagementOpen === true}
+            engagementOpen={db.pollsOpen === true || db.agOpen === true || db.engagementOpen === true}
             membresCount={membresCount}
             creneauxCount={getEffectiveConfig(db).creneauxCount}
             foundedYear={getEffectiveConfig(db).foundedYear}

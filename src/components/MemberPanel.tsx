@@ -275,14 +275,13 @@ export default function MemberPanel({
 
   return (
     <div
-      className="fixed inset-0 z-[4500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 overflow-y-auto"
-      style={{
-        WebkitOverflowScrolling: "touch", // scroll fluide iOS
-        overscrollBehavior: "contain",    // évite le bounce + le scroll qui "remonte" derrière
-      }}
+      className="fixed inset-0 z-[4500] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4"
+      style={{ overscrollBehavior: "contain" }}
     >
+      {/* 🔧 UN SEUL conteneur scrollable : la carte intérieure. Le wrapper externe ne scrolle
+          plus pour éviter le conflit qui obligeait à swiper 2 fois pour naviguer. */}
       <div
-        className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm my-auto max-h-[90vh] overflow-y-auto"
+        className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm max-h-[92vh] overflow-y-auto"
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehavior: "contain",

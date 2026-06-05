@@ -37,7 +37,9 @@ export default function Engagement({
   onRefresh: () => Promise<void>;
 }) {
   // 🔒 Si aucune section activée, on n'affiche RIEN
-  if (!pollsOpen && !agOpen && !reportsOpen) return null;
+  // 📋 Les comptes-rendus ne déclenchent plus l'affichage de cette section publique :
+  // ils sont uniquement accessibles via la modale dans Mon espace.
+  if (!pollsOpen && !agOpen) return null;
   const [myVotes, setMyVotes] = useState<Record<string, number[]>>({});
   const [voting, setVoting] = useState<string | null>(null);
   const [agItemsExpanded, setAgItemsExpanded] = useState(false);
@@ -169,10 +171,11 @@ export default function Engagement({
           </div>
           <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
             {(() => {
+              // 📋 Les comptes-rendus sont désormais accessibles uniquement via la modale
+              // dans Mon espace. On ne les liste plus dans le titre ici.
               const parts: string[] = [];
               if (pollsOpen) parts.push("Sondages");
               if (agOpen) parts.push("AG");
-              if (reportsOpen) parts.push("Comptes-rendus");
               return parts.join(" & ") || "Engagement";
             })()}
           </h2>
@@ -183,7 +186,7 @@ export default function Engagement({
               ? "Donnez votre avis sur les sondages en cours de l’association."
               : agOpen
               ? "Posez vos questions et proposez vos idées pour préparer ensemble la prochaine assemblée."
-              : "Consultez les comptes-rendus des dernières réunions de l’association."}
+              : "Espace participatif de l’association."}
           </p>
           <div className="inline-block mt-4 px-4 py-1.5 bg-gradient-to-r from-purple-100 to-amber-100 border border-purple-200 rounded-full">
             <span className="text-xs font-bold uppercase tracking-widest text-purple-700">
