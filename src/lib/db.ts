@@ -51,7 +51,49 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     faqOpen: d.faqOpen === true,
     faqItems: Array.isArray(d.faqItems) ? d.faqItems : [],
     emailSignature: typeof d.emailSignature === "string" ? d.emailSignature : "",
+    officialDocsOpen: d.officialDocsOpen === true,
+    officialDocs: Array.isArray(d.officialDocs) ? d.officialDocs : [],
   };
+}
+
+// 📑 [ADMIN] Crée ou met à jour un document officiel
+export async function adminOfficialDocSave(args: {
+  adminEmail: string;
+  adminCode: string;
+  docId?: string;
+  title: string;
+  type: "rapport_financier" | "charte" | "rapport_moral" | "autre";
+  content?: string;
+  pdfUrl?: string;
+  pdfPath?: string;
+  pdfName?: string;
+}): Promise<{ ok: boolean; docId?: string; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_official_doc_save", ...args }),
+  });
+  return res.json();
+}
+
+// 📑 [ADMIN] Supprime un document officiel
+export async function adminOfficialDocDelete(adminEmail: string, adminCode: string, docId: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_official_doc_delete", adminEmail, adminCode, docId }),
+  });
+  return res.json();
+}
+
+// 📑 [ADMIN] Réordonne un document (déplace en haut ou en bas)
+export async function adminOfficialDocReorder(adminEmail: string, adminCode: string, docId: string, direction: "up" | "down"): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_official_doc_reorder", adminEmail, adminCode, docId, direction }),
+  });
+  return res.json();
 }
 
 // 👕 Récupère ma commande t-shirt

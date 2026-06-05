@@ -127,6 +127,20 @@ export type EmailDraft = {
   updatedBy?: string;         // email de l'admin qui a modifié en dernier
 };
 
+// 📑 Document officiel partagé avec les adhérents (rapport financier, charte, etc.)
+export type OfficialDoc = {
+  id: string;
+  title: string;
+  type: "rapport_financier" | "charte" | "rapport_moral" | "autre";
+  content?: string;      // texte libre (résumé / aperçu), optionnel si PDF
+  pdfUrl?: string;       // lien public Supabase Storage
+  pdfPath?: string;      // chemin Supabase Storage (pour suppression)
+  pdfName?: string;      // nom du fichier original
+  saison?: string;       // ex: "2025-2026" pour traçabilité
+  createdAt: string;
+  order?: number;        // pour trier (asc), définit l'ordre d'affichage
+};
+
 // ❓ Question/réponse de la FAQ adhérents
 export type FaqItem = {
   id: string;
@@ -231,6 +245,11 @@ export type DB = {
   // (texte libre, retours à la ligne préservés). Modifiable par l'admin dans Paramètres
   // saison. Pré-remplie dans le formulaire, l'admin peut la modifier ou la retirer.
   emailSignature?: string;
+  // 📑 Documents officiels (rapport financier, charte, rapport moral, etc.) visibles
+  // par les adhérents connectés via une modale dans Mon espace. Toggle d'activation
+  // global officialDocsOpen pour contrôler la visibilité (typiquement activé après AG).
+  officialDocs?: OfficialDoc[];
+  officialDocsOpen?: boolean;
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

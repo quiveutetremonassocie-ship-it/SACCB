@@ -884,6 +884,8 @@ Deno.serve(async (req) => {
       tshirtOpen: d.tshirtOpen === true,
       tshirtPrice: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
       emailSignature: typeof d.emailSignature === "string" ? d.emailSignature : "",
+      officialDocsOpen: d.officialDocsOpen === true,
+      officialDocs: Array.isArray(d.officialDocs) ? d.officialDocs : [],
       faqOpen: d.faqOpen === true,
       // Si aucune FAQ n'a encore été configurée, on renvoie un seed par défaut
       // (3 questions essentielles). L'admin peut tout modifier ensuite.
@@ -3983,6 +3985,97 @@ Deno.serve(async (req) => {
     d.emailDrafts = remainingDrafts;
     await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     return json({ ok: true, sent: sentDrafts });
+  }
+
+  // 📑 [ADMIN] Crée ou met à jour un document officiel
+  if (action === "admin_official_doc_save") {
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const docId = String(body.docId || "");
+    const title = String(body.title || "").slice(0, 200).trim();
+    const type = String(body.type || "autre");
+    const content = String(body.content || "").slice(0, 10000);
+    const pdfUrl = String(body.pdfUrl || "");
+    const pdfPath = String(body.pdfPath || "");
+    const pdfName = String(body.pdfName || "");
+
+    if (!title) return json({ ok: false, reason: "Titre requis." }, 400);
+    if (!["rapport_financier", "charte", "rapport_moral", "autre"].includes(type)) {
+      return json({ ok: false, reason: "Type de document invalide." }, 400);
+    }
+
+    const docs = (d.officialDocs || []) as Record<string, unknown>[];
+    const existingIdx = docId ? docs.findIndex((x) => x.id === docId) : -1;
+    const doc = {
+      id: existingIdx !== -1 ? docId : `doc-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      title,
+      type,
+      content: content || undefined,
+      pdfUrl: pdfUrl || undefined,
+      pdfPath: pdfPath || undefined,
+      pdfName: pdfName || undefined,
+      saison: `${d.y1}-${d.y2}`,
+      createdAt: existingIdx !== -1 ? docs[existingIdx].createdAt : new Date().toISOString(),
+      order: existingIdx !== -1 ? docs[existingIdx].order : docs.length,
+    };
+    if (existingIdx !== -1) docs[existingIdx] = doc;
+    else docs.push(doc);
+    d.officialDocs = docs;
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true, docId: doc.id });
+  }
+
+  // 📑 [ADMIN] Supprime un document officiel (et son fichier PDF associé si présent)
+  if (action === "admin_official_doc_delete") {
+    const docId = String(body.docId || "");
+    if (!docId) return json({ ok: false, reason: "docId manquant." }, 400);
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const docs = (d.officialDocs || []) as Record<string, unknown>[];
+    const target = docs.find((x) => x.id === docId);
+    // Suppression du PDF associé dans Storage (best-effort)
+    if (target?.pdfPath) {
+      try {
+        await supabaseAdmin.storage.from("public").remove([String(target.pdfPath)]);
+      } catch (e) {
+        console.warn("[admin_official_doc_delete] PDF removal failed:", e);
+      }
+    }
+    d.officialDocs = docs.filter((x) => x.id !== docId);
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true });
+  }
+
+  // 📑 [ADMIN] Réordonne les documents officiels (chevrons up/down)
+  if (action === "admin_official_doc_reorder") {
+    const docId = String(body.docId || "");
+    const direction = body.direction === "up" ? -1 : 1;
+    if (!docId) return json({ ok: false, reason: "docId manquant." }, 400);
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const docs = ((d.officialDocs || []) as Record<string, unknown>[]).slice()
+      .sort((a, b) => ((a.order as number) ?? 999) - ((b.order as number) ?? 999));
+    const idx = docs.findIndex((x) => x.id === docId);
+    if (idx === -1) return json({ ok: false, reason: "Document introuvable." }, 404);
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= docs.length) return json({ ok: true });
+    [docs[idx], docs[newIdx]] = [docs[newIdx], docs[idx]];
+    const updated = docs.map((x, i) => ({ ...x, order: i }));
+    d.officialDocs = updated;
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true });
   }
 
   // 📝 [ADMIN] Liste les brouillons d'emails (partagés entre tous les admins)

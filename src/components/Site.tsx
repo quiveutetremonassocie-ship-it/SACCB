@@ -578,6 +578,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           presidentName={db.presidentName}
           clubConfig={db.clubConfig}
           reunionReports={db.reunionReports ?? []}
+          officialDocs={db.officialDocs ?? []}
+          officialDocsOpen={db.officialDocsOpen === true}
         />
       )}
       {/* Panneau démo en mode présentation */}

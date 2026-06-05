@@ -5,8 +5,9 @@ import Link from "next/link";
 import TshirtOrderForm from "./TshirtOrderForm";
 import RecuModal from "./admin/RecuModal";
 import ReportsModal from "./modals/ReportsModal";
+import OfficialDocsModal from "./modals/OfficialDocsModal";
 import { PRIX } from "@/lib/types";
-import type { ClubConfig, Membre, ReunionReport } from "@/lib/types";
+import type { ClubConfig, Membre, ReunionReport, OfficialDoc } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip } from "@/lib/db";
@@ -30,6 +31,8 @@ export default function MemberPanel({
   presidentName,
   clubConfig,
   reunionReports = [],
+  officialDocs = [],
+  officialDocsOpen = false,
 }: {
   session: MemberSession;
   y1: number;
@@ -47,12 +50,15 @@ export default function MemberPanel({
   presidentName?: string;
   clubConfig?: ClubConfig;
   reunionReports?: ReunionReport[];
+  officialDocs?: OfficialDoc[];
+  officialDocsOpen?: boolean;
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
   const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
   const [recuOpen, setRecuOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
+  const [officialDocsModalOpen, setOfficialDocsModalOpen] = useState(false);
   // 🚪 État : ce membre a-t-il dit "je ne renouvelle pas pour cette saison" ?
   const currentSeasonKey = `${y1}-${y2}`;
   const [renewalSkipped, setRenewalSkipped] = useState<boolean>(
@@ -487,10 +493,21 @@ export default function MemberPanel({
         {reunionReports.length > 0 && (
           <button
             onClick={() => setReportsModalOpen(true)}
-            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+            className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
           >
             <FileSignature className="w-4 h-4" />
             Comptes-rendus de réunions ({reunionReports.length})
+          </button>
+        )}
+
+        {/* 📑 Documents officiels (visible uniquement si l'admin a activé la section ET qu'il y a des docs) */}
+        {officialDocsOpen && officialDocs.length > 0 && (
+          <button
+            onClick={() => setOfficialDocsModalOpen(true)}
+            className="w-full mb-4 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl py-2.5 text-sm transition shadow-sm"
+          >
+            <FileSignature className="w-4 h-4" />
+            📑 Documents officiels ({officialDocs.length})
           </button>
         )}
 
@@ -847,6 +864,14 @@ export default function MemberPanel({
         <ReportsModal
           reports={reunionReports}
           onClose={() => setReportsModalOpen(false)}
+        />
+      )}
+
+      {/* 📑 Modale des documents officiels */}
+      {officialDocsModalOpen && (
+        <OfficialDocsModal
+          docs={officialDocs}
+          onClose={() => setOfficialDocsModalOpen(false)}
         />
       )}
     </div>

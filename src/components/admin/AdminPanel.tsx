@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send, HelpCircle, Shirt } from "lucide-react";
+// FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
 import { DB, Membre, getEffectivePrix } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
@@ -19,6 +20,7 @@ import EngagementAdmin from "./EngagementAdmin";
 import TshirtAdmin from "./TshirtAdmin";
 import GuideAdmin from "./GuideAdmin";
 import FaqAdmin from "./FaqAdmin";
+import OfficialDocsAdmin from "./OfficialDocsAdmin";
 import RulesAdmin from "./RulesAdmin";
 import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
@@ -469,6 +471,12 @@ export default function AdminPanel({
               <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
             </div>
           )}
+          {/* 📑 Documents officiels — gestion partagée avec engagement */}
+          {canSee("engagement") && (
+            <div id="admin-official-docs" className="lg:col-span-2 scroll-mt-24">
+              <OfficialDocsAdmin db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
+            </div>
+          )}
           {/* 📖 Guide admin — accessible à tous les admins, indépendant des permissions */}
           <div id="admin-guide" className="lg:col-span-2 scroll-mt-24">
             <GuideAdmin />
@@ -592,6 +600,7 @@ function QuickNav({
     { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
     { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
     { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
+    { id: "admin-official-docs", label: "Documents officiels", icon: <FileText className="w-4 h-4" />, color: "from-blue-500 to-purple-500", permission: "engagement" },
     { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
   ];
   const items = allItems.filter((it) => !it.permission || canSee(it.permission));
