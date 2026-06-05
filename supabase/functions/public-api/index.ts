@@ -1420,6 +1420,55 @@ Deno.serve(async (req) => {
           .update({ data: currentData })
           .eq("id", 1);
         if (renewError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+        // 📧 Mail de confirmation pour un renouvellement aussi (en attente de paiement)
+        const brevoKeyRenew = Deno.env.get("BREVO_API_KEY");
+        if (brevoKeyRenew) {
+          const prenom = extractFirstName(nom);
+          const greeting = prenom ? `Bonjour ${escapeHtml(prenom)},` : "Bonjour,";
+          const greetingText = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+          const yearLabel = `${currentData.y1}–${currentData.y2}`;
+          const isOnline = paymentMethod === "online";
+          const paymentBlockHtml = isOnline
+            ? `<p style="color: #475569; margin: 16px 0 8px;">Vous avez choisi le <strong>paiement en ligne (HelloAsso)</strong>.</p>
+               <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 12px 0;"><p style="margin: 0 0 6px; color: #92400e; font-size: 13px;"><strong>⚠️ Attention au don pré-coché par HelloAsso</strong></p><p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">À la fin du paiement, HelloAsso propose une « contribution au fonctionnement » qui leur revient (et pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à <strong>0&nbsp;€</strong> si vous voulez juste régler votre cotisation.</p></div>
+               <p style="color: #475569;">Une fois votre paiement validé, vous recevrez automatiquement votre confirmation par email.</p>`
+            : `<p style="color: #475569; margin: 16px 0 8px;">Vous avez choisi le <strong>paiement par virement</strong>.</p>
+               <p style="color: #475569;">Rapprochez-vous d'un membre du bureau au prochain entraînement pour finaliser votre règlement. Vous recevrez votre confirmation dès que le virement sera validé.</p>`;
+          const paymentBlockText = isOnline
+            ? `Vous avez choisi le paiement en ligne (HelloAsso).\n\nATTENTION : à la fin du paiement, HelloAsso propose une contribution au fonctionnement qui leur est versée (pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à 0 € si vous voulez juste régler votre cotisation.`
+            : `Vous avez choisi le paiement par virement. Rapprochez-vous d'un membre du bureau au prochain entraînement pour finaliser votre règlement.`;
+          sendBrevo(brevoKeyRenew, {
+            from: "SACCB <contact@saccb.fr>",
+            headers: {
+              "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+            to: [email],
+            subject: `📝 Votre renouvellement au SACCB a bien été enregistré — saison ${yearLabel}`,
+            text: `${greetingText}\n\nVotre renouvellement au SACCB pour la saison ${yearLabel} a bien été enregistré. Il est actuellement en attente de paiement.\n\n${paymentBlockText}\n\nÀ très bientôt sur les terrains 🏸\nLe bureau du SACCB`,
+            html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 14px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="background: white; border-radius: 10px; padding: 4px; display: block;" />
+                <div><h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club de Compétition de Badminton</p></div>
+              </div>
+              <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                <p style="color: #475569; margin: 0 0 14px;">${greeting}</p>
+                <p style="color: #475569; line-height: 1.6;">Votre renouvellement d'adhésion au SACCB pour la saison <strong>${yearLabel}</strong> a bien été enregistré 🎉</p>
+                <p style="color: #475569; line-height: 1.6;">Il est actuellement <strong>en attente de paiement</strong>.</p>
+                ${paymentBlockHtml}
+              </div>
+            </div>`,
+          }).then(async (res) => {
+            await logEmailToHistory(supabaseAdmin, {
+              type: "registration_pending",
+              subject: `Renouvellement enregistré — saison ${yearLabel}`,
+              recipients: [email],
+              status: res.ok ? "sent" : "failed",
+            });
+          }).catch(() => {});
+        }
+
         return json({ ok: true, membreId: String(existing.id), renewed: true });
       }
     } else {
@@ -1460,6 +1509,70 @@ Deno.serve(async (req) => {
       .eq("id", 1);
 
     if (updateError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    // 📧 Envoi du mail de confirmation d'inscription (avant paiement) — fire and forget
+    const brevoKeyConfirm = Deno.env.get("BREVO_API_KEY");
+    if (brevoKeyConfirm) {
+      const prenom = extractFirstName(nom);
+      const greeting = prenom ? `Bonjour ${escapeHtml(prenom)},` : "Bonjour,";
+      const greetingText = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+      const yearLabel = `${currentData.y1}–${currentData.y2}`;
+      const isOnline = paymentMethod === "online";
+      const paymentBlockHtml = isOnline
+        ? `
+          <p style="color: #475569; margin: 16px 0 8px;">Vous avez choisi le <strong>paiement en ligne (HelloAsso)</strong>.</p>
+          <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 12px 0;">
+            <p style="margin: 0 0 6px; color: #92400e; font-size: 13px;"><strong>⚠️ Attention au don pré-coché par HelloAsso</strong></p>
+            <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">À la fin du paiement, HelloAsso propose une « contribution au fonctionnement » qui leur revient (et pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à <strong>0&nbsp;€</strong> si vous voulez juste régler votre cotisation.</p>
+          </div>
+          <p style="color: #475569;">Une fois votre paiement validé, vous recevrez automatiquement un email de bienvenue avec votre code d'accès à l'espace membre.</p>
+        `
+        : `
+          <p style="color: #475569; margin: 16px 0 8px;">Vous avez choisi le <strong>paiement par virement</strong>.</p>
+          <p style="color: #475569;">Rapprochez-vous d'un membre du bureau au prochain entraînement pour finaliser votre règlement. Dès que le virement sera validé, vous recevrez un email de confirmation avec votre code d'accès.</p>
+        `;
+      const paymentBlockText = isOnline
+        ? `Vous avez choisi le paiement en ligne (HelloAsso).\n\nATTENTION : à la fin du paiement, HelloAsso propose une contribution au fonctionnement qui leur est versée (pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à 0 € si vous voulez juste régler votre cotisation.\n\nUne fois votre paiement validé, vous recevrez votre code d'accès par email.`
+        : `Vous avez choisi le paiement par virement.\n\nRapprochez-vous d'un membre du bureau au prochain entraînement pour finaliser votre règlement. Vous recevrez votre code d'accès dès que le virement sera validé.`;
+
+      sendBrevo(brevoKeyConfirm, {
+        from: "SACCB <contact@saccb.fr>",
+        headers: {
+          "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+          "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+        },
+        to: [email],
+        subject: `📝 Votre inscription au SACCB a bien été enregistrée — saison ${yearLabel}`,
+        text: `${greetingText}\n\nVotre inscription au SACCB pour la saison ${yearLabel} a bien été enregistrée. Elle est actuellement en attente de paiement.\n\n${paymentBlockText}\n\nÀ très bientôt sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 14px;">
+              <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="background: white; border-radius: 10px; padding: 4px; display: block;" />
+              <div>
+                <h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1>
+                <p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club de Compétition de Badminton</p>
+              </div>
+            </div>
+            <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <p style="color: #475569; margin: 0 0 14px;">${greeting}</p>
+              <p style="color: #475569; line-height: 1.6;">Votre inscription au SACCB pour la saison <strong>${yearLabel}</strong> a bien été enregistrée 🎉</p>
+              <p style="color: #475569; line-height: 1.6;">Elle est actuellement <strong>en attente de paiement</strong>.</p>
+              ${paymentBlockHtml}
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 14px;">
+                Si vous n'êtes pas à l'origine de cette inscription, vous pouvez ignorer cet email.
+              </p>
+            </div>
+          </div>
+        `,
+      }).then(async (res) => {
+        await logEmailToHistory(supabaseAdmin, {
+          type: "registration_pending",
+          subject: `Inscription enregistrée — saison ${yearLabel}`,
+          recipients: [email],
+          status: res.ok ? "sent" : "failed",
+        });
+      }).catch(() => {});
+    }
 
     // Webhook Google Sheets (fire and forget)
     const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
