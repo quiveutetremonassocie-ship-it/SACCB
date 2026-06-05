@@ -177,7 +177,9 @@ export type TshirtOrder = {
 export type ReunionReport = {
   id: string;
   title: string;
-  type: "debut_saison" | "fin_saison" | "ag" | "autre";
+  // 📑 Types unifiés "Documents officiels" : comptes-rendus + rapports +
+  // charte. Tout passe désormais par cette même structure.
+  type: "debut_saison" | "fin_saison" | "ag" | "rapport_financier" | "charte" | "rapport_moral" | "autre";
   date: string; // YYYY-MM-DD
   content: string; // texte libre, supporte les retours à la ligne
   pdfUrl?: string; // PDF du compte-rendu (optionnel)

@@ -5,16 +5,22 @@ import { X, FileText, Download, ChevronDown, ChevronUp, Calendar } from "lucide-
 import type { ReunionReport } from "@/lib/types";
 
 const TYPE_LABELS: Record<string, string> = {
-  debut_saison: "Début de saison",
-  fin_saison: "Fin de saison",
-  ag: "Assemblée générale",
-  autre: "Autre",
+  debut_saison: "📋 Début de saison",
+  fin_saison: "📋 Fin de saison",
+  ag: "🎤 Assemblée générale",
+  rapport_financier: "📊 Rapport financier",
+  rapport_moral: "📝 Rapport moral",
+  charte: "📜 Charte",
+  autre: "📄 Autre",
 };
 
 const TYPE_COLORS: Record<string, string> = {
   debut_saison: "bg-emerald-100 text-emerald-700 border-emerald-200",
   fin_saison: "bg-amber-100 text-amber-700 border-amber-200",
   ag: "bg-blue-100 text-blue-700 border-blue-200",
+  rapport_financier: "bg-emerald-100 text-emerald-700 border-emerald-200",
+  rapport_moral: "bg-blue-100 text-blue-700 border-blue-200",
+  charte: "bg-purple-100 text-purple-700 border-purple-200",
   autre: "bg-slate-100 text-slate-700 border-slate-200",
 };
 
@@ -57,7 +63,7 @@ export default function ReportsModal({
               <FileText className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-display text-xl tracking-wider text-slate-800">Comptes-rendus</h3>
+              <h3 className="font-display text-xl tracking-wider text-slate-800">Documents officiels</h3>
               <p className="text-xs text-slate-400">{sorted.length} compte{sorted.length > 1 ? "s" : ""}-rendu{sorted.length > 1 ? "s" : ""} disponible{sorted.length > 1 ? "s" : ""}</p>
             </div>
           </div>

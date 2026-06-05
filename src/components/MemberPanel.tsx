@@ -489,25 +489,16 @@ export default function MemberPanel({
           Questions fréquentes
         </a>
 
-        {/* 📋 Comptes-rendus de réunions (uniquement si au moins un existe) */}
+        {/* 📑 Documents officiels (comptes-rendus + rapport financier + charte + rapport moral)
+            Visible si au moins un document existe — peu importe le toggle officialDocsOpen
+            (legacy : on garde reunionReports comme source unique). */}
         {reunionReports.length > 0 && (
           <button
             onClick={() => setReportsModalOpen(true)}
-            className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
           >
             <FileSignature className="w-4 h-4" />
-            Comptes-rendus de réunions ({reunionReports.length})
-          </button>
-        )}
-
-        {/* 📑 Documents officiels (visible uniquement si l'admin a activé la section ET qu'il y a des docs) */}
-        {officialDocsOpen && officialDocs.length > 0 && (
-          <button
-            onClick={() => setOfficialDocsModalOpen(true)}
-            className="w-full mb-4 flex items-center justify-center gap-2 bg-gradient-to-r from-blue-500 to-purple-500 hover:from-blue-600 hover:to-purple-600 text-white font-semibold rounded-xl py-2.5 text-sm transition shadow-sm"
-          >
-            <FileSignature className="w-4 h-4" />
-            📑 Documents officiels ({officialDocs.length})
+            📑 Documents officiels ({reunionReports.length})
           </button>
         )}
 

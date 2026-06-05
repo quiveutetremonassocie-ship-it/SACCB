@@ -58,13 +58,13 @@ export default function EngagementAdmin({
   async function notifyAdherents() {
     if (readOnly || !adminEmail || !adminCode) return;
     if (!pollsOpen && !agOpen && !reportsOpen) {
-      alert("Activez au moins une section (Sondages, AG ou Comptes-rendus) avant de notifier les adhérents.");
+      alert("Activez au moins une section (Sondages, AG ou Documents officiels) avant de notifier les adhérents.");
       return;
     }
     const sections: string[] = [];
     if (pollsOpen) sections.push("Sondages");
     if (agOpen) sections.push("Questions & idées AG");
-    if (reportsOpen) sections.push("Comptes-rendus");
+    if (reportsOpen) sections.push("Documents officiels");
     const label = sections.join(" + ");
     if (!confirm(`Envoyer un email à tous les adhérents (payés + news activées) pour leur dire que "${label}" est maintenant disponible ?`)) return;
     setNotifying(true);
@@ -77,7 +77,7 @@ export default function EngagementAdmin({
   return (
     <div className="glass p-4 md:p-6">
       <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-4 flex items-center gap-2">
-        📣 Sondages, AG & Comptes-rendus
+        📣 Sondages, AG & Documents officiels
       </h3>
 
       {/* 2 toggles séparés visibilité côté site public */}
@@ -121,7 +121,7 @@ export default function EngagementAdmin({
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${agOpen ? "translate-x-5" : ""}`} />
           </span>
         </button>
-        {/* Toggle Comptes-rendus (nouveau, dissocié des sondages) */}
+        {/* Toggle Documents officiels (comptes-rendus + rapports + charte) */}
         <button
           onClick={toggleReports}
           disabled={readOnly}
@@ -133,7 +133,7 @@ export default function EngagementAdmin({
         >
           <span className="flex items-center gap-2">
             <FileText className="w-4 h-4" />
-            Comptes-rendus
+            Documents officiels
           </span>
           <span className={`relative inline-block w-10 h-5 rounded-full transition-colors ${reportsOpen ? "bg-blue-500" : "bg-slate-300"}`}>
             <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform ${reportsOpen ? "translate-x-5" : ""}`} />
@@ -181,7 +181,7 @@ export default function EngagementAdmin({
           className={`px-3 py-2 text-sm font-medium transition border-b-2 -mb-[1px] ${tab === "reports" ? "border-blue-500 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-700"}`}
         >
           <FileText className="w-4 h-4 inline mr-1.5" />
-          Comptes-rendus ({(db.reunionReports ?? []).length})
+          Documents officiels ({(db.reunionReports ?? []).length})
         </button>
       </div>
 
@@ -808,7 +808,7 @@ function ReportsTab({
     <div className="space-y-3">
       {!readOnly && !showForm && (
         <button onClick={startNew} className="btn-primary !text-sm w-full">
-          <Plus className="w-4 h-4" /> Nouveau compte-rendu
+          <Plus className="w-4 h-4" /> Nouveau document
         </button>
       )}
 
@@ -816,7 +816,7 @@ function ReportsTab({
         <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
           <div className="flex items-center justify-between">
             <p className="text-sm font-semibold text-slate-700">
-              {editingId ? "Modifier le compte-rendu" : "Nouveau compte-rendu"}
+              {editingId ? "Modifier le document" : "Nouveau document"}
             </p>
             <button onClick={() => { setShowForm(false); setEditingId(null); }} className="text-slate-400 hover:text-slate-600">
               <X className="w-4 h-4" />
@@ -835,10 +835,17 @@ function ReportsTab({
               value={form.type}
               onChange={(e) => setForm({ ...form, type: e.target.value as ReunionReport["type"] })}
             >
-              <option value="ag">Assemblée Générale</option>
-              <option value="debut_saison">Début de saison</option>
-              <option value="fin_saison">Fin de saison</option>
-              <option value="autre">Autre réunion</option>
+              <optgroup label="Comptes-rendus de réunions">
+                <option value="ag">Assemblée Générale</option>
+                <option value="debut_saison">Début de saison</option>
+                <option value="fin_saison">Fin de saison</option>
+              </optgroup>
+              <optgroup label="Documents officiels (publiés après AG)">
+                <option value="rapport_financier">Rapport financier</option>
+                <option value="rapport_moral">Rapport moral</option>
+                <option value="charte">Charte de l&apos;association</option>
+              </optgroup>
+              <option value="autre">Autre document</option>
             </select>
             <input
               type="date"
@@ -1091,6 +1098,9 @@ function labelType(t: ReunionReport["type"]): string {
     case "ag": return "Assemblée Générale";
     case "debut_saison": return "Début de saison";
     case "fin_saison": return "Fin de saison";
-    default: return "Réunion";
+    case "rapport_financier": return "Rapport financier";
+    case "charte": return "Charte de l'association";
+    case "rapport_moral": return "Rapport moral";
+    default: return "Autre document";
   }
 }

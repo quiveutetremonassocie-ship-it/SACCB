@@ -4,7 +4,7 @@ import { useState } from "react";
 import { BookOpen, ChevronDown, ChevronUp, Zap, Bell, Clock, Shield, Mail as MailIcon, Database } from "lucide-react";
 
 export default function GuideAdmin() {
-  const [autoOpen, setAutoOpen] = useState(true);
+  const [autoOpen, setAutoOpen] = useState(false);
   const [shortcutsOpen, setShortcutsOpen] = useState(false);
   const [practicesOpen, setPracticesOpen] = useState(false);
 

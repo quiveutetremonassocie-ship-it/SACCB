@@ -471,12 +471,9 @@ export default function AdminPanel({
               <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
             </div>
           )}
-          {/* 📑 Documents officiels — gestion partagée avec engagement */}
-          {canSee("engagement") && (
-            <div id="admin-official-docs" className="lg:col-span-2 scroll-mt-24">
-              <OfficialDocsAdmin db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
-            </div>
-          )}
+          {/* 📑 Documents officiels — fusionnés dans la section Comptes-rendus/Engagement
+              ci-dessus. L'ancien composant OfficialDocsAdmin reste dispo dans le code
+              mais n'est plus monté. */}
           {/* 📖 Guide admin — accessible à tous les admins, indépendant des permissions */}
           <div id="admin-guide" className="lg:col-span-2 scroll-mt-24">
             <GuideAdmin />
@@ -600,7 +597,6 @@ function QuickNav({
     { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
     { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
     { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
-    { id: "admin-official-docs", label: "Documents officiels", icon: <FileText className="w-4 h-4" />, color: "from-blue-500 to-purple-500", permission: "engagement" },
     { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
   ];
   const items = allItems.filter((it) => !it.permission || canSee(it.permission));
