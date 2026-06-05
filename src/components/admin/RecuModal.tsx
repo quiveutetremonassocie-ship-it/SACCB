@@ -57,7 +57,11 @@ export default function RecuModal({
         </p>
         <p className="text-center text-3xl font-bold mb-8">{montant} €</p>
         <p className="mb-2">
-          De la part de : <strong>{membre.nom}</strong>
+          De la part de : <strong>{
+            // 🛡️ Si le champ 'nom' ressemble à un email (cas rare des comptes admin
+            // indépendants), on n'affiche rien plutôt que de divulguer l'email
+            /@/.test(membre.nom) ? "______________________" : membre.nom
+          }</strong>
         </p>
         <p className="mb-8">
           Au titre de la cotisation annuelle pour la saison{" "}

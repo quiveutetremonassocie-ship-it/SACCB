@@ -634,7 +634,7 @@ export default function MemberPanel({
             >
               <span className="flex items-center gap-2">
                 <Trophy className="w-4 h-4 text-amber-500" />
-                Historique des tournois ({totalPast})
+                Tournois passés ({totalPast})
               </span>
               {histOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
             </button>
