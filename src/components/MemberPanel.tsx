@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight, HelpCircle } from "lucide-react";
 import Link from "next/link";
 import TshirtOrderForm from "./TshirtOrderForm";
 import RecuModal from "./admin/RecuModal";
@@ -377,12 +377,21 @@ export default function MemberPanel({
         {session.paid !== false && (
           <button
             onClick={() => setRecuOpen(true)}
-            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+            className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
           >
             <FileSignature className="w-4 h-4" />
             Mon justificatif d&apos;adhésion
           </button>
         )}
+
+        {/* ❓ Lien vers la FAQ — visible pour tous les membres */}
+        <a
+          href="/faq"
+          className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-700 hover:text-indigo-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-indigo-50"
+        >
+          <HelpCircle className="w-4 h-4" />
+          Questions fréquentes
+        </a>
 
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
         {(() => {
