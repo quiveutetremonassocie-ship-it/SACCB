@@ -105,12 +105,21 @@ export default function MemberPanel({
   function isDatePast(dateStr: string): boolean {
     if (!dateStr) return false;
     // Format ISO YYYY-MM-DD : comparaison lexicographique fiable
-    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr <= today;
-    // Autre format : on tente un parsing natif
+    // 🔧 Strict < : un tournoi qui a lieu AUJOURD'HUI n'est pas encore "passé"
+    if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr < today;
+    // Format français DD/MM/YYYY → on convertit en ISO pour comparer
+    const frMatch = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    if (frMatch) {
+      const iso = `${frMatch[3]}-${frMatch[2].padStart(2, "0")}-${frMatch[1].padStart(2, "0")}`;
+      return iso < today;
+    }
+    // Autre format parsable → on tente un parsing natif
     const d = new Date(dateStr);
-    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10) <= today;
-    // Date en texte libre non parsable → on l'inclut dans l'historique par défaut
-    return true;
+    if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10) < today;
+    // 🔧 Date en texte libre non parsable (ex: "Samedi 20 octobre") → on NE l'inclut PAS
+    // dans l'historique (mieux vaut ne rien afficher que d'afficher un tournoi à venir
+    // comme étant passé)
+    return false;
   }
 
   const allSeasons = useMemo(() => {
