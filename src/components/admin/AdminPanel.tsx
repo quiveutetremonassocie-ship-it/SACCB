@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send, HelpCircle } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send, HelpCircle, Shirt } from "lucide-react";
 import { DB, Membre, getEffectivePrix } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
@@ -579,6 +579,8 @@ function QuickNav({
     { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500", permission: "comptabilite" },
     { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500", permission: "actualites" },
     { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500", permission: "engagement" },
+    { id: "admin-tshirts", label: "T-shirts", icon: <Shirt className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "engagement" },
+    { id: "admin-bureau", label: "Bureau", icon: <Users className="w-4 h-4" />, color: "from-indigo-500 to-purple-500", permission: "bureau" },
     { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
     { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
     { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
@@ -591,7 +593,7 @@ function QuickNav({
       <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 px-1">
         🚀 Accès rapide
       </p>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-11 gap-2">
+      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
         {items.map((it) => (
           <button
             key={it.id}

@@ -897,17 +897,94 @@ Deno.serve(async (req) => {
             },
             {
               id: "faq-seed-2",
-              category: "Application",
+              category: "Mon compte",
               order: 1,
+              question: "Comment changer mon code personnel ?",
+              answer: "Connecte-toi à ton espace membre puis clique sur « Changer mon code personnel ». Tu devras saisir ton ancien code et choisir le nouveau (4 caractères minimum).",
+            },
+            {
+              id: "faq-seed-3",
+              category: "Mon compte",
+              order: 2,
+              question: "Comment télécharger mon justificatif d'adhésion ?",
+              answer: "Si tu as déjà payé ta cotisation, tu peux télécharger ton justificatif depuis ton espace membre. Clique sur le bouton « Mon justificatif d'adhésion », puis sur « Imprimer » → choisis « Enregistrer au format PDF » dans la boîte de dialogue d'impression de ton navigateur.\n\nC'est pratique pour les impôts ou pour te faire rembourser par ton employeur.",
+            },
+            {
+              id: "faq-seed-4",
+              category: "Inscription",
+              order: 3,
+              question: "Comment payer mon adhésion en ligne ?",
+              answer: "Sur la page Inscription, choisis « Paiement en ligne » : tu seras redirigé vers HelloAsso, notre partenaire qui encaisse les cotisations.\n\n⚠️ Attention : à la fin du paiement, HelloAsso propose une « contribution au fonctionnement » cochée par défaut. Cette contribution leur revient (pas au SACCB). Si tu veux juste payer ton adhésion, pense à mettre cette contribution à 0 €.\n\nLe tarif SACCB est fixe : 50 € pour un adulte, 30 € pour un étudiant.",
+            },
+            {
+              id: "faq-seed-5",
+              category: "Inscription",
+              order: 4,
+              question: "Je préfère payer par virement, comment faire ?",
+              answer: "Lors de ton inscription, choisis « Paiement par virement ». Tu recevras un email confirmant ton inscription en attente, puis tu pourras donner ton règlement à un membre du bureau lors du prochain entraînement.\n\nDès que ton paiement sera validé, tu recevras un email de confirmation avec ton code d'accès.",
+            },
+            {
+              id: "faq-seed-6",
+              category: "Inscription",
+              order: 5,
+              question: "Combien coûte l'adhésion ?",
+              answer: "Le tarif est fixe :\n• 50 € pour un Adulte\n• 30 € pour un Étudiant\n\nPas un centime de plus. Si tu paies en ligne via HelloAsso, attention à bien mettre leur contribution facultative à 0 € avant de valider.",
+            },
+            {
+              id: "faq-seed-7",
+              category: "Tournois",
+              order: 6,
+              question: "Comment m'inscrire à un tournoi ?",
+              answer: "Très simple, en 3 étapes :\n\n1. Connecte-toi à ton espace membre (bouton « Espace membre » en haut à droite)\n2. Va sur la page Tournois\n3. Sur le tournoi qui t'intéresse, clique sur « S'inscrire » et choisis ton/ta partenaire dans la liste\n\nTu peux aussi cliquer sur « Ajouter à mon agenda » pour avoir un rappel sur ton téléphone le jour J.\n\n💡 Tu peux te désinscrire à tout moment tant que le tournoi n'a pas commencé.",
+            },
+            {
+              id: "faq-seed-8",
+              category: "Tournois",
+              order: 7,
+              question: "Je peux changer de binôme après m'être inscrit ?",
+              answer: "Oui ! Tant que le tournoi n'a pas commencé, tu peux te désinscrire puis te réinscrire avec un autre partenaire depuis ton espace membre.\n\nSi le tournoi est complet, contacte directement un membre du bureau pour qu'il puisse t'aider à faire le changement.",
+            },
+            {
+              id: "faq-seed-9",
+              category: "Tournois",
+              order: 8,
+              question: "Où voir mes résultats et statistiques personnelles ?",
+              answer: "Tout est dans ton espace membre ! Tu y verras :\n• Tes statistiques perso (nombre de tournois joués, podiums, équipiers différents)\n• L'historique de tes tournois passés avec tes résultats\n• Le classement des binômes de la saison\n\nClique sur « Tournois passés » pour voir le détail de chaque saison.",
+            },
+            {
+              id: "faq-seed-10",
+              category: "Application",
+              order: 9,
               question: "Comment installer le site comme une appli sur mon téléphone ?",
               answer: "Le site SACCB peut s'installer comme une vraie application sur ton téléphone (icône sur l'écran d'accueil, plein écran, etc.) !\n\n🍎 Sur iPhone (Safari) :\n1. Ouvre saccb.fr dans Safari (pas Chrome)\n2. Appuie sur le bouton Partager (carré avec flèche)\n3. Fais défiler et touche « Sur l'écran d'accueil »\n4. Touche « Ajouter » en haut à droite ✅\n\n🤖 Sur Android (Chrome) :\n1. Ouvre saccb.fr dans Chrome\n2. Appuie sur le menu ⋮ (3 points) en haut à droite\n3. Touche « Installer l'application »\n4. Confirme ✅\n\nL'icône SACCB sera sur ton écran d'accueil et l'appli se mettra à jour automatiquement.",
             },
             {
-              id: "faq-seed-3",
-              category: "Tournois",
-              order: 2,
-              question: "Comment m'inscrire à un tournoi ?",
-              answer: "Très simple, en 3 étapes :\n\n1. Connecte-toi à ton espace membre (bouton « Espace membre » en haut à droite)\n2. Va sur la page Tournois (ou clique sur la section depuis ton espace)\n3. Sur le tournoi qui t'intéresse, clique sur « S'inscrire » et choisis ton/ta partenaire dans la liste\n\nTu peux aussi cliquer sur le bouton « Ajouter à mon agenda » pour recevoir un rappel sur ton téléphone le jour J.\n\n💡 Tu peux te désinscrire à tout moment tant que le tournoi n'a pas commencé.",
+              id: "faq-seed-11",
+              category: "Communication",
+              order: 10,
+              question: "Comment voter aux sondages et poser une question pour l'AG ?",
+              answer: "Connecte-toi à ton espace membre, puis va dans la section « Sondages & AG » sur la page d'accueil ou via ton espace.\n\nTu peux :\n• Voter aux sondages en cours en un clic\n• Poser tes propres questions/idées pour la prochaine assemblée générale\n• Lire les comptes-rendus des réunions précédentes\n• Générer ta procuration si tu ne peux pas être présent(e) à l'AG",
+            },
+            {
+              id: "faq-seed-12",
+              category: "Communication",
+              order: 11,
+              question: "J'ai une question ou une idée, comment vous contacter ?",
+              answer: "Le plus simple : utilise le formulaire sur la page Contact (lien dans le menu en haut). On reçoit ton message direct et on te répond rapidement.\n\nTu peux aussi parler directement avec un membre du bureau lors d'un entraînement, ou via le groupe WhatsApp si tu en fais partie.",
+            },
+            {
+              id: "faq-seed-13",
+              category: "Communication",
+              order: 12,
+              question: "Comment me désinscrire de la newsletter ?",
+              answer: "Connecte-toi à ton espace membre, puis décoche l'option « Recevoir les emails de l'association » dans tes préférences.\n\nTu continueras à recevoir les emails essentiels (confirmation de paiement, rappels de cotisation, etc.) mais plus les communications optionnelles.",
+            },
+            {
+              id: "faq-seed-14",
+              category: "Inscription",
+              order: 13,
+              question: "Pourquoi dois-je contacter le bureau avant de payer ?",
+              answer: "C'est juste une question d'organisation des créneaux : on aime bien faire connaissance avec les nouveaux adhérents et s'assurer qu'on a la place pour t'accueillir avant que tu engages des frais. C'est une étape rapide qui évite les mauvaises surprises.\n\nUtilise la page Contact ou viens nous voir à l'entraînement.",
             },
           ],
     });
@@ -1335,6 +1412,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 🔍 Détection de l'ouverture des commandes t-shirt (false → true)
+    const tshirtJustOpened = d.tshirtOpen !== true && newData.tshirtOpen === true;
+
     const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
@@ -1345,6 +1425,71 @@ Deno.serve(async (req) => {
         method: "POST",
         body: JSON.stringify(newData),
       }).catch((e) => console.warn("[admin_save] Sheets sync failed:", e));
+    }
+
+    // 👕 Notification automatique aux adhérents quand les commandes t-shirt s'ouvrent
+    if (tshirtJustOpened) {
+      const brevoKeyT = Deno.env.get("BREVO_API_KEY");
+      if (brevoKeyT) {
+        const tshirtPrice = typeof newData.tshirtPrice === "number" ? newData.tshirtPrice : null;
+        const priceText = tshirtPrice !== null ? `Le t-shirt coûte ${tshirtPrice}€` : "Le prix vous sera précisé par le bureau";
+        // Adhérents payés + newsletter activée (= ceux qui consentent à recevoir les news)
+        const paidMembres = ((newData.membres || []) as Record<string, unknown>[])
+          .filter((m) => m.ok === true && m.newsOptIn !== false)
+          .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+          .filter((m) => m.email);
+        // Fire-and-forget : on envoie en boucle avec throttle, sans bloquer la réponse admin
+        (async () => {
+          for (const r of paidMembres) {
+            const greeting = r.prenom ? `Bonjour ${escapeHtml(r.prenom)},` : "Bonjour,";
+            const greetingText = r.prenom ? `Bonjour ${r.prenom},` : "Bonjour,";
+            await sendBrevo(brevoKeyT, {
+              from: "SACCB <contact@saccb.fr>",
+              headers: {
+                "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+              },
+              to: [r.email],
+              subject: `👕 Commandes de t-shirts SACCB ouvertes !`,
+              text: `${greetingText}\n\nLes commandes de t-shirts SACCB sont ouvertes ! 🎉\n\nPour commander, c'est simple :\n1. Va sur saccb.fr et connecte-toi à ton espace membre\n2. Dans ton espace, tu verras un bloc orange « Commander un T-shirt SACCB »\n3. Choisis ta taille (XS, S, M, L ou XL) et indique éventuellement un nom/surnom à floquer sur ton t-shirt\n4. Valide ta commande\n\n💰 Prix : ${priceText}. Le règlement se fera de la main à la main, au moment où tu viendras chercher ton t-shirt.\n\nPour modifier ou annuler ta commande, retourne dans ton espace membre.\n\nÀ très bientôt sur les terrains 🏸\nLe bureau du SACCB`,
+              html: `
+                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                  <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 14px;">
+                    <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="background: white; border-radius: 10px; padding: 4px; display: block;" />
+                    <div><h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club de Compétition de Badminton</p></div>
+                  </div>
+                  <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                    <p style="color: #475569; margin: 0 0 14px;">${greeting}</p>
+                    <p style="color: #475569; line-height: 1.6;">Les <strong>commandes de t-shirts SACCB</strong> sont ouvertes 🎉</p>
+                    <h3 style="color: #1e3a5f; font-size: 15px; margin: 20px 0 10px;">👕 Comment commander</h3>
+                    <ol style="color: #475569; line-height: 1.7; padding-left: 20px; margin: 0 0 16px;">
+                      <li>Rends-toi sur <a href="https://saccb.fr/?member=1" style="color: #1e3a5f; font-weight: 600;">saccb.fr</a> et connecte-toi à ton espace membre</li>
+                      <li>Dans ton espace, tu verras un bloc orange <strong>« Commander un T-shirt SACCB »</strong></li>
+                      <li>Choisis ta taille (XS, S, M, L ou XL) et, si tu le souhaites, un nom/surnom à floquer</li>
+                      <li>Valide ta commande</li>
+                    </ol>
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 16px 0;">
+                      <p style="margin: 0 0 4px; color: #92400e; font-size: 13px;"><strong>💰 Prix</strong></p>
+                      <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">${priceText}.<br/>Le règlement se fera <strong>de la main à la main</strong>, au moment où tu viendras chercher ton t-shirt — pas de paiement en ligne pour les t-shirts.</p>
+                    </div>
+                    <p style="color: #64748b; font-size: 13px; margin: 14px 0 0;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace membre tant que les commandes sont ouvertes.</p>
+                    <p style="margin-top: 22px; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains 🏸</p>
+                    <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">Le bureau du SACCB</p>
+                  </div>
+                </div>
+              `,
+            }).catch(() => {});
+            await sleep(EMAIL_THROTTLE_MS);
+          }
+          await logEmailToHistory(supabaseAdmin, {
+            type: "tshirt_open_notification",
+            subject: `Commandes de t-shirts SACCB ouvertes`,
+            recipients: paidMembres.map((m) => m.email),
+            sentCount: paidMembres.length,
+            status: "sent",
+          });
+        })();
+      }
     }
 
     return json({ ok: true });
