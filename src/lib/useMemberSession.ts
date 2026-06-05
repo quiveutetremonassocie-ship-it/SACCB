@@ -25,6 +25,8 @@ export type MemberSession = {
   // ici avec la session a le même profil de sécurité.
   memberCode?: string;
   newsOptIn?: boolean; // préférence news de l’association
+  // 🔕 Ids des tournois pour lesquels le membre a coché "pas intéressé(e)"
+  tournoisIgnored?: string[];
 };
 
 export function getMemberSession(): MemberSession | null {

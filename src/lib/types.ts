@@ -10,6 +10,9 @@ export type Membre = {
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
+  // 🔕 Ids de tournois pour lesquels le membre a explicitement dit "pas intéressé".
+  // Le système n'enverra pas les rappels J-30/J-15/J-5/J-1 pour ces tournois.
+  tournoisIgnored?: string[];
 };
 
 export type FactureFile = {

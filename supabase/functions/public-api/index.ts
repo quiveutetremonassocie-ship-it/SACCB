@@ -992,6 +992,36 @@ Deno.serve(async (req) => {
   }
 
   // ❓ ADHÉRENT pose une nouvelle question pour la FAQ (en attente de réponse admin)
+  // 🔕 [MEMBRE] Toggle "pas intéressé(e) par ce tournoi"
+  // Le membre ne recevra pas les rappels J-30/15/5/1 pour ce tournoi.
+  if (action === "member_toggle_tournoi_ignored") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const tournoiId = String(body.tournoiId || "");
+    const ignored = body.ignored === true; // true = ne plus recevoir, false = réactiver
+    if (!email || !code || !membreId || !tournoiId) return json({ ok: false, reason: "Paramètres manquants." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
+
+    const idx = membres.findIndex((m) => m.id === membreId);
+    if (idx === -1) return json({ ok: false, reason: "Adhérent introuvable." }, 404);
+
+    const current = Array.isArray(membres[idx].tournoisIgnored) ? (membres[idx].tournoisIgnored as string[]) : [];
+    const next = ignored
+      ? Array.from(new Set([...current, tournoiId]))
+      : current.filter((id) => id !== tournoiId);
+    membres[idx] = { ...membres[idx], tournoisIgnored: next };
+    d.membres = membres;
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true, tournoisIgnored: next });
+  }
+
   if (action === "faq_ask_question") {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));
@@ -1373,6 +1403,7 @@ Deno.serve(async (req) => {
         type: membre.type,
         email: membre.email,
         newsOptIn: membre.newsOptIn !== false, // true par défaut pour les anciens comptes
+        tournoisIgnored: Array.isArray(membre.tournoisIgnored) ? membre.tournoisIgnored : [],
       },
       trustToken: issuedTrustToken ?? undefined,
     });
@@ -2302,9 +2333,16 @@ Deno.serve(async (req) => {
     const unpaidEmails = unpaidRecipients.map((r) => r.email);
 
     // Membres payés ayant accepté les news — destinataires des rappels tournois
+    // On garde aussi l'id et la liste des tournois ignorés pour pouvoir filtrer
+    // les rappels tournois (le membre a dit "pas intéressé" pour ce tournoi)
     const newsRecipients = membres
       .filter((m) => m.ok === true && m.newsOptIn !== false)
-      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .map((m) => ({
+        email: String(m.email || ""),
+        prenom: extractFirstName(String(m.nom || "")),
+        membreId: String(m.id || ""),
+        tournoisIgnored: Array.isArray(m.tournoisIgnored) ? (m.tournoisIgnored as string[]) : [],
+      }))
       .filter((r) => r.email);
     const newsEmails = newsRecipients.map((r) => r.email);
 
@@ -2442,15 +2480,20 @@ Deno.serve(async (req) => {
       const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
       if (tDaysLeft !== 30 && tDaysLeft !== 15 && tDaysLeft !== 5 && tDaysLeft !== 1) continue;
 
-      // 🎯 Exclure les membres déjà inscrits à CE tournoi (inutile de leur envoyer un rappel)
-      const inscritsCeTournoi = inscritsTournoi.filter((i) => i.tournoiId === t.id);
+      // 🎯 Exclure :
+      //  - les membres déjà inscrits à CE tournoi (inutile de leur envoyer un rappel)
+      //  - les membres qui ont coché "pas intéressé(e)" sur ce tournoi
+      const tournoiId = String(t.id || "");
+      const inscritsCeTournoi = inscritsTournoi.filter((i) => i.tournoiId === tournoiId);
       const inscritsNoms = inscritsCeTournoi
         .map((i) => String(i.joueurs || "").toLowerCase())
         .join(" | ");
       const newsRecipientsForThisT = newsRecipients.filter((r) => {
+        // 🔕 Filtre 1 : pas intéressé(e) explicite
+        if (r.tournoisIgnored.includes(tournoiId)) return false;
+        // Filtre 2 : déjà inscrit (basé sur le prénom)
         if (!r.prenom) return true; // si pas de prénom, on ne peut pas matcher → on garde par sécurité
         const nameLower = r.prenom.toLowerCase();
-        // Si le prénom du membre apparaît dans la liste des inscrits → on l'exclut
         return !inscritsNoms.includes(nameLower);
       });
 

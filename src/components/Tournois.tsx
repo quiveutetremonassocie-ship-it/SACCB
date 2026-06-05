@@ -1,10 +1,10 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone } from "lucide-react";
+import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone, BellOff, Bell } from "lucide-react";
 import { useState } from "react";
 import { DB, Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
-import { publicRegisterTournoiWithCovoiturage } from "@/lib/db";
+import { publicRegisterTournoiWithCovoiturage, memberToggleTournoiIgnored } from "@/lib/db";
 import { MemberSession } from "@/lib/useMemberSession";
 import { MiniCalendarBadge } from "./MiniCalendar";
 import TiltCard from "./TiltCard";
@@ -384,6 +384,28 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
   const [covoContact, setCovoContact] = useState("");
   const daysLeft = getDaysLeft(t.dateLimit);
   const inscriptionsClosed = t.closed === true || (daysLeft !== null && daysLeft < 0);
+  // 🔕 Le membre a-t-il dit "pas intéressé" pour ce tournoi ?
+  const [ignored, setIgnored] = useState<boolean>(
+    !!memberSession?.tournoisIgnored?.includes(t.id)
+  );
+  const [togglingIgnored, setTogglingIgnored] = useState(false);
+
+  async function toggleIgnoredFn() {
+    if (!memberSession) return;
+    const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    if (!code) {
+      alert("Reconnectez-vous à votre espace membre pour modifier vos préférences.");
+      return;
+    }
+    setTogglingIgnored(true);
+    const r = await memberToggleTournoiIgnored(memberSession.email, code, memberSession.membreId, t.id, !ignored);
+    setTogglingIgnored(false);
+    if (r.ok) {
+      setIgnored(!ignored);
+    } else {
+      alert("Erreur : " + (r.reason || "inconnue"));
+    }
+  }
 
   // Offres de covoiturage pour ce tournoi
   const covoiturageOffers = inscrits.filter((i) => i.covoiturage && i.covoiturage.seats > 0);
@@ -582,6 +604,36 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
                 )}
               </div>
               <button type="submit" className="btn-primary w-full" disabled={submitting}>{submitting ? "Envoi..." : "S'inscrire"}</button>
+
+              {/* 🔕 Bouton "Pas intéressé(e)" — pour ne plus recevoir les rappels de ce tournoi */}
+              {!readOnly && !ignored && (
+                <button
+                  type="button"
+                  onClick={toggleIgnoredFn}
+                  disabled={togglingIgnored}
+                  className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-white border border-slate-300 hover:border-slate-400 text-slate-600 hover:text-slate-800 text-xs font-medium px-4 py-2 rounded-xl transition disabled:opacity-50"
+                  title="Cocher cette case pour ne plus recevoir les rappels d'inscription pour ce tournoi"
+                >
+                  <BellOff className="w-3.5 h-3.5" />
+                  {togglingIgnored ? "..." : "Pas intéressé(e) — ne plus me rappeler"}
+                </button>
+              )}
+              {!readOnly && ignored && (
+                <div className="mt-3 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-2">
+                  <p className="text-xs text-slate-600">
+                    🔕 Vous ne recevrez pas de rappel pour ce tournoi.
+                  </p>
+                  <button
+                    type="button"
+                    onClick={toggleIgnoredFn}
+                    disabled={togglingIgnored}
+                    className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 disabled:opacity-50 shrink-0"
+                  >
+                    <Bell className="w-3 h-3" />
+                    Réactiver
+                  </button>
+                </div>
+              )}
             </form>
           ) : memberSession && memberSession.paid !== true ? (
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">

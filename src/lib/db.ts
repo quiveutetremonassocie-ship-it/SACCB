@@ -122,6 +122,23 @@ export async function adminDraftDelete(adminEmail: string, adminCode: string, dr
   return res.json();
 }
 
+// 🔕 Membre marque un tournoi comme "pas intéressé(e)" (ou réactive les rappels)
+// → utilisé pour ne plus recevoir les rappels J-30/15/5/1 pour ce tournoi
+export async function memberToggleTournoiIgnored(
+  email: string,
+  code: string,
+  membreId: string,
+  tournoiId: string,
+  ignored: boolean
+): Promise<{ ok: boolean; tournoisIgnored?: string[]; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "member_toggle_tournoi_ignored", email, code, membreId, tournoiId, ignored }),
+  });
+  return res.json();
+}
+
 // ❓ Membre pose une nouvelle question pour la FAQ
 export async function memberAskFaqQuestion(email: string, code: string, membreId: string, question: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
