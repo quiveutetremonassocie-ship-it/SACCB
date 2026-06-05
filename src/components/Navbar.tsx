@@ -36,6 +36,7 @@ export default function Navbar({
     { href: "/tournois", label: "Tournois" },
     { href: "/#palmares", label: "Palmarès" },
     { href: "/inscription", label: "Adhésion", hideIfMember: true },
+    { href: "/faq", label: "Aide" },
     { href: "/contact", label: "Contact" },
   ];
   // Le lien "Adhésion" est caché pour les membres connectés (ils sont déjà adhérents)

@@ -47,6 +47,8 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     sectionsVisible: d.sectionsVisible ?? {},
     clubConfig: d.clubConfig ?? undefined,
     tshirtOpen: d.tshirtOpen === true,
+    faqOpen: d.faqOpen === true,
+    faqItems: Array.isArray(d.faqItems) ? d.faqItems : [],
   };
 }
 

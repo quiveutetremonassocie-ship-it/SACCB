@@ -101,6 +101,15 @@ export type AGItem = {
   resolved?: boolean;
 };
 
+// ❓ Question/réponse de la FAQ adhérents
+export type FaqItem = {
+  id: string;
+  question: string;
+  answer: string;     // texte libre, retours à la ligne préservés
+  category?: string;  // ex: "Inscription", "Paiement", "Tournois", "Mon compte"
+  order?: number;     // pour trier (asc)
+};
+
 // 👕 Commande de t-shirt par un adhérent
 export type TshirtOrder = {
   id: string;
@@ -175,6 +184,9 @@ export type DB = {
   tshirtOpen?: boolean; // Section commande t-shirt visible/ouverte dans l'espace membre
   tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
+  // ❓ FAQ adhérents : visible sur la home + page /faq
+  faqOpen?: boolean; // Affiche/cache la section FAQ côté public
+  faqItems?: FaqItem[];
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

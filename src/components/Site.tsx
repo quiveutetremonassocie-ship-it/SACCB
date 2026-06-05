@@ -23,12 +23,13 @@ import Palmares from "./Palmares";
 import Engagement from "./Engagement";
 import Rules from "./Rules";
 import ContactSection from "./ContactSection";
+import FAQ from "./FAQ";
 import BureauPublic from "./BureauPublic";
 import ScrollButton from "./ScrollButton";
 import FadeInSection from "./FadeInSection";
 import WaveDivider from "./WaveDivider";
 
-type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact";
+type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact" | "faq";
 
 export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [db, setDb] = useState<DB>(emptyDB());
@@ -523,6 +524,18 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {mode === "contact" && (
           <FadeInSection>
             <ContactSection whatsappLink={db.whatsappLink} />
+          </FadeInSection>
+        )}
+
+        {/* ❓ FAQ — section sur la home (mode preview) + page complète (mode full) */}
+        {mode === "full" && db.faqOpen && (db.faqItems ?? []).length > 0 && (
+          <FadeInSection>
+            <FAQ items={db.faqItems ?? []} mode="preview" />
+          </FadeInSection>
+        )}
+        {mode === "faq" && (
+          <FadeInSection>
+            <FAQ items={db.faqItems ?? []} mode="full" />
           </FadeInSection>
         )}
 

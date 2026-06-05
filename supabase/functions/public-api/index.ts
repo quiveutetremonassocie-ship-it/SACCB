@@ -882,6 +882,34 @@ Deno.serve(async (req) => {
       clubConfig: d.clubConfig ?? {},
       tshirtOpen: d.tshirtOpen === true,
       tshirtPrice: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
+      faqOpen: d.faqOpen === true,
+      // Si aucune FAQ n'a encore été configurée, on renvoie un seed par défaut
+      // (3 questions essentielles). L'admin peut tout modifier ensuite.
+      faqItems: Array.isArray(d.faqItems) && d.faqItems.length > 0
+        ? d.faqItems
+        : [
+            {
+              id: "faq-seed-1",
+              category: "Mon compte",
+              order: 0,
+              question: "J'ai oublié mon code de connexion, que faire ?",
+              answer: "Pas de panique ! Sur la page de connexion (« Espace membre » en haut à droite), clique sur le lien « Code oublié ? » juste sous le formulaire. Tu recevras un email contenant un nouveau code temporaire. Connecte-toi avec, puis change-le si tu veux dans l'onglet « Changer mon code personnel » de ton espace membre.",
+            },
+            {
+              id: "faq-seed-2",
+              category: "Application",
+              order: 1,
+              question: "Comment installer le site comme une appli sur mon téléphone ?",
+              answer: "Le site SACCB peut s'installer comme une vraie application sur ton téléphone (icône sur l'écran d'accueil, plein écran, etc.) !\n\n🍎 Sur iPhone (Safari) :\n1. Ouvre saccb.fr dans Safari (pas Chrome)\n2. Appuie sur le bouton Partager (carré avec flèche)\n3. Fais défiler et touche « Sur l'écran d'accueil »\n4. Touche « Ajouter » en haut à droite ✅\n\n🤖 Sur Android (Chrome) :\n1. Ouvre saccb.fr dans Chrome\n2. Appuie sur le menu ⋮ (3 points) en haut à droite\n3. Touche « Installer l'application »\n4. Confirme ✅\n\nL'icône SACCB sera sur ton écran d'accueil et l'appli se mettra à jour automatiquement.",
+            },
+            {
+              id: "faq-seed-3",
+              category: "Tournois",
+              order: 2,
+              question: "Comment m'inscrire à un tournoi ?",
+              answer: "Très simple, en 3 étapes :\n\n1. Connecte-toi à ton espace membre (bouton « Espace membre » en haut à droite)\n2. Va sur la page Tournois (ou clique sur la section depuis ton espace)\n3. Sur le tournoi qui t'intéresse, clique sur « S'inscrire » et choisis ton/ta partenaire dans la liste\n\nTu peux aussi cliquer sur le bouton « Ajouter à mon agenda » pour recevoir un rappel sur ton téléphone le jour J.\n\n💡 Tu peux te désinscrire à tout moment tant que le tournoi n'a pas commencé.",
+            },
+          ],
     });
   }
 
