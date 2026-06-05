@@ -1,9 +1,10 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
-import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search, History, Trash2, ChevronDown, ChevronUp, AlertCircle } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search, History, Trash2, ChevronDown, ChevronUp, AlertCircle, FileText, CalendarClock } from "lucide-react";
 import { DB } from "@/lib/types";
-import { adminSendEmail, adminDeleteEmailLog, adminClearEmailHistory } from "@/lib/db";
+import type { EmailDraft } from "@/lib/types";
+import { adminSendEmail, adminDeleteEmailLog, adminClearEmailHistory, adminDraftsList, adminDraftSave, adminDraftDelete } from "@/lib/db";
 
 type TargetMode = "" | "all" | "paid" | "unpaid" | "news" | "custom";
 
@@ -46,6 +47,88 @@ export default function EmailingAdmin({
   const [historyAutoOpen, setHistoryAutoOpen] = useState(false);
   const [openLogId, setOpenLogId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+
+  // 📝 Brouillons
+  const [drafts, setDrafts] = useState<EmailDraft[]>([]);
+  const [draftsOpen, setDraftsOpen] = useState(false);
+  const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
+  const [scheduledAt, setScheduledAt] = useState<string>(""); // format "YYYY-MM-DDTHH:mm"
+  const [savingDraft, setSavingDraft] = useState(false);
+
+  const refreshDrafts = useCallback(async () => {
+    if (!adminEmail || !adminCode) return;
+    const r = await adminDraftsList(adminEmail, adminCode);
+    if (r.ok && r.drafts) setDrafts(r.drafts);
+  }, [adminEmail, adminCode]);
+  useEffect(() => { refreshDrafts(); }, [refreshDrafts]);
+
+  function clearForm() {
+    setSubject(""); setBody(""); setVariant("default");
+    setTargetMode(""); setSelectedMembreIds(new Set()); setExtraEmails("");
+    setEditingDraftId(null); setScheduledAt("");
+  }
+
+  function loadDraft(d: EmailDraft) {
+    setSubject(d.subject || "");
+    setBody(d.body || "");
+    setVariant((d.variant as typeof variant) || "default");
+    setTargetMode((d.targetMode as TargetMode) || "");
+    setSelectedMembreIds(new Set(d.customMembreIds || []));
+    setExtraEmails((d.extraEmails || []).join(", "));
+    setEditingDraftId(d.id);
+    // Convertit ISO -> format input datetime-local (YYYY-MM-DDTHH:mm)
+    if (d.scheduledAt) {
+      const dt = new Date(d.scheduledAt);
+      const pad = (n: number) => String(n).padStart(2, "0");
+      setScheduledAt(`${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`);
+    } else {
+      setScheduledAt("");
+    }
+    setDraftsOpen(false);
+    setTimeout(() => document.getElementById("emailing-form-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
+  }
+
+  async function saveAsDraft() {
+    if (!adminEmail || !adminCode) return;
+    if (!subject.trim() && !body.trim()) {
+      alert("Saisissez au moins un sujet ou un message avant d'enregistrer.");
+      return;
+    }
+    setSavingDraft(true);
+    const customMembreIds = targetMode === "custom" ? Array.from(selectedMembreIds) : [];
+    const r = await adminDraftSave({
+      adminEmail, adminCode,
+      draftId: editingDraftId || undefined,
+      subject: subject.trim(),
+      body: body.trim(),
+      targetMode,
+      customMembreIds,
+      extraEmails: parsedExtraEmails,
+      variant,
+      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
+    });
+    setSavingDraft(false);
+    if (r.ok) {
+      if (r.draftId) setEditingDraftId(r.draftId);
+      await refreshDrafts();
+      setResult({ ok: true, text: scheduledAt ? "Brouillon programmé enregistré ✓" : "Brouillon enregistré ✓" });
+      setTimeout(() => setResult(null), 3000);
+    } else {
+      alert("Erreur : " + (r.reason || "Inconnue"));
+    }
+  }
+
+  async function deleteDraft(id: string) {
+    if (!adminEmail || !adminCode) return;
+    if (!confirm("Supprimer définitivement ce brouillon ?")) return;
+    const r = await adminDraftDelete(adminEmail, adminCode, id);
+    if (r.ok) {
+      if (editingDraftId === id) clearForm();
+      await refreshDrafts();
+    } else {
+      alert("Erreur : " + (r.reason || "Inconnue"));
+    }
+  }
 
   // 📩 Réponse à un message reçu : on récupère le contexte depuis sessionStorage
   // (déposé par MessagesAdmin quand on clique sur l'enveloppe "Répondre")
@@ -278,6 +361,8 @@ export default function EmailingAdmin({
         contentType: a.contentType,
       })),
       variant,
+      // 📝 Si on envoie un brouillon, on transmet son id pour qu'il soit supprimé après envoi
+      draftId: editingDraftId || undefined,
     });
     setSending(false);
 
@@ -286,6 +371,11 @@ export default function EmailingAdmin({
         ok: true,
         text: `✅ Email envoyé à ${r.sent} destinataire${(r.sent ?? 0) > 1 ? "s" : ""}${r.total && r.total !== r.sent ? ` (sur ${r.total} prévus)` : ""}!`,
       });
+      // Refresh la liste des brouillons (au cas où on en consommait un)
+      if (editingDraftId) {
+        setEditingDraftId(null);
+        refreshDrafts();
+      }
       // Reset le formulaire
       setSubject("");
       setBody("");
@@ -560,16 +650,131 @@ export default function EmailingAdmin({
         </div>
       )}
 
-      {/* Bouton envoyer */}
+      {/* 🗓️ Programmation (optionnelle) */}
       {!readOnly && (
-        <button
-          onClick={handleSend}
-          disabled={sending || recipientCount === 0 || !subject.trim() || !body.trim()}
-          className="btn-primary w-full"
-        >
-          <Send className="w-4 h-4" />
-          {sending ? "Envoi en cours..." : `Envoyer à ${recipientCount} destinataire${recipientCount > 1 ? "s" : ""}`}
-        </button>
+        <div className="mb-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
+          <label className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1.5 flex items-center gap-1.5">
+            <CalendarClock className="w-3.5 h-3.5" /> Programmer un envoi (optionnel)
+          </label>
+          <div className="flex gap-2 items-center flex-wrap">
+            <input
+              type="datetime-local"
+              value={scheduledAt}
+              onChange={(e) => setScheduledAt(e.target.value)}
+              className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 bg-white"
+              min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
+            />
+            {scheduledAt && (
+              <button
+                onClick={() => setScheduledAt("")}
+                className="text-xs text-slate-500 hover:text-slate-700 px-2"
+                title="Retirer la programmation"
+              >
+                ✕
+              </button>
+            )}
+          </div>
+          <p className="text-[11px] text-slate-500 mt-1.5">
+            Si une date est définie, enregistrer comme brouillon programmera l&apos;envoi automatique à cette date.
+            Sinon le brouillon reste en attente d&apos;envoi manuel.
+          </p>
+        </div>
+      )}
+
+      {/* Boutons : Brouillon + Envoyer */}
+      {!readOnly && (
+        <div className="flex flex-col sm:flex-row gap-2">
+          <button
+            onClick={saveAsDraft}
+            disabled={savingDraft || (!subject.trim() && !body.trim())}
+            className="flex-1 inline-flex items-center justify-center gap-2 bg-white border-2 border-slate-300 hover:border-slate-500 text-slate-700 font-semibold px-4 py-2.5 rounded-xl transition disabled:opacity-50"
+          >
+            <FileText className="w-4 h-4" />
+            {savingDraft ? "Enregistrement..." : editingDraftId ? "Mettre à jour le brouillon" : "Enregistrer comme brouillon"}
+          </button>
+          <button
+            onClick={handleSend}
+            disabled={sending || recipientCount === 0 || !subject.trim() || !body.trim()}
+            className="flex-1 btn-primary"
+          >
+            <Send className="w-4 h-4" />
+            {sending ? "Envoi en cours..." : `Envoyer à ${recipientCount} destinataire${recipientCount > 1 ? "s" : ""}`}
+          </button>
+        </div>
+      )}
+
+      {/* Indicateur "édition d'un brouillon" */}
+      {editingDraftId && (
+        <div className="mt-3 bg-amber-50 border border-amber-200 rounded-xl px-4 py-2 flex items-center justify-between gap-2">
+          <p className="text-xs text-amber-800">
+            ✏️ Vous modifiez un brouillon existant.
+          </p>
+          <button
+            onClick={clearForm}
+            className="text-xs text-amber-700 hover:text-amber-900 underline"
+          >
+            Nouveau message vide
+          </button>
+        </div>
+      )}
+
+      {/* 📝 Section "Brouillons" — visible s'il y en a au moins 1 */}
+      {drafts.length > 0 && !readOnly && (
+        <div className="mt-6 border-t border-slate-200 pt-4">
+          <button
+            onClick={() => setDraftsOpen(!draftsOpen)}
+            className="w-full flex items-center justify-between bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl px-4 py-3 transition"
+          >
+            <span className="flex items-center gap-2 text-sm font-semibold text-amber-900">
+              <FileText className="w-4 h-4 text-amber-700" />
+              📝 Brouillons et envois programmés ({drafts.length})
+            </span>
+            {draftsOpen ? <ChevronUp className="w-4 h-4 text-amber-700" /> : <ChevronDown className="w-4 h-4 text-amber-700" />}
+          </button>
+          {draftsOpen && (
+            <ul className="mt-3 space-y-2">
+              {drafts.map((d) => {
+                const isScheduled = !!d.scheduledAt;
+                const scheduledDate = isScheduled ? new Date(d.scheduledAt!) : null;
+                const isPast = scheduledDate ? scheduledDate.getTime() < Date.now() : false;
+                return (
+                  <li key={d.id} className="bg-white border border-slate-200 rounded-xl p-3">
+                    <div className="flex items-start gap-2">
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-semibold text-slate-800 truncate">{d.subject || <span className="italic text-slate-400">(sans sujet)</span>}</p>
+                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
+                          {isScheduled && (
+                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${isPast ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
+                              <CalendarClock className="w-3 h-3" />
+                              {isPast ? "À envoyer (en retard)" : `Programmé : ${scheduledDate?.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`}
+                            </span>
+                          )}
+                          {!isScheduled && (
+                            <span className="inline-block bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">Brouillon</span>
+                          )}
+                          <span>Modifié le {new Date(d.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => loadDraft(d)}
+                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                      >
+                        Ouvrir
+                      </button>
+                      <button
+                        onClick={() => deleteDraft(d.id)}
+                        className="text-red-400 hover:text-red-600 p-1.5 rounded shrink-0"
+                        title="Supprimer le brouillon"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          )}
+        </div>
       )}
 
       {/* ─── HISTORIQUE DES EMAILS — SCISSION : MANUELS vs AUTOMATIQUES ─── */}

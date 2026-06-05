@@ -81,6 +81,47 @@ export async function memberSubmitTshirtOrder(args: {
   return res.json();
 }
 
+// 📝 [ADMIN] Liste les brouillons d'emails
+export async function adminDraftsList(adminEmail: string, adminCode: string): Promise<{ ok: boolean; drafts?: import("./types").EmailDraft[]; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_drafts_list", adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
+// 📝 [ADMIN] Crée ou met à jour un brouillon (draftId vide = création)
+export async function adminDraftSave(args: {
+  adminEmail: string;
+  adminCode: string;
+  draftId?: string;
+  subject: string;
+  body: string;
+  targetMode: string;
+  customMembreIds?: string[];
+  extraEmails?: string[];
+  variant?: string;
+  scheduledAt?: string;
+}): Promise<{ ok: boolean; draftId?: string; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_draft_save", ...args }),
+  });
+  return res.json();
+}
+
+// 📝 [ADMIN] Supprime un brouillon
+export async function adminDraftDelete(adminEmail: string, adminCode: string, draftId: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_draft_delete", adminEmail, adminCode, draftId }),
+  });
+  return res.json();
+}
+
 // ❓ Membre pose une nouvelle question pour la FAQ
 export async function memberAskFaqQuestion(email: string, code: string, membreId: string, question: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
@@ -676,6 +717,7 @@ export async function adminSendEmail(args: {
   extraEmails?: string[];
   attachments?: { filename: string; content: string; contentType?: string }[];
   variant?: EmailVariant;
+  draftId?: string; // si fourni, le brouillon sera supprimé après envoi réussi
 }): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string; errors?: string[] }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
@@ -691,6 +733,7 @@ export async function adminSendEmail(args: {
       extraEmails: args.extraEmails ?? [],
       attachments: args.attachments ?? [],
       variant: args.variant ?? "default",
+      draftId: args.draftId,
     }),
   });
   return res.json();

@@ -101,6 +101,24 @@ export type AGItem = {
   resolved?: boolean;
 };
 
+// 📝 Brouillon d'email partagé entre admins
+export type EmailDraft = {
+  id: string;
+  subject: string;
+  body: string;
+  targetMode: "all" | "paid" | "unpaid" | "news" | "custom" | "";
+  customMembreIds?: string[]; // ids des adhérents sélectionnés si targetMode === "custom"
+  extraEmails?: string[];     // emails externes ajoutés
+  variant?: "default" | "urgent" | "annonce" | "bonne_nouvelle" | "info";
+  // Programmation : si scheduledAt est défini, le brouillon sera envoyé automatiquement
+  // par le cron à cette date/heure (ISO timestamp). Sinon c'est juste un brouillon manuel.
+  scheduledAt?: string;
+  createdAt: string;          // ISO timestamp
+  updatedAt: string;          // ISO timestamp
+  createdBy?: string;         // email de l'admin créateur
+  updatedBy?: string;         // email de l'admin qui a modifié en dernier
+};
+
 // ❓ Question/réponse de la FAQ adhérents
 export type FaqItem = {
   id: string;
@@ -198,6 +216,9 @@ export type DB = {
   faqOpen?: boolean; // Affiche/cache la section FAQ côté public
   faqItems?: FaqItem[];
   faqPending?: FaqPendingQuestion[]; // Questions soumises par adhérents en attente de réponse admin
+  // 📝 Brouillons d'emails partagés entre admins (préparés à l'avance, envoyés plus tard
+  // ou programmés à une date/heure précise)
+  emailDrafts?: EmailDraft[];
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

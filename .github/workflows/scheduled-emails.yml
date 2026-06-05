@@ -1,0 +1,26 @@
+name: Envoi des emails programmés
+
+on:
+  schedule:
+    # Toutes les 15 minutes — granularité raisonnable pour les brouillons programmés
+    - cron: '*/15 * * * *'
+  workflow_dispatch: # permet de lancer manuellement pour tester
+
+jobs:
+  send-scheduled:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Envoyer les brouillons dont l'heure d'envoi est arrivée
+        run: |
+          set +e
+          echo "📤 Appel de cron_send_scheduled_drafts..."
+          STATUS=$(curl -s -o /tmp/body.txt -w "%{http_code}" \
+            --max-time 120 \
+            -X POST "https://jsceiujlopxgsjlxbvyu.supabase.co/functions/v1/public-api" \
+            -H "Content-Type: application/json" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -d '{"action":"cron_send_scheduled_drafts"}')
+          echo "HTTP $STATUS"
+          cat /tmp/body.txt
+          echo ""

@@ -3774,6 +3774,198 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: Envoi d'un email personnalisé aux adhérents (avec pièces jointes) ───
+  // ⏰ [CRON, public] Envoie les brouillons programmés dont l'heure est arrivée.
+  // Appelé toutes les 15 min par GitHub Actions (workflow scheduled-emails.yml).
+  // Aucune auth requise (l'action ne fait que consommer des brouillons côté serveur),
+  // mais on garde une logique idempotente : si rien à envoyer, on retourne juste {sent:0}.
+  if (action === "cron_send_scheduled_drafts") {
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "DB error" }, 500);
+    const d = data.data as Record<string, unknown>;
+    const drafts = (d.emailDrafts || []) as Array<Record<string, unknown>>;
+    const now = Date.now();
+    const dueDrafts = drafts.filter((x) =>
+      x.scheduledAt && new Date(String(x.scheduledAt)).getTime() <= now
+    );
+    if (dueDrafts.length === 0) return json({ ok: true, sent: 0 });
+
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "BREVO_API_KEY missing" }, 500);
+
+    const membres = (d.membres || []) as Array<Record<string, unknown>>;
+    let sentDrafts = 0;
+    const remainingDrafts = drafts.filter((x) => !dueDrafts.some((dd) => dd.id === x.id));
+
+    for (const draft of dueDrafts) {
+      try {
+        const draftSubject = String(draft.subject || "");
+        const draftBody = String(draft.body || "");
+        const draftMode = String(draft.targetMode || "");
+        const draftCustomIds = (draft.customMembreIds as string[]) || [];
+        const draftExtra = (draft.extraEmails as string[]) || [];
+        const variant = String(draft.variant || "default") as "urgent" | "annonce" | "bonne_nouvelle" | "info" | "default";
+
+        // Reconstruction de la liste de destinataires (même logique que admin_send_email)
+        let recipients: string[] = [];
+        if (draftMode === "all") {
+          recipients = membres.map((m) => String(m.email || "")).filter(Boolean);
+        } else if (draftMode === "paid") {
+          recipients = membres.filter((m) => m.ok === true).map((m) => String(m.email || "")).filter(Boolean);
+        } else if (draftMode === "unpaid") {
+          recipients = membres.filter((m) => m.ok !== true).map((m) => String(m.email || "")).filter(Boolean);
+        } else if (draftMode === "news") {
+          recipients = membres.filter((m) => m.ok === true && m.newsOptIn !== false).map((m) => String(m.email || "")).filter(Boolean);
+        } else if (draftMode === "custom") {
+          recipients = draftCustomIds
+            .map((id) => String(membres.find((m) => m.id === id)?.email || ""))
+            .filter(Boolean);
+        }
+        recipients = [...recipients, ...draftExtra.map((e) => String(e || "").toLowerCase().trim()).filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e))];
+        recipients = Array.from(new Set(recipients.map((e) => e.toLowerCase().trim()))).filter(Boolean);
+
+        if (recipients.length === 0) {
+          console.warn(`[cron_send] draft ${draft.id}: no recipients, skipping`);
+          continue;
+        }
+
+        // Variant config simplifié pour le cron (équivalent du admin_send_email)
+        const variantConfig: Record<string, { headerBg: string; subjectPrefix: string; badge: string | null }> = {
+          urgent: { headerBg: "linear-gradient(135deg, #dc2626 0%, #991b1b 100%)", subjectPrefix: "🚨 URGENT — ", badge: '<div style="display:inline-block;background:#fee2e2;color:#991b1b;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">⚠️ Annonce importante</div>' },
+          annonce: { headerBg: "linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%)", subjectPrefix: "📢 ", badge: '<div style="display:inline-block;background:#dbeafe;color:#1e3a5f;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">📢 Annonce</div>' },
+          bonne_nouvelle: { headerBg: "linear-gradient(135deg, #059669 0%, #047857 100%)", subjectPrefix: "🎉 ", badge: '<div style="display:inline-block;background:#d1fae5;color:#065f46;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">🎉 Bonne nouvelle</div>' },
+          info: { headerBg: "linear-gradient(135deg, #64748b 0%, #475569 100%)", subjectPrefix: "ℹ️ ", badge: '<div style="display:inline-block;background:#f1f5f9;color:#475569;padding:6px 14px;border-radius:999px;font-size:11px;font-weight:700;letter-spacing:1px;text-transform:uppercase;margin-bottom:14px;">ℹ️ Information</div>' },
+          default: { headerBg: "#1e3a5f", subjectPrefix: "", badge: null },
+        };
+        const vc = variantConfig[variant] || variantConfig.default;
+        const finalSubject = (vc.subjectPrefix + draftSubject.trim()).slice(0, 300);
+
+        let totalSent = 0;
+        for (const email of recipients) {
+          await sendBrevo(brevoKey, {
+            from: "SACCB <contact@saccb.fr>",
+            headers: {
+              "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+              "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+            },
+            to: [email],
+            subject: finalSubject,
+            text: `${draftBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+            html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+              <div style="background: ${vc.headerBg}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+                <div><h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p></div>
+              </div>
+              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                ${vc.badge || ""}
+                <div style="color: #1f2937; line-height: 1.6; white-space: pre-wrap; font-size: 15px;">${draftBody}</div>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                      <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr>
+                </table>
+              </div>
+            </div>`,
+          }).then((res) => { if (res.ok) totalSent++; }).catch(() => {});
+          await sleep(EMAIL_THROTTLE_MS);
+        }
+
+        // Log dans l'historique
+        await logEmailToHistory(supabaseAdmin, {
+          type: "manual_scheduled",
+          subject: finalSubject,
+          body: draftBody.slice(0, 5000),
+          recipients,
+          sentBy: String(draft.createdBy || "system"),
+          status: totalSent === recipients.length ? "sent" : totalSent > 0 ? "partial" : "failed",
+          sentCount: totalSent,
+        });
+        sentDrafts++;
+      } catch (err) {
+        console.warn(`[cron_send] draft ${draft.id} failed:`, err);
+      }
+    }
+
+    // Met à jour la DB en retirant les brouillons consommés
+    d.emailDrafts = remainingDrafts;
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true, sent: sentDrafts });
+  }
+
+  // 📝 [ADMIN] Liste les brouillons d'emails (partagés entre tous les admins)
+  if (action === "admin_drafts_list") {
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    return json({ ok: true, drafts: d.emailDrafts || [] });
+  }
+
+  // 📝 [ADMIN] Crée ou met à jour un brouillon
+  if (action === "admin_draft_save") {
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const draftId = String(body.draftId || ""); // vide = création
+    const subject = String(body.subject || "").slice(0, 300);
+    const draftBody = String(body.body || "").slice(0, 100_000);
+    const targetMode = String(body.targetMode || "");
+    const customMembreIds = Array.isArray(body.customMembreIds) ? body.customMembreIds.map(String) : [];
+    const extraEmails = Array.isArray(body.extraEmails) ? body.extraEmails.map(String) : [];
+    const variant = String(body.variant || "default");
+    const scheduledAt = body.scheduledAt ? String(body.scheduledAt) : undefined;
+    const adminEmailUsed = String(body.adminEmail || body.email || "").toLowerCase().trim();
+
+    const drafts = (d.emailDrafts || []) as Record<string, unknown>[];
+    const existingIdx = draftId ? drafts.findIndex((x) => x.id === draftId) : -1;
+    const now = new Date().toISOString();
+
+    const draft = {
+      id: existingIdx !== -1 ? draftId : `draft-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      subject,
+      body: draftBody,
+      targetMode,
+      customMembreIds,
+      extraEmails,
+      variant,
+      scheduledAt,
+      createdAt: existingIdx !== -1 ? drafts[existingIdx].createdAt : now,
+      updatedAt: now,
+      createdBy: existingIdx !== -1 ? drafts[existingIdx].createdBy : adminEmailUsed,
+      updatedBy: adminEmailUsed,
+    };
+
+    if (existingIdx !== -1) drafts[existingIdx] = draft;
+    else drafts.push(draft);
+    d.emailDrafts = drafts;
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true, draftId: draft.id });
+  }
+
+  // 📝 [ADMIN] Supprime un brouillon
+  if (action === "admin_draft_delete") {
+    const draftId = String(body.draftId || "");
+    if (!draftId) return json({ ok: false, reason: "draftId manquant." }, 400);
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    d.emailDrafts = ((d.emailDrafts || []) as { id: string }[]).filter((x) => x.id !== draftId);
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true });
+  }
+
   if (action === "admin_send_email") {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
@@ -3981,6 +4173,11 @@ Deno.serve(async (req) => {
       // Garder uniquement les 100 derniers (anti-explosion DB)
       const trimmed = emailHistory.slice(-100);
       d.emailHistory = trimmed;
+      // 📝 Si l'envoi vient d'un brouillon, on le supprime maintenant qu'il a servi
+      const consumedDraftId = String(body.draftId || "");
+      if (consumedDraftId) {
+        d.emailDrafts = ((d.emailDrafts || []) as { id: string }[]).filter((x) => x.id !== consumedDraftId);
+      }
       await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     } catch (e) {
       console.warn("[admin_send_email] Failed to log:", e);
