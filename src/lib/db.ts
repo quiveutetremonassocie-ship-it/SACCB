@@ -50,6 +50,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     tshirtOpen: d.tshirtOpen === true,
     faqOpen: d.faqOpen === true,
     faqItems: Array.isArray(d.faqItems) ? d.faqItems : [],
+    emailSignature: typeof d.emailSignature === "string" ? d.emailSignature : "",
   };
 }
 

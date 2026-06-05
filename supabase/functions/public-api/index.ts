@@ -883,6 +883,7 @@ Deno.serve(async (req) => {
       clubConfig: d.clubConfig ?? {},
       tshirtOpen: d.tshirtOpen === true,
       tshirtPrice: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
+      emailSignature: typeof d.emailSignature === "string" ? d.emailSignature : "",
       faqOpen: d.faqOpen === true,
       // Si aucune FAQ n'a encore été configurée, on renvoie un seed par défaut
       // (3 questions essentielles). L'admin peut tout modifier ensuite.

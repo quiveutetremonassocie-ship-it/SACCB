@@ -227,6 +227,10 @@ export type DB = {
   // 📝 Brouillons d'emails partagés entre admins (préparés à l'avance, envoyés plus tard
   // ou programmés à une date/heure précise)
   emailDrafts?: EmailDraft[];
+  // ✍️ Signature commune ajoutée automatiquement à la fin de chaque nouveau mail manuel
+  // (texte libre, retours à la ligne préservés). Modifiable par l'admin dans Paramètres
+  // saison. Pré-remplie dans le formulaire, l'admin peut la modifier ou la retirer.
+  emailSignature?: string;
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

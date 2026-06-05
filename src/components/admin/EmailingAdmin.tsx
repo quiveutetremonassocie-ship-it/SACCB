@@ -31,7 +31,10 @@ export default function EmailingAdmin({
   readOnly?: boolean;
 }) {
   const [subject, setSubject] = useState("");
-  const [body, setBody] = useState("");
+  // ✍️ Signature commune : pré-remplie au démarrage. Si l'admin la modifie/supprime
+  // pour ce mail, on garde sa version (pas de réécrasement automatique).
+  const initialBody = db.emailSignature ? `\n\n${db.emailSignature}` : "";
+  const [body, setBody] = useState(initialBody);
   // 🎨 Type d'email (visuel + sujet préfixé)
   const [variant, setVariant] = useState<"urgent" | "annonce" | "bonne_nouvelle" | "info" | "default">("default");
   // Volontairement vide au démarrage : on force l'admin à cliquer explicitement
@@ -62,7 +65,7 @@ export default function EmailingAdmin({
   useEffect(() => { refreshDrafts(); }, [refreshDrafts]);
 
   function clearForm() {
-    setSubject(""); setBody(""); setVariant("default");
+    setSubject(""); setBody(initialBody); setVariant("default");
     setTargetMode(""); setSelectedMembreIds(new Set()); setExtraEmails("");
     setEditingDraftId(null);
   }
@@ -366,9 +369,9 @@ export default function EmailingAdmin({
         setEditingDraftId(null);
         refreshDrafts();
       }
-      // Reset le formulaire
+      // Reset le formulaire (réinjecte la signature pré-remplie pour le prochain envoi)
       setSubject("");
-      setBody("");
+      setBody(initialBody);
       setAttachments([]);
       setSelectedMembreIds(new Set());
       setExtraEmails("");
