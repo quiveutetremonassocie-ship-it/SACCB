@@ -3914,11 +3914,19 @@ Deno.serve(async (req) => {
                 ${vc.badge || ""}
                 <!-- Corps du mail tel qu'écrit par l'admin (préserve les retours à la ligne) -->
                 <div style="color: #1f2937; line-height: 1.6; white-space: pre-wrap; font-size: 15px;">${htmlBody}</div>
-                <!-- Footer minimaliste : juste pour identifier l'expéditeur -->
-                <p style="margin: 24px 0 0; padding-top: 14px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; text-align: center;">
-                  SACCB · Sainte-Adresse Club de Compétition de Badminton<br/>
-                  <a href="mailto:contact@saccb.fr" style="color: #94a3b8; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #94a3b8; text-decoration: none;">saccb.fr</a>
-                </p>
+                <!-- Footer minimaliste avec logo : identifie clairement l'expéditeur -->
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 24px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                      <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr>
+                </table>
               </div>
             </div>
           `,
