@@ -9,7 +9,7 @@ import { PRIX } from "@/lib/types";
 import type { ClubConfig, Membre, ReunionReport } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
-import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
+import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 
@@ -53,6 +53,31 @@ export default function MemberPanel({
   const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
   const [recuOpen, setRecuOpen] = useState(false);
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
+  // 🚪 État : ce membre a-t-il dit "je ne renouvelle pas pour cette saison" ?
+  const currentSeasonKey = `${y1}-${y2}`;
+  const [renewalSkipped, setRenewalSkipped] = useState<boolean>(
+    session.renewalSkippedFor === currentSeasonKey
+  );
+  const [togglingSkip, setTogglingSkip] = useState(false);
+
+  async function toggleRenewalSkip() {
+    const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    if (!code) {
+      alert("Reconnectez-vous à votre espace membre pour modifier cette préférence.");
+      return;
+    }
+    setTogglingSkip(true);
+    const r = await memberToggleRenewalSkip(session.email, code, session.membreId, !renewalSkipped);
+    setTogglingSkip(false);
+    if (r.ok) {
+      setRenewalSkipped(!renewalSkipped);
+      // Met à jour la session locale
+      const updated = { ...session, renewalSkippedFor: r.renewalSkippedFor || undefined };
+      setMemberSession(updated);
+    } else {
+      alert("Erreur, réessayez.");
+    }
+  }
 
   function toggleTournoi(id: string) {
     setOpenTournois(prev => {
@@ -341,7 +366,7 @@ export default function MemberPanel({
         )}
 
         {/* Renouvellement si non payé pour cette saison */}
-        {session.paid === false && (
+        {session.paid === false && !renewalSkipped && (
           <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
             <p className="text-amber-800 font-semibold text-sm mb-1">⏳ Adhésion à renouveler</p>
             <p className="text-amber-700 text-xs mb-3">
@@ -370,6 +395,41 @@ export default function MemberPanel({
               <RefreshCw className="w-3 h-3 inline mr-1" />
               Vos infos sont déjà en base, pas besoin de tout refaire
             </p>
+            {/* 🚪 Case "je ne renouvelle pas" */}
+            <div className="mt-3 pt-3 border-t border-amber-200">
+              <button
+                onClick={toggleRenewalSkip}
+                disabled={togglingSkip}
+                className="w-full text-left text-xs text-amber-700 hover:text-amber-900 disabled:opacity-50 flex items-start gap-2"
+                title="Ne plus recevoir les rappels de cotisation pour la saison en cours"
+              >
+                <BellOff className="w-3.5 h-3.5 shrink-0 mt-0.5" />
+                <span>{togglingSkip ? "..." : "Je ne souhaite pas reconduire mon adhésion pour cette saison — ne plus me rappeler"}</span>
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 🚪 Bandeau confirmant le choix "je ne renouvelle pas" */}
+        {session.paid === false && renewalSkipped && (
+          <div className="mb-6 bg-slate-50 border border-slate-200 rounded-xl p-4">
+            <div className="flex items-start gap-2">
+              <BellOff className="w-5 h-5 text-slate-500 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="text-slate-700 font-semibold text-sm mb-1">Vous ne renouvelez pas cette saison</p>
+                <p className="text-slate-500 text-xs mb-3">
+                  Vous ne recevrez plus de rappels pour la saison {y1}–{y2}. Vous pouvez revenir sur cette décision à tout moment.
+                </p>
+                <button
+                  onClick={toggleRenewalSkip}
+                  disabled={togglingSkip}
+                  className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 disabled:opacity-50"
+                >
+                  <Bell className="w-3 h-3" />
+                  {togglingSkip ? "..." : "Je change d'avis, réactiver"}
+                </button>
+              </div>
+            </div>
           </div>
         )}
 

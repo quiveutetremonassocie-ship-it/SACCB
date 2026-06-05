@@ -992,6 +992,39 @@ Deno.serve(async (req) => {
   }
 
   // ❓ ADHÉRENT pose une nouvelle question pour la FAQ (en attente de réponse admin)
+  // 🚪 [MEMBRE] Toggle "je ne renouvelle pas cette saison"
+  // Le membre ne recevra plus les rappels J-30/15/5/1 de cotisation pour la saison
+  // actuelle. À la saison suivante, la valeur ne matche plus → les rappels reprennent.
+  if (action === "member_toggle_renewal_skip") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const skip = body.skip === true;
+    if (!email || !code || !membreId) return json({ ok: false, reason: "Paramètres manquants." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
+
+    const idx = membres.findIndex((m) => m.id === membreId);
+    if (idx === -1) return json({ ok: false, reason: "Adhérent introuvable." }, 404);
+
+    const currentSeasonKey = `${d.y1}-${d.y2}`;
+    if (skip) {
+      membres[idx] = { ...membres[idx], renewalSkippedFor: currentSeasonKey };
+    } else {
+      const next = { ...membres[idx] };
+      delete next.renewalSkippedFor;
+      membres[idx] = next;
+    }
+    d.membres = membres;
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true, renewalSkippedFor: skip ? currentSeasonKey : null });
+  }
+
   // 🔕 [MEMBRE] Toggle "pas intéressé(e) par ce tournoi"
   // Le membre ne recevra pas les rappels J-30/15/5/1 pour ce tournoi.
   if (action === "member_toggle_tournoi_ignored") {
@@ -1404,6 +1437,7 @@ Deno.serve(async (req) => {
         email: membre.email,
         newsOptIn: membre.newsOptIn !== false, // true par défaut pour les anciens comptes
         tournoisIgnored: Array.isArray(membre.tournoisIgnored) ? membre.tournoisIgnored : [],
+        renewalSkippedFor: membre.renewalSkippedFor ? String(membre.renewalSkippedFor) : undefined,
       },
       trustToken: issuedTrustToken ?? undefined,
     });
@@ -2326,8 +2360,10 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     // Membres non payés (inscrits mais pas encore réglé) — destinataires des rappels de réinscription
+    // 🚪 On exclut ceux qui ont coché "je ne renouvelle pas" pour cette saison
+    const currentSeasonKey = `${d.y1}-${d.y2}`;
     const unpaidRecipients = membres
-      .filter((m) => m.ok !== true)
+      .filter((m) => m.ok !== true && String(m.renewalSkippedFor || "") !== currentSeasonKey)
       .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
       .filter((r) => r.email);
     const unpaidEmails = unpaidRecipients.map((r) => r.email);

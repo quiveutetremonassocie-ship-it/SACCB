@@ -13,6 +13,11 @@ export type Membre = {
   // 🔕 Ids de tournois pour lesquels le membre a explicitement dit "pas intéressé".
   // Le système n'enverra pas les rappels J-30/J-15/J-5/J-1 pour ces tournois.
   tournoisIgnored?: string[];
+  // 🚪 Le membre a indiqué qu'il ne souhaite PAS renouveler son adhésion pour
+  // cette saison-là (format "y1-y2", ex: "2024-2025"). Le système n'envoie plus
+  // les rappels J-30/J-15/J-5/J-1 de cotisation pour cette saison.
+  // À la saison suivante, la valeur ne matche plus → les rappels reprennent.
+  renewalSkippedFor?: string;
 };
 
 export type FactureFile = {

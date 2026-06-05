@@ -27,6 +27,8 @@ export type MemberSession = {
   newsOptIn?: boolean; // préférence news de l’association
   // 🔕 Ids des tournois pour lesquels le membre a coché "pas intéressé(e)"
   tournoisIgnored?: string[];
+  // 🚪 Saison "y1-y2" pour laquelle le membre ne souhaite pas renouveler
+  renewalSkippedFor?: string;
 };
 
 export function getMemberSession(): MemberSession | null {

@@ -122,6 +122,22 @@ export async function adminDraftDelete(adminEmail: string, adminCode: string, dr
   return res.json();
 }
 
+// 🚪 Membre indique qu'il ne souhaite pas renouveler sa cotisation pour la saison
+// (ou annule cette décision). Désactive les rappels J-30/15/5/1 de cotisation.
+export async function memberToggleRenewalSkip(
+  email: string,
+  code: string,
+  membreId: string,
+  skip: boolean
+): Promise<{ ok: boolean; renewalSkippedFor?: string | null; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "member_toggle_renewal_skip", email, code, membreId, skip }),
+  });
+  return res.json();
+}
+
 // 🔕 Membre marque un tournoi comme "pas intéressé(e)" (ou réactive les rappels)
 // → utilisé pour ne plus recevoir les rappels J-30/15/5/1 pour ce tournoi
 export async function memberToggleTournoiIgnored(
