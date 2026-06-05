@@ -2,17 +2,21 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, HelpCircle, Search } from "lucide-react";
+import { ChevronDown, ChevronUp, HelpCircle, Search, MessageCircleQuestion, Send, CheckCircle2 } from "lucide-react";
 import type { FaqItem } from "@/lib/types";
+import type { MemberSession } from "@/lib/useMemberSession";
+import { memberAskFaqQuestion } from "@/lib/db";
 
 export default function FAQ({
   items,
   mode = "preview",
+  memberSession,
 }: {
   items: FaqItem[];
   // preview = section sur la home (5 questions max + lien)
   // full = page dédiée /faq (toutes les questions + recherche + catégories)
   mode?: "preview" | "full";
+  memberSession?: MemberSession | null;
 }) {
   const [openId, setOpenId] = useState<string | null>(null);
   const [query, setQuery] = useState("");
@@ -157,8 +161,107 @@ export default function FAQ({
             </Link>
           </div>
         )}
+
+        {/* Formulaire "poser une question" — uniquement mode full + membre connecté */}
+        {mode === "full" && (
+          <AskQuestionBlock memberSession={memberSession} />
+        )}
       </div>
     </section>
+  );
+}
+
+// 💬 Bloc "Poser une question" — visible sur /faq pour les membres connectés
+function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | null }) {
+  const [question, setQuestion] = useState("");
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [error, setError] = useState("");
+
+  if (!memberSession) {
+    return (
+      <div className="mt-12 bg-slate-50 border border-slate-200 rounded-2xl p-6 text-center">
+        <MessageCircleQuestion className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+        <p className="text-sm text-slate-600 font-semibold mb-1">Vous avez une autre question ?</p>
+        <p className="text-xs text-slate-500 mb-3">Connectez-vous à votre espace membre pour la poser au bureau.</p>
+        <Link href="/?member=1" className="inline-block bg-[#1e3a5f] hover:bg-[#2d5a8e] text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+          Se connecter
+        </Link>
+      </div>
+    );
+  }
+  if (memberSession.paid === false) {
+    return (
+      <div className="mt-12 bg-amber-50 border border-amber-200 rounded-2xl p-5 text-center">
+        <p className="text-sm text-amber-800">⏳ Votre adhésion doit être validée pour poser une question au bureau.</p>
+      </div>
+    );
+  }
+
+  async function handleSubmit(e: React.FormEvent) {
+    e.preventDefault();
+    if (!memberSession) return;
+    const code = memberSession.adminCode || (typeof window !== "undefined" ? sessionStorage.getItem("saccb_member_code") || "" : "");
+    if (!code) {
+      setError("Session expirée, veuillez vous reconnecter.");
+      return;
+    }
+    if (question.trim().length < 5) {
+      setError("Question trop courte.");
+      return;
+    }
+    setSending(true);
+    setError("");
+    const r = await memberAskFaqQuestion(memberSession.email, code, memberSession.membreId, question.trim());
+    setSending(false);
+    if (r.ok) {
+      setSent(true);
+      setQuestion("");
+    } else {
+      setError(r.reason || "Erreur lors de l'envoi.");
+    }
+  }
+
+  if (sent) {
+    return (
+      <div className="mt-12 bg-emerald-50 border border-emerald-200 rounded-2xl p-6 text-center">
+        <CheckCircle2 className="w-8 h-8 text-emerald-600 mx-auto mb-2" />
+        <p className="text-sm text-emerald-800 font-semibold mb-1">Question envoyée !</p>
+        <p className="text-xs text-emerald-700">Le bureau y répondra prochainement et la question apparaîtra ici une fois traitée. Vous recevrez un email dès que la réponse sera publiée.</p>
+        <button onClick={() => setSent(false)} className="mt-3 text-xs text-emerald-700 underline hover:text-emerald-900">Poser une autre question</button>
+      </div>
+    );
+  }
+
+  return (
+    <form onSubmit={handleSubmit} className="mt-12 bg-blue-50 border border-blue-200 rounded-2xl p-6">
+      <div className="flex items-center gap-2 mb-3">
+        <MessageCircleQuestion className="w-5 h-5 text-blue-600" />
+        <h3 className="text-base font-bold text-slate-800">Une autre question ?</h3>
+      </div>
+      <p className="text-sm text-slate-600 mb-3">Posez-la au bureau. La question et sa réponse seront ajoutées à la FAQ pour tous les adhérents.</p>
+      <textarea
+        value={question}
+        onChange={(e) => setQuestion(e.target.value)}
+        rows={3}
+        placeholder="Ex: Est-ce qu'on peut amener un invité à un entraînement ?"
+        className="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 focus:outline-none focus:border-blue-500 bg-white resize-none"
+        maxLength={500}
+        required
+      />
+      <div className="flex items-center justify-between mt-1.5">
+        <p className="text-[11px] text-slate-500">{question.length}/500 — Connecté en tant que <strong>{memberSession.nom}</strong></p>
+      </div>
+      {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
+      <button
+        type="submit"
+        disabled={sending || question.trim().length < 5}
+        className="mt-3 w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold px-5 py-2.5 rounded-lg transition shadow-sm"
+      >
+        <Send className="w-4 h-4" />
+        {sending ? "Envoi…" : "Envoyer ma question"}
+      </button>
+    </form>
   );
 }
 

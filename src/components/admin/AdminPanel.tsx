@@ -459,7 +459,7 @@ export default function AdminPanel({
           {/* ❓ FAQ adhérents — gestion partagée avec engagement */}
           {canSee("engagement") && (
             <div id="admin-faq" className="lg:col-span-2 scroll-mt-24">
-              <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} />
+              <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
             </div>
           )}
           {/* 📖 Guide admin — accessible à tous les admins, indépendant des permissions */}

@@ -110,6 +110,16 @@ export type FaqItem = {
   order?: number;     // pour trier (asc)
 };
 
+// ❓ Question posée par un adhérent, en attente de réponse admin
+export type FaqPendingQuestion = {
+  id: string;
+  question: string;
+  membreId: string;
+  membreNom: string;   // capturé au moment de la soumission
+  membreEmail: string;
+  createdAt: string;   // ISO timestamp
+};
+
 // 👕 Commande de t-shirt par un adhérent
 export type TshirtOrder = {
   id: string;
@@ -187,6 +197,7 @@ export type DB = {
   // ❓ FAQ adhérents : visible sur la home + page /faq
   faqOpen?: boolean; // Affiche/cache la section FAQ côté public
   faqItems?: FaqItem[];
+  faqPending?: FaqPendingQuestion[]; // Questions soumises par adhérents en attente de réponse admin
   // Règles de l'association (texte libre + PDF optionnel, NON archivé avec les saisons — reste permanent)
   clubRules?: string;
   clubRulesPdfUrl?: string;

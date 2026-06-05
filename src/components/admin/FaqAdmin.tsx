@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
-import { HelpCircle, Plus, Trash2, Pencil, Save, ChevronDown, ChevronUp, GripVertical } from "lucide-react";
-import type { DB, FaqItem } from "@/lib/types";
+import { useEffect, useState, useCallback } from "react";
+import { HelpCircle, Plus, Trash2, Pencil, Save, ChevronDown, ChevronUp, MessageCircleQuestion, Check, X, Mail } from "lucide-react";
+import type { DB, FaqItem, FaqPendingQuestion } from "@/lib/types";
+import { adminFaqPendingList, adminFaqAnswer, adminFaqReject } from "@/lib/db";
 
 const SUGGESTED_CATEGORIES = ["Inscription", "Paiement", "Mon compte", "Tournois", "Application", "Communication"];
 
@@ -10,10 +11,16 @@ export default function FaqAdmin({
   db,
   onPersist,
   readOnly,
+  adminEmail,
+  adminCode,
+  onRefresh,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   readOnly?: boolean;
+  adminEmail?: string;
+  adminCode?: string;
+  onRefresh?: () => Promise<void>;
 }) {
   const items = (db.faqItems ?? []).slice().sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
   const open = db.faqOpen === true;
@@ -27,6 +34,49 @@ export default function FaqAdmin({
   const [formQuestion, setFormQuestion] = useState("");
   const [formAnswer, setFormAnswer] = useState("");
   const [formCategory, setFormCategory] = useState("");
+
+  // 📥 Questions en attente posées par les adhérents
+  const [pending, setPending] = useState<FaqPendingQuestion[]>([]);
+  const [answeringId, setAnsweringId] = useState<string | null>(null);
+  const [pendingAnswer, setPendingAnswer] = useState("");
+  const [pendingCategory, setPendingCategory] = useState("");
+
+  const refreshPending = useCallback(async () => {
+    if (!adminEmail || !adminCode) return;
+    const r = await adminFaqPendingList(adminEmail, adminCode);
+    if (r.ok && r.pending) setPending(r.pending);
+  }, [adminEmail, adminCode]);
+
+  useEffect(() => { refreshPending(); }, [refreshPending]);
+
+  async function answerPending(id: string) {
+    if (!adminEmail || !adminCode) return;
+    if (pendingAnswer.trim().length < 5) {
+      alert("Réponse trop courte.");
+      return;
+    }
+    const r = await adminFaqAnswer(adminEmail, adminCode, id, pendingAnswer.trim(), pendingCategory.trim() || undefined);
+    if (!r.ok) {
+      alert("Erreur : " + (r.reason || "inconnue"));
+      return;
+    }
+    setAnsweringId(null);
+    setPendingAnswer("");
+    setPendingCategory("");
+    await refreshPending();
+    if (onRefresh) await onRefresh();
+  }
+
+  async function rejectPending(id: string) {
+    if (!adminEmail || !adminCode) return;
+    if (!confirm("Supprimer cette question sans y répondre ?\n\nL'adhérent ne sera pas notifié.")) return;
+    const r = await adminFaqReject(adminEmail, adminCode, id);
+    if (!r.ok) {
+      alert("Erreur : " + (r.reason || "inconnue"));
+      return;
+    }
+    await refreshPending();
+  }
 
   function resetForm() {
     setFormQuestion(""); setFormAnswer(""); setFormCategory("");
@@ -140,6 +190,97 @@ export default function FaqAdmin({
           <p className="text-xs text-slate-600">
             ℹ️ La FAQ est <strong>masquée</strong> côté public. Clique sur le bouton ci-dessus pour la rendre visible (section sur la home + page /faq).
           </p>
+        </div>
+      )}
+
+      {/* 📥 Questions en attente posées par les adhérents */}
+      {pending.length > 0 && (
+        <div className="mb-4 bg-amber-50 border-2 border-amber-300 rounded-xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <MessageCircleQuestion className="w-5 h-5 text-amber-700" />
+            <h4 className="text-sm font-bold text-amber-900">
+              {pending.length} question{pending.length > 1 ? "s" : ""} en attente de réponse
+            </h4>
+          </div>
+          <ul className="space-y-3">
+            {pending.map((p) => {
+              const isAnswering = answeringId === p.id;
+              return (
+                <li key={p.id} className="bg-white border border-amber-200 rounded-lg p-3">
+                  <p className="text-sm text-slate-800 font-medium mb-1.5">« {p.question} »</p>
+                  <p className="text-[11px] text-slate-500 mb-2 flex items-center gap-1.5 flex-wrap">
+                    <span><strong>{p.membreNom}</strong></span>
+                    <span className="text-slate-300">·</span>
+                    <a href={`mailto:${p.membreEmail}`} className="text-blue-600 hover:underline inline-flex items-center gap-1">
+                      <Mail className="w-3 h-3" />{p.membreEmail}
+                    </a>
+                    <span className="text-slate-300">·</span>
+                    <span>{new Date(p.createdAt).toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
+                  </p>
+
+                  {!isAnswering && !readOnly && (
+                    <div className="flex gap-2">
+                      <button
+                        onClick={() => { setAnsweringId(p.id); setPendingAnswer(""); setPendingCategory(""); }}
+                        className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <Check className="w-3.5 h-3.5" /> Répondre & publier
+                      </button>
+                      <button
+                        onClick={() => rejectPending(p.id)}
+                        className="text-xs bg-white border border-red-300 text-red-700 hover:bg-red-50 font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1"
+                      >
+                        <X className="w-3.5 h-3.5" /> Rejeter
+                      </button>
+                    </div>
+                  )}
+
+                  {isAnswering && (
+                    <div className="space-y-2 mt-2">
+                      <textarea
+                        value={pendingAnswer}
+                        onChange={(e) => setPendingAnswer(e.target.value)}
+                        rows={4}
+                        placeholder="Votre réponse à publier dans la FAQ…"
+                        className="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 bg-white"
+                        maxLength={2000}
+                      />
+                      <input
+                        type="text"
+                        value={pendingCategory}
+                        onChange={(e) => setPendingCategory(e.target.value)}
+                        placeholder="Catégorie (optionnel) : Inscription, Tournois, Mon compte…"
+                        className="w-full text-sm border border-amber-300 rounded-lg px-3 py-2 focus:outline-none focus:border-amber-500 bg-white"
+                        maxLength={40}
+                        list="faq-pending-cat-suggestions"
+                      />
+                      <datalist id="faq-pending-cat-suggestions">
+                        {["Inscription", "Paiement", "Mon compte", "Tournois", "Application", "Communication"].map((c) => <option key={c} value={c} />)}
+                      </datalist>
+                      <div className="flex gap-2">
+                        <button
+                          onClick={() => { setAnsweringId(null); setPendingAnswer(""); setPendingCategory(""); }}
+                          className="flex-1 text-xs border border-slate-300 text-slate-600 rounded-lg py-2 hover:bg-slate-50"
+                        >
+                          Annuler
+                        </button>
+                        <button
+                          onClick={() => answerPending(p.id)}
+                          disabled={pendingAnswer.trim().length < 5}
+                          className="flex-1 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-xs font-semibold rounded-lg py-2 inline-flex items-center justify-center gap-1"
+                        >
+                          <Save className="w-3.5 h-3.5" /> Publier dans la FAQ
+                        </button>
+                      </div>
+                      <p className="text-[11px] text-amber-700">
+                        💡 L&apos;adhérent recevra automatiquement un email avec ta réponse.
+                      </p>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
       )}
 

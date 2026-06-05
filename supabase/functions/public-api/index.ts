@@ -990,6 +990,175 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ❓ ADHÉRENT pose une nouvelle question pour la FAQ (en attente de réponse admin)
+  if (action === "faq_ask_question") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const question = sanitize(String(body.question || "")).slice(0, 500);
+    if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
+    if (!question.trim() || question.trim().length < 5) return json({ ok: false, reason: "Question trop courte (5 caractères minimum)." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const membre = await findMembreByCredentials(membres, email, code);
+    if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
+    if (membre.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour poser une question." }, 403);
+
+    const pending = (d.faqPending || []) as Record<string, unknown>[];
+    // Anti-spam : 1 question max par membre toutes les 60 secondes
+    const recentByMember = pending.find((p) => p.membreId === membreId && (Date.now() - new Date(String(p.createdAt)).getTime()) < 60_000);
+    if (recentByMember) return json({ ok: false, reason: "Patientez quelques secondes avant de poser une nouvelle question." }, 429);
+
+    pending.push({
+      id: `faq-q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      question: question.trim(),
+      membreId,
+      membreNom: String(membre.nom || ""),
+      membreEmail: email,
+      createdAt: new Date().toISOString(),
+    });
+    d.faqPending = pending;
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+
+    // 📧 Notification aux admins (fire and forget)
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (brevoKey) {
+      const adminEmails = parseAdminEmails((d.adminEmails as unknown[]) || []).map((e) => e.email);
+      const adminCreds = ((d.adminCredentials || []) as { email: string }[]).map((c) => String(c.email || "").toLowerCase()).filter(Boolean);
+      const allAdmins = Array.from(new Set([...adminEmails, ...adminCreds]));
+      if (allAdmins.length > 0) {
+        const safeQuestion = escapeHtml(question.trim());
+        const safeName = escapeHtml(String(membre.nom || ""));
+        (async () => {
+          for (const adm of allAdmins) {
+            await sendBrevo(brevoKey, {
+              from: "SACCB <contact@saccb.fr>",
+              to: [adm],
+              subject: `❓ Nouvelle question FAQ de ${String(membre.nom || "")}`,
+              text: `${String(membre.nom || "")} a posé une nouvelle question pour la FAQ :\n\n"${question.trim()}"\n\nRendez-vous dans l'admin (section FAQ adhérents) pour répondre :\nhttps://saccb.fr/admin#admin-faq`,
+              html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+                <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0;">
+                  <h1 style="color: white; margin: 0; font-size: 18px;">❓ Nouvelle question FAQ</h1>
+                </div>
+                <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+                  <p style="color: #475569; margin: 0 0 12px;"><strong>${safeName}</strong> a posé une nouvelle question pour la FAQ :</p>
+                  <div style="background: #f1f5f9; border-left: 4px solid #1e3a5f; padding: 14px; margin: 12px 0; border-radius: 4px;">
+                    <p style="margin: 0; color: #1e293b; font-style: italic;">« ${safeQuestion} »</p>
+                  </div>
+                  <a href="https://saccb.fr/admin#admin-faq" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 22px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px; margin-top: 12px;">Répondre dans l'admin →</a>
+                </div>
+              </div>`,
+            }).catch(() => {});
+            await sleep(EMAIL_THROTTLE_MS);
+          }
+          await logEmailToHistory(supabaseAdmin, {
+            type: "faq_question_notification",
+            subject: `Nouvelle question FAQ de ${String(membre.nom || "")}`,
+            recipients: allAdmins,
+            sentCount: allAdmins.length,
+            status: "sent",
+          });
+        })();
+      }
+    }
+
+    return json({ ok: true });
+  }
+
+  // ❓ ADMIN : valider une question en attente avec une réponse (la déplace dans faqItems)
+  if (action === "admin_faq_answer") {
+    const pendingId = String(body.pendingId || "");
+    const answer = sanitize(String(body.answer || "")).slice(0, 2000);
+    const category = sanitize(String(body.category || "")).slice(0, 40);
+    if (!pendingId || !answer.trim()) return json({ ok: false, reason: "Paramètres manquants." }, 400);
+
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const pending = (d.faqPending || []) as Array<{ id: string; question: string; membreEmail?: string; membreNom?: string }>;
+    const entry = pending.find((p) => p.id === pendingId);
+    if (!entry) return json({ ok: false, reason: "Question introuvable." }, 404);
+
+    const faqItems = (d.faqItems || []) as Record<string, unknown>[];
+    faqItems.push({
+      id: `faq-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      question: entry.question,
+      answer: answer.trim(),
+      category: category.trim() || undefined,
+      order: faqItems.length,
+    });
+    d.faqItems = faqItems;
+    d.faqPending = pending.filter((p) => p.id !== pendingId);
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+
+    // 📧 Notifier l'adhérent que sa question a été répondue (fire and forget)
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (brevoKey && entry.membreEmail) {
+      const safeName = escapeHtml(String(entry.membreNom || ""));
+      const safeQ = escapeHtml(entry.question);
+      const safeA = escapeHtml(answer.trim()).replace(/\n/g, "<br/>");
+      sendBrevo(brevoKey, {
+        from: "SACCB <contact@saccb.fr>",
+        to: [entry.membreEmail],
+        subject: `✅ Le bureau a répondu à ta question FAQ`,
+        text: `Bonjour ${String(entry.membreNom || "")},\n\nTa question pour la FAQ a été publiée avec une réponse :\n\nQuestion : ${entry.question}\n\nRéponse : ${answer.trim()}\n\nTu peux la retrouver à tout moment sur https://saccb.fr/faq\n\nLe bureau du SACCB`,
+        html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 18px;">✅ Le bureau a répondu à ta question</h1>
+          </div>
+          <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+            <p style="color: #475569; margin: 0 0 12px;">Bonjour <strong>${safeName}</strong>,</p>
+            <p style="color: #475569;">Ta question pour la FAQ a été publiée avec une réponse 🎉</p>
+            <div style="background: #f1f5f9; border-left: 4px solid #1e3a5f; padding: 14px; margin: 14px 0; border-radius: 4px;">
+              <p style="margin: 0 0 4px; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Question</p>
+              <p style="margin: 0; color: #1e293b; font-style: italic;">${safeQ}</p>
+            </div>
+            <div style="background: #f0fdf4; border-left: 4px solid #16a34a; padding: 14px; margin: 14px 0; border-radius: 4px;">
+              <p style="margin: 0 0 4px; color: #15803d; font-size: 12px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Réponse</p>
+              <p style="margin: 0; color: #1e293b;">${safeA}</p>
+            </div>
+            <p style="color: #64748b; font-size: 13px;">Tu peux la retrouver à tout moment dans la <a href="https://saccb.fr/faq" style="color: #1e3a5f; font-weight: 600;">FAQ du site</a>.</p>
+            <p style="margin-top: 18px; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains 🏸</p>
+            <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">Le bureau du SACCB</p>
+          </div>
+        </div>`,
+      }).catch(() => {});
+    }
+
+    return json({ ok: true });
+  }
+
+  // ❓ ADMIN : refuser/supprimer une question en attente
+  if (action === "admin_faq_reject") {
+    const pendingId = String(body.pendingId || "");
+    if (!pendingId) return json({ ok: false, reason: "pendingId manquant." }, 400);
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    d.faqPending = ((d.faqPending || []) as { id: string }[]).filter((p) => p.id !== pendingId);
+    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    return json({ ok: true });
+  }
+
+  // ❓ ADMIN : lister les questions en attente
+  if (action === "admin_faq_pending_list") {
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    return json({ ok: true, pending: d.faqPending || [] });
+  }
+
   // ─── ACTION: Récupérer les actualités privées (membres authentifiés) ───
   if (action === "fetch_private_actualites") {
     const email = sanitize(String(body.email || "")).toLowerCase();

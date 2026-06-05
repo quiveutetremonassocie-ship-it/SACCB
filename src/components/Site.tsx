@@ -535,7 +535,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         )}
         {mode === "faq" && (
           <FadeInSection>
-            <FAQ items={db.faqItems ?? []} mode="full" />
+            <FAQ items={db.faqItems ?? []} mode="full" memberSession={displaySession} />
           </FadeInSection>
         )}
 

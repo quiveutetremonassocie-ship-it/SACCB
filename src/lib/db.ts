@@ -80,6 +80,46 @@ export async function memberSubmitTshirtOrder(args: {
   return res.json();
 }
 
+// ❓ Membre pose une nouvelle question pour la FAQ
+export async function memberAskFaqQuestion(email: string, code: string, membreId: string, question: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "faq_ask_question", email, code, membreId, question }),
+  });
+  return res.json();
+}
+
+// ❓ [ADMIN] Lister les questions FAQ en attente de réponse
+export async function adminFaqPendingList(adminEmail: string, adminCode: string): Promise<{ ok: boolean; pending?: import("./types").FaqPendingQuestion[]; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_faq_pending_list", adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
+// ❓ [ADMIN] Répondre à une question en attente (la déplace dans la FAQ publique)
+export async function adminFaqAnswer(adminEmail: string, adminCode: string, pendingId: string, answer: string, category?: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_faq_answer", adminEmail, adminCode, pendingId, answer, category: category || "" }),
+  });
+  return res.json();
+}
+
+// ❓ [ADMIN] Rejeter / supprimer une question en attente sans publication
+export async function adminFaqReject(adminEmail: string, adminCode: string, pendingId: string): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_faq_reject", adminEmail, adminCode, pendingId }),
+  });
+  return res.json();
+}
+
 // 👕 [ADMIN] Supprime une commande t-shirt
 export async function adminDeleteTshirtOrder(adminEmail: string, adminCode: string, orderId: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
