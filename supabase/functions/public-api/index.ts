@@ -3886,9 +3886,12 @@ Deno.serve(async (req) => {
     const errors: string[] = [];
     for (const recipientEmail of recipientEmails) {
       const prenomAdmin = emailToPrenom.get(recipientEmail.toLowerCase()) || "";
-      const greetingA = prenomAdmin ? `Bonjour ${escapeHtml(prenomAdmin)},` : "Bonjour,";
-      const greetingTextA = prenomAdmin ? `Bonjour ${prenomAdmin},` : "Bonjour,";
-      const plainTextA = `${greetingTextA}\n\n${htmlBody.replace(/<[^>]+>/g, "")}\n\nBonne journée,\nCordialement,\nLe bureau du SACCB\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      // 🚫 On n'ajoute plus de "Bonjour [Prénom]" automatique ni de signature auto :
+      // l'admin écrit le mail complet (introduction + corps + signature) lui-même
+      // pour éviter les doublons quand l'admin met déjà Bonjour / Bureau du SACCB.
+      void prenomAdmin; // (variable conservée pour usage futur éventuel)
+      // Plain text = juste le corps écrit par l'admin + footer minimal (mention asso)
+      const plainTextA = `${htmlBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -3909,39 +3912,13 @@ Deno.serve(async (req) => {
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 ${vc.badge || ""}
-                <p style="color: #475569; margin: 0 0 16px;">${greetingA}</p>
-                <div style="color: #475569; line-height: 1.6; white-space: pre-wrap;">${htmlBody}</div>
-
-                <!-- ✍️ Formule de politesse automatique avec logo -->
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px;">
-                  <tr>
-                    <td style="vertical-align: middle; padding-right: 14px;">
-                      <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="display: block; border-radius: 10px;" />
-                    </td>
-                    <td style="vertical-align: middle;">
-                      <p style="margin: 0; color: #475569; line-height: 1.6;">Bonne journée,</p>
-                      <p style="margin: 0; color: #475569; line-height: 1.6;">Cordialement,</p>
-                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; line-height: 1.6;">Le bureau du SACCB</p>
-                    </td>
-                  </tr>
-                </table>
-
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
-                  <tr><td>
-                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
-                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
-                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
-                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
-                    <table cellpadding="0" cellspacing="0" border="0"><tr>
-                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
-                      <td style="vertical-align: middle;">
-                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
-                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
-                      </td>
-                    </tr></table>
-                  </td></tr>
-                </table>
+                <!-- Corps du mail tel qu'écrit par l'admin (préserve les retours à la ligne) -->
+                <div style="color: #1f2937; line-height: 1.6; white-space: pre-wrap; font-size: 15px;">${htmlBody}</div>
+                <!-- Footer minimaliste : juste pour identifier l'expéditeur -->
+                <p style="margin: 24px 0 0; padding-top: 14px; border-top: 1px solid #e2e8f0; color: #94a3b8; font-size: 11px; text-align: center;">
+                  SACCB · Sainte-Adresse Club de Compétition de Badminton<br/>
+                  <a href="mailto:contact@saccb.fr" style="color: #94a3b8; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #94a3b8; text-decoration: none;">saccb.fr</a>
+                </p>
               </div>
             </div>
           `,

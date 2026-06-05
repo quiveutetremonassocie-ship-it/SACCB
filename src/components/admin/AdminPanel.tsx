@@ -258,8 +258,15 @@ export default function AdminPanel({
   }
 
   return (
-    <div ref={scrollContainerRef} className="admin-shell fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto overflow-x-hidden">
-      <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10">
+    <div
+      ref={scrollContainerRef}
+      className="admin-shell fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto overflow-x-hidden"
+      style={{
+        WebkitOverflowScrolling: "touch", // scroll fluide iOS
+        overscrollBehavior: "contain",    // évite le bounce + le scroll qui "remonte" derrière
+      }}
+    >
+      <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10 pb-24 md:pb-10">
         <div className="flex items-center justify-between mb-6 sticky top-0 z-10 -mx-4 md:-mx-6 lg:-mx-10 px-4 md:px-6 lg:px-10 py-3 bg-[#f8fafc]/95 backdrop-blur-xl border-b border-slate-200">
           <div>
             <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold">Panel</p>
