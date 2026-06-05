@@ -75,7 +75,13 @@ export default function MemberPanel({
       const updated = { ...session, renewalSkippedFor: r.renewalSkippedFor || undefined };
       setMemberSession(updated);
     } else {
-      alert("Erreur, réessayez.");
+      // 🔍 Affiche le vrai message d'erreur du serveur (au lieu d'un générique)
+      const reason = r.reason || "Erreur inconnue";
+      if (reason.toLowerCase().includes("session")) {
+        alert("Votre session a expiré. Reconnectez-vous à votre espace membre pour modifier cette préférence.");
+      } else {
+        alert("Erreur : " + reason);
+      }
     }
   }
 
