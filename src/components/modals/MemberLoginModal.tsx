@@ -81,9 +81,12 @@ export default function MemberLoginModal({
   function finalizeLogin() {
     if (!pendingSession) return;
     const { session, adminCode } = pendingSession;
-    setMemberSession(session);
+    // 🔑 Pour les membres non-admin, on persiste le code dans la session localStorage
+    // pour qu'il survive aux nouveaux onglets/pages (charger les actus privees, FAQ, etc.)
+    const finalSession = !session.isAdmin ? { ...session, memberCode: code } : session;
+    setMemberSession(finalSession);
     if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
-    onSuccess({ ...session, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
+    onSuccess({ ...finalSession, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
     resetAll();
   }
 
@@ -127,9 +130,10 @@ export default function MemberLoginModal({
     }
 
     // Sinon connexion normale
-    setMemberSession(session);
+    const finalSession = !session.isAdmin ? { ...session, memberCode: code } : session;
+    setMemberSession(finalSession);
     if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
-    onSuccess({ ...session, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
+    onSuccess({ ...finalSession, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
     resetAll();
   }
 
@@ -174,8 +178,9 @@ export default function MemberLoginModal({
     }
     // Et on finalise la connexion
     if (!pendingSession) return;
-    setMemberSession(pendingSession.session);
-    onSuccess({ ...pendingSession.session, expiry: Date.now() + sessionDurationMs(pendingSession.session.isAdmin === true) }, pendingSession.adminCode);
+    const finalSession = !pendingSession.session.isAdmin ? { ...pendingSession.session, memberCode: newCode } : pendingSession.session;
+    setMemberSession(finalSession);
+    onSuccess({ ...finalSession, expiry: Date.now() + sessionDurationMs(pendingSession.session.isAdmin === true) }, pendingSession.adminCode);
     resetAll();
   }
 

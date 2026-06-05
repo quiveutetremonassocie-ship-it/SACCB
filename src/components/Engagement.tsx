@@ -56,7 +56,7 @@ export default function Engagement({
       setMyVotes({});
       return;
     }
-    const code = memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) return;
     fetchMyVotes(memberSession.email, code, memberSession.membreId).then(setMyVotes);
   }, [memberSession, polls]);
@@ -94,7 +94,7 @@ export default function Engagement({
       onLoginRequest();
       return;
     }
-    const code = memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) { onLoginRequest(); return; }
     setVoting(pollId + ":" + optionIdx);
     const r = await memberVotePoll(memberSession.email, code, memberSession.membreId, pollId, optionIdx);
@@ -119,7 +119,7 @@ export default function Engagement({
       setAgMsg({ ok: false, text: "Votre message doit faire au moins 5 caractères." });
       return;
     }
-    const code = memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) { onLoginRequest(); return; }
     setAgSending(true);
     setAgMsg(null);

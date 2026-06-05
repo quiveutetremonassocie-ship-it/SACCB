@@ -396,7 +396,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
     const p1 = String(fd.get("p1") || "").trim();
     const p2 = String(fd.get("p2") || "").trim();
     if (!p1 || !p2) { setSubmitting(false); return; }
-    const code = memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) {
       alert("Vous devez etre connecte a votre espace membre pour vous inscrire a un tournoi.");
       setSubmitting(false);

@@ -180,10 +180,10 @@ function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | n
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
 
-  // Pré-remplit le code si on a une session valide avec code en mémoire
-  // (cas où l'utilisateur vient juste de se connecter dans le même onglet)
+  // Pré-remplit le code si on a une session valide avec code en mémoire.
+  // Priorité : memberCode persistant (survit aux nouveaux onglets) > adminCode > sessionStorage
   const cachedCode = typeof window !== "undefined"
-    ? (memberSession?.adminCode || sessionStorage.getItem("saccb_member_code") || "")
+    ? (memberSession?.memberCode || memberSession?.adminCode || sessionStorage.getItem("saccb_member_code") || "")
     : "";
 
   if (!memberSession) {

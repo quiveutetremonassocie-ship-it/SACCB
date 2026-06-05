@@ -176,7 +176,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       setPrivateActualites([]);
       return;
     }
-    const savedCode = sessionStorage.getItem("saccb_member_code");
+    // 🔑 Priorité : code en session persistante (localStorage), sinon sessionStorage de l'onglet
+    const savedCode = memberSession.memberCode || sessionStorage.getItem("saccb_member_code");
     if (!savedCode) return;
     fetchPrivateActualites(memberSession.email, savedCode, memberSession.membreId)
       .then(setPrivateActualites)

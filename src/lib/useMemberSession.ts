@@ -18,6 +18,12 @@ export type MemberSession = {
   paid?: boolean; // false = adhésion non renouvelée pour la saison en cours
   isAdmin?: boolean; // true = accès au panneau admin
   adminCode?: string; // code admin stocké dans la session (évite une clé localStorage séparée)
+  // 🔑 Code personnel du membre, persistant en localStorage. Permet d'accéder aux
+  // ressources protégées (actus privées, FAQ, etc.) depuis n'importe quel onglet/page.
+  // Note : c'est le même niveau de sensibilité que la session elle-même, qui contient
+  // déjà email + membreId. Le code étant déjà nécessaire pour ces actions, le stocker
+  // ici avec la session a le même profil de sécurité.
+  memberCode?: string;
   newsOptIn?: boolean; // préférence news de l’association
 };
 

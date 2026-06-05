@@ -85,7 +85,7 @@ export default function MemberPanel({
     setNewsLoading(true);
     setNewsMsg(null);
     // On a besoin du code — stocké dans adminCode pour les admins, sinon via sessionStorage
-    const code = session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     const r = await memberUpdateNewsOptIn(session.email, code, session.membreId, next);
     setNewsLoading(false);
     if (r.ok) {
@@ -404,7 +404,7 @@ export default function MemberPanel({
 
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
         {(() => {
-          const code = session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+          const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
           if (!code) return null;
           // Split du nom complet en prénom + nom (le 1er mot = prénom, le reste = nom)
           const fullName = (session.nom || "").trim();
