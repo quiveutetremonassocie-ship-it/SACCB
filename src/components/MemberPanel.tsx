@@ -4,8 +4,9 @@ import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, Refr
 import Link from "next/link";
 import TshirtOrderForm from "./TshirtOrderForm";
 import RecuModal from "./admin/RecuModal";
+import ReportsModal from "./modals/ReportsModal";
 import { PRIX } from "@/lib/types";
-import type { ClubConfig, Membre } from "@/lib/types";
+import type { ClubConfig, Membre, ReunionReport } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberUpdateNewsOptIn } from "@/lib/db";
@@ -28,6 +29,7 @@ export default function MemberPanel({
   helloassoUrls,
   presidentName,
   clubConfig,
+  reunionReports = [],
 }: {
   session: MemberSession;
   y1: number;
@@ -44,11 +46,13 @@ export default function MemberPanel({
   helloassoUrls?: { mixte?: string; adulte?: string; etudiant?: string };
   presidentName?: string;
   clubConfig?: ClubConfig;
+  reunionReports?: ReunionReport[];
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
   const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
   const [recuOpen, setRecuOpen] = useState(false);
+  const [reportsModalOpen, setReportsModalOpen] = useState(false);
 
   function toggleTournoi(id: string) {
     setOpenTournois(prev => {
@@ -396,11 +400,22 @@ export default function MemberPanel({
         {/* ❓ Lien vers la FAQ — visible pour tous les membres */}
         <a
           href="/faq"
-          className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-700 hover:text-indigo-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-indigo-50"
+          className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-700 hover:text-indigo-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-indigo-50"
         >
           <HelpCircle className="w-4 h-4" />
           Questions fréquentes
         </a>
+
+        {/* 📋 Comptes-rendus de réunions (uniquement si au moins un existe) */}
+        {reunionReports.length > 0 && (
+          <button
+            onClick={() => setReportsModalOpen(true)}
+            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+          >
+            <FileSignature className="w-4 h-4" />
+            Comptes-rendus de réunions ({reunionReports.length})
+          </button>
+        )}
 
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
         {(() => {
@@ -747,6 +762,14 @@ export default function MemberPanel({
             montantEtudiant: clubConfig?.prixEtudiant ?? PRIX.Etudiant,
           }}
           onClose={() => setRecuOpen(false)}
+        />
+      )}
+
+      {/* 📋 Modale des comptes-rendus */}
+      {reportsModalOpen && (
+        <ReportsModal
+          reports={reunionReports}
+          onClose={() => setReportsModalOpen(false)}
         />
       )}
     </div>

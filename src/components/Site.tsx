@@ -577,6 +577,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           helloassoUrls={db.clubConfig?.helloassoUrls}
           presidentName={db.presidentName}
           clubConfig={db.clubConfig}
+          reunionReports={db.reunionReports ?? []}
         />
       )}
       {/* Panneau démo en mode présentation */}
