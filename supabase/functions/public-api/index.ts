@@ -3853,11 +3853,18 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: Envoi d'un email personnalisé aux adhérents (avec pièces jointes) ───
-  // ⏰ [CRON, public] Envoie les brouillons programmés dont l'heure est arrivée.
-  // Appelé toutes les 15 min par GitHub Actions (workflow scheduled-emails.yml).
-  // Aucune auth requise (l'action ne fait que consommer des brouillons côté serveur),
-  // mais on garde une logique idempotente : si rien à envoyer, on retourne juste {sent:0}.
+  // ⏰ ANCIENNE ACTION désactivée : envoi programmé des brouillons.
+  // Désormais on ne supporte que les brouillons manuels (pas de programmation).
+  // Si un éventuel workflow cron externe appelle encore cette action, on répond
+  // simplement {ok:true, sent:0} pour ne pas casser. Le code complet est conservé
+  // pour pouvoir réactiver facilement si besoin un jour.
   if (action === "cron_send_scheduled_drafts") {
+    return json({ ok: true, sent: 0, disabled: true });
+  }
+
+  // ⚠️ CODE INACTIF — ancien envoi programmé, conservé pour référence
+  // (jamais exécuté car l'action est interceptée juste au-dessus)
+  if (action === "__DISABLED_cron_send_scheduled_drafts__") {
     const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
     if (error || !data) return json({ ok: false, reason: "DB error" }, 500);
     const d = data.data as Record<string, unknown>;

@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search, History, Trash2, ChevronDown, ChevronUp, AlertCircle, FileText, CalendarClock } from "lucide-react";
+import { Mail, Send, Paperclip, X, Users, CheckCircle2, Clock, Bell, UserCheck, Search, History, Trash2, ChevronDown, ChevronUp, AlertCircle, FileText } from "lucide-react";
 import { DB } from "@/lib/types";
 import type { EmailDraft } from "@/lib/types";
 import { adminSendEmail, adminDeleteEmailLog, adminClearEmailHistory, adminDraftsList, adminDraftSave, adminDraftDelete } from "@/lib/db";
@@ -52,7 +52,6 @@ export default function EmailingAdmin({
   const [drafts, setDrafts] = useState<EmailDraft[]>([]);
   const [draftsOpen, setDraftsOpen] = useState(false);
   const [editingDraftId, setEditingDraftId] = useState<string | null>(null);
-  const [scheduledAt, setScheduledAt] = useState<string>(""); // format "YYYY-MM-DDTHH:mm"
   const [savingDraft, setSavingDraft] = useState(false);
 
   const refreshDrafts = useCallback(async () => {
@@ -65,7 +64,7 @@ export default function EmailingAdmin({
   function clearForm() {
     setSubject(""); setBody(""); setVariant("default");
     setTargetMode(""); setSelectedMembreIds(new Set()); setExtraEmails("");
-    setEditingDraftId(null); setScheduledAt("");
+    setEditingDraftId(null);
   }
 
   function loadDraft(d: EmailDraft) {
@@ -76,14 +75,6 @@ export default function EmailingAdmin({
     setSelectedMembreIds(new Set(d.customMembreIds || []));
     setExtraEmails((d.extraEmails || []).join(", "));
     setEditingDraftId(d.id);
-    // Convertit ISO -> format input datetime-local (YYYY-MM-DDTHH:mm)
-    if (d.scheduledAt) {
-      const dt = new Date(d.scheduledAt);
-      const pad = (n: number) => String(n).padStart(2, "0");
-      setScheduledAt(`${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`);
-    } else {
-      setScheduledAt("");
-    }
     setDraftsOpen(false);
     setTimeout(() => document.getElementById("emailing-form-top")?.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
@@ -105,13 +96,12 @@ export default function EmailingAdmin({
       customMembreIds,
       extraEmails: parsedExtraEmails,
       variant,
-      scheduledAt: scheduledAt ? new Date(scheduledAt).toISOString() : undefined,
     });
     setSavingDraft(false);
     if (r.ok) {
       if (r.draftId) setEditingDraftId(r.draftId);
       await refreshDrafts();
-      setResult({ ok: true, text: scheduledAt ? "Brouillon programmé enregistré ✓" : "Brouillon enregistré ✓" });
+      setResult({ ok: true, text: "Brouillon enregistré ✓" });
       setTimeout(() => setResult(null), 3000);
     } else {
       alert("Erreur : " + (r.reason || "Inconnue"));
@@ -635,40 +625,6 @@ export default function EmailingAdmin({
         </div>
       )}
 
-      {/* 🗓️ Programmation (optionnelle) */}
-      {!readOnly && (
-        <div className="mb-3 bg-slate-50 border border-slate-200 rounded-xl p-3">
-          <label className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1.5 flex items-center gap-1.5">
-            <CalendarClock className="w-3.5 h-3.5" /> Programmer un envoi (optionnel)
-          </label>
-          <div className="flex gap-2 items-center flex-wrap">
-            <input
-              type="datetime-local"
-              value={scheduledAt}
-              onChange={(e) => setScheduledAt(e.target.value)}
-              className="text-sm border border-slate-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-blue-500 bg-white"
-              min={new Date(Date.now() + 60_000).toISOString().slice(0, 16)}
-            />
-            {scheduledAt && (
-              <button
-                onClick={() => setScheduledAt("")}
-                className="text-xs text-slate-500 hover:text-slate-700 px-2"
-                title="Retirer la programmation"
-              >
-                ✕
-              </button>
-            )}
-          </div>
-          <p className="text-[11px] text-slate-500 mt-1.5">
-            Si une date est définie, enregistrer comme brouillon programmera l&apos;envoi automatique à cette date.
-            Sinon le brouillon reste en attente d&apos;envoi manuel.
-          </p>
-          <p className="text-[11px] text-amber-700 mt-1 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
-            ⏰ <strong>Précision ±15 min</strong> : le système vérifie les brouillons à envoyer toutes les 15 minutes (à xx:00, xx:15, xx:30 et xx:45). L&apos;envoi peut donc arriver avec un léger décalage par rapport à l&apos;heure programmée.
-          </p>
-        </div>
-      )}
-
       {/* Boutons : Brouillon + Envoyer */}
       {!readOnly && (
         <div className="flex flex-col sm:flex-row gap-2">
@@ -715,51 +671,37 @@ export default function EmailingAdmin({
           >
             <span className="flex items-center gap-2 text-sm font-semibold text-amber-900">
               <FileText className="w-4 h-4 text-amber-700" />
-              📝 Brouillons et envois programmés ({drafts.length})
+              📝 Brouillons ({drafts.length})
             </span>
             {draftsOpen ? <ChevronUp className="w-4 h-4 text-amber-700" /> : <ChevronDown className="w-4 h-4 text-amber-700" />}
           </button>
           {draftsOpen && (
             <ul className="mt-3 space-y-2">
-              {drafts.map((d) => {
-                const isScheduled = !!d.scheduledAt;
-                const scheduledDate = isScheduled ? new Date(d.scheduledAt!) : null;
-                const isPast = scheduledDate ? scheduledDate.getTime() < Date.now() : false;
-                return (
-                  <li key={d.id} className="bg-white border border-slate-200 rounded-xl p-3">
-                    <div className="flex items-start gap-2">
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-semibold text-slate-800 truncate">{d.subject || <span className="italic text-slate-400">(sans sujet)</span>}</p>
-                        <div className="text-[11px] text-slate-500 mt-0.5 flex items-center gap-2 flex-wrap">
-                          {isScheduled && (
-                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${isPast ? "bg-red-100 text-red-700" : "bg-blue-100 text-blue-700"}`}>
-                              <CalendarClock className="w-3 h-3" />
-                              {isPast ? "À envoyer (en retard)" : `Programmé : ${scheduledDate?.toLocaleString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}`}
-                            </span>
-                          )}
-                          {!isScheduled && (
-                            <span className="inline-block bg-slate-100 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold uppercase">Brouillon</span>
-                          )}
-                          <span>Modifié le {new Date(d.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}</span>
-                        </div>
-                      </div>
-                      <button
-                        onClick={() => loadDraft(d)}
-                        className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg shrink-0"
-                      >
-                        Ouvrir
-                      </button>
-                      <button
-                        onClick={() => deleteDraft(d.id)}
-                        className="text-red-400 hover:text-red-600 p-1.5 rounded shrink-0"
-                        title="Supprimer le brouillon"
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </button>
+              {drafts.map((d) => (
+                <li key={d.id} className="bg-white border border-slate-200 rounded-xl p-3">
+                  <div className="flex items-start gap-2">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm font-semibold text-slate-800 truncate">{d.subject || <span className="italic text-slate-400">(sans sujet)</span>}</p>
+                      <p className="text-[11px] text-slate-500 mt-0.5">
+                        Modifié le {new Date(d.updatedAt).toLocaleDateString("fr-FR", { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" })}
+                      </p>
                     </div>
-                  </li>
-                );
-              })}
+                    <button
+                      onClick={() => loadDraft(d)}
+                      className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg shrink-0"
+                    >
+                      Ouvrir
+                    </button>
+                    <button
+                      onClick={() => deleteDraft(d.id)}
+                      className="text-red-400 hover:text-red-600 p-1.5 rounded shrink-0"
+                      title="Supprimer le brouillon"
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </button>
+                  </div>
+                </li>
+              ))}
             </ul>
           )}
         </div>
