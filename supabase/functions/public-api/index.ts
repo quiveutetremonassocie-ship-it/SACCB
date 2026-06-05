@@ -1612,41 +1612,25 @@ Deno.serve(async (req) => {
           for (const r of paidMembres) {
             const greeting = r.prenom ? `Bonjour ${escapeHtml(r.prenom)},` : "Bonjour,";
             const greetingText = r.prenom ? `Bonjour ${r.prenom},` : "Bonjour,";
+            // 📨 Design "mail perso" pour éviter le classement en Promotions Gmail.
+            // Texte plein, pas de bouton CTA, pas de liste numérotée, pas de couleur vive.
+            const subjectPrefix = r.prenom ? `${r.prenom}, ` : "";
             await sendBrevo(brevoKeyT, {
               from: "SACCB <contact@saccb.fr>",
-              headers: {
-                "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-                "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-              },
+              // 🚫 Pas de header List-Unsubscribe sur les mails 1-to-1 type "mail perso"
+              // pour ne pas signaler à Gmail "ceci est un envoi de masse"
               to: [r.email],
-              subject: `👕 Commandes de t-shirts SACCB ouvertes !`,
-              text: `${greetingText}\n\nLes commandes de t-shirts SACCB sont ouvertes ! 🎉\n\nPour commander, c'est simple :\n1. Va sur saccb.fr et connecte-toi à ton espace membre\n2. Dans ton espace, tu verras un bloc orange « Commander un T-shirt SACCB »\n3. Choisis ta taille (XS, S, M, L ou XL) et indique éventuellement un nom/surnom à floquer sur ton t-shirt\n4. Valide ta commande\n\n💰 Prix : ${priceText}. Le règlement se fera de la main à la main, au moment où tu viendras chercher ton t-shirt.\n\nPour modifier ou annuler ta commande, retourne dans ton espace membre.\n\nÀ très bientôt sur les terrains 🏸\nLe bureau du SACCB`,
-              html: `
-                <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-                  <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 14px;">
-                    <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="background: white; border-radius: 10px; padding: 4px; display: block;" />
-                    <div><h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club de Compétition de Badminton</p></div>
-                  </div>
-                  <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                    <p style="color: #475569; margin: 0 0 14px;">${greeting}</p>
-                    <p style="color: #475569; line-height: 1.6;">Les <strong>commandes de t-shirts SACCB</strong> sont ouvertes 🎉</p>
-                    <h3 style="color: #1e3a5f; font-size: 15px; margin: 20px 0 10px;">👕 Comment commander</h3>
-                    <ol style="color: #475569; line-height: 1.7; padding-left: 20px; margin: 0 0 16px;">
-                      <li>Rends-toi sur <a href="https://saccb.fr/?member=1" style="color: #1e3a5f; font-weight: 600;">saccb.fr</a> et connecte-toi à ton espace membre</li>
-                      <li>Dans ton espace, tu verras un bloc orange <strong>« Commander un T-shirt SACCB »</strong></li>
-                      <li>Choisis ta taille (XS, S, M, L ou XL) et, si tu le souhaites, un nom/surnom à floquer</li>
-                      <li>Valide ta commande</li>
-                    </ol>
-                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 16px 0;">
-                      <p style="margin: 0 0 4px; color: #92400e; font-size: 13px;"><strong>💰 Prix</strong></p>
-                      <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">${priceText}.<br/>Le règlement se fera <strong>de la main à la main</strong>, au moment où tu viendras chercher ton t-shirt — pas de paiement en ligne pour les t-shirts.</p>
-                    </div>
-                    <p style="color: #64748b; font-size: 13px; margin: 14px 0 0;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace membre tant que les commandes sont ouvertes.</p>
-                    <p style="margin-top: 22px; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains 🏸</p>
-                    <p style="margin: 4px 0 0; color: #64748b; font-size: 13px;">Le bureau du SACCB</p>
-                  </div>
-                </div>
-              `,
+              subject: `${subjectPrefix}les commandes de t-shirts sont ouvertes`,
+              text: `${greetingText}\n\nPetit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.\n\nPour commander, tu te connectes à ton espace membre sur saccb.fr et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.\n\nLe prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.\n\nTu peux modifier ou annuler ta commande à tout moment depuis ton espace membre.\n\nÀ bientôt,\nLe bureau du SACCB`,
+              // HTML très sobre, presque du texte brut avec juste un peu de mise en forme
+              html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+                <p style="margin: 0 0 14px;">${greeting}</p>
+                <p style="margin: 0 0 14px;">Petit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.</p>
+                <p style="margin: 0 0 14px;">Pour commander, tu te connectes à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a> et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.</p>
+                <p style="margin: 0 0 14px;">Le prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.</p>
+                <p style="margin: 0 0 14px;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace.</p>
+                <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
+              </div>`,
             }).catch(() => {});
             await sleep(EMAIL_THROTTLE_MS);
           }
@@ -4093,54 +4077,21 @@ Deno.serve(async (req) => {
         : `Votre avis sur "${pollQuestion}"`;
       const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site de l'association :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
+      // 📨 Design "mail perso" sobre pour éviter le classement en Promotions
+      const optionsHtml = ((poll.options as string[]) || []).slice(0, 5).map((o) => `<p style="margin: 2px 0; padding-left: 18px;">— ${escapeHtml(o)}</p>`).join("");
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
-          headers: {
-            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
           to: [recipient.email],
           subject,
           text: plainText,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
-                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
-                <div>
-                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
-                </div>
-              </div>
-              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
-                <h2 style="color: #1e3a5f; margin-top: 0;">📊 Un nouveau sondage vous attend !</h2>
-                <p style="color: #475569;">Le bureau souhaite recueillir votre avis :</p>
-                <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                  <p style="margin: 0 0 12px; font-size: 16px; font-weight: bold; color: #1e3a5f;">${escapeHtml(pollQuestion)}</p>
-                  ${((poll.options as string[]) || []).slice(0, 5).map((o) => `<p style="margin: 4px 0; color: #64748b; font-size: 13px;">• ${escapeHtml(o)}</p>`).join("")}
-                </div>
-                <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
-                  📊 Donner mon avis →
-                </a>
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
-                  <tr><td>
-                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
-                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
-                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
-                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
-                    <table cellpadding="0" cellspacing="0" border="0"><tr>
-                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
-                      <td style="vertical-align: middle;">
-                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
-                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
-                      </td>
-                    </tr></table>
-                  </td></tr>
-                </table>
-              </div>
-            </div>
-          `,
+          html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+            <p style="margin: 0 0 14px;">${greeting}</p>
+            <p style="margin: 0 0 14px;">Le bureau aimerait avoir ton avis sur cette question :</p>
+            <p style="margin: 0 0 6px; font-weight: 600;">« ${escapeHtml(pollQuestion)} »</p>
+            ${optionsHtml}
+            <p style="margin: 14px 0;">Tu peux y répondre en te connectant à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a>.</p>
+            <p style="margin: 14px 0 0;">Merci pour ton retour,<br/>Le bureau du SACCB</p>
+          </div>`,
         });
       if (sendRes.ok) sentCount++;
       else errors.push(`${recipient.email}: ${sendRes.status}`);
@@ -4241,53 +4192,19 @@ Deno.serve(async (req) => {
         : `${topic} au SACCB`;
       const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site de l'association !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
 
+      // 📨 Design "mail perso" sobre pour éviter le classement en Promotions
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
-          headers: {
-            "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
-            "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
-          },
           to: [recipient.email],
           subject,
           text: plainText,
-          html: `
-            <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
-              <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
-                <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
-                <div>
-                  <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
-                </div>
-              </div>
-              <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
-                <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
-                <h2 style="color: #1e3a5f; margin-top: 0;">📣 ${topic}</h2>
-                <p style="color: #475569;">Une nouvelle section est disponible sur le site de l'association !</p>
-                <p style="color: #475569;">Vous pouvez maintenant <strong>${topicEmail}</strong>.</p>
-                <p style="color: #475569;">C'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.</p>
-                <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 16px; margin-top: 8px;">
-                  📣 Accéder à l'espace →
-                </a>
-                ${procurationBlockHtml}
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
-                  <tr><td>
-                    <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
-                    <p style="margin: 4px 0 14px; color: #64748b; font-size: 13px;">Le bureau vous souhaite une excellente journée 🏸</p>
-                    <p style="margin: 0 0 2px; color: #1e293b; font-size: 13px; font-weight: 600;">Hernan Camara <span style="color: #64748b; font-weight: 400;">· Président</span></p>
-                    <p style="margin: 0 0 14px; color: #64748b; font-size: 12px; font-style: italic;">&amp; toute l'équipe du SACCB</p>
-                    <table cellpadding="0" cellspacing="0" border="0"><tr>
-                      <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
-                      <td style="vertical-align: middle;">
-                        <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
-                        <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
-                      </td>
-                    </tr></table>
-                  </td></tr>
-                </table>
-              </div>
-            </div>
-          `,
+          html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+            <p style="margin: 0 0 14px;">${greeting}</p>
+            <p style="margin: 0 0 14px;">Petit message pour t'informer qu'une nouvelle section est ouverte sur le site : tu peux maintenant ${topicEmail}.</p>
+            <p style="margin: 0 0 14px;">C'est l'occasion de donner ton avis et de contribuer à la vie de l'association. Tu peux y accéder en te connectant à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a>.</p>
+            ${procurationBlockHtml}
+            <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
+          </div>`,
         });
       if (sendRes.ok) sentCount++;
       else errors.push(`${recipient.email}: ${sendRes.status}`);
