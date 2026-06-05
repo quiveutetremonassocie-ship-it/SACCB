@@ -350,9 +350,10 @@ export default function Engagement({
           </div>
         )}
 
-        {/* COMPTES-RENDUS DE RÉUNION (dissocié des sondages — toggle reportsOpen)
-            + ARCHIVES des saisons précédentes (accessibles aux nouveaux adhérents) */}
-        {reportsOpen && (reunionReports.length > 0 || archivedSeasonsWithReports.length > 0) && (
+        {/* COMPTES-RENDUS DE RÉUNION : retirés de la section publique Engagement.
+            Ils sont désormais accessibles UNIQUEMENT via la modale dédiée dans
+            l'espace membre (bouton « Comptes-rendus de réunions » dans Mon espace). */}
+        {false && reportsOpen && (reunionReports.length > 0 || archivedSeasonsWithReports.length > 0) && (
           <div className="max-w-3xl mx-auto">
             <h3 className="flex items-center gap-2 font-display text-2xl tracking-wider text-slate-800 mb-4">
               <FileText className="w-6 h-6 text-blue-500" /> Comptes-rendus de réunions
