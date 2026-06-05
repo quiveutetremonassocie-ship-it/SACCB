@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Users, Plus, Trash2, Pencil, X, Check } from "lucide-react";
+import { Users, Plus, Trash2, Pencil, X, Check, ChevronUp, ChevronDown } from "lucide-react";
 import { DB, BureauMember } from "@/lib/types";
 
 export default function BureauAdmin({
@@ -53,6 +53,18 @@ export default function BureauAdmin({
   async function remove(id: string) {
     if (!confirm("Supprimer ce membre du bureau ?")) return;
     await onPersist({ ...db, bureauMembers: members.filter((m) => m.id !== id) });
+  }
+
+  // ⬆️⬇️ Déplace un membre vers le haut (-1) ou vers le bas (+1) dans la liste
+  async function move(id: string, direction: -1 | 1) {
+    if (readOnly) return;
+    const idx = members.findIndex((m) => m.id === id);
+    if (idx === -1) return;
+    const newIdx = idx + direction;
+    if (newIdx < 0 || newIdx >= members.length) return;
+    const reordered = [...members];
+    [reordered[idx], reordered[newIdx]] = [reordered[newIdx], reordered[idx]];
+    await onPersist({ ...db, bureauMembers: reordered });
   }
 
   return (
@@ -107,8 +119,29 @@ export default function BureauAdmin({
         <p className="text-sm text-slate-400 italic text-center py-6">Aucun membre du bureau ajouté pour l&apos;instant.</p>
       ) : (
         <ul className="space-y-2">
-          {members.map((m) => (
-            <li key={m.id} className="flex items-start gap-3 bg-white border border-slate-200 rounded-xl p-3">
+          {members.map((m, idx) => (
+            <li key={m.id} className="flex items-start gap-2 bg-white border border-slate-200 rounded-xl p-3">
+              {/* ⬆️⬇️ Flèches de réorganisation (mobile-friendly, peu encombrant) */}
+              {!readOnly && members.length > 1 && (
+                <div className="flex flex-col shrink-0 -my-1">
+                  <button
+                    onClick={() => move(m.id, -1)}
+                    disabled={idx === 0}
+                    className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed p-0.5"
+                    title="Monter"
+                  >
+                    <ChevronUp className="w-4 h-4" />
+                  </button>
+                  <button
+                    onClick={() => move(m.id, 1)}
+                    disabled={idx === members.length - 1}
+                    className="text-slate-300 hover:text-indigo-600 disabled:opacity-30 disabled:cursor-not-allowed p-0.5"
+                    title="Descendre"
+                  >
+                    <ChevronDown className="w-4 h-4" />
+                  </button>
+                </div>
+              )}
               <div className="w-10 h-10 rounded-full bg-gradient-to-br from-indigo-400 to-purple-400 flex items-center justify-center text-white font-bold shrink-0">
                 {m.prenom.charAt(0).toUpperCase()}
               </div>
