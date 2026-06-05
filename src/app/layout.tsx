@@ -67,6 +67,10 @@ export const metadata: Metadata = {
 
 export const viewport = {
   themeColor: "#1e3a5f",
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 5, // permet le zoom (accessibilité) mais empêche le zoom intempestif
+  userScalable: true,
 };
 
 // JSON-LD enrichi : multi-types + coordonnées GPS + appartenance fédérale.

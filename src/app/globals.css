@@ -57,6 +57,55 @@ body {
   }
 }
 
+/* 🛡️ ANTI-SCROLL HORIZONTAL — Toute la zone admin
+   Force les enfants à respecter la largeur du parent et autorise le wrap
+   des éléments flex qui auraient tendance à déborder. */
+.admin-shell, .admin-shell * {
+  /* Aucun élément ne peut être plus large que son parent */
+  max-width: 100%;
+}
+.admin-shell {
+  overflow-x: hidden;
+  width: 100%;
+  min-width: 0;
+}
+/* Tous les containers flex doivent pouvoir wrapper sur petit écran */
+@media (max-width: 1023px) {
+  .admin-shell .flex:not(.flex-nowrap-keep) {
+    flex-wrap: wrap;
+  }
+  /* Empêche un enfant flex de forcer son parent à grandir */
+  .admin-shell .flex > * {
+    min-width: 0;
+  }
+  /* Inputs jamais plus larges que leur container */
+  .admin-shell input,
+  .admin-shell textarea,
+  .admin-shell select {
+    max-width: 100%;
+    width: 100%;
+    box-sizing: border-box;
+  }
+  /* Pré et code peuvent contenir des textes longs */
+  .admin-shell pre,
+  .admin-shell code {
+    white-space: pre-wrap;
+    word-break: break-word;
+    max-width: 100%;
+  }
+  /* Casse les mots très longs (URLs, emails, etc.) */
+  .admin-shell p,
+  .admin-shell span,
+  .admin-shell a {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
+  /* Les boutons inline ne doivent jamais dépasser la largeur du parent */
+  .admin-shell button {
+    max-width: 100%;
+  }
+}
+
 /* ============ SPORTY COMPONENTS ============ */
 @layer components {
   .glass {
