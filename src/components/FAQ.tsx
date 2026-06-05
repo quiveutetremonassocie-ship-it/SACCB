@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import Link from "next/link";
-import { ChevronDown, ChevronUp, HelpCircle, Search, MessageCircleQuestion, Send, CheckCircle2 } from "lucide-react";
+import { ChevronDown, ChevronUp, HelpCircle, Search, MessageCircleQuestion, Send, CheckCircle2, Eye, EyeOff } from "lucide-react";
 import type { FaqItem } from "@/lib/types";
 import type { MemberSession } from "@/lib/useMemberSession";
 import { memberAskFaqQuestion } from "@/lib/db";
@@ -174,9 +174,17 @@ export default function FAQ({
 // 💬 Bloc "Poser une question" — visible sur /faq pour les membres connectés
 function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | null }) {
   const [question, setQuestion] = useState("");
+  const [code, setCode] = useState("");
+  const [showCode, setShowCode] = useState(false);
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const [error, setError] = useState("");
+
+  // Pré-remplit le code si on a une session valide avec code en mémoire
+  // (cas où l'utilisateur vient juste de se connecter dans le même onglet)
+  const cachedCode = typeof window !== "undefined"
+    ? (memberSession?.adminCode || sessionStorage.getItem("saccb_member_code") || "")
+    : "";
 
   if (!memberSession) {
     return (
@@ -201,9 +209,10 @@ function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | n
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!memberSession) return;
-    const code = memberSession.adminCode || (typeof window !== "undefined" ? sessionStorage.getItem("saccb_member_code") || "" : "");
-    if (!code) {
-      setError("Session expirée, veuillez vous reconnecter.");
+    // 🔑 Priorité : code saisi manuellement, sinon code en cache de la session
+    const finalCode = code.trim() || cachedCode;
+    if (!finalCode) {
+      setError("Saisissez votre mot de passe pour confirmer votre identité.");
       return;
     }
     if (question.trim().length < 5) {
@@ -212,11 +221,12 @@ function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | n
     }
     setSending(true);
     setError("");
-    const r = await memberAskFaqQuestion(memberSession.email, code, memberSession.membreId, question.trim());
+    const r = await memberAskFaqQuestion(memberSession.email, finalCode, memberSession.membreId, question.trim());
     setSending(false);
     if (r.ok) {
       setSent(true);
       setQuestion("");
+      setCode("");
     } else {
       setError(r.reason || "Erreur lors de l'envoi.");
     }
@@ -249,9 +259,37 @@ function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | n
         maxLength={500}
         required
       />
-      <div className="flex items-center justify-between mt-1.5">
+      <div className="flex items-center justify-between mt-1.5 mb-3">
         <p className="text-[11px] text-slate-500">{question.length}/500 — Connecté en tant que <strong>{memberSession.nom}</strong></p>
       </div>
+
+      {/* 🔒 Code de confirmation : visible uniquement si pas de code en cache (page d'arrivée directe) */}
+      {!cachedCode && (
+        <div className="mb-3">
+          <label className="text-xs text-slate-600 font-medium block mb-1">
+            Confirmez votre mot de passe pour valider votre identité
+          </label>
+          <div className="relative">
+            <input
+              type={showCode ? "text" : "password"}
+              value={code}
+              onChange={(e) => setCode(e.target.value)}
+              placeholder="Votre code personnel"
+              className="w-full text-sm border border-blue-300 rounded-lg px-3 py-2 pr-10 focus:outline-none focus:border-blue-500 bg-white"
+              autoComplete="current-password"
+            />
+            <button
+              type="button"
+              onClick={() => setShowCode((s) => !s)}
+              className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+              tabIndex={-1}
+            >
+              {showCode ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && <p className="text-xs text-red-600 mt-1">{error}</p>}
       <button
         type="submit"
