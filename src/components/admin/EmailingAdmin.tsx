@@ -678,6 +678,9 @@ export default function EmailingAdmin({
             Si une date est définie, enregistrer comme brouillon programmera l&apos;envoi automatique à cette date.
             Sinon le brouillon reste en attente d&apos;envoi manuel.
           </p>
+          <p className="text-[11px] text-amber-700 mt-1 bg-amber-50 border border-amber-200 rounded-md px-2 py-1.5">
+            ⏰ <strong>Précision ±15 min</strong> : le système vérifie les brouillons à envoyer toutes les 15 minutes (à xx:00, xx:15, xx:30 et xx:45). L&apos;envoi peut donc arriver avec un léger décalage par rapport à l&apos;heure programmée.
+          </p>
         </div>
       )}
 
