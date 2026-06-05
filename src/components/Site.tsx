@@ -577,7 +577,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           helloassoUrls={db.clubConfig?.helloassoUrls}
           presidentName={db.presidentName}
           clubConfig={db.clubConfig}
-          reunionReports={db.reunionReports ?? []}
+          reunionReports={(db.reunionReports ?? []).filter((r) => r.visible !== false)}
           officialDocs={db.officialDocs ?? []}
           officialDocsOpen={db.officialDocsOpen === true}
         />

@@ -187,6 +187,9 @@ export type ReunionReport = {
   pdfName?: string; // nom du fichier original
   saison?: string;
   createdAt: string;
+  // 👁️ Visibilité côté adhérent. Undefined ou true = visible. False = masqué
+  // (le document reste en DB mais n'apparaît pas dans la modale Documents officiels).
+  visible?: boolean;
 };
 
 export type SeasonArchive = {

@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail, Bell } from "lucide-react";
+import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, Eye, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail, Bell } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import { adminNotifyEngagementOpen, adminNotifyNewPoll, adminSendReport } from "@/lib/db";
@@ -804,6 +804,17 @@ function ReportsTab({
     await onPersist({ ...db, reunionReports: reports.filter((r) => r.id !== id) });
   }
 
+  // 👁️ Toggle visible/masqué pour un document précis
+  async function toggleVisibility(id: string) {
+    if (readOnly) return;
+    const updated = reports.map((r) => {
+      if (r.id !== id) return r;
+      const current = r.visible !== false; // default true
+      return { ...r, visible: !current };
+    });
+    await onPersist({ ...db, reunionReports: updated });
+  }
+
   return (
     <div className="space-y-3">
       {!readOnly && !showForm && (
@@ -944,12 +955,24 @@ function ReportsTab({
                 {openReport === r.id ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
               </button>
               {!readOnly && (
-                <div className="flex gap-1 shrink-0">
+                <div className="flex gap-1 shrink-0 items-center">
+                  {/* 👁️ Toggle visible / masqué côté adhérent */}
+                  <button
+                    onClick={() => toggleVisibility(r.id)}
+                    className={`p-1.5 rounded transition ${
+                      r.visible === false
+                        ? "text-slate-400 hover:bg-slate-100"
+                        : "text-emerald-600 hover:bg-emerald-50"
+                    }`}
+                    title={r.visible === false ? "Masqué pour les adhérents — clic pour afficher" : "Visible pour les adhérents — clic pour masquer"}
+                  >
+                    {r.visible === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
                   <button
                     onClick={() => emailReport(r)}
                     disabled={sendingReportId === r.id}
                     className="p-1.5 rounded hover:bg-blue-50 text-blue-600 disabled:opacity-50"
-                    title="Envoyer ce compte-rendu par email à tous les adhérents"
+                    title="Envoyer ce document par email à tous les adhérents"
                   >
                     {sendingReportId === r.id ? <span className="text-xs">…</span> : <Mail className="w-4 h-4" />}
                   </button>
