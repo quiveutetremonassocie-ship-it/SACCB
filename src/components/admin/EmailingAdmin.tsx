@@ -405,31 +405,16 @@ export default function EmailingAdmin({
         </div>
       </div>
 
-      {/* Modèles d'emails pré-écrits */}
+      {/* Modèles d'emails pré-écrits
+          Note : on n'inclut PAS de modèle "Rappel paiement" ni "Info tournoi"
+          car ces emails sont déjà envoyés automatiquement par le système
+          (J-30/J-15/J-5/J-1 pour les rappels saison, et notification dédiée
+          pour les nouveaux tournois). Inclure un modèle ici risquerait de
+          provoquer des doublons. */}
       {!readOnly && (
         <div className="mb-5">
           <p className="text-xs uppercase tracking-widest text-slate-500 mb-2 font-semibold">Modeles rapides</p>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
-            <TemplateButton
-              emoji="💳"
-              label="Rappel paiement"
-              onClick={() => {
-                setSubject("Rappel — Adhesion SACCB a renouveler");
-                setBody("Bonjour,\n\nNous vous rappelons que votre adhesion pour la saison en cours n'a pas encore ete reglee.\n\nPour finaliser votre inscription, rendez-vous sur votre espace membre : https://saccb.fr/?member=1\n\nVous pouvez payer en ligne via HelloAsso ou par virement en contactant un membre du bureau.\n\nN'hesitez pas a nous contacter si vous avez des questions.\n\nSportivement,\nLe bureau du SACCB");
-                setVariant("urgent");
-                setTargetMode("unpaid");
-              }}
-            />
-            <TemplateButton
-              emoji="🏸"
-              label="Info tournoi"
-              onClick={() => {
-                setSubject("Prochain tournoi SACCB");
-                setBody("Bonjour a tous,\n\nNous vous informons qu'un tournoi approche !\n\n📅 Date : [A COMPLETER]\n📍 Lieu : [A COMPLETER]\n⏰ Date limite d'inscription : [A COMPLETER]\n\nPour vous inscrire, rendez-vous dans la section Tournois de votre espace membre : https://saccb.fr/tournois\n\nN'oubliez pas de trouver votre binome !\n\nSportivement,\nLe bureau du SACCB");
-                setVariant("annonce");
-                setTargetMode("paid");
-              }}
-            />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             <TemplateButton
               emoji="📋"
               label="Info generale"
