@@ -17,6 +17,7 @@ import MembresAdmin from "./MembresAdmin";
 import ActualitesAdmin from "./ActualitesAdmin";
 import EngagementAdmin from "./EngagementAdmin";
 import TshirtAdmin from "./TshirtAdmin";
+import GuideAdmin from "./GuideAdmin";
 import RulesAdmin from "./RulesAdmin";
 import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
@@ -454,6 +455,10 @@ export default function AdminPanel({
               <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
             </div>
           )}
+          {/* 📖 Guide admin — accessible à tous les admins, indépendant des permissions */}
+          <div id="admin-guide" className="lg:col-span-2 scroll-mt-24">
+            <GuideAdmin />
+          </div>
           {canSee("rules") && (
             <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
               <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
@@ -570,6 +575,7 @@ function QuickNav({
     { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
     { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
     { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
+    { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
   ];
   const items = allItems.filter((it) => !it.permission || canSee(it.permission));
   return (
