@@ -871,6 +871,7 @@ Deno.serve(async (req) => {
       // Migration douce : si engagementOpen=true (ancien format), équivaut aux 2 toggles
       pollsOpen: d.pollsOpen === true || d.engagementOpen === true,
       agOpen: d.agOpen === true || d.engagementOpen === true,
+      reportsOpen: d.reportsOpen === true || (d.reportsOpen === undefined && (d.pollsOpen === true || d.engagementOpen === true)),
       clubRules: d.clubRules ?? "",
       clubRulesPdfUrl: d.clubRulesPdfUrl ?? null,
       clubRulesPdfName: d.clubRulesPdfName ?? null,
@@ -1630,6 +1631,18 @@ Deno.serve(async (req) => {
                 <p style="margin: 0 0 14px;">Le prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.</p>
                 <p style="margin: 0 0 14px;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace.</p>
                 <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
+                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+                  <tr>
+                    <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                      <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                    </td>
+                    <td style="vertical-align: middle;">
+                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                    </td>
+                  </tr>
+                </table>
               </div>`,
             }).catch(() => {});
             await sleep(EMAIL_THROTTLE_MS);
@@ -4076,6 +4089,18 @@ Deno.serve(async (req) => {
             ${optionsHtml}
             <p style="margin: 14px 0;">Tu peux y répondre en te connectant à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a>.</p>
             <p style="margin: 14px 0 0;">Merci pour ton retour,<br/>Le bureau du SACCB</p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                </td>
+              </tr>
+            </table>
           </div>`,
         });
       if (sendRes.ok) sentCount++;
@@ -4175,9 +4200,19 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, ${topic.toLowerCase()} au SACCB`
         : `${topic} au SACCB`;
-      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site de l'association !\n\nVous pouvez maintenant ${topicEmail}.\n\nC'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      // 🎯 Phrase d'incitation adaptée : si SEULEMENT comptes-rendus (lecture seule),
+      // on ne dit pas "donne ton avis" car il n'y a rien à voter / commenter.
+      const onlyReports = includeReports && !includePolls && !includeAG;
+      const callToAction = onlyReports
+        ? "Bonne lecture !"
+        : "C'est l'occasion de donner ton avis et de contribuer à la vie de l'association.";
+      const callToActionText = onlyReports
+        ? "Bonne lecture !"
+        : "C'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.";
 
-      // 📨 Design "mail perso" sobre pour éviter le classement en Promotions
+      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site de l'association !\n\nVous pouvez maintenant ${topicEmail}.\n\n${callToActionText}\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+
+      // 📨 Design "mail perso" sobre + logo SACCB en signature
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           to: [recipient.email],
@@ -4186,9 +4221,21 @@ Deno.serve(async (req) => {
           html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
             <p style="margin: 0 0 14px;">${greeting}</p>
             <p style="margin: 0 0 14px;">Petit message pour t'informer qu'une nouvelle section est ouverte sur le site : tu peux maintenant ${topicEmail}.</p>
-            <p style="margin: 0 0 14px;">C'est l'occasion de donner ton avis et de contribuer à la vie de l'association. Tu peux y accéder en te connectant à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a>.</p>
+            <p style="margin: 0 0 14px;">${callToAction} Tu peux y accéder en te connectant à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a>.</p>
             ${procurationBlockHtml}
             <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                </td>
+              </tr>
+            </table>
           </div>`,
         });
       if (sendRes.ok) sentCount++;
