@@ -771,8 +771,11 @@ function ReportsTab({
 
   async function save() {
     if (readOnly) return;
-    if (!form.title.trim() || !form.content.trim()) {
-      alert("Titre et contenu requis.");
+    // 🔧 Seul le titre est obligatoire. Le contenu texte est facultatif si un PDF
+    // est joint (ou même sans PDF, l'admin peut juste vouloir un document avec
+    // un titre comme placeholder).
+    if (!form.title.trim()) {
+      alert("Le titre est obligatoire.");
       return;
     }
     if (editingId) {
@@ -867,7 +870,7 @@ function ReportsTab({
           </div>
           <textarea
             className="input w-full min-h-[200px] resize-y"
-            placeholder="Contenu du compte-rendu (texte libre, retours à la ligne préservés)…"
+            placeholder="Contenu / résumé du document (optionnel — texte libre, retours à la ligne préservés)…"
             value={form.content}
             onChange={(e) => setForm({ ...form, content: e.target.value })}
           />
