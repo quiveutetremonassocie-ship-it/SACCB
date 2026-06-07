@@ -31,19 +31,29 @@ export default function GuideAdmin() {
       >
         <div className="space-y-3 text-sm">
           <AutoItem
+            icon={<MailIcon className="w-4 h-4 text-blue-600" />}
+            title="📝 Email de confirmation d'inscription"
+            desc="Envoyé automatiquement dès qu'une personne s'inscrit sur le site (avant paiement). Elle reçoit la confirmation que son inscription est bien enregistrée + les explications pour payer (HelloAsso avec rappel sur la contribution à 0€, OU virement avec contact bureau)."
+          />
+          <AutoItem
             icon={<MailIcon className="w-4 h-4 text-emerald-600" />}
             title="📧 Email de bienvenue"
-            desc="Envoyé automatiquement à chaque nouvel adhérent après son paiement (en ligne ou validation virement). Il contient son code d'accès personnel et la présentation du site."
+            desc="Envoyé automatiquement à chaque nouvel adhérent après son paiement (en ligne ou validation virement). Il contient son code d'accès personnel et la présentation du site. Les PDF marqués « 📎 Joindre » dans Documents officiels sont aussi attachés."
           />
           <AutoItem
             icon={<MailIcon className="w-4 h-4 text-emerald-600" />}
             title="✅ Email de confirmation de paiement"
-            desc="Envoyé automatiquement quand un paiement HelloAsso aboutit OU quand un admin valide un virement (bouton « Marquer payé » sur la fiche adhérent)."
+            desc="Envoyé automatiquement quand un paiement HelloAsso aboutit OU quand un admin valide un virement (bouton « Marquer payé » sur la fiche adhérent). Les PDF marqués « 📎 Joindre » dans Documents officiels sont aussi attachés."
           />
           <AutoItem
             icon={<Bell className="w-4 h-4 text-rose-600" />}
             title="🚨 Rappels de cotisation J-30 / J-15 / J-5 / J-1"
-            desc="Envoyés automatiquement aux adhérents NON PAYÉS quand la date limite d'inscription approche (configurée dans Paramètres saison). À J-5 et J-1, le mail passe en rouge urgent."
+            desc="Envoyés automatiquement aux adhérents NON PAYÉS quand la date limite d'inscription approche (configurée dans Paramètres saison). À J-5 et J-1, le mail passe en rouge urgent. ⚠️ Les adhérents qui ont coché « Je ne souhaite pas reconduire » dans leur espace membre sont exclus."
+          />
+          <AutoItem
+            icon={<Bell className="w-4 h-4 text-amber-600" />}
+            title="🏆 Rappels tournois J-30 / J-15 / J-5 / J-1"
+            desc="Envoyés automatiquement aux adhérents payés (avec newsletter activée) quand la date limite d'inscription d'un tournoi approche. ⚠️ Exclus : ceux qui sont déjà inscrits ET ceux qui ont coché « Pas intéressé(e) » sur le tournoi en question."
           />
           <AutoItem
             icon={<Clock className="w-4 h-4 text-blue-600" />}
@@ -57,8 +67,23 @@ export default function GuideAdmin() {
           />
           <AutoItem
             icon={<Bell className="w-4 h-4 text-violet-600" />}
-            title="🗳️ Notification de nouveau sondage / nouvelle annonce AG"
-            desc="Quand tu crées un nouveau sondage ou un nouveau compte-rendu, un mail est automatiquement envoyé à tous les adhérents qui ont activé la newsletter."
+            title="🗳️ Notification de nouveau sondage / document officiel"
+            desc="Quand tu cliques sur « 📣 Notifier les adhérents » dans la section Sondages/AG/Documents officiels, un mail est envoyé à tous les adhérents payés qui ont activé la newsletter."
+          />
+          <AutoItem
+            icon={<MailIcon className="w-4 h-4 text-blue-600" />}
+            title="❓ Notification de nouvelle question FAQ"
+            desc="Quand un adhérent pose une question via la page /faq, un mail est automatiquement envoyé à tous les admins pour qu'ils puissent répondre depuis FAQ adhérents → « Questions en attente »."
+          />
+          <AutoItem
+            icon={<MailIcon className="w-4 h-4 text-amber-600" />}
+            title="👕 Notification d'ouverture des commandes t-shirts"
+            desc="Quand tu actives le toggle « Commandes ouvertes » dans T-shirts, un mail part automatiquement aux adhérents payés (avec newsletter) pour les informer."
+          />
+          <AutoItem
+            icon={<MailIcon className="w-4 h-4 text-emerald-600" />}
+            title="✉️ Envoi des brouillons d'emails"
+            desc="Tu peux préparer des brouillons d'emails (bouton « Enregistrer comme brouillon » dans Envoi d'emails) et les envoyer plus tard. Quand un brouillon est envoyé, il disparaît automatiquement de la liste."
           />
           <AutoItem
             icon={<Database className="w-4 h-4 text-slate-600" />}
@@ -93,7 +118,11 @@ export default function GuideAdmin() {
           <li className="flex items-start gap-2"><kbd className="bg-slate-100 border border-slate-300 rounded px-1.5 py-0.5 text-xs shrink-0">Échap</kbd><span>Fermer une modale ouverte</span></li>
           <li className="flex items-start gap-2 mt-3 pt-3 border-t border-slate-200"><span className="text-base">✉️</span><span>Sur un message reçu (page Messages), cliquer sur l&apos;enveloppe ouvre directement le formulaire d&apos;envoi d&apos;email pré-rempli avec le destinataire et le sujet « Re: »</span></li>
           <li className="flex items-start gap-2"><span className="text-base">🔍</span><span>Tous les boutons de la barre du haut (Membres, Comptes, Tournois...) défilent vers la section concernée</span></li>
-          <li className="flex items-start gap-2"><span className="text-base">📥</span><span>Export CSV disponible sur : Membres, T-shirts (commandes), Inscriptions tournois</span></li>
+          <li className="flex items-start gap-2"><span className="text-base">📥</span><span>Export CSV disponible sur : Membres, T-shirts (commandes), Inscriptions tournois, Comptabilité</span></li>
+          <li className="flex items-start gap-2"><span className="text-base">📎</span><span>Sur un document officiel (charte, rapport...), clique sur le trombone pour qu&apos;il soit joint automatiquement aux mails de bienvenue + paiement confirmé</span></li>
+          <li className="flex items-start gap-2"><span className="text-base">✍️</span><span>Tu peux définir une signature commune dans Paramètres saison → elle est pré-remplie à chaque nouveau mail manuel</span></li>
+          <li className="flex items-start gap-2"><span className="text-base">📝</span><span>Brouillons d&apos;emails : prépare un mail, clique « Enregistrer comme brouillon ». Il reste dispo dans la liste en bas pour le finaliser plus tard. Tous les admins le voient.</span></li>
+          <li className="flex items-start gap-2"><span className="text-base">👁️</span><span>Sur un document officiel, l&apos;icône œil sert à le masquer pour les adhérents sans le supprimer (utile pour préparer un doc à l&apos;avance)</span></li>
         </ul>
       </Section>
 
@@ -107,11 +136,14 @@ export default function GuideAdmin() {
         accent="emerald"
       >
         <ul className="space-y-2 text-sm text-slate-700 list-disc list-inside">
-          <li><strong>Ne jamais</strong> envoyer un mail manuel pour la bienvenue ou le paiement confirmé : c&apos;est déjà automatique.</li>
-          <li><strong>Ne jamais</strong> envoyer un mail manuel de rappel de cotisation J-30/15/5/1 : c&apos;est automatique aussi.</li>
+          <li><strong>Ne jamais</strong> envoyer un mail manuel pour la confirmation d&apos;inscription, la bienvenue ou le paiement confirmé : c&apos;est déjà automatique.</li>
+          <li><strong>Ne jamais</strong> envoyer un mail manuel de rappel de cotisation J-30/15/5/1 ni de rappel tournoi : c&apos;est automatique aussi.</li>
           <li>Avant d&apos;envoyer un mail à <strong>tous les adhérents</strong>, vérifier 2 fois la cible dans le sélecteur (Tous / Payés / Non-payés / Newsletter / Sélection).</li>
           <li>Quand on rouvre temporairement les inscriptions (pour un retardataire), cocher <strong>« Pas de rappels J-X »</strong> sinon les autres adhérents reçoivent à nouveau les rappels.</li>
           <li>Avant de marquer un adhérent « Payé » manuellement (virement), bien vérifier la trace bancaire — l&apos;email de confirmation part automatiquement.</li>
+          <li>Quand tu publies un document officiel important (charte, rapport financier...), pense à cliquer sur le <strong>📎 trombone</strong> pour qu&apos;il soit joint aux mails de bienvenue/paiement des futurs nouveaux adhérents.</li>
+          <li>Si tu crées un sondage ou un nouveau document officiel et que tu veux notifier les adhérents, utilise le <strong>bouton « 📣 Notifier les adhérents par email »</strong> en haut de la section (sinon personne ne sera prévenu).</li>
+          <li>Pour gérer les permissions d&apos;un nouvel admin, va dans <strong>Paramètres saison → Comptes admin</strong> : tu peux cocher uniquement les sections auxquelles il doit avoir accès (passe la souris sur chaque case pour voir ce qu&apos;elle couvre).</li>
           <li>Sauvegarder régulièrement la base avec le bouton <strong>« Export JSON »</strong> en haut. La sauvegarde quotidienne sur le PC tourne déjà, mais une copie supplémentaire avant une grosse opération c&apos;est mieux.</li>
           <li>Ne PAS supprimer un adhérent qui a peut-être déjà payé : marquer plutôt comme « Non actif » ou le déplacer en archive.</li>
           <li>Les comptes admin doivent absolument avoir un email valide auquel ils ont accès — sinon ils ne peuvent plus se connecter (à cause du 2FA tous les 14 jours).</li>

@@ -431,15 +431,17 @@ export function getEffectiveConfig(db: DB) {
   };
 }
 
+// 🔐 Sections qu'on peut accorder via le système de permissions.
+// Chaque clé peut couvrir plusieurs sous-sections de l'admin (voir hint).
 export const ADMIN_SECTIONS = [
-  { key: "membres",      label: "Membres",             emoji: "👥" },
-  { key: "comptabilite", label: "Comptabilité",         emoji: "💰" },
-  { key: "tournois",     label: "Tournois",             emoji: "🏸" },
-  { key: "actualites",   label: "Actualités",           emoji: "📰" },
-  { key: "inscriptions", label: "Inscriptions tournoi", emoji: "📋" },
-  { key: "engagement",   label: "Sondages & AG",        emoji: "📣" },
-  { key: "rules",        label: "Règles de l'association",       emoji: "📜" },
-  { key: "bureau",       label: "Membres du bureau",    emoji: "👔" },
-  { key: "emailing",     label: "Envoi d'emails",       emoji: "📧" },
-  { key: "saison",       label: "Paramètres saison",    emoji: "⚙️" },
+  { key: "membres",      label: "Adhérents",                       emoji: "👥", hint: "Liste des adhérents, fiches, mots de passe, validation paiement" },
+  { key: "comptabilite", label: "Comptabilité",                    emoji: "💰", hint: "Recettes, dépenses, factures, bilan financier" },
+  { key: "tournois",     label: "Tournois",                        emoji: "🏸", hint: "Création/édition des tournois (dates, lieux, quotas)" },
+  { key: "actualites",   label: "Actualités",                      emoji: "📰", hint: "Publication d'articles + photos sur la page d'accueil" },
+  { key: "inscriptions", label: "Inscriptions tournois",           emoji: "📋", hint: "Voir et gérer les binômes inscrits aux tournois" },
+  { key: "engagement",   label: "Sondages, AG, Documents, FAQ, T-shirts", emoji: "📣", hint: "Sondages, questions AG, documents officiels, FAQ adhérents, commandes t-shirts" },
+  { key: "rules",        label: "Règlement de l'association",      emoji: "📜", hint: "Règles du club + PDF du règlement" },
+  { key: "bureau",       label: "Membres du bureau",               emoji: "👔", hint: "Composition du bureau visible par les adhérents connectés" },
+  { key: "emailing",     label: "Emails & Messages",               emoji: "📧", hint: "Envoyer des mails, boîte de réception, historique" },
+  { key: "saison",       label: "Paramètres saison & Statistiques", emoji: "⚙️", hint: "Saison en cours, quotas, dates, présidents, signature, analytics" },
 ] as const;

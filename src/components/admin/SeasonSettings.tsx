@@ -551,7 +551,7 @@ export default function SeasonSettings({
                       {ADMIN_SECTIONS.map((s) => {
                         const checked = !entry.readOnly && perms.includes(s.key);
                         return (
-                          <label key={s.key} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 transition">
+                          <label key={s.key} title={s.hint} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 transition">
                             <input
                               type="checkbox"
                               checked={checked}
@@ -746,7 +746,7 @@ export default function SeasonSettings({
                       {ADMIN_SECTIONS.map((s) => {
                         const checked = !cred.readOnly && perms.includes(s.key);
                         return (
-                          <label key={s.key} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 transition">
+                          <label key={s.key} title={s.hint} className="flex items-center gap-2 cursor-pointer text-sm text-slate-700 bg-slate-50 rounded-lg px-2.5 py-1.5 border border-slate-200 hover:bg-slate-100 transition">
                             <input
                               type="checkbox"
                               checked={checked}
