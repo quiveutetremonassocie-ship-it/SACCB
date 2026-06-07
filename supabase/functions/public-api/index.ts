@@ -1962,15 +1962,15 @@ Deno.serve(async (req) => {
             <p style="margin: 0 0 6px; color: #92400e; font-size: 13px;"><strong>⚠️ Attention au don pré-coché par HelloAsso</strong></p>
             <p style="margin: 0; color: #92400e; font-size: 13px; line-height: 1.5;">À la fin du paiement, HelloAsso propose une « contribution au fonctionnement » qui leur revient (et pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à <strong>0&nbsp;€</strong> si vous voulez juste régler votre cotisation.</p>
           </div>
-          <p style="color: #475569;">Une fois votre paiement validé, vous recevrez automatiquement un email de bienvenue avec votre code d'accès à l'espace membre.</p>
+          <p style="color: #475569;">Une fois votre paiement validé, vous recevrez automatiquement un email de bienvenue et vous pourrez accéder à votre espace membre sur saccb.fr avec le mot de passe que vous avez choisi à l'inscription.</p>
         `
         : `
           <p style="color: #475569; margin: 16px 0 8px;">Vous avez choisi le <strong>paiement par virement</strong>.</p>
-          <p style="color: #475569;">Rapprochez-vous d'un membre du bureau au prochain entraînement pour finaliser votre règlement. Dès que le virement sera validé, vous recevrez un email de confirmation avec votre code d'accès.</p>
+          <p style="color: #475569;">Vous recevrez prochainement un email avec le <strong>RIB de l'association</strong> pour effectuer votre virement. Dès réception de votre paiement, votre adhésion sera activée et vous pourrez accéder à votre espace membre avec le mot de passe que vous avez choisi à l'inscription.</p>
         `;
       const paymentBlockText = isOnline
-        ? `Vous avez choisi le paiement en ligne (HelloAsso).\n\nATTENTION : à la fin du paiement, HelloAsso propose une contribution au fonctionnement qui leur est versée (pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à 0 € si vous voulez juste régler votre cotisation.\n\nUne fois votre paiement validé, vous recevrez votre code d'accès par email.`
-        : `Vous avez choisi le paiement par virement.\n\nRapprochez-vous d'un membre du bureau au prochain entraînement pour finaliser votre règlement. Vous recevrez votre code d'accès dès que le virement sera validé.`;
+        ? `Vous avez choisi le paiement en ligne (HelloAsso).\n\nATTENTION : à la fin du paiement, HelloAsso propose une contribution au fonctionnement qui leur est versée (pas au SACCB). Elle est cochée par défaut. Pensez à la mettre à 0 € si vous voulez juste régler votre cotisation.\n\nUne fois votre paiement validé, vous pourrez accéder à votre espace membre sur saccb.fr avec le mot de passe que vous avez choisi à l'inscription.`
+        : `Vous avez choisi le paiement par virement.\n\nVous recevrez prochainement un email avec le RIB de l'association pour effectuer votre virement. Dès réception de votre paiement, votre adhésion sera activée et vous pourrez accéder à votre espace membre avec le mot de passe que vous avez choisi à l'inscription.`;
 
       sendBrevo(brevoKeyConfirm, {
         from: "SACCB <contact@saccb.fr>",
@@ -2867,7 +2867,7 @@ Deno.serve(async (req) => {
       subject: prenom
         ? `💳 ${prenom}, le RIB pour votre adhésion SACCB`
         : `💳 Le RIB pour votre adhésion SACCB`,
-      text: `${greetingText}\n\nVous avez choisi de régler votre adhésion au SACCB par virement bancaire. Voici les informations nécessaires :\n\nMontant à régler : ${prix} €\nSaison : ${yearLabel}\n${hasRib ? "\nVous trouverez notre RIB en pièce jointe à ce mail.\n" : ""}${inscCloseDate ? `\nMerci d'effectuer votre virement avant le ${closeFormatted}.\n` : ""}\nDès réception du virement, votre adhésion sera marquée comme payée et vous recevrez votre code d'accès à l'espace membre.\n\nSi vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.\n\nÀ très vite sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+      text: `${greetingText}\n\nVous avez choisi de régler votre adhésion au SACCB par virement bancaire. Voici les informations nécessaires :\n\nMontant à régler : ${prix} €\nSaison : ${yearLabel}\n${hasRib ? "\nVous trouverez notre RIB en pièce jointe à ce mail.\n" : ""}${inscCloseDate ? `\nMerci d'effectuer votre virement avant le ${closeFormatted}.\n` : ""}\nDès réception du virement, votre adhésion sera marquée comme payée et vous pourrez accéder à votre espace membre sur saccb.fr avec le mot de passe que vous avez choisi lors de l'inscription.\n\nSi vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.\n\nÀ très vite sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -2895,7 +2895,7 @@ Deno.serve(async (req) => {
             </div>
             `}
             ${inscCloseDate ? `<p style="color: #475569;">Merci d'effectuer votre virement avant le <strong>${closeFormatted}</strong>.</p>` : ""}
-            <p style="color: #475569;">Dès réception du virement, votre adhésion sera marquée comme payée et vous recevrez votre code d'accès à l'espace membre.</p>
+            <p style="color: #475569;">Dès réception du virement, votre adhésion sera marquée comme payée et vous pourrez accéder à votre espace membre sur <a href="https://saccb.fr" style="color: #1e3a5f;">saccb.fr</a> avec le mot de passe que vous avez choisi lors de l'inscription.</p>
             <p style="color: #64748b; font-size: 13px; margin-top: 18px;">Si vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.</p>
             <p style="color: #1e3a5f; font-size: 14px; font-weight: 600; margin: 18px 0 4px;">À très vite sur les terrains 🏸</p>
             <p style="color: #64748b; font-size: 13px; margin: 0;">Le bureau du SACCB</p>
