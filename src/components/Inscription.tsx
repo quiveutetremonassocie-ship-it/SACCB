@@ -725,19 +725,19 @@ export default function Inscription({
                 <span className="text-2xl">⚠️</span>
               </div>
               <div>
-                <h3 className="font-display text-xl text-slate-800 tracking-wide leading-tight">Avant de continuer</h3>
-                <p className="text-xs text-slate-500 mt-1">Une étape importante</p>
+                <h3 className="font-display text-xl text-slate-800 tracking-wide leading-tight">Bienvenue 🏸</h3>
+                <p className="text-xs text-slate-500 mt-1">Petit message avant de continuer</p>
               </div>
             </div>
             <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-5">
               <p className="text-sm text-slate-700 leading-relaxed">
-                Avant de finaliser votre inscription, merci de prendre contact avec un <strong>membre du bureau</strong> pour qu&apos;il puisse <strong>accepter ou refuser</strong> votre adhésion.
+                Si vous êtes <strong>nouveau dans l&apos;association</strong> et que vous ne nous avez <strong>pas encore rencontrés</strong>, merci de nous contacter au préalable via notre page contact afin que l&apos;on puisse échanger avec vous et s&apos;assurer qu&apos;il reste de la place sur vos créneaux.
               </p>
               <p className="text-xs text-slate-600 leading-relaxed mt-2">
-                Cela nous permet de discuter avec vous, vérifier la disponibilité des créneaux et vous accueillir au mieux. Sans cet accord préalable, votre paiement pourrait être annulé.
+                Si vous êtes déjà connu(e) du bureau, vous pouvez continuer directement votre inscription.
               </p>
               <p className="text-xs text-amber-700 mt-3">
-                👉 Contactez-nous via la <a href="/contact" className="underline font-semibold">page contact</a> si ce n&apos;est pas déjà fait.
+                👉 <a href="/contact" className="underline font-semibold">Nous contacter</a> si besoin.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-2">
