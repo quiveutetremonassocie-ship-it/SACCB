@@ -139,19 +139,21 @@ function delete2FAEntry(currentData: Record<string, unknown>, email: string): vo
   currentData.twoFAPending = get2FAList(currentData).filter((e) => e.email !== email);
 }
 
-// Rate limiting inscription adhérent + inscription tournoi (max 5/heure par IP)
-// Protège contre les bots qui spammeraient des inscriptions automatiques
+// Rate limiting inscription adhérent + inscription tournoi (max 3 par 12h par IP)
+// Plus strict que la version précédente (5/h) : on suppose que personne n'a besoin
+// de plus de 3 inscriptions sur une demi-journée depuis la même connexion. Protège
+// contre les bots et les trolls qui tenteraient de spammer.
 const registrationLimitMap = new Map<string, { count: number; reset: number }>();
 
 function isRegistrationRateLimited(ip: string): boolean {
   const now = Date.now();
   const entry = registrationLimitMap.get(ip);
   if (!entry || now > entry.reset) {
-    registrationLimitMap.set(ip, { count: 1, reset: now + 3_600_000 }); // 1 heure
+    registrationLimitMap.set(ip, { count: 1, reset: now + 12 * 3_600_000 }); // 12 heures
     return false;
   }
   entry.count++;
-  return entry.count > 5;
+  return entry.count > 3;
 }
 
 function sanitize(str: string): string {
