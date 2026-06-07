@@ -363,12 +363,12 @@ async function callResend(resendKey: string, payload: EmailPayload): Promise<Res
 // se télécharger, on l'ignore silencieusement.
 async function loadWelcomeAttachments(
   d: Record<string, unknown>,
-): Promise<{ name: string; content: string }[]> {
+): Promise<{ filename: string; content: string }[]> {
   const reports = (d.reunionReports || []) as Array<Record<string, unknown>>;
   const docsToAttach = reports.filter((r) => r.attachToWelcome === true && r.pdfUrl);
   if (docsToAttach.length === 0) return [];
 
-  const attachments: { name: string; content: string }[] = [];
+  const attachments: { filename: string; content: string }[] = [];
   for (const doc of docsToAttach) {
     try {
       const url = String(doc.pdfUrl || "");
@@ -395,7 +395,7 @@ async function loadWelcomeAttachments(
       const rawName = String(doc.pdfName || doc.title || "document.pdf");
       const safeName = rawName.replace(/[^a-zA-Z0-9._-]/g, "_");
       attachments.push({
-        name: safeName.toLowerCase().endsWith(".pdf") ? safeName : `${safeName}.pdf`,
+        filename: safeName.toLowerCase().endsWith(".pdf") ? safeName : `${safeName}.pdf`,
         content,
       });
     } catch (err) {
@@ -2811,7 +2811,7 @@ Deno.serve(async (req) => {
     if (!email) return json({ ok: false, reason: "Adhérent sans email." });
 
     // 📎 RIB en PJ (best-effort)
-    const ribAttachments: { name: string; content: string }[] = [];
+    const ribAttachments: { filename: string; content: string }[] = [];
     const ribUrl = String(currentData.ribPdfUrl || "");
     if (ribUrl) {
       try {
@@ -2826,7 +2826,7 @@ Deno.serve(async (req) => {
           }
           const rawName = String(currentData.ribPdfName || "RIB-SACCB.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
           ribAttachments.push({
-            name: rawName.toLowerCase().endsWith(".pdf") ? rawName : `${rawName}.pdf`,
+            filename: rawName.toLowerCase().endsWith(".pdf") ? rawName : `${rawName}.pdf`,
             content: btoa(binary),
           });
         }
@@ -2918,7 +2918,7 @@ Deno.serve(async (req) => {
       sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
       status: "sent",
       sentCount: 1,
-      attachmentNames: ribAttachments.map((a) => a.name),
+      attachmentNames: ribAttachments.map((a) => a.filename),
     });
     return json({ ok: true });
   }
