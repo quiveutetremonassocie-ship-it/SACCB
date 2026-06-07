@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send, HelpCircle, Shirt } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send, HelpCircle, Shirt, BarChart3 } from "lucide-react";
 // FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
 import { DB, Membre, getEffectivePrix } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
@@ -595,6 +595,7 @@ function QuickNav({
     { id: "admin-bureau", label: "Bureau", icon: <Users className="w-4 h-4" />, color: "from-indigo-500 to-purple-500", permission: "bureau" },
     { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
     { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
+    { id: "admin-analytics", label: "Statistiques", icon: <BarChart3 className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "saison" },
     { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
     { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
     { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
