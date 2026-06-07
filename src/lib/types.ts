@@ -22,6 +22,10 @@ export type Membre = {
   // Chaque entrée = date ISO de l'envoi. Permet d'afficher en admin combien
   // de fois et quand on a relancé le membre par virement.
   virementRemindersSent?: string[];
+  // 💸 Historique des envois du mail « Rappel paiement » (bouton AlarmClock).
+  // Chaque entrée = date ISO de l'envoi. Permet d'éviter d'envoyer plusieurs
+  // rappels rapprochés au même adhérent.
+  paymentRemindersSent?: string[];
 };
 
 export type FactureFile = {

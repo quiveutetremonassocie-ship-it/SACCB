@@ -129,12 +129,44 @@ export default function MembresAdmin({
   const [reminderId, setReminderId] = useState<string | null>(null);
   async function sendPaymentReminder(m: Membre) {
     if (!adminEmail || !adminCode) { alert("Identifiants admin manquants."); return; }
-    if (!confirm(`Envoyer un rappel de paiement par email à ${m.nom} ?\n\nL'email sera envoyé à : ${m.email}`)) return;
+    // 📅 On rappelle la date du dernier envoi pour éviter de spammer
+    const history = m.paymentRemindersSent || [];
+    const lastSentInfo = formatLastSent(history, "Aucun rappel de paiement n'a encore été envoyé.");
+    if (!confirm(
+      `Êtes-vous sûr de vouloir envoyer un rappel de paiement à ${m.nom} ?\n\n` +
+      `${lastSentInfo}\n\n` +
+      `Destinataire : ${m.email}`
+    )) return;
     setReminderId(m.id);
     const r = await adminSendPaymentReminder(m.id, adminEmail, adminCode);
     setReminderId(null);
-    if (r.ok) alert(`✅ Rappel envoyé à ${m.nom}.`);
-    else alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
+    if (r.ok) {
+      const now = new Date().toISOString();
+      const next = {
+        ...db,
+        membres: db.membres.map((x) =>
+          x.id === m.id
+            ? { ...x, paymentRemindersSent: [...(x.paymentRemindersSent || []), now] }
+            : x
+        ),
+      };
+      await onPersist(next);
+      const count = history.length + 1;
+      alert(`✅ Rappel envoyé à ${m.nom}.\n\nNombre total de rappels paiement envoyés : ${count}`);
+    } else {
+      alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
+    }
+  }
+
+  // 🕒 Helper : formate "Dernier mail envoyé le 14/03/2026 à 18h32 (3 envois au total)"
+  function formatLastSent(history: string[], emptyText: string): string {
+    if (history.length === 0) return emptyText;
+    const last = history[history.length - 1];
+    const d = new Date(last);
+    if (isNaN(d.getTime())) return `Déjà ${history.length} envoi(s).`;
+    const dateStr = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit", year: "numeric" });
+    const heureStr = d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    return `📅 Dernier envoi : le ${dateStr} à ${heureStr}\n📊 Nombre total d'envois : ${history.length}`;
   }
 
   // 💳 Envoi du mail « Rappel virement » avec le RIB en PJ. Réservé aux non-payés virement.
@@ -144,7 +176,13 @@ export default function MembresAdmin({
     const ribWarn = !db.ribPdfUrl
       ? "\n\n⚠️ Aucun RIB n'est configuré dans Paramètres saison. Le mail partira sans pièce jointe."
       : `\n\n📎 Le RIB joint : ${db.ribPdfName || "RIB enregistré"}`;
-    if (!confirm(`Envoyer le mail "Rappel virement" à ${m.nom} ?\n\nDestinataire : ${m.email}${ribWarn}`)) return;
+    const history = m.virementRemindersSent || [];
+    const lastSentInfo = formatLastSent(history, "Aucun rappel virement n'a encore été envoyé.");
+    if (!confirm(
+      `Êtes-vous sûr de vouloir envoyer le mail "Rappel virement" à ${m.nom} ?\n\n` +
+      `${lastSentInfo}\n\n` +
+      `Destinataire : ${m.email}${ribWarn}`
+    )) return;
     setVirementId(m.id);
     const r = await adminSendVirementReminder(m.id, adminEmail, adminCode);
     setVirementId(null);
