@@ -79,8 +79,13 @@ export default function MembresAdmin({
       return;
     }
     setSendingEmail(m.id);
-    await adminSendConfirmation(m.id, adminEmail, adminCode);
+    const r = await adminSendConfirmation(m.id, adminEmail, adminCode);
     setSendingEmail(null);
+    if (r.ok) {
+      alert(`✅ Email de confirmation envoyé à ${m.nom} (${m.email}).`);
+    } else {
+      alert(`❌ Échec de l'envoi : ${r.reason || "erreur inconnue"}\n\nVérifie :\n• Que l'adhérent a un email valide\n• Que tu as bien Internet\n• Si le problème persiste, regarde les logs Supabase`);
+    }
   }
 
   async function del(id: string) {

@@ -3200,9 +3200,16 @@ Deno.serve(async (req) => {
     const membreCode = ""; // Codes hashés en base : on n'affiche plus le code dans l'email
 
     // 📎 Chargement des PDFs marqués 'attachToWelcome' pour les joindre au mail
-    const welcomeAttachments = await loadWelcomeAttachments(currentData);
+    // Best-effort : si ça échoue, on continue sans PJ plutôt que de bloquer le mail
+    let welcomeAttachments: { filename: string; content: string }[] = [];
+    try {
+      welcomeAttachments = await loadWelcomeAttachments(currentData);
+    } catch (err) {
+      console.warn("[send_confirmation] attachments load failed:", err);
+    }
 
-    const sendRes = await sendBrevo(brevoKey, {
+    // Helper interne : reconstruit le payload (avec ou sans PJ pour le retry)
+    const buildPayload = (atts: typeof welcomeAttachments) => ({
         from: "SACCB <contact@saccb.fr>",
         headers: {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -3210,7 +3217,7 @@ Deno.serve(async (req) => {
         },
         to: [String(membre.email)],
         subject: "🎉 Paiement confirmé — Bienvenue au SACCB !",
-        ...(welcomeAttachments.length > 0 ? { attachments: welcomeAttachments } : {}),
+        ...(atts.length > 0 ? { attachments: atts } : {}),
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -3317,9 +3324,19 @@ Deno.serve(async (req) => {
         `,
       });
 
+    // 1er essai avec les PJ
+    let sendRes = await sendBrevo(brevoKey, buildPayload(welcomeAttachments));
+
+    // 🔄 Retry sans PJ si l'envoi échoue avec un 400/413 (payload invalide, trop gros…)
+    // Les PJ sont un "bonus", on préfère envoyer le mail sans plutôt que de tout planter
+    if (!sendRes.ok && welcomeAttachments.length > 0 && [400, 413].includes(sendRes.status)) {
+      console.warn(`[send_confirmation] retry without attachments after ${sendRes.status}`);
+      sendRes = await sendBrevo(brevoKey, buildPayload([]));
+    }
+
     if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      return json({ ok: false, reason: "Erreur envoi email : " + errText });
+      const errText = await sendRes.text().catch(() => "");
+      return json({ ok: false, reason: `Erreur Brevo ${sendRes.status} : ${errText.slice(0, 300)}` });
     }
 
     await logEmailToHistory(supabaseAdmin, {
@@ -3510,9 +3527,15 @@ Deno.serve(async (req) => {
     await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
 
     // 📎 Chargement des PDFs marqués 'attachToWelcome' pour les joindre au mail
-    const welcomeAttachmentsB = await loadWelcomeAttachments(currentData);
+    // Best-effort : si ça échoue, on continue sans PJ plutôt que de bloquer le mail
+    let welcomeAttachmentsB: { filename: string; content: string }[] = [];
+    try {
+      welcomeAttachmentsB = await loadWelcomeAttachments(currentData);
+    } catch (err) {
+      console.warn("[send_welcome] attachments load failed:", err);
+    }
 
-    const sendRes = await sendBrevo(brevoKey, {
+    const buildPayloadW = (atts: typeof welcomeAttachmentsB) => ({
         from: "SACCB <contact@saccb.fr>",
         headers: {
           "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
@@ -3520,7 +3543,7 @@ Deno.serve(async (req) => {
         },
         to: [String(membre.email)],
         subject: "🎉 Bienvenue au SACCB — Votre accès espace membre",
-        ...(welcomeAttachmentsB.length > 0 ? { attachments: welcomeAttachmentsB } : {}),
+        ...(atts.length > 0 ? { attachments: atts } : {}),
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -3600,9 +3623,18 @@ Deno.serve(async (req) => {
         `,
       });
 
+    // 1er essai avec les PJ
+    let sendRes = await sendBrevo(brevoKey, buildPayloadW(welcomeAttachmentsB));
+
+    // 🔄 Retry sans PJ si payload invalide / trop gros
+    if (!sendRes.ok && welcomeAttachmentsB.length > 0 && [400, 413].includes(sendRes.status)) {
+      console.warn(`[send_welcome] retry without attachments after ${sendRes.status}`);
+      sendRes = await sendBrevo(brevoKey, buildPayloadW([]));
+    }
+
     if (!sendRes.ok) {
-      const errText = await sendRes.text();
-      return json({ ok: false, reason: "Erreur envoi email : " + errText });
+      const errText = await sendRes.text().catch(() => "");
+      return json({ ok: false, reason: `Erreur Brevo ${sendRes.status} : ${errText.slice(0, 300)}` });
     }
 
     await logEmailToHistory(supabaseAdmin, {
