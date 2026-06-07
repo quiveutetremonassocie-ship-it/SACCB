@@ -2011,6 +2011,54 @@ Deno.serve(async (req) => {
           status: res.ok ? "sent" : "failed",
         });
       }).catch(() => {});
+
+      // 🔔 Notification au bureau qu'une nouvelle personne s'est inscrite.
+      // Envoyée à contactEmails (configurés dans Paramètres saison), fallback
+      // sur les super-admins par défaut. Fire-and-forget, n'empêche pas le retour OK.
+      const adminContactEmails = ((currentData.contactEmails || []) as string[]);
+      const adminToEmails = adminContactEmails.length > 0
+        ? adminContactEmails
+        : ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
+      const paymentLabel = isOnline ? "💳 Paiement en ligne (HelloAsso)" : "🏦 Paiement par virement";
+      const newsLabel = newsOptIn ? "✅ Oui" : "❌ Non";
+      const photoLabel = photoConsent ? "✅ Oui" : "❌ Non";
+      const adminNotifText = `Nouvelle inscription au SACCB !\n\nNom : ${nom}\nEmail : ${email}\nTéléphone : ${tel || "(non renseigné)"}\nType : ${type}\nMode de paiement : ${paymentLabel}\nAccepte les news : ${newsLabel}\nDroit à l'image : ${photoLabel}\n\nSaison : ${yearLabel}\n\nConnectez-vous à l'admin pour valider le paiement : https://saccb.fr/?admin=1\n\n--\nSACCB · Notification automatique`;
+      sendBrevo(brevoKeyConfirm, {
+        from: "SACCB <contact@saccb.fr>",
+        to: adminToEmails,
+        subject: `🔔 Nouvelle inscription : ${nom} (${type})`,
+        text: adminNotifText,
+        html: `
+          <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+            <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 20px 24px; border-radius: 12px 12px 0 0;">
+              <h1 style="color: white; margin: 0; font-size: 20px;">🎉 Nouvelle inscription !</h1>
+              <p style="color: rgba(255,255,255,0.8); margin: 4px 0 0; font-size: 13px;">Saison ${yearLabel}</p>
+            </div>
+            <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+              <table cellpadding="0" cellspacing="0" border="0" style="width: 100%; border-collapse: collapse;">
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px; width: 140px;">👤 Nom</td><td style="padding: 8px 0; color: #1e293b; font-weight: 600;">${escapeHtml(nom)}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">📧 Email</td><td style="padding: 8px 0; color: #1e293b;"><a href="mailto:${escapeHtml(email)}" style="color: #1e3a5f;">${escapeHtml(email)}</a></td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">📱 Téléphone</td><td style="padding: 8px 0; color: #1e293b;">${escapeHtml(tel || "(non renseigné)")}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">🏷️ Type</td><td style="padding: 8px 0; color: #1e293b;">${escapeHtml(type)}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">💰 Paiement</td><td style="padding: 8px 0; color: #1e293b;">${paymentLabel}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">📰 News</td><td style="padding: 8px 0; color: #1e293b;">${newsLabel}</td></tr>
+                <tr><td style="padding: 8px 0; color: #64748b; font-size: 13px;">📸 Droit à l'image</td><td style="padding: 8px 0; color: #1e293b;">${photoLabel}</td></tr>
+              </table>
+              <div style="margin-top: 20px; padding-top: 16px; border-top: 1px solid #e2e8f0;">
+                <a href="https://saccb.fr/?admin=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600; font-size: 14px;">🔑 Accéder à l'admin →</a>
+              </div>
+              <p style="color: #94a3b8; font-size: 12px; margin-top: 18px; margin-bottom: 0;">Vous recevez cet email parce que vous êtes membre du bureau et que vos coordonnées sont dans la liste « Emails de contact » des paramètres.</p>
+            </div>
+          </div>
+        `,
+      }).then(async (res) => {
+        await logEmailToHistory(supabaseAdmin, {
+          type: "admin_new_registration_notif",
+          subject: `Nouvelle inscription : ${nom}`,
+          recipients: adminToEmails,
+          status: res.ok ? "sent" : "failed",
+        });
+      }).catch(() => {});
     }
 
     // Webhook Google Sheets (fire and forget)
