@@ -65,12 +65,36 @@ export default function MembresAdmin({
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
   }, [db.membres, search, filterNoPhoto, filterType]);
 
+  // 📧 Suit l'envoi auto pour notifier l'admin si ça échoue silencieusement
+  const [autoSendStatus, setAutoSendStatus] = useState<{ ok: boolean; text: string } | null>(null);
+
   async function togglePaiement(id: string, val: boolean) {
     const next = { ...db, membres: db.membres.map((m) => (m.id === id ? { ...m, ok: val } : m)) };
     await onPersist(next);
-    if (val && autoSendEmail && adminEmail && adminCode) {
-      adminSendConfirmation(id, adminEmail, adminCode).catch(() => {});
+    if (!val) return; // pas d'envoi si on dé-coche
+    if (!autoSendEmail) return; // toggle « Envoi auto » désactivé
+    if (!adminEmail || !adminCode) {
+      setAutoSendStatus({ ok: false, text: "⚠️ Identifiants admin manquants — mail de confirmation NON envoyé. Utilise la flèche ✉️ pour l'envoyer manuellement." });
+      setTimeout(() => setAutoSendStatus(null), 8000);
+      return;
     }
+    // 📧 Envoi auto du mail de confirmation. On surveille la réponse et on
+    // affiche une notification discrète (au lieu d'ignorer silencieusement).
+    const membre = db.membres.find((m) => m.id === id);
+    const nom = membre?.nom || "l'adhérent";
+    adminSendConfirmation(id, adminEmail, adminCode)
+      .then((r) => {
+        if (r.ok) {
+          setAutoSendStatus({ ok: true, text: `✅ Email de confirmation envoyé à ${nom}` });
+        } else {
+          setAutoSendStatus({ ok: false, text: `❌ Échec envoi à ${nom} : ${r.reason || "erreur inconnue"}. Tu peux réessayer avec la flèche ✉️.` });
+        }
+        setTimeout(() => setAutoSendStatus(null), 8000);
+      })
+      .catch((err) => {
+        setAutoSendStatus({ ok: false, text: `❌ Réseau : ${String(err).slice(0, 150)}` });
+        setTimeout(() => setAutoSendStatus(null), 8000);
+      });
   }
 
   async function sendEmail(m: Membre) {
@@ -215,7 +239,7 @@ export default function MembresAdmin({
         <div className="flex items-center justify-between mb-3 bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
           <span className="flex items-center gap-2 text-sm text-slate-600">
             <Send className="w-3.5 h-3.5 text-emerald-500" />
-            Envoyer l'email de confirmation lors de la validation
+            Envoyer l&apos;email de confirmation lors de la validation
           </span>
           <button
             onClick={() => setAutoSendEmail(v => !v)}
@@ -223,6 +247,17 @@ export default function MembresAdmin({
           >
             <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${autoSendEmail ? "translate-x-5" : "translate-x-0"}`} />
           </button>
+        </div>
+      )}
+
+      {/* 📧 Notification du résultat de l'envoi automatique */}
+      {autoSendStatus && (
+        <div className={`mb-3 rounded-xl px-4 py-2.5 text-sm border-2 ${
+          autoSendStatus.ok
+            ? "bg-emerald-50 border-emerald-200 text-emerald-800"
+            : "bg-red-50 border-red-200 text-red-800"
+        }`}>
+          {autoSendStatus.text}
         </div>
       )}
 
