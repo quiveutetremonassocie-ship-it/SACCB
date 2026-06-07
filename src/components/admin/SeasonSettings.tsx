@@ -60,6 +60,7 @@ export default function SeasonSettings({
   const [whatsappLink, setWhatsappLink] = useState(db.whatsappLink || "");
   const [presidentName, setPresidentName] = useState(db.presidentName || "");
   const [emailSignature, setEmailSignature] = useState(db.emailSignature || "");
+  const [smashUrl, setSmashUrl] = useState(db.smashUrl || "");
   const [inscCloseDate, setInscCloseDate] = useState(db.insc_close_date || "");
   const [adminEmailInput, setAdminEmailInput] = useState("");
   const [contactEmailInput, setContactEmailInput] = useState("");
@@ -88,6 +89,7 @@ export default function SeasonSettings({
       insc_close_date: inscCloseDate.trim() || undefined,
       presidentName: presidentName.trim() || undefined,
       emailSignature: emailSignature.trim() || undefined,
+      smashUrl: smashUrl.trim() || undefined,
     });
     alert("Paramètres mis à jour !");
   }
@@ -348,6 +350,24 @@ export default function SeasonSettings({
 
       {/* 💳 RIB pour les rappels de virement */}
       <RibUploadField db={db} onPersist={onPersist} readOnly={readOnly} adminEmail={adminEmail} adminCode={adminCode} />
+
+      {/* 🏆 URL Smash — appli partenaire pour les mini-tournois entre adhérents */}
+      <div className="mb-3">
+        <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+          🏆 Lien Smash (mini-tournois entraînement)
+        </label>
+        <input
+          type="url"
+          className="input w-full"
+          placeholder="https://smash.saccb.fr"
+          value={smashUrl}
+          onChange={(e) => setSmashUrl(e.target.value)}
+          disabled={readOnly}
+        />
+        <p className="text-xs text-slate-400 mt-1">
+          Si renseigné, un bouton « Mini-tournoi entre nous » apparaîtra dans Mon espace pour tous les adhérents connectés. Laisse vide pour masquer le bouton.
+        </p>
+      </div>
 
       {/* 🔑 Toggle 2FA admin */}
       <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">

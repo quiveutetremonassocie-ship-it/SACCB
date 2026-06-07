@@ -580,6 +580,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           reunionReports={(db.reunionReports ?? []).filter((r) => r.visible !== false)}
           officialDocs={db.officialDocs ?? []}
           officialDocsOpen={db.officialDocsOpen === true}
+          smashUrl={db.smashUrl}
         />
       )}
       {/* Panneau démo en mode présentation */}

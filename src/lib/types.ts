@@ -268,6 +268,11 @@ export type DB = {
   ribPdfUrl?: string;
   ribPdfPath?: string;
   ribPdfName?: string;
+  // 🏆 URL de l'appli partenaire « Smash » pour gérer les mini-tournois entre
+  // adhérents pendant les entraînements. Lien permanent partagé : tout adhérent
+  // connecté peut l'ouvrir, créer/consulter/réinitialiser un mini-tournoi.
+  // Si vide, le bouton n'apparaît pas dans Mon espace.
+  smashUrl?: string;
   // 📑 Documents officiels (rapport financier, charte, rapport moral, etc.) visibles
   // par les adhérents connectés via une modale dans Mon espace. Toggle d'activation
   // global officialDocsOpen pour contrôler la visibilité (typiquement activé après AG).

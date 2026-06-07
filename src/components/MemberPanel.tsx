@@ -33,6 +33,7 @@ export default function MemberPanel({
   reunionReports = [],
   officialDocs = [],
   officialDocsOpen = false,
+  smashUrl,
 }: {
   session: MemberSession;
   y1: number;
@@ -52,6 +53,7 @@ export default function MemberPanel({
   reunionReports?: ReunionReport[];
   officialDocs?: OfficialDoc[];
   officialDocsOpen?: boolean;
+  smashUrl?: string;
 }) {
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
@@ -488,6 +490,22 @@ export default function MemberPanel({
           <HelpCircle className="w-4 h-4" />
           Questions fréquentes
         </a>
+
+        {/* 🏆 Mini-tournoi entre nous — lien Smash partagé pour créer un tournoi
+            à la volée pendant l'entraînement. Visible uniquement si l'admin a
+            renseigné l'URL Smash dans Paramètres saison. */}
+        {smashUrl && (
+          <a
+            href={smashUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full mb-3 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 hover:border-amber-500 text-amber-800 hover:text-amber-900 font-semibold rounded-xl py-2.5 text-sm transition"
+          >
+            <Trophy className="w-4 h-4" />
+            Mini-tournoi entre nous
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        )}
 
         {/* 📑 Documents officiels (comptes-rendus + rapport financier + charte + rapport moral)
             Visible si au moins un document existe — peu importe le toggle officialDocsOpen
