@@ -26,6 +26,7 @@ export default function MembresAdmin({
   const [search, setSearch] = useState("");
   const [filterNoPhoto, setFilterNoPhoto] = useState(false);
   const [filterType, setFilterType] = useState<"all" | "Adulte" | "Etudiant">("all");
+  const [filterPayment, setFilterPayment] = useState<"all" | "virement" | "online" | "virement_unpaid">("all");
   const [sendingEmail, setSendingEmail] = useState<string | null>(null);
   const [showAddForm, setShowAddForm] = useState(false);
   const [addForm, setAddForm] = useState({
@@ -50,6 +51,8 @@ export default function MembresAdmin({
   const noPhotoCount = db.membres.filter((m) => m.photoConsent !== true).length;
   const adultesCount = db.membres.filter((m) => m.type === "Adulte").length;
   const etudiantsCount = db.membres.filter((m) => m.type === "Etudiant").length;
+  const virementCount = db.membres.filter((m) => m.paymentMethod === "virement").length;
+  const virementUnpaidCount = db.membres.filter((m) => m.paymentMethod === "virement" && !m.ok).length;
 
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
@@ -60,10 +63,14 @@ export default function MembresAdmin({
           m.email.toLowerCase().includes(s) ||
           (m.tel && m.tel.includes(s))) &&
           (!filterNoPhoto || m.photoConsent !== true) &&
-          (filterType === "all" || m.type === filterType)
+          (filterType === "all" || m.type === filterType) &&
+          (filterPayment === "all"
+            || (filterPayment === "virement" && m.paymentMethod === "virement")
+            || (filterPayment === "online" && m.paymentMethod === "online")
+            || (filterPayment === "virement_unpaid" && m.paymentMethod === "virement" && !m.ok))
       )
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
-  }, [db.membres, search, filterNoPhoto, filterType]);
+  }, [db.membres, search, filterNoPhoto, filterType, filterPayment]);
 
   // 📧 Suit l'envoi auto pour notifier l'admin si ça échoue silencieusement
   const [autoSendStatus, setAutoSendStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -141,8 +148,35 @@ export default function MembresAdmin({
     setVirementId(m.id);
     const r = await adminSendVirementReminder(m.id, adminEmail, adminCode);
     setVirementId(null);
-    if (r.ok) alert(`✅ Mail envoyé à ${m.nom}.`);
-    else alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
+    if (r.ok) {
+      // 📌 On enregistre la date d'envoi pour afficher le compteur et la
+      // dernière date à côté de l'adhérent. Tableau de dates ISO.
+      const now = new Date().toISOString();
+      const next = {
+        ...db,
+        membres: db.membres.map((x) =>
+          x.id === m.id
+            ? { ...x, virementRemindersSent: [...(x.virementRemindersSent || []), now] }
+            : x
+        ),
+      };
+      await onPersist(next);
+      const count = (m.virementRemindersSent?.length || 0) + 1;
+      alert(`✅ Mail envoyé à ${m.nom}.\n\nNombre total de rappels virement envoyés : ${count}`);
+    } else {
+      alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
+    }
+  }
+
+  // 🏦 Helper pour afficher "RIB envoyé Nx · dd/mm" à côté d'un membre.
+  function virementBadge(m: Membre): { count: number; lastFr: string } | null {
+    const arr = m.virementRemindersSent || [];
+    if (arr.length === 0) return null;
+    const last = arr[arr.length - 1];
+    const d = new Date(last);
+    if (isNaN(d.getTime())) return { count: arr.length, lastFr: "" };
+    const lastFr = d.toLocaleDateString("fr-FR", { day: "2-digit", month: "2-digit" });
+    return { count: arr.length, lastFr };
   }
 
   // 🔑 Réinitialiser le code d'un adhérent (avec DOUBLE confirmation pour éviter le clic accidentel)
@@ -292,6 +326,35 @@ export default function MembresAdmin({
               : `Étudiants (${etudiantsCount})`}
           </span>
         </button>
+        {/* 🏦 Filtre paiement : cycle Tous → Virement → Virement non payés → En ligne */}
+        <button
+          onClick={() => setFilterPayment((v) =>
+            v === "all" ? "virement"
+            : v === "virement" ? "virement_unpaid"
+            : v === "virement_unpaid" ? "online"
+            : "all"
+          )}
+          className={`btn-primary !px-3 shrink-0 ${
+            filterPayment === "virement" ? "!bg-gradient-to-r !from-amber-500 !to-yellow-500"
+            : filterPayment === "virement_unpaid" ? "!bg-gradient-to-r !from-red-500 !to-rose-500"
+            : filterPayment === "online" ? "!bg-gradient-to-r !from-blue-500 !to-sky-500"
+            : "!bg-gradient-to-r !from-slate-400 !to-slate-500"
+          }`}
+          title={
+            filterPayment === "all" ? "Filtrer par mode de paiement"
+            : filterPayment === "virement" ? `Virement (${virementCount}) — clic : virement non payés`
+            : filterPayment === "virement_unpaid" ? `Virement non payés (${virementUnpaidCount}) — clic : en ligne`
+            : "En ligne — clic : tout afficher"
+          }
+        >
+          <Landmark className="w-4 h-4" />
+          <span className="hidden sm:inline ml-1">
+            {filterPayment === "all" ? "Paiement"
+              : filterPayment === "virement" ? `Virement (${virementCount})`
+              : filterPayment === "virement_unpaid" ? `Vir. dus (${virementUnpaidCount})`
+              : "En ligne"}
+          </span>
+        </button>
         <button
           onClick={() => setFilterNoPhoto((v) => !v)}
           className={`btn-primary !px-3 shrink-0 ${filterNoPhoto ? "!bg-gradient-to-r !from-orange-500 !to-amber-500" : "!bg-gradient-to-r !from-slate-400 !to-slate-500"}`}
@@ -396,6 +459,18 @@ export default function MembresAdmin({
                 ) : m.paymentMethod === "virement" ? (
                   <span className="text-[10px] text-amber-600 bg-amber-50 px-1.5 py-0.5 rounded">Virement</span>
                 ) : null}
+                {(() => {
+                  const b = virementBadge(m);
+                  if (!b) return null;
+                  return (
+                    <span
+                      className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded flex items-center gap-1"
+                      title={`RIB envoyé ${b.count} fois — dernier le ${b.lastFr}`}
+                    >
+                      <Landmark className="w-2.5 h-2.5" /> RIB {b.count}× {b.lastFr && `· ${b.lastFr}`}
+                    </span>
+                  );
+                })()}
               </div>
             </div>
             <div className="flex items-center justify-between">
@@ -509,13 +584,27 @@ export default function MembresAdmin({
                 <td className="p-3 text-slate-400">{m.tel || "-"}</td>
                 <td className="p-3 text-slate-500">{m.type}</td>
                 <td className="p-3">
-                  {m.paymentMethod === "online" ? (
-                    <span className="text-blue-600 text-xs">En ligne</span>
-                  ) : m.paymentMethod === "virement" ? (
-                    <span className="text-amber-600 text-xs">Virement</span>
-                  ) : (
-                    <span className="text-slate-300 text-xs">–</span>
-                  )}
+                  <div className="flex flex-col gap-1">
+                    {m.paymentMethod === "online" ? (
+                      <span className="text-blue-600 text-xs">En ligne</span>
+                    ) : m.paymentMethod === "virement" ? (
+                      <span className="text-amber-600 text-xs">Virement</span>
+                    ) : (
+                      <span className="text-slate-300 text-xs">–</span>
+                    )}
+                    {(() => {
+                      const b = virementBadge(m);
+                      if (!b) return null;
+                      return (
+                        <span
+                          className="text-[10px] text-blue-700 bg-blue-50 border border-blue-200 px-1.5 py-0.5 rounded inline-flex items-center gap-1 w-fit"
+                          title={`RIB envoyé ${b.count} fois — dernier le ${b.lastFr}`}
+                        >
+                          <Landmark className="w-2.5 h-2.5" /> RIB {b.count}× {b.lastFr && `· ${b.lastFr}`}
+                        </span>
+                      );
+                    })()}
+                  </div>
                 </td>
                 <td className="p-3">
                   {m.newsOptIn === true ? (

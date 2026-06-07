@@ -18,6 +18,10 @@ export type Membre = {
   // les rappels J-30/J-15/J-5/J-1 de cotisation pour cette saison.
   // À la saison suivante, la valeur ne matche plus → les rappels reprennent.
   renewalSkippedFor?: string;
+  // 💳 Historique des envois du mail « Rappel virement » avec le RIB en PJ.
+  // Chaque entrée = date ISO de l'envoi. Permet d'afficher en admin combien
+  // de fois et quand on a relancé le membre par virement.
+  virementRemindersSent?: string[];
 };
 
 export type FactureFile = {

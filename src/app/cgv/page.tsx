@@ -46,7 +46,7 @@ export default function Page() {
         <p>L'inscription s'effectue via le formulaire en ligne disponible sur saccb.fr. Elle est considérée comme définitive après :</p>
         <ul>
           <li>validation du formulaire d'inscription ;</li>
-          <li>paiement intégral de la cotisation auprès du bureau ;</li>
+          <li>paiement intégral de la cotisation (par carte bancaire en ligne ou par virement) ;</li>
           <li>
             le cas échéant, fourniture des pièces justificatives demandées (certificat médical,
             carte étudiante, etc.).
@@ -57,9 +57,20 @@ export default function Page() {
       <section>
         <h2>Article 4 — Modalités de paiement</h2>
         <p>
-          Le paiement de la cotisation peut être effectué en espèces, par chèque à l'ordre de
-          « SACCB » ou par virement bancaire. Le règlement est à remettre au bureau lors de la
-          finalisation de l'adhésion.
+          Le paiement de la cotisation peut être effectué :
+        </p>
+        <ul>
+          <li>
+            <strong>par carte bancaire</strong>, en ligne via notre plateforme sécurisée HelloAsso
+            au moment de l'inscription ;
+          </li>
+          <li>
+            <strong>par virement bancaire</strong> sur le compte de l'association. Le RIB est
+            envoyé par email après le choix de ce mode de paiement.
+          </li>
+        </ul>
+        <p>
+          L'adhésion est considérée comme finalisée à réception du paiement.
         </p>
       </section>
 

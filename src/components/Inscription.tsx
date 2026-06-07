@@ -615,9 +615,25 @@ export default function Inscription({
                       <Banknote className={`w-4 h-4 ${mode === "virement" ? "text-amber-500" : "text-slate-400"}`} />
                       <span className="font-semibold text-sm text-slate-800">Virement bancaire</span>
                     </div>
-                    <p className="text-xs text-slate-500">Règlement auprès d&apos;un membre du bureau</p>
+                    <p className="text-xs text-slate-500">Le RIB vous sera envoyé par email</p>
                   </button>
                 </div>
+
+                {/* ℹ️ Précision affichée uniquement si le membre choisit le virement.
+                    Le RIB est envoyé manuellement par le bureau après validation
+                    de l'inscription via le bouton « Rappel virement » côté admin. */}
+                {mode === "virement" && (
+                  <div className="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs text-amber-900 leading-relaxed">
+                    <p className="font-semibold mb-1 flex items-center gap-1.5">
+                      <Banknote className="w-3.5 h-3.5" /> Paiement par virement
+                    </p>
+                    <p>
+                      Vous recevrez un email avec le <strong>RIB de l&apos;association</strong> dans
+                      les jours qui viennent, dès que le bureau aura validé votre inscription.
+                      Votre adhésion sera définitivement active à réception du virement.
+                    </p>
+                  </div>
+                )}
               </div>
 
               {/* RGPD */}

@@ -289,11 +289,21 @@ type EmailPayload = {
   attachments?: Array<{ filename: string; content: string }>;
 };
 
-// Conditions de fallback : on retente sur Resend si Brevo répond avec une erreur
-// "non liée à ton payload" (quota, rate limit, panne serveur, network error).
-// On ne retente PAS sur 400 (payload invalide) ni 401/403 (clé invalide).
+// Conditions de fallback : on retente sur Resend dès que Brevo nous lâche pour
+// une raison où Resend pourrait sauver l'envoi.
+//   • 5xx / network errors → panne serveur Brevo
+//   • 402 → quota / paiement requis
+//   • 429 → rate limit dépassé
+//   • 400 / 401 / 403 → problème de configuration côté Brevo (sender non vérifié,
+//     clé invalide, sender désactivé). Resend, configuré indépendamment, a
+//     toutes les chances d'accepter le mail.
+// On ne fallback PAS sur 404 / 422 (vraies erreurs de payload — Resend planterait
+// pareil) ni sur 200/204 (déjà OK).
 function shouldFallback(status: number): boolean {
-  return status === 402 || status === 429 || (status >= 500 && status < 600);
+  if (status === 400 || status === 401 || status === 402 || status === 403 || status === 429) {
+    return true;
+  }
+  return status >= 500 && status < 600;
 }
 
 async function callBrevo(brevoKey: string, payload: EmailPayload): Promise<Response> {
