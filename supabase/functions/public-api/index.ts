@@ -2465,7 +2465,7 @@ Deno.serve(async (req) => {
             ? `${recipient.prenom}, votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`
             : `Votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`);
           const closeFormattedSafe = closeFormatted;
-          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Rapprochez-vous de Hernan au prochain entraînement pour régler votre cotisation."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Vous pouvez régler en ligne via HelloAsso ou par virement bancaire. Si vous n'avez plus le RIB de l'association, merci de nous le demander via la page contact (https://saccb.fr/contact) et nous vous l'enverrons."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
           await sendBrevo(brevoKey, {
               from: "SACCB <contact@saccb.fr>",
               headers: {
@@ -2494,7 +2494,8 @@ Deno.serve(async (req) => {
                   <p style="color: #475569;">La date limite de paiement est le <strong>${closeFormatted}</strong>. Passé cette date, votre inscription sera annulée automatiquement.</p>
                   ${daysLeft === 1
                     ? `<p style="color: #b91c1c; font-weight: bold;">⚠️ C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui.</p>`
-                    : `<p style="color: #475569;">Rapprochez-vous de <strong>Hernan</strong> au prochain entraînement pour régler votre cotisation.</p>`
+                    : `<p style="color: #475569;">Vous pouvez régler en ligne via <strong>HelloAsso</strong> ou par <strong>virement bancaire</strong>.</p>
+                       <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px; margin: 12px 0;"><p style="margin: 0; color: #1e40af; font-size: 13px;">💡 Si vous n'avez plus le <strong>RIB de l'association</strong>, merci de nous le demander via la <a href="https://saccb.fr/contact" style="color: #1e40af; font-weight: 600;">page contact</a> et nous vous l'enverrons.</p></div>`
                   }
                   <a href="https://saccb.fr/?member=1" style="display: inline-block; background: ${isUrgent ? "#b91c1c" : "#1e3a5f"}; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
                     Finaliser mon adhésion →
@@ -2974,7 +2975,7 @@ Deno.serve(async (req) => {
       subject: prenom
         ? `🚨 URGENT — ${prenom}, finalisez votre adhésion SACCB`
         : `🚨 URGENT — Finalisez votre adhésion SACCB`,
-      text: `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${y1}–${y2} n'a pas encore été finalisée.\n\n${inscCloseDate ? `Pour pouvoir continuer à jouer, le règlement doit être effectué avant le ${closeFormatted}.\n\n` : ""}Vous pouvez régler en ligne via HelloAsso ou par virement à Hernan. Toutes les infos sont dans votre espace membre.\n\nAccéder à votre espace : https://saccb.fr/?member=1\n\nSi vous avez un souci ou souhaitez en discuter, répondez simplement à cet email.\n\n--\nLe bureau du SACCB\ncontact@saccb.fr · saccb.fr`,
+      text: `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${y1}–${y2} n'a pas encore été finalisée.\n\n${inscCloseDate ? `Pour pouvoir continuer à jouer, le règlement doit être effectué avant le ${closeFormatted}.\n\n` : ""}Vous pouvez régler en ligne via HelloAsso ou par virement bancaire.\n\nSi vous n'avez plus le RIB de l'association, merci de nous le demander via la page contact (https://saccb.fr/contact) et nous vous l'enverrons.\n\nAccéder à votre espace : https://saccb.fr/?member=1\n\nSi vous avez un souci ou souhaitez en discuter, répondez simplement à cet email.\n\n--\nLe bureau du SACCB\ncontact@saccb.fr · saccb.fr`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%); padding: 24px; border-radius: 12px 12px 0 0;">
@@ -2989,9 +2990,11 @@ Deno.serve(async (req) => {
             <p style="color: #475569;">Vous pouvez :</p>
             <ul style="color: #475569; padding-left: 20px;">
               <li>💳 Régler en ligne via <strong>HelloAsso</strong></li>
-              <li>💵 Faire un <strong>virement à Hernan</strong></li>
+              <li>🏦 Faire un <strong>virement bancaire</strong></li>
             </ul>
-            <p style="color: #475569;">Toutes les infos sont dans votre espace membre.</p>
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: 8px; padding: 12px 14px; margin: 12px 0;">
+              <p style="margin: 0; color: #1e40af; font-size: 13px;">💡 Si vous n'avez plus le <strong>RIB de l'association</strong>, merci de nous le demander via la <a href="https://saccb.fr/contact" style="color: #1e40af; font-weight: 600;">page contact</a> et nous vous l'enverrons.</p>
+            </div>
             <a href="https://saccb.fr/?member=1" style="display: inline-block; background: #dc2626; color: white; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: bold; font-size: 15px; margin-top: 8px;">
               🔑 Accéder à mon espace →
             </a>
