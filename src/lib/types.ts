@@ -254,6 +254,12 @@ export type DB = {
   // (texte libre, retours à la ligne préservés). Modifiable par l'admin dans Paramètres
   // saison. Pré-remplie dans le formulaire, l'admin peut la modifier ou la retirer.
   emailSignature?: string;
+  // 💳 RIB de l'association pour les rappels de paiement par virement.
+  // Stocké dans Supabase Storage (bucket REPORTS_BUCKET), joint au mail
+  // « Rappel virement » envoyé depuis MembresAdmin.
+  ribPdfUrl?: string;
+  ribPdfPath?: string;
+  ribPdfName?: string;
   // 📑 Documents officiels (rapport financier, charte, rapport moral, etc.) visibles
   // par les adhérents connectés via une modale dans Mon espace. Toggle d'activation
   // global officialDocsOpen pour contrôler la visibilité (typiquement activé après AG).

@@ -1,9 +1,9 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound, AlarmClock } from "lucide-react";
+import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound, AlarmClock, Landmark } from "lucide-react";
 import { DB, Membre, FormerMember } from "@/lib/types";
-import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder } from "@/lib/db";
+import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder, adminSendVirementReminder } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -98,6 +98,21 @@ export default function MembresAdmin({
     const r = await adminSendPaymentReminder(m.id, adminEmail, adminCode);
     setReminderId(null);
     if (r.ok) alert(`✅ Rappel envoyé à ${m.nom}.`);
+    else alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
+  }
+
+  // 💳 Envoi du mail « Rappel virement » avec le RIB en PJ. Réservé aux non-payés virement.
+  const [virementId, setVirementId] = useState<string | null>(null);
+  async function sendVirementReminder(m: Membre) {
+    if (!adminEmail || !adminCode) { alert("Identifiants admin manquants."); return; }
+    const ribWarn = !db.ribPdfUrl
+      ? "\n\n⚠️ Aucun RIB n'est configuré dans Paramètres saison. Le mail partira sans pièce jointe."
+      : `\n\n📎 Le RIB joint : ${db.ribPdfName || "RIB enregistré"}`;
+    if (!confirm(`Envoyer le mail "Rappel virement" à ${m.nom} ?\n\nDestinataire : ${m.email}${ribWarn}`)) return;
+    setVirementId(m.id);
+    const r = await adminSendVirementReminder(m.id, adminEmail, adminCode);
+    setVirementId(null);
+    if (r.ok) alert(`✅ Mail envoyé à ${m.nom}.`);
     else alert(`❌ Échec : ${r.reason || "erreur inconnue"}`);
   }
 
@@ -388,6 +403,16 @@ export default function MembresAdmin({
                     <AlarmClock className="w-3.5 h-3.5" />
                   </button>
                 )}
+                {!readOnly && !m.ok && m.paymentMethod === "virement" && (
+                  <button
+                    onClick={() => sendVirementReminder(m)}
+                    disabled={virementId === m.id}
+                    className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-blue-500 !to-cyan-500"
+                    title="Envoyer le RIB par email (rappel virement)"
+                  >
+                    <Landmark className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
@@ -506,6 +531,16 @@ export default function MembresAdmin({
                         title="Envoyer un rappel de paiement par email"
                       >
                         <AlarmClock className="w-3 h-3" />
+                      </button>
+                    )}
+                    {!readOnly && !m.ok && m.paymentMethod === "virement" && (
+                      <button
+                        onClick={() => sendVirementReminder(m)}
+                        disabled={virementId === m.id}
+                        className="btn-primary !px-2 !py-1 !text-xs !bg-gradient-to-r !from-blue-500 !to-cyan-500"
+                        title="Envoyer le RIB par email (rappel virement)"
+                      >
+                        <Landmark className="w-3 h-3" />
                       </button>
                     )}
                     <button onClick={() => onRecu(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Reçu">

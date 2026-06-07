@@ -33,8 +33,18 @@ export default function EmailingAdmin({
   const [subject, setSubject] = useState("");
   // ✍️ Signature commune : pré-remplie au démarrage. Si l'admin la modifie/supprime
   // pour ce mail, on garde sa version (pas de réécrasement automatique).
-  const initialBody = db.emailSignature ? `\n\n${db.emailSignature}` : "";
+  const signature = (db.emailSignature || "").trim();
+  const initialBody = signature ? `\n\n${signature}` : "";
   const [body, setBody] = useState(initialBody);
+  // 🔄 Si la signature arrive après le mount (DB chargée en async), on l'injecte
+  // une fois quand le body est encore vide ou ne contient que l'ancienne valeur.
+  const [signatureSeeded, setSignatureSeeded] = useState(!!signature);
+  useEffect(() => {
+    if (!signatureSeeded && signature && (body.trim() === "" || body === "\n\n")) {
+      setBody(`\n\n${signature}`);
+      setSignatureSeeded(true);
+    }
+  }, [signature, signatureSeeded, body]);
   // 🎨 Type d'email (visuel + sujet préfixé)
   const [variant, setVariant] = useState<"urgent" | "annonce" | "bonne_nouvelle" | "info" | "default">("default");
   // Volontairement vide au démarrage : on force l'admin à cliquer explicitement

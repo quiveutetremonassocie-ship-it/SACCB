@@ -563,6 +563,21 @@ export async function adminSendPaymentReminder(
   return res.json();
 }
 
+// 💳 Envoi du mail "rappel virement" avec le RIB en PJ. Réservé aux adhérents
+// non-payés ayant choisi paymentMethod="virement".
+export async function adminSendVirementReminder(
+  membreId: string,
+  adminEmail: string,
+  adminCode: string
+): Promise<{ ok: boolean; reason?: string }> {
+  const res = await fetch(EDGE_FUNCTION_URL, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+    body: JSON.stringify({ action: "admin_send_virement_reminder", membreId, adminEmail, adminCode }),
+  });
+  return res.json();
+}
+
 // ─── Réinitialiser le code d'un adhérent (depuis l'admin) — AUTH ADMIN REQUISE ───
 // Génère un nouveau code aléatoire et l'envoie par email à l'adhérent
 export async function adminResetMemberCode(

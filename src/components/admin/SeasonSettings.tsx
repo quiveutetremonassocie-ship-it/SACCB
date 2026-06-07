@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock, ListChecks, Building2, ChevronDown } from "lucide-react";
+import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock, ListChecks, Building2, ChevronDown, Upload, FileText } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS, ClubConfig, ScheduleSlot, DEFAULT_HORAIRES } from "@/lib/types";
 import { adminNotifyNewSeason } from "@/lib/db";
+import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import ArchiveEditModal from "./ArchiveEditModal";
 
 const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
@@ -344,6 +345,9 @@ export default function SeasonSettings({
           Pré-remplie à la fin de chaque nouveau mail manuel (Envoi d&apos;emails). L&apos;admin peut toujours la modifier ou la retirer pour un mail spécifique. Laisse vide pour ne rien pré-remplir.
         </p>
       </div>
+
+      {/* 💳 RIB pour les rappels de virement */}
+      <RibUploadField db={db} onPersist={onPersist} readOnly={readOnly} adminEmail={adminEmail} adminCode={adminCode} />
 
       {/* 🔑 Toggle 2FA admin */}
       <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
@@ -1255,6 +1259,125 @@ function ClubConfigSection({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+// 💳 Sous-composant : upload du RIB (PDF) pour les mails de rappel virement
+function RibUploadField({
+  db,
+  onPersist,
+  readOnly,
+  adminEmail,
+  adminCode,
+}: {
+  db: DB;
+  onPersist: (db: DB) => Promise<void>;
+  readOnly?: boolean;
+  adminEmail?: string;
+  adminCode?: string;
+}) {
+  const [uploading, setUploading] = useState(false);
+
+  async function handleUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.type !== "application/pdf") {
+      alert("Format PDF uniquement.");
+      return;
+    }
+    if (file.size > 5 * 1024 * 1024) {
+      alert("Le fichier ne doit pas dépasser 5 Mo.");
+      return;
+    }
+    setUploading(true);
+    try {
+      if (adminEmail && adminCode) {
+        // Upload via Edge Function (admin via membre)
+        const arrayBuffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(arrayBuffer);
+        let binary = "";
+        for (let i = 0; i < bytes.length; i += 8192) {
+          const chunk = bytes.subarray(i, i + 8192);
+          binary += String.fromCharCode.apply(null, Array.from(chunk));
+        }
+        const base64 = btoa(binary);
+        const res = await fetch(EDGE_FUNCTION_URL, {
+          method: "POST",
+          headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+          body: JSON.stringify({
+            action: "upload_image",
+            email: adminEmail,
+            code: adminCode,
+            fileData: base64,
+            fileName: file.name.replace(/[^a-zA-Z0-9._-]/g, "_"),
+            contentType: "application/pdf",
+            bucket: REPORTS_BUCKET,
+            pathPrefix: "rib/",
+          }),
+        });
+        const result = await res.json();
+        if (!result.ok) {
+          alert("Erreur upload : " + (result.reason || "Inconnue"));
+          return;
+        }
+        await onPersist({ ...db, ribPdfUrl: result.url, ribPdfPath: result.path, ribPdfName: file.name });
+      } else {
+        // Upload direct (admin Supabase Auth)
+        const path = `rib/${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const { error } = await supabaseClient.storage
+          .from(REPORTS_BUCKET)
+          .upload(path, file, { upsert: false, contentType: "application/pdf" });
+        if (error) {
+          alert("Erreur upload : " + error.message);
+          return;
+        }
+        const { data } = supabaseClient.storage.from(REPORTS_BUCKET).getPublicUrl(path);
+        await onPersist({ ...db, ribPdfUrl: data.publicUrl, ribPdfPath: path, ribPdfName: file.name });
+      }
+    } finally {
+      setUploading(false);
+      e.target.value = "";
+    }
+  }
+
+  async function removeRib() {
+    if (readOnly) return;
+    if (!confirm("Supprimer le RIB enregistré ?")) return;
+    // Best-effort suppression du storage si admin Supabase direct
+    if (db.ribPdfPath && !adminEmail) {
+      await supabaseClient.storage.from(REPORTS_BUCKET).remove([db.ribPdfPath]).catch(() => {});
+    }
+    await onPersist({ ...db, ribPdfUrl: undefined, ribPdfPath: undefined, ribPdfName: undefined });
+  }
+
+  return (
+    <div className="mb-3">
+      <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
+        💳 RIB de l&apos;association (PDF)
+      </label>
+      {db.ribPdfUrl ? (
+        <div className="bg-emerald-50 border border-emerald-200 rounded-lg p-2.5 flex items-center gap-2">
+          <FileText className="w-4 h-4 text-emerald-600 shrink-0" />
+          <a href={db.ribPdfUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-emerald-700 hover:text-emerald-900 truncate flex-1 font-medium">
+            {db.ribPdfName || "RIB enregistré"}
+          </a>
+          {!readOnly && (
+            <button onClick={removeRib} className="text-red-400 hover:text-red-600 shrink-0" title="Supprimer le RIB">
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <label className="inline-flex items-center gap-2 bg-white border-2 border-dashed border-slate-300 hover:border-slate-500 text-slate-700 hover:text-slate-900 text-xs font-medium px-3 py-2 rounded-lg cursor-pointer transition w-full justify-center">
+          <Upload className="w-3.5 h-3.5" />
+          {uploading ? "Upload en cours..." : "Importer le RIB de l'association (PDF, max 5 Mo)"}
+          <input type="file" accept="application/pdf" onChange={handleUpload} className="hidden" disabled={uploading || readOnly} />
+        </label>
+      )}
+      <p className="text-xs text-slate-400 mt-1">
+        Joint automatiquement aux mails « Rappel virement » envoyés depuis la fiche des adhérents non-payés ayant choisi le virement.
+      </p>
     </div>
   );
 }

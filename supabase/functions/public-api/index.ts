@@ -2785,6 +2785,144 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // ─── ACTION: Envoyer un rappel "virement à effectuer" avec le RIB en PJ ───
+  // Spécifique aux adhérents qui ont choisi paymentMethod="virement" et non encore payés.
+  if (action === "admin_send_virement_reminder") {
+    const membreId = String(body.membreId || "");
+    if (!membreId) return json({ ok: false, reason: "membreId manquant." }, 400);
+
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const currentData = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, currentData);
+    if (authError) return authError;
+
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+    const membre = membres.find((m) => m.id === membreId);
+    if (!membre) return json({ ok: false, reason: "Adhérent introuvable." });
+    if (membre.ok === true) return json({ ok: false, reason: "Cet adhérent est déjà payé." });
+    if (membre.paymentMethod !== "virement") {
+      return json({ ok: false, reason: "Cet adhérent a choisi le paiement en ligne, pas le virement." });
+    }
+    const email = String(membre.email || "");
+    if (!email) return json({ ok: false, reason: "Adhérent sans email." });
+
+    // 📎 RIB en PJ (best-effort)
+    const ribAttachments: { name: string; content: string }[] = [];
+    const ribUrl = String(currentData.ribPdfUrl || "");
+    if (ribUrl) {
+      try {
+        const res = await fetch(ribUrl);
+        if (res.ok) {
+          const buf = await res.arrayBuffer();
+          const bytes = new Uint8Array(buf);
+          let binary = "";
+          for (let i = 0; i < bytes.length; i += 8192) {
+            const chunk = bytes.subarray(i, i + 8192);
+            binary += String.fromCharCode.apply(null, Array.from(chunk));
+          }
+          const rawName = String(currentData.ribPdfName || "RIB-SACCB.pdf").replace(/[^a-zA-Z0-9._-]/g, "_");
+          ribAttachments.push({
+            name: rawName.toLowerCase().endsWith(".pdf") ? rawName : `${rawName}.pdf`,
+            content: btoa(binary),
+          });
+        }
+      } catch (err) {
+        console.warn("[admin_send_virement_reminder] RIB download failed:", err);
+      }
+    }
+
+    const prenom = extractFirstName(String(membre.nom || ""));
+    const greeting = prenom ? `Bonjour ${escapeHtml(prenom)},` : "Bonjour,";
+    const greetingText = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+    const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
+    const prix = prixMap[String(membre.type)] ?? 50;
+    const yearLabel = `${currentData.y1}–${currentData.y2}`;
+    const inscCloseDate = String(currentData.insc_close_date || "");
+    const closeFormatted = inscCloseDate
+      ? new Date(inscCloseDate).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })
+      : "";
+    const hasRib = ribAttachments.length > 0;
+
+    const sendRes = await sendBrevo(brevoKey, {
+      from: "SACCB <contact@saccb.fr>",
+      headers: {
+        "List-Unsubscribe": "<mailto:contact@saccb.fr?subject=unsubscribe>",
+        "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
+      },
+      to: [email],
+      subject: prenom
+        ? `💳 ${prenom}, le RIB pour votre adhésion SACCB`
+        : `💳 Le RIB pour votre adhésion SACCB`,
+      text: `${greetingText}\n\nVous avez choisi de régler votre adhésion au SACCB par virement bancaire. Voici les informations nécessaires :\n\nMontant à régler : ${prix} €\nSaison : ${yearLabel}\n${hasRib ? "\nVous trouverez notre RIB en pièce jointe à ce mail.\n" : ""}${inscCloseDate ? `\nMerci d'effectuer votre virement avant le ${closeFormatted}.\n` : ""}\nDès réception du virement, votre adhésion sera marquée comme payée et vous recevrez votre code d'accès à l'espace membre.\n\nSi vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.\n\nÀ très vite sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+      html: `
+        <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
+            <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
+            <div>
+              <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            </div>
+          </div>
+          <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
+            <p style="color: #475569; margin: 0 0 16px;">${greeting}</p>
+            <p style="color: #475569; line-height: 1.6;">Vous avez choisi de régler votre adhésion au SACCB par <strong>virement bancaire</strong>. Voici les informations nécessaires :</p>
+            <div style="background: white; border: 1px solid #e2e8f0; border-radius: 8px; padding: 16px; margin: 16px 0;">
+              <p style="margin: 0 0 6px; color: #64748b; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Montant à régler</p>
+              <p style="margin: 0; color: #1e293b; font-size: 24px; font-weight: 700;">${prix} €</p>
+              <p style="margin: 8px 0 0; color: #64748b; font-size: 13px;">Saison ${yearLabel}</p>
+            </div>
+            ${hasRib ? `
+            <div style="background: #ecfdf5; border: 1px solid #a7f3d0; border-radius: 8px; padding: 14px; margin: 16px 0;">
+              <p style="margin: 0; color: #065f46; font-size: 14px;">📎 <strong>Notre RIB est joint à ce mail</strong> (PDF).</p>
+            </div>
+            ` : `
+            <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 14px; margin: 16px 0;">
+              <p style="margin: 0; color: #92400e; font-size: 13px;">ℹ️ Pour obtenir le RIB de l'association, merci de nous contacter en répondant à ce mail ou via la page contact.</p>
+            </div>
+            `}
+            ${inscCloseDate ? `<p style="color: #475569;">Merci d'effectuer votre virement avant le <strong>${closeFormatted}</strong>.</p>` : ""}
+            <p style="color: #475569;">Dès réception du virement, votre adhésion sera marquée comme payée et vous recevrez votre code d'accès à l'espace membre.</p>
+            <p style="color: #64748b; font-size: 13px; margin-top: 18px;">Si vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.</p>
+            <p style="color: #1e3a5f; font-size: 14px; font-weight: 600; margin: 18px 0 4px;">À très vite sur les terrains 🏸</p>
+            <p style="color: #64748b; font-size: 13px; margin: 0;">Le bureau du SACCB</p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                </td>
+              </tr>
+            </table>
+          </div>
+        </div>
+      `,
+      ...(ribAttachments.length > 0 ? { attachments: ribAttachments } : {}),
+    });
+
+    if (!sendRes.ok) {
+      const t = await sendRes.text().catch(() => "");
+      return json({ ok: false, reason: `Erreur envoi : ${sendRes.status} ${t.slice(0, 100)}` });
+    }
+    await logEmailToHistory(supabaseAdmin, {
+      type: "virement_reminder",
+      subject: `Rappel virement — ${String(membre.nom || "")}`,
+      recipients: [email],
+      sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
+      status: "sent",
+      sentCount: 1,
+      attachmentNames: ribAttachments.map((a) => a.name),
+    });
+    return json({ ok: true });
+  }
+
   // ─── ACTION: Envoyer un rappel de paiement individuel a un adherent — AUTH ADMIN ───
   if (action === "admin_send_payment_reminder") {
     const membreId = String(body.membreId || "");
