@@ -1,7 +1,7 @@
 "use client";
 
 import { useRef, useState } from "react";
-import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, Eye, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail, Bell } from "lucide-react";
+import { Plus, Trash2, BarChart3, MessageSquare, Lightbulb, FileText, Lock, Unlock, Send, X, Check, Calendar, Eye, EyeOff, ChevronDown, ChevronUp, Upload, FileDown, Mail, Bell, Paperclip } from "lucide-react";
 import { DB, Poll, AGItem, ReunionReport } from "@/lib/types";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import { adminNotifyEngagementOpen, adminNotifyNewPoll, adminSendReport } from "@/lib/db";
@@ -818,6 +818,16 @@ function ReportsTab({
     await onPersist({ ...db, reunionReports: updated });
   }
 
+  // 📎 Toggle "joindre au mail de bienvenue" pour un document
+  async function toggleAttachWelcome(id: string) {
+    if (readOnly) return;
+    const updated = reports.map((r) => {
+      if (r.id !== id) return r;
+      return { ...r, attachToWelcome: !r.attachToWelcome };
+    });
+    await onPersist({ ...db, reunionReports: updated });
+  }
+
   return (
     <div className="space-y-3">
       {!readOnly && !showForm && (
@@ -971,6 +981,24 @@ function ReportsTab({
                   >
                     {r.visible === false ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                   </button>
+                  {/* 📎 Toggle "joindre au mail de bienvenue / confirmation de paiement" */}
+                  {r.pdfUrl && (
+                    <button
+                      onClick={() => toggleAttachWelcome(r.id)}
+                      className={`p-1.5 rounded transition ${
+                        r.attachToWelcome
+                          ? "text-amber-600 bg-amber-50 hover:bg-amber-100"
+                          : "text-slate-400 hover:bg-slate-100"
+                      }`}
+                      title={
+                        r.attachToWelcome
+                          ? "PDF joint aux mails de paiement/bienvenue — clic pour ne plus le joindre"
+                          : "Cliquer pour joindre ce PDF aux mails de confirmation de paiement / bienvenue"
+                      }
+                    >
+                      <Paperclip className="w-4 h-4" />
+                    </button>
+                  )}
                   <button
                     onClick={() => emailReport(r)}
                     disabled={sendingReportId === r.id}

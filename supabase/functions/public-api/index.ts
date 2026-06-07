@@ -357,6 +357,54 @@ async function callResend(resendKey: string, payload: EmailPayload): Promise<Res
   });
 }
 
+// 📎 Charge les PDFs marqués 'attachToWelcome' depuis Supabase Storage et les
+// retourne au format Brevo (name + content base64). Utilisé par les mails de
+// confirmation de paiement et de bienvenue. Best-effort : si un PDF échoue à
+// se télécharger, on l'ignore silencieusement.
+async function loadWelcomeAttachments(
+  d: Record<string, unknown>,
+): Promise<{ name: string; content: string }[]> {
+  const reports = (d.reunionReports || []) as Array<Record<string, unknown>>;
+  const docsToAttach = reports.filter((r) => r.attachToWelcome === true && r.pdfUrl);
+  if (docsToAttach.length === 0) return [];
+
+  const attachments: { name: string; content: string }[] = [];
+  for (const doc of docsToAttach) {
+    try {
+      const url = String(doc.pdfUrl || "");
+      if (!url) continue;
+      // Cap : on ne télécharge pas les PDF > 5 Mo pour ne pas exploser le mail
+      const headRes = await fetch(url, { method: "HEAD" });
+      const sizeHeader = headRes.headers.get("content-length");
+      if (sizeHeader && parseInt(sizeHeader) > 5 * 1024 * 1024) {
+        console.warn(`[loadWelcomeAttachments] Skipping ${doc.pdfName || url} : > 5 Mo`);
+        continue;
+      }
+      const res = await fetch(url);
+      if (!res.ok) continue;
+      const buf = await res.arrayBuffer();
+      const bytes = new Uint8Array(buf);
+      // Encodage base64 par chunks (les ArrayBuffer larges plantent btoa direct)
+      let binary = "";
+      const chunkSize = 8192;
+      for (let i = 0; i < bytes.length; i += chunkSize) {
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCharCode.apply(null, Array.from(chunk));
+      }
+      const content = btoa(binary);
+      const rawName = String(doc.pdfName || doc.title || "document.pdf");
+      const safeName = rawName.replace(/[^a-zA-Z0-9._-]/g, "_");
+      attachments.push({
+        name: safeName.toLowerCase().endsWith(".pdf") ? safeName : `${safeName}.pdf`,
+        content,
+      });
+    } catch (err) {
+      console.warn("[loadWelcomeAttachments] failed for one PDF:", err);
+    }
+  }
+  return attachments;
+}
+
 async function sendBrevo(brevoKey: string, payload: EmailPayload): Promise<Response> {
   // Essai Brevo
   try {
@@ -3013,6 +3061,9 @@ Deno.serve(async (req) => {
     const prix = prixMap[String(membre.type)] ?? 50;
     const membreCode = ""; // Codes hashés en base : on n'affiche plus le code dans l'email
 
+    // 📎 Chargement des PDFs marqués 'attachToWelcome' pour les joindre au mail
+    const welcomeAttachments = await loadWelcomeAttachments(currentData);
+
     const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",
         headers: {
@@ -3021,6 +3072,7 @@ Deno.serve(async (req) => {
         },
         to: [String(membre.email)],
         subject: "🎉 Paiement confirmé — Bienvenue au SACCB !",
+        ...(welcomeAttachments.length > 0 ? { attachments: welcomeAttachments } : {}),
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -3319,6 +3371,9 @@ Deno.serve(async (req) => {
     currentData.membres = membres;
     await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
 
+    // 📎 Chargement des PDFs marqués 'attachToWelcome' pour les joindre au mail
+    const welcomeAttachmentsB = await loadWelcomeAttachments(currentData);
+
     const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",
         headers: {
@@ -3327,6 +3382,7 @@ Deno.serve(async (req) => {
         },
         to: [String(membre.email)],
         subject: "🎉 Bienvenue au SACCB — Votre accès espace membre",
+        ...(welcomeAttachmentsB.length > 0 ? { attachments: welcomeAttachmentsB } : {}),
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: linear-gradient(135deg, #059669 0%, #047857 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">

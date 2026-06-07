@@ -190,6 +190,10 @@ export type ReunionReport = {
   // 👁️ Visibilité côté adhérent. Undefined ou true = visible. False = masqué
   // (le document reste en DB mais n'apparaît pas dans la modale Documents officiels).
   visible?: boolean;
+  // 📎 Si true, le PDF de ce document est joint automatiquement au mail de
+  // confirmation de paiement / bienvenue (utile pour la charte, le rapport
+  // moral, etc. que les nouveaux adhérents doivent connaître dès l'inscription).
+  attachToWelcome?: boolean;
 };
 
 export type SeasonArchive = {
