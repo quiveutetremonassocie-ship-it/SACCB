@@ -53,6 +53,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     emailSignature: typeof d.emailSignature === "string" ? d.emailSignature : "",
     officialDocsOpen: d.officialDocsOpen === true,
     officialDocs: Array.isArray(d.officialDocs) ? d.officialDocs : [],
+    smashUrl: typeof d.smashUrl === "string" && d.smashUrl ? d.smashUrl : undefined,
   };
 }
 
