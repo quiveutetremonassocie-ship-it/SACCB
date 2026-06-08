@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, Send, HelpCircle, Shirt, BarChart3 } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, ChevronDown, Send, HelpCircle, Shirt, BarChart3 } from "lucide-react";
 // FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
 import { DB, Membre, getEffectivePrix } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
@@ -348,7 +348,7 @@ export default function AdminPanel({
           </div>
         )}
 
-        <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
+        <div className="grid lg:grid-cols-2 gap-3 md:gap-4">
           {/* ════════════════════════════════════════════
               👥 GESTION DES ADHÉRENTS
               ════════════════════════════════════════════ */}
@@ -356,7 +356,7 @@ export default function AdminPanel({
             <SectionDivider emoji="👥" title="Gestion des adhérents" />
           )}
           {canSee("membres") && (
-            <div id="admin-membres" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-membres" label="Adhérents" icon={<Users className="w-5 h-5" />} color="from-cyan-500 to-blue-500">
               <MembresAdmin
                 db={db}
                 onPersist={safePersist}
@@ -366,17 +366,17 @@ export default function AdminPanel({
                 adminCode={adminCode}
                 readOnly={!canEdit("membres")}
               />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("inscriptions") && (
-            <div id="admin-inscriptions" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-inscriptions" label="Inscriptions" icon={<Users className="w-5 h-5" />} color="from-purple-500 to-pink-500">
               <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("bureau") && (
-            <div id="admin-bureau" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-bureau" label="Bureau" icon={<Users className="w-5 h-5" />} color="from-indigo-500 to-purple-500">
               <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
 
           {/* ════════════════════════════════════════════
@@ -386,19 +386,25 @@ export default function AdminPanel({
             <SectionDivider emoji="💬" title="Communication" />
           )}
           {canSee("emailing") && (
-            <div id="admin-messages" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection
+              id="admin-messages"
+              label="Messages reçus"
+              icon={<Inbox className="w-5 h-5" />}
+              color="from-blue-500 to-indigo-500"
+              badge={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
+            >
               <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("emailing") && (
-            <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-emailing" label="Envoyer un mail" icon={<Mail className="w-5 h-5" />} color="from-emerald-500 to-teal-500">
               <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("actualites") && (
-            <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-actualites" label="Actualités" icon={<Newspaper className="w-5 h-5" />} color="from-rose-500 to-red-500">
               <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
 
           {/* ════════════════════════════════════════════
@@ -408,24 +414,24 @@ export default function AdminPanel({
             <SectionDivider emoji="🏆" title="Activités du club" />
           )}
           {canSee("tournois") && (
-            <div id="admin-tournois" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-tournois" label="Tournois" icon={<Trophy className="w-5 h-5" />} color="from-amber-500 to-orange-500">
               <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("engagement") && (
-            <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-engagement" label="Sondages & AG" icon={<MessageSquare className="w-5 h-5" />} color="from-violet-500 to-purple-500">
               <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("engagement") && (
-            <div id="admin-tshirts" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-tshirts" label="T-shirts" icon={<Shirt className="w-5 h-5" />} color="from-amber-500 to-orange-500">
               <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("engagement") && (
-            <div id="admin-faq" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-faq" label="FAQ adhérents" icon={<HelpCircle className="w-5 h-5" />} color="from-blue-500 to-indigo-500">
               <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
-            </div>
+            </CollapsibleAdminSection>
           )}
 
           {/* ════════════════════════════════════════════
@@ -435,20 +441,18 @@ export default function AdminPanel({
             <SectionDivider emoji="💰" title="Gestion & statistiques" />
           )}
           {canSee("comptabilite") && (
-            <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-comptabilite" label="Comptabilité" icon={<Receipt className="w-5 h-5" />} color="from-green-500 to-emerald-500">
               <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
-          {canSee("saison") && <StatsAdhesions totals={totals} />}
           {canSee("saison") && (
-            <div className="lg:col-span-2 scroll-mt-24" id="admin-analytics">
-              <StatsVisites analyticsDaily={db.analyticsDaily} />
-            </div>
-          )}
-          {canSee("saison") && adminEmail && adminCode && (
-            <div className="lg:col-span-2">
-              <LockedAccounts adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
-            </div>
+            <CollapsibleAdminSection id="admin-analytics" label="Statistiques" icon={<BarChart3 className="w-5 h-5" />} color="from-purple-500 to-pink-500">
+              <div className="space-y-4">
+                <StatsAdhesions totals={totals} />
+                <StatsVisites analyticsDaily={db.analyticsDaily} />
+                {adminEmail && adminCode && <LockedAccounts adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />}
+              </div>
+            </CollapsibleAdminSection>
           )}
 
           {/* ════════════════════════════════════════════
@@ -456,22 +460,24 @@ export default function AdminPanel({
               ════════════════════════════════════════════ */}
           <SectionDivider emoji="⚙️" title="Configuration & outils" />
           {canSee("saison") && (
-            <div id="admin-saison" className="scroll-mt-24">
+            <CollapsibleAdminSection id="admin-saison" label="Paramètres saison" icon={<CalendarCog className="w-5 h-5" />} color="from-indigo-500 to-violet-500">
               <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
           {canSee("rules") && (
-            <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
+            <CollapsibleAdminSection id="admin-rules" label="Règlement intérieur" icon={<BookOpen className="w-5 h-5" />} color="from-slate-500 to-slate-700">
               <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
-            </div>
+            </CollapsibleAdminSection>
           )}
+          <CollapsibleAdminSection id="admin-helloasso" label="HelloAsso · QR code" icon={<QrCode className="w-5 h-5" />} color="from-green-500 to-emerald-500">
+            <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
+          </CollapsibleAdminSection>
+          <CollapsibleAdminSection id="admin-notes" label="Bloc-notes partagé" icon={<FileText className="w-5 h-5" />} color="from-yellow-500 to-amber-500">
+            <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
+          </CollapsibleAdminSection>
 
-          <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
-
-          {/* Bloc-notes partagé */}
-          <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
-
-          <div id="admin-sauvegarde" className="lg:col-span-2 glass p-4 md:p-6 scroll-mt-24">
+          <CollapsibleAdminSection id="admin-sauvegarde" label="Sauvegarde & export" icon={<DatabaseBackup className="w-5 h-5" />} color="from-sky-500 to-blue-600">
+          <div className="glass p-4 md:p-6">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500 !text-xs md:!text-sm">
@@ -543,11 +549,12 @@ export default function AdminPanel({
               </div>
             )}
           </div>
+          </CollapsibleAdminSection>
 
           {/* 📖 Guide admin — toujours accessible */}
-          <div id="admin-guide" className="lg:col-span-2 scroll-mt-24">
+          <CollapsibleAdminSection id="admin-guide" label="Guide admin" icon={<BookOpen className="w-5 h-5" />} color="from-indigo-500 to-purple-500">
             <GuideAdmin />
-          </div>
+          </CollapsibleAdminSection>
         </div>
       </div>
 
@@ -606,7 +613,11 @@ function QuickNav({
 }) {
   function scrollTo(id: string) {
     const el = document.getElementById(id);
-    if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (!el) return;
+    // 📂 Demande à la section repliable de s'ouvrir avant le scroll, pour que
+    // l'utilisateur arrive sur du contenu visible et pas sur un en-tête fermé.
+    el.dispatchEvent(new CustomEvent("admin-open"));
+    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
   }
   // 🗂️ Sections regroupées par thématique pour faciliter la navigation.
   // Chaque item garde sa permission individuelle : si l'utilisateur n'a accès à
@@ -701,6 +712,58 @@ function QuickNav({
           </div>
         ))}
       </div>
+    </div>
+  );
+}
+
+// 📂 Section repliable utilisée pour chaque grosse section de l'admin.
+// Par défaut fermée. Cliquer sur l'en-tête déplie/replie. Écoute aussi un
+// custom event `admin-open` dispatché par l'accès rapide pour s'ouvrir
+// automatiquement quand l'utilisateur clique sur un carré du menu en haut.
+function CollapsibleAdminSection({
+  id,
+  label,
+  icon,
+  color,
+  badge,
+  children,
+}: {
+  id: string;
+  label: string;
+  icon: React.ReactNode;
+  color: string;
+  badge?: number;
+  children: React.ReactNode;
+}) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const handler = () => setOpen(true);
+    el.addEventListener("admin-open", handler);
+    return () => el.removeEventListener("admin-open", handler);
+  }, []);
+  return (
+    <div id={id} ref={ref} className="lg:col-span-2 scroll-mt-24">
+      <button
+        onClick={() => setOpen((v) => !v)}
+        className={`w-full glass p-3 md:p-4 flex items-center justify-between gap-3 hover:shadow-md transition ${open ? "rounded-b-none" : ""}`}
+      >
+        <div className="flex items-center gap-3 min-w-0">
+          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white shadow-sm shrink-0`}>
+            {icon}
+          </div>
+          <span className="text-base md:text-lg font-display tracking-wider text-slate-800 truncate">{label}</span>
+          {badge !== undefined && badge > 0 && (
+            <span className="ml-2 min-w-[22px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shadow-sm shrink-0">
+              {badge > 99 ? "99+" : badge}
+            </span>
+          )}
+        </div>
+        {open ? <ChevronUp className="w-5 h-5 text-slate-500 shrink-0" /> : <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />}
+      </button>
+      {open && <div className="mt-3">{children}</div>}
     </div>
   );
 }
