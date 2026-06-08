@@ -1,6 +1,7 @@
 "use client";
 
 import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight, HelpCircle } from "lucide-react";
+import confetti from "canvas-confetti";
 import Link from "next/link";
 import TshirtOrderForm from "./TshirtOrderForm";
 import RecuModal from "./admin/RecuModal";
@@ -55,6 +56,24 @@ export default function MemberPanel({
   officialDocsOpen?: boolean;
   smashUrl?: string;
 }) {
+  // 🎉 Petite explosion de confettis quand l'adhérent ouvre son espace.
+  // Ne se déclenche qu'une fois par ouverture du panel (useEffect deps vides).
+  useEffect(() => {
+    const t = setTimeout(() => {
+      confetti({ particleCount: 80, spread: 60, origin: { y: 0.35 }, ticks: 120 });
+    }, 250);
+    return () => clearTimeout(t);
+  }, []);
+
+  // 🎉 Confettis sur clic du badge : effet "ouverture de paquet cadeau".
+  function celebrateBadge() {
+    confetti({ particleCount: 120, spread: 80, origin: { y: 0.4 }, startVelocity: 35 });
+    setTimeout(() => {
+      confetti({ particleCount: 60, spread: 100, origin: { y: 0.5, x: 0.3 }, startVelocity: 25 });
+      confetti({ particleCount: 60, spread: 100, origin: { y: 0.5, x: 0.7 }, startVelocity: 25 });
+    }, 150);
+  }
+
   const [histOpen, setHistOpen] = useState(false);
   const [classementOpen, setClassementOpen] = useState(false);
   const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
@@ -465,7 +484,7 @@ export default function MemberPanel({
           <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
             <Trophy className="w-3.5 h-3.5" /> Votre carte membre
           </p>
-          <Badge nom={session.nom} type={session.type} y1={y1} y2={y2} />
+          <Badge nom={session.nom} type={session.type} y1={y1} y2={y2} onCelebrate={celebrateBadge} />
           <p className="text-xs text-slate-400 text-center mt-2">
             Faites une capture d&apos;écran pour la conserver.
           </p>
@@ -887,9 +906,14 @@ export default function MemberPanel({
   );
 }
 
-function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y2: number }) {
+function Badge({ nom, type, y1, y2, onCelebrate }: { nom: string; type: string; y1: number; y2: number; onCelebrate?: () => void }) {
   return (
-    <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
+    <button
+      type="button"
+      onClick={onCelebrate}
+      aria-label="Faire pleuvoir des confettis 🎉"
+      className="relative max-w-sm mx-auto block w-full text-left bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+    >
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
       <div className="font-display text-xl text-blue-400 tracking-widest border-b border-white/10 pb-2 mb-4">
         MEMBRE OFFICIEL SACCB
@@ -902,7 +926,7 @@ function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y
         <span className="text-xs uppercase tracking-widest text-white/60">{type}</span>
         <span className="font-display text-lg text-white/70">ST-ADRESSE</span>
       </div>
-    </div>
+    </button>
   );
 }
 
