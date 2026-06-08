@@ -581,49 +581,97 @@ function QuickNav({
     const el = document.getElementById(id);
     if (el) el.scrollIntoView({ behavior: "smooth", block: "start" });
   }
-  // permission = key dans ADMIN_SECTIONS (cf types.ts). undefined = toujours visible.
-  const allItems: { id: string; label: string; icon: React.ReactNode; color: string; badge?: number; permission?: string }[] = [
-    { id: "admin-membres", label: "Adhérents", icon: <Users className="w-4 h-4" />, color: "from-cyan-500 to-blue-500", permission: "membres" },
-    { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined, permission: "emailing" },
-    { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500", permission: "emailing" },
-    { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "tournois" },
-    { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "inscriptions" },
-    { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500", permission: "comptabilite" },
-    { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500", permission: "actualites" },
-    { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500", permission: "engagement" },
-    { id: "admin-tshirts", label: "T-shirts", icon: <Shirt className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "engagement" },
-    { id: "admin-bureau", label: "Bureau", icon: <Users className="w-4 h-4" />, color: "from-indigo-500 to-purple-500", permission: "bureau" },
-    { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
-    { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
-    { id: "admin-analytics", label: "Statistiques", icon: <BarChart3 className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "saison" },
-    { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
-    { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
-    { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
+  // 🗂️ Sections regroupées par thématique pour faciliter la navigation.
+  // Chaque item garde sa permission individuelle : si l'utilisateur n'a accès à
+  // aucun item d'un groupe, le groupe entier est masqué. Toute section restant
+  // avec une permission `undefined` est toujours visible.
+  type Item = { id: string; label: string; icon: React.ReactNode; color: string; badge?: number; permission?: string };
+  type Group = { title: string; emoji: string; items: Item[] };
+  const groups: Group[] = [
+    {
+      title: "Adhérents",
+      emoji: "👥",
+      items: [
+        { id: "admin-membres", label: "Adhérents", icon: <Users className="w-4 h-4" />, color: "from-cyan-500 to-blue-500", permission: "membres" },
+        { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "inscriptions" },
+        { id: "admin-bureau", label: "Bureau", icon: <Users className="w-4 h-4" />, color: "from-indigo-500 to-purple-500", permission: "bureau" },
+      ],
+    },
+    {
+      title: "Communication",
+      emoji: "💬",
+      items: [
+        { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined, permission: "emailing" },
+        { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500", permission: "emailing" },
+        { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500", permission: "actualites" },
+      ],
+    },
+    {
+      title: "Activités du club",
+      emoji: "🏆",
+      items: [
+        { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "tournois" },
+        { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500", permission: "engagement" },
+        { id: "admin-tshirts", label: "T-shirts", icon: <Shirt className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "engagement" },
+        { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
+      ],
+    },
+    {
+      title: "Gestion",
+      emoji: "💰",
+      items: [
+        { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500", permission: "comptabilite" },
+        { id: "admin-analytics", label: "Statistiques", icon: <BarChart3 className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "saison" },
+      ],
+    },
+    {
+      title: "Configuration & aide",
+      emoji: "⚙️",
+      items: [
+        { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
+        { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
+        { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" },
+        { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" },
+      ],
+    },
   ];
-  const items = allItems.filter((it) => !it.permission || canSee(it.permission));
+  // Filtre permissions item par item puis garde les groupes non vides
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.items.filter((it) => !it.permission || canSee(it.permission)) }))
+    .filter((g) => g.items.length > 0);
   return (
     <div className="glass p-3 md:p-4 mb-4">
       <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 px-1">
         🚀 Accès rapide
       </p>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
-        {items.map((it) => (
-          <button
-            key={it.id}
-            onClick={() => scrollTo(it.id)}
-            className={`relative flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl bg-gradient-to-br ${it.color} text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition`}
-            title={it.label}
-          >
-            {it.icon}
-            <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2">
-              {it.label}
-            </span>
-            {it.badge !== undefined && it.badge > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow border border-white">
-                {it.badge > 99 ? "99+" : it.badge}
-              </span>
-            )}
-          </button>
+      <div className="space-y-4">
+        {visibleGroups.map((g) => (
+          <div key={g.title}>
+            <p className="text-[11px] uppercase tracking-widest text-slate-400 font-semibold mb-2 px-1 flex items-center gap-1.5">
+              <span>{g.emoji}</span>
+              <span>{g.title}</span>
+            </p>
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
+              {g.items.map((it) => (
+                <button
+                  key={it.id}
+                  onClick={() => scrollTo(it.id)}
+                  className={`relative flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl bg-gradient-to-br ${it.color} text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition`}
+                  title={it.label}
+                >
+                  {it.icon}
+                  <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2">
+                    {it.label}
+                  </span>
+                  {it.badge !== undefined && it.badge > 0 && (
+                    <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow border border-white">
+                      {it.badge > 99 ? "99+" : it.badge}
+                    </span>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
         ))}
       </div>
     </div>
