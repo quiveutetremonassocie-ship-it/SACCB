@@ -944,6 +944,10 @@ Deno.serve(async (req) => {
       tshirtOpen: d.tshirtOpen === true,
       tshirtPrice: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
       emailSignature: typeof d.emailSignature === "string" ? d.emailSignature : "",
+      // 🏆 URL de l'appli Smash (mini-tournois entraînement). Exposée côté
+      // public pour que le bouton « Mini-tournoi entre nous » s'affiche dans
+      // Mon espace dès que l'admin l'a renseignée.
+      smashUrl: typeof d.smashUrl === "string" ? d.smashUrl : null,
       officialDocsOpen: d.officialDocsOpen === true,
       officialDocs: Array.isArray(d.officialDocs) ? d.officialDocs : [],
       faqOpen: d.faqOpen === true,
