@@ -349,15 +349,94 @@ export default function AdminPanel({
         )}
 
         <div className="grid lg:grid-cols-2 gap-4 md:gap-6">
-          {canSee("comptabilite") && (
-            <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
-              <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
+          {/* ════════════════════════════════════════════
+              👥 GESTION DES ADHÉRENTS
+              ════════════════════════════════════════════ */}
+          {(canSee("membres") || canSee("inscriptions") || canSee("bureau")) && (
+            <SectionDivider emoji="👥" title="Gestion des adhérents" />
+          )}
+          {canSee("membres") && (
+            <div id="admin-membres" className="lg:col-span-2 scroll-mt-24">
+              <MembresAdmin
+                db={db}
+                onPersist={safePersist}
+                onEdit={setEditMembre}
+                onRecu={setRecuMembre}
+                adminEmail={adminEmail}
+                adminCode={adminCode}
+                readOnly={!canEdit("membres")}
+              />
+            </div>
+          )}
+          {canSee("inscriptions") && (
+            <div id="admin-inscriptions" className="lg:col-span-2 scroll-mt-24">
+              <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
+            </div>
+          )}
+          {canSee("bureau") && (
+            <div id="admin-bureau" className="lg:col-span-2 scroll-mt-24">
+              <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
             </div>
           )}
 
-          {canSee("saison") && (
-            <div id="admin-saison" className="scroll-mt-24">
-              <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+          {/* ════════════════════════════════════════════
+              💬 COMMUNICATION
+              ════════════════════════════════════════════ */}
+          {(canSee("emailing") || canSee("actualites")) && (
+            <SectionDivider emoji="💬" title="Communication" />
+          )}
+          {canSee("emailing") && (
+            <div id="admin-messages" className="lg:col-span-2 scroll-mt-24">
+              <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
+            </div>
+          )}
+          {canSee("emailing") && (
+            <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
+              <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
+            </div>
+          )}
+          {canSee("actualites") && (
+            <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">
+              <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════
+              🏆 ACTIVITÉS DU CLUB
+              ════════════════════════════════════════════ */}
+          {(canSee("tournois") || canSee("engagement")) && (
+            <SectionDivider emoji="🏆" title="Activités du club" />
+          )}
+          {canSee("tournois") && (
+            <div id="admin-tournois" className="lg:col-span-2 scroll-mt-24">
+              <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
+            </div>
+          )}
+          {canSee("engagement") && (
+            <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
+              <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
+            </div>
+          )}
+          {canSee("engagement") && (
+            <div id="admin-tshirts" className="lg:col-span-2 scroll-mt-24">
+              <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
+            </div>
+          )}
+          {canSee("engagement") && (
+            <div id="admin-faq" className="lg:col-span-2 scroll-mt-24">
+              <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
+            </div>
+          )}
+
+          {/* ════════════════════════════════════════════
+              💰 GESTION FINANCIÈRE & STATISTIQUES
+              ════════════════════════════════════════════ */}
+          {(canSee("comptabilite") || canSee("saison")) && (
+            <SectionDivider emoji="💰" title="Gestion & statistiques" />
+          )}
+          {canSee("comptabilite") && (
+            <div id="admin-comptabilite" className="lg:col-span-2 scroll-mt-24">
+              <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
             </div>
           )}
           {canSee("saison") && <StatsAdhesions totals={totals} />}
@@ -371,6 +450,26 @@ export default function AdminPanel({
               <LockedAccounts adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
             </div>
           )}
+
+          {/* ════════════════════════════════════════════
+              ⚙️ CONFIGURATION & OUTILS
+              ════════════════════════════════════════════ */}
+          <SectionDivider emoji="⚙️" title="Configuration & outils" />
+          {canSee("saison") && (
+            <div id="admin-saison" className="scroll-mt-24">
+              <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+            </div>
+          )}
+          {canSee("rules") && (
+            <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
+              <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
+            </div>
+          )}
+
+          <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
+
+          {/* Bloc-notes partagé */}
+          <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
 
           <div id="admin-sauvegarde" className="lg:col-span-2 glass p-4 md:p-6 scroll-mt-24">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
@@ -445,82 +544,10 @@ export default function AdminPanel({
             )}
           </div>
 
-          <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
-
-          {/* Bloc-notes partagé */}
-          <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
-
-          {canSee("actualites") && (
-            <div id="admin-actualites" className="lg:col-span-2 scroll-mt-24">
-              <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
-            </div>
-          )}
-          {canSee("engagement") && (
-            <div id="admin-engagement" className="lg:col-span-2 scroll-mt-24">
-              <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
-            </div>
-          )}
-          {canSee("engagement") && (
-            <div id="admin-tshirts" className="lg:col-span-2 scroll-mt-24">
-              <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
-            </div>
-          )}
-          {/* ❓ FAQ adhérents — gestion partagée avec engagement */}
-          {canSee("engagement") && (
-            <div id="admin-faq" className="lg:col-span-2 scroll-mt-24">
-              <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
-            </div>
-          )}
-          {/* 📑 Documents officiels — fusionnés dans la section Comptes-rendus/Engagement
-              ci-dessus. L'ancien composant OfficialDocsAdmin reste dispo dans le code
-              mais n'est plus monté. */}
-          {/* 📖 Guide admin — accessible à tous les admins, indépendant des permissions */}
+          {/* 📖 Guide admin — toujours accessible */}
           <div id="admin-guide" className="lg:col-span-2 scroll-mt-24">
             <GuideAdmin />
           </div>
-          {canSee("rules") && (
-            <div id="admin-rules" className="lg:col-span-2 scroll-mt-24">
-              <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
-            </div>
-          )}
-          {canSee("emailing") && (
-            <div id="admin-messages" className="lg:col-span-2 scroll-mt-24">
-              <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
-            </div>
-          )}
-          {canSee("emailing") && (
-            <div id="admin-emailing" className="lg:col-span-2 scroll-mt-24">
-              <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
-            </div>
-          )}
-          {canSee("bureau") && (
-            <div id="admin-bureau" className="lg:col-span-2 scroll-mt-24">
-              <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
-            </div>
-          )}
-          {canSee("tournois") && (
-            <div id="admin-tournois" className="lg:col-span-2 scroll-mt-24">
-              <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
-            </div>
-          )}
-          {canSee("inscriptions") && (
-            <div id="admin-inscriptions" className="lg:col-span-2 scroll-mt-24">
-              <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
-            </div>
-          )}
-          {canSee("membres") && (
-            <div id="admin-membres" className="lg:col-span-2 scroll-mt-24">
-            <MembresAdmin
-              db={db}
-              onPersist={safePersist}
-              onEdit={setEditMembre}
-              onRecu={setRecuMembre}
-              adminEmail={adminEmail}
-              adminCode={adminCode}
-              readOnly={!canEdit("membres")}
-            />
-            </div>
-          )}
         </div>
       </div>
 
@@ -673,6 +700,24 @@ function QuickNav({
             </div>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+// 🏷️ Séparateur de groupe affiché entre les sections de l'admin.
+// Rendu en pleine largeur (col-span-2) avec un fond dégradé léger pour
+// matérialiser le passage d'un thème à un autre quand on scrolle.
+function SectionDivider({ emoji, title }: { emoji: string; title: string }) {
+  return (
+    <div className="lg:col-span-2 mt-2 mb-1">
+      <div className="flex items-center gap-3">
+        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-slate-300" />
+        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200 shadow-sm">
+          <span className="text-lg leading-none">{emoji}</span>
+          <span className="text-xs uppercase tracking-widest font-bold text-slate-700">{title}</span>
+        </div>
+        <div className="flex-1 h-px bg-gradient-to-l from-transparent via-slate-300 to-slate-300" />
       </div>
     </div>
   );
