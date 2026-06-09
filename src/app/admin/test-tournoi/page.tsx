@@ -38,34 +38,10 @@ type Pool = {
   matches: Match[];
 };
 
-// 🏆 Match d'un bracket éliminatoire (post-poules).
-// - round 0 = premier tour (équipes connues, viennent des poules)
-// - round > 0 = équipes déterminées par le gagnant du match parent
-type BracketMatch = {
-  id: string;
-  round: number;
-  position: number; // index du match dans son round (pour l'affichage)
-  // Soit l'équipe est connue directement (round 0), soit elle vient du gagnant
-  // d'un autre match (rounds suivants). Si feedFromX est défini, teamXId sera
-  // rempli automatiquement quand le match parent est verrouillé.
-  teamAId?: string;
-  teamBId?: string;
-  feedFromA?: string; // id d'un BracketMatch dont le gagnant alimente teamA
-  feedFromB?: string;
-  // Score (2 sets de 21 pts)
-  set1A?: number;
-  set1B?: number;
-  set2A?: number;
-  set2B?: number;
-  locked: boolean;
-};
-
-type Bracket = {
-  // "winners" = bracket des 1ers et 2èmes ("1er-2e" dans le Sheets)
-  // "consolation" = bracket des 3èmes et 4èmes ("3e-4e" dans le Sheets)
-  name: "winners" | "consolation";
-  rounds: number; // nombre total de rounds
-  matches: BracketMatch[];
+// 🏆 Pool du 2ème tour. Reprend la structure des poules de phase 1
+// mais avec un "bracket" pour distinguer les 2 niveaux (winners/consolation).
+type SecondPool = Pool & {
+  bracket: "winners" | "consolation";
 };
 
 type Tournament = {
@@ -74,9 +50,9 @@ type Tournament = {
   numTeams: number;
   teamsPerPool: number;
   teams: Team[];
-  pools: Pool[];
-  brackets: Bracket[];
-  phase: "setup" | "teams" | "pools" | "elimination";
+  pools: Pool[];               // Phase 1 (initiale)
+  secondPools: SecondPool[];   // Phase 2 (1ers+2èmes et 3èmes+4èmes re-distribués)
+  phase: "setup" | "teams" | "pools" | "second_round";
   createdAt: number;
 };
 
@@ -188,109 +164,117 @@ function computePoolStanding(pool: Pool, teams: Team[]): {
 
 // 🏆 Gagnant d'un match (au meilleur des 2 sets de 21pts).
 // Retourne undefined si le match n'est pas conclu.
-function matchWinner(m: BracketMatch | Match): string | undefined {
+function matchWinner(m: Match): string | undefined {
   if (m.set1A === undefined || m.set1B === undefined) return undefined;
   const aSets = (m.set1A > m.set1B ? 1 : 0)
     + (m.set2A !== undefined && m.set2B !== undefined && m.set2A > m.set2B ? 1 : 0);
   const bSets = (m.set1B > m.set1A ? 1 : 0)
     + (m.set2A !== undefined && m.set2B !== undefined && m.set2B > m.set2A ? 1 : 0);
-  // Au cas où les 2 sets sont identiques, on attend qu'un set départage
   if (aSets === bSets) return undefined;
   return aSets > bSets ? m.teamAId : m.teamBId;
 }
 
-// 🏆 Génère le bracket "winners" (1ers + 2èmes) ou "consolation" (3èmes + 4èmes)
-// à partir des classements de poules. Pattern croisé inspiré du Sheets :
-//   - Poules appariées par 2 : (A,B), (C,D), (E,F), (G,H)…
-//   - Round 0 : 1A vs 2B, 2A vs 1B, 1C vs 2D, 2C vs 1D…
-//   - Rounds suivants : gagnants des rounds précédents s'affrontent
-// Pour un format propre on attend un nombre PAIR de poules. Si impair, on
-// ne génère pas le bracket.
-function buildBracket(
-  name: "winners" | "consolation",
+// 🔁 Génère les nouvelles poules du 2ème tour à partir des classements
+// des poules initiales. Tout le monde joue le MÊME nombre de matchs
+// (pas d'élimination). Pattern de redistribution inspiré du Sheets :
+//
+//   • Bracket "winners" : les 1ers et 2èmes de chaque poule initiale
+//   • Bracket "consolation" : les 3èmes et 4èmes (si poules de 4)
+//
+//   Pour chaque groupe de 4 poules initiales (A,B,C,D) :
+//     - Nouvelle poule X : 1A, 2B, 1C, 2D
+//     - Nouvelle poule Y : 2A, 1B, 2C, 1D
+//   → 2 nouvelles poules par groupe de 4 anciennes poules.
+//
+//   Cas particuliers :
+//     • 2 poules initiales → 1 nouvelle poule par bracket (tous ensemble)
+//     • 4 poules initiales → 2 nouvelles poules par bracket
+//     • 8 poules initiales → 4 nouvelles poules par bracket
+//     • Pour les autres tailles → pas supporté pour l'instant
+function generateSecondRoundPools(
+  bracket: "winners" | "consolation",
   poolStandings: { poolId: string; ranking: string[] }[]
-): Bracket | null {
+): SecondPool[] {
+  const rankA = bracket === "winners" ? 0 : 2;
+  const rankB = bracket === "winners" ? 1 : 3;
+  const prefix = bracket === "winners" ? "W" : "C";
   const numPools = poolStandings.length;
-  if (numPools < 2) return null;
-  if (numPools % 2 !== 0) return null; // on accepte seulement nb pair
+  const out: SecondPool[] = [];
 
-  // Choisir les rangs à prendre selon le bracket
-  const rankA = name === "winners" ? 0 : 2; // index dans ranking[]
-  const rankB = name === "winners" ? 1 : 3;
-
-  const matches: BracketMatch[] = [];
-  let position = 0;
-  // Round 0 : matchs croisés par paire de poules
-  for (let p = 0; p < numPools; p += 2) {
-    const poolA = poolStandings[p];
-    const poolB = poolStandings[p + 1];
-    // Match 1 : rankA de poolA vs rankB de poolB
-    matches.push({
-      id: `${name}-R0-${position}`,
-      round: 0,
-      position,
-      teamAId: poolA.ranking[rankA],
-      teamBId: poolB.ranking[rankB],
-      locked: false,
-    });
-    position++;
-    // Match 2 : rankA de poolB vs rankB de poolA
-    matches.push({
-      id: `${name}-R0-${position}`,
-      round: 0,
-      position,
-      teamAId: poolB.ranking[rankA],
-      teamBId: poolA.ranking[rankB],
-      locked: false,
-    });
-    position++;
-  }
-
-  // Rounds suivants : on apparie 2 par 2 les gagnants
-  let prevRound = matches.filter((m) => m.round === 0);
-  let round = 1;
-  while (prevRound.length > 1) {
-    const newRound: BracketMatch[] = [];
-    let pos = 0;
-    for (let i = 0; i < prevRound.length; i += 2) {
-      newRound.push({
-        id: `${name}-R${round}-${pos}`,
-        round,
-        position: pos,
-        feedFromA: prevRound[i].id,
-        feedFromB: prevRound[i + 1]?.id,
-        locked: false,
+  // Cas 1 : 2 poules initiales → 1 nouvelle poule
+  if (numPools === 2) {
+    const teamIds = [
+      poolStandings[0].ranking[rankA], // 1A (ou 3A)
+      poolStandings[0].ranking[rankB], // 2A (ou 4A)
+      poolStandings[1].ranking[rankA], // 1B
+      poolStandings[1].ranking[rankB], // 2B
+    ].filter(Boolean);
+    if (teamIds.length >= 2) {
+      out.push({
+        id: `${prefix}1`,
+        teamIds,
+        matches: generatePoolMatches(`${prefix}1`, teamIds),
+        bracket,
       });
-      pos++;
     }
-    matches.push(...newRound);
-    prevRound = newRound;
-    round++;
+    return out;
   }
 
-  return { name, rounds: round, matches };
-}
+  // Cas général : grouper les anciennes poules par 4 (A,B,C,D), (E,F,G,H)…
+  // Chaque groupe produit 2 nouvelles poules de 4.
+  for (let g = 0; g < numPools; g += 4) {
+    const p1 = poolStandings[g];
+    const p2 = poolStandings[g + 1];
+    const p3 = poolStandings[g + 2];
+    const p4 = poolStandings[g + 3];
+    if (!p1 || !p2) continue;
 
-// 🔄 Propage les gagnants à travers le bracket en mettant à jour les
-// teamAId/teamBId des matchs qui dépendent d'un match verrouillé.
-// Renvoie un nouveau bracket avec les références résolues.
-function propagateBracket(bracket: Bracket): Bracket {
-  const byId = new Map(bracket.matches.map((m) => [m.id, m]));
-  const matches = bracket.matches.map((m) => {
-    const updated = { ...m };
-    if (m.feedFromA) {
-      const src = byId.get(m.feedFromA);
-      if (src && src.locked) updated.teamAId = matchWinner(src);
-      else updated.teamAId = undefined;
+    // Si on a moins de 4 poules dans ce groupe (ex: 6 poules → groupe de 2 à la fin)
+    // on fait juste 1 nouvelle poule au lieu de 2
+    if (!p3 || !p4) {
+      const teamIds = [
+        p1.ranking[rankA], p1.ranking[rankB],
+        p2.ranking[rankA], p2.ranking[rankB],
+      ].filter(Boolean);
+      const idx = out.length + 1;
+      if (teamIds.length >= 2) {
+        out.push({
+          id: `${prefix}${idx}`,
+          teamIds,
+          matches: generatePoolMatches(`${prefix}${idx}`, teamIds),
+          bracket,
+        });
+      }
+      continue;
     }
-    if (m.feedFromB) {
-      const src = byId.get(m.feedFromB);
-      if (src && src.locked) updated.teamBId = matchWinner(src);
-      else updated.teamBId = undefined;
-    }
-    return updated;
-  });
-  return { ...bracket, matches };
+
+    // Groupe complet de 4 anciennes poules → 2 nouvelles poules
+    // Nouvelle poule X : 1p1, 2p2, 1p3, 2p4
+    const teamIdsX = [
+      p1.ranking[rankA], p2.ranking[rankB],
+      p3.ranking[rankA], p4.ranking[rankB],
+    ].filter(Boolean);
+    const idxX = out.length + 1;
+    out.push({
+      id: `${prefix}${idxX}`,
+      teamIds: teamIdsX,
+      matches: generatePoolMatches(`${prefix}${idxX}`, teamIdsX),
+      bracket,
+    });
+    // Nouvelle poule Y : 2p1, 1p2, 2p3, 1p4
+    const teamIdsY = [
+      p1.ranking[rankB], p2.ranking[rankA],
+      p3.ranking[rankB], p4.ranking[rankA],
+    ].filter(Boolean);
+    const idxY = out.length + 1;
+    out.push({
+      id: `${prefix}${idxY}`,
+      teamIds: teamIdsY,
+      matches: generatePoolMatches(`${prefix}${idxY}`, teamIdsY),
+      bracket,
+    });
+  }
+  return out;
 }
 
 export default function TestTournoiPage() {
@@ -326,7 +310,7 @@ export default function TestTournoiPage() {
       teamsPerPool: 4,
       teams: [],
       pools: [],
-      brackets: [],
+      secondPools: [],
       phase: "setup",
       createdAt: Date.now(),
     });
@@ -380,7 +364,7 @@ export default function TestTournoiPage() {
         ) : tournament.phase === "pools" ? (
           <PoolsPhase t={tournament} setT={setTournament} onReset={reset} />
         ) : (
-          <EliminationPhase t={tournament} setT={setTournament} onReset={reset} />
+          <SecondRoundPhase t={tournament} setT={setTournament} onReset={reset} />
         )}
       </div>
     </div>
@@ -612,28 +596,27 @@ function PoolsPhase({ t, setT, onReset }: { t: Tournament; setT: (t: Tournament)
   const numPools = t.pools.length;
   const evenPools = numPools >= 2 && numPools % 2 === 0;
 
-  function launchElimination() {
+  function launchSecondRound() {
     if (!evenPools) {
-      alert("La phase éliminatoire nécessite un nombre PAIR de poules (2, 4, 6, 8…). Reviens à la configuration pour ajuster.");
+      alert("Le 2ème tour nécessite un nombre PAIR de poules (2, 4, 8…). Reviens à la configuration pour ajuster.");
       return;
     }
     if (!allPoolsDone) {
-      if (!confirm("Tous les matchs de poules ne sont pas terminés. Lancer quand même la phase éliminatoire (avec le classement actuel) ?")) return;
+      if (!confirm("Tous les matchs de poules ne sont pas terminés. Lancer quand même le 2ème tour (avec le classement actuel) ?")) return;
     }
-    // Calcul des classements
+    // Calcul des classements des poules de phase 1
     const poolStandings = t.pools.map((p) => {
       const ranking = computePoolStanding(p, t.teams).map((row) => row.team.id);
       return { poolId: p.id, ranking };
     });
-    // Génération des 2 brackets
-    const winners = buildBracket("winners", poolStandings);
-    const consolation = buildBracket("consolation", poolStandings);
-    const brackets: Bracket[] = [];
-    if (winners) brackets.push(winners);
-    // Bracket consolation seulement si au moins 3 équipes par poule
+    // Génération des nouvelles poules du 2ème tour
+    const winnersPools = generateSecondRoundPools("winners", poolStandings);
     const minPoolSize = Math.min(...t.pools.map((p) => p.teamIds.length));
-    if (consolation && minPoolSize >= 4) brackets.push(consolation);
-    setT({ ...t, brackets, phase: "elimination" });
+    const consolationPools = minPoolSize >= 4
+      ? generateSecondRoundPools("consolation", poolStandings)
+      : [];
+    const secondPools: SecondPool[] = [...winnersPools, ...consolationPools];
+    setT({ ...t, secondPools, phase: "second_round" });
   }
 
   return (
@@ -667,31 +650,33 @@ function PoolsPhase({ t, setT, onReset }: { t: Tournament; setT: (t: Tournament)
         ))}
       </div>
 
-      {/* Bouton "Lancer la phase éliminatoire" */}
+      {/* Bouton "Lancer le 2ème tour" */}
       <div className="bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-amber-300 rounded-2xl p-4 md:p-6">
         <div className="flex items-start gap-3 flex-wrap">
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
             <Trophy className="w-6 h-6 text-white" />
           </div>
           <div className="flex-1 min-w-0">
-            <h3 className="font-display text-lg tracking-wider text-slate-800">Phase éliminatoire</h3>
+            <h3 className="font-display text-lg tracking-wider text-slate-800">2ème tour</h3>
             <p className="text-sm text-slate-600 mt-1">
-              Quand tous les matchs de poules sont terminés, lance la phase éliminatoire.
-              Les <strong>1ers et 2èmes</strong> de chaque poule s&apos;affronteront dans le bracket principal
-              {numPools >= 2 ? <> ; les <strong>3èmes et 4èmes</strong> dans le bracket consolation (si poules de 4)</> : null}.
+              Quand tous les matchs de poules sont terminés, lance le 2ème tour. Les équipes seront
+              <strong> redistribuées dans de nouvelles poules</strong> en fonction de leur classement,
+              et tout le monde rejoue <strong>le même nombre de matchs</strong> (pas d&apos;élimination).
+              Les <strong>1ers et 2èmes</strong> vont dans le bracket principal,
+              les <strong>3èmes et 4èmes</strong> dans le bracket consolation (si poules de 4).
             </p>
             {!evenPools && (
               <p className="text-xs text-amber-700 mt-2">
-                ⚠️ Il faut un nombre PAIR de poules pour générer les brackets croisés (actuellement {numPools}).
+                ⚠️ Il faut un nombre PAIR de poules pour redistribuer (actuellement {numPools}).
               </p>
             )}
           </div>
           <button
-            onClick={launchElimination}
+            onClick={launchSecondRound}
             disabled={!evenPools}
             className="btn-primary inline-flex items-center gap-2 !bg-gradient-to-r !from-amber-500 !to-orange-500 disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            <Trophy className="w-4 h-4" /> Lancer la phase éliminatoire →
+            <Trophy className="w-4 h-4" /> Lancer le 2ème tour →
           </button>
         </div>
       </div>
@@ -700,61 +685,61 @@ function PoolsPhase({ t, setT, onReset }: { t: Tournament; setT: (t: Tournament)
 }
 
 // ───────────────────────────────────────────────────────────
-// PHASE 4 — Brackets éliminatoires
+// PHASE 4 — 2ème tour (nouvelles poules, tout le monde joue)
 // ───────────────────────────────────────────────────────────
-function EliminationPhase({ t, setT, onReset }: { t: Tournament; setT: (t: Tournament) => void; onReset: () => void }) {
-  // Propagation auto des gagnants à chaque rendu (les brackets stockés ne
-  // contiennent que les feedFromA/feedFromB, on calcule les teamIds dynamiquement)
-  const brackets = useMemo(() => t.brackets.map(propagateBracket), [t.brackets]);
-
-  function updateBracketMatch(bracketName: "winners" | "consolation", matchId: string, patch: Partial<BracketMatch>) {
-    const updated = t.brackets.map((b) => b.name === bracketName
-      ? { ...b, matches: b.matches.map((m) => m.id === matchId ? { ...m, ...patch } : m) }
-      : b);
-    setT({ ...t, brackets: updated });
+function SecondRoundPhase({ t, setT, onReset }: { t: Tournament; setT: (t: Tournament) => void; onReset: () => void }) {
+  function updateMatch(poolId: string, matchId: string, patch: Partial<Match>) {
+    const secondPools = t.secondPools.map((p) => p.id === poolId
+      ? { ...p, matches: p.matches.map((m) => m.id === matchId ? { ...m, ...patch } : m) }
+      : p);
+    setT({ ...t, secondPools });
   }
 
   function backToPools() {
-    if (!confirm("Revenir aux poules ? Les scores éliminatoires seront perdus.")) return;
-    setT({ ...t, phase: "pools", brackets: [] });
+    if (!confirm("Revenir aux poules de phase 1 ? Les scores du 2ème tour seront perdus.")) return;
+    setT({ ...t, phase: "pools", secondPools: [] });
   }
 
-  function teamLabel(id?: string): string {
-    if (!id) return "?";
-    const t2 = t.teams.find((x) => x.id === id);
-    if (!t2) return "?";
-    return `${t2.player1.trim()}${t2.player2.trim() ? " / " + t2.player2.trim() : ""}` || "Équipe sans nom";
-  }
-  function teamSubtitle(id?: string): string {
-    if (!id) return "";
-    const t2 = t.teams.find((x) => x.id === id);
-    return [t2?.club, t2?.level].filter(Boolean).join(" · ");
-  }
+  // 🥇 Classement final calculé à partir des classements des poules de phase 2.
+  // Bracket "winners" : positions 1 à N (N = nb d'équipes 1er+2eme)
+  // Bracket "consolation" : positions (N+1) à 2N
+  const finalRanking = useMemo(() => {
+    const winners = t.secondPools.filter((p) => p.bracket === "winners");
+    const consolation = t.secondPools.filter((p) => p.bracket === "consolation");
+    const rows: { team: Team; place: number; bracket: "winners" | "consolation"; poolId: string; poolRank: number }[] = [];
+    // Helper : prend les classements de chaque pool et les "entrelace" par rang
+    function flatten(pools: Pool[], startPlace: number, bracket: "winners" | "consolation"): typeof rows {
+      const out: typeof rows = [];
+      const standings = pools.map((p) => ({ pool: p, ranking: computePoolStanding(p, t.teams) }));
+      const maxLen = Math.max(0, ...standings.map((s) => s.ranking.length));
+      let place = startPlace;
+      for (let rank = 0; rank < maxLen; rank++) {
+        for (const s of standings) {
+          const row = s.ranking[rank];
+          if (!row) continue;
+          out.push({ team: row.team, place, bracket, poolId: s.pool.id, poolRank: rank + 1 });
+          place++;
+        }
+      }
+      return out;
+    }
+    const winnersFlat = flatten(winners, 1, "winners");
+    const consolationFlat = flatten(consolation, winnersFlat.length + 1, "consolation");
+    return [...winnersFlat, ...consolationFlat];
+  }, [t.secondPools, t.teams]);
 
-  // 🥇 Détermine le classement final dans un bracket : on prend les 2 finalistes
-  // + les perdants des rounds précédents.
-  const finalRankings = useMemo(() => {
-    return brackets.map((b) => {
-      const lastRound = b.rounds - 1;
-      const finalMatch = b.matches.find((m) => m.round === lastRound);
-      const winner = finalMatch ? matchWinner(finalMatch) : undefined;
-      const runnerUp = finalMatch?.locked
-        ? (winner === finalMatch.teamAId ? finalMatch.teamBId : finalMatch.teamAId)
-        : undefined;
-      return { name: b.name, winner, runnerUp };
-    });
-  }, [brackets]);
+  const allDone = t.secondPools.length > 0 && t.secondPools.every((p) => p.matches.every((m) => m.locked));
 
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 md:p-6 flex items-center justify-between flex-wrap gap-3">
         <div>
           <h2 className="font-display text-xl tracking-wider text-slate-800">🥇 {t.name}</h2>
-          <p className="text-xs text-slate-500">Phase éliminatoire</p>
+          <p className="text-xs text-slate-500">2ème tour — nouvelles poules</p>
         </div>
         <div className="flex gap-2 flex-wrap">
           <button onClick={backToPools} className="btn-secondary !text-xs inline-flex items-center gap-1.5">
-            <ArrowLeft className="w-3.5 h-3.5" /> Poules
+            <ArrowLeft className="w-3.5 h-3.5" /> Poules phase 1
           </button>
           <button onClick={onReset} className="btn-secondary !text-xs !text-red-600 inline-flex items-center gap-1.5">
             <Trash2 className="w-3.5 h-3.5" /> Tout effacer
@@ -762,180 +747,97 @@ function EliminationPhase({ t, setT, onReset }: { t: Tournament; setT: (t: Tourn
         </div>
       </div>
 
-      {/* Classement final (s'il existe) */}
-      {finalRankings.some((r) => r.winner) && (
-        <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-4 md:p-6">
-          <h3 className="font-display text-lg tracking-wider text-amber-900 mb-3 flex items-center gap-2">
-            <Trophy className="w-5 h-5" /> Classement final
-          </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {finalRankings.map((r) => (
-              <div key={r.name} className="bg-white border border-amber-200 rounded-xl p-3">
-                <p className="text-[10px] uppercase tracking-widest text-slate-500 font-semibold mb-2">
-                  Bracket {r.name === "winners" ? "principal (1er-2e)" : "consolation (3e-4e)"}
-                </p>
-                {r.winner ? (
-                  <>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="text-lg">🥇</span>
-                      <span className="font-semibold text-slate-800">{teamLabel(r.winner)}</span>
-                    </div>
-                    {r.runnerUp && (
-                      <div className="flex items-center gap-2 text-sm text-slate-600">
-                        <span>🥈</span>
-                        <span>{teamLabel(r.runnerUp)}</span>
-                      </div>
-                    )}
-                  </>
-                ) : (
-                  <p className="text-xs text-slate-400 italic">En cours…</p>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
+      {/* Bracket principal (winners) */}
+      {t.secondPools.some((p) => p.bracket === "winners") && (
+        <SecondBracketView
+          title="Bracket principal — 1ers & 2èmes"
+          color="from-amber-500 to-orange-500"
+          pools={t.secondPools.filter((p) => p.bracket === "winners")}
+          teams={t.teams}
+          onUpdateMatch={updateMatch}
+        />
       )}
 
-      {/* Brackets */}
-      {brackets.map((b) => (
-        <BracketView
-          key={b.name}
-          bracket={b}
-          teamLabel={teamLabel}
-          teamSubtitle={teamSubtitle}
-          onUpdateMatch={(matchId, patch) => updateBracketMatch(b.name, matchId, patch)}
+      {/* Bracket consolation */}
+      {t.secondPools.some((p) => p.bracket === "consolation") && (
+        <SecondBracketView
+          title="Bracket consolation — 3èmes & 4èmes"
+          color="from-slate-500 to-slate-700"
+          pools={t.secondPools.filter((p) => p.bracket === "consolation")}
+          teams={t.teams}
+          onUpdateMatch={updateMatch}
         />
-      ))}
-    </div>
-  );
-}
+      )}
 
-// ───────────────────────────────────────────────────────────
-// Affichage d'un bracket (colonnes de rounds)
-// ───────────────────────────────────────────────────────────
-function BracketView({ bracket, teamLabel, teamSubtitle, onUpdateMatch }: {
-  bracket: Bracket;
-  teamLabel: (id?: string) => string;
-  teamSubtitle: (id?: string) => string;
-  onUpdateMatch: (matchId: string, patch: Partial<BracketMatch>) => void;
-}) {
-  const roundLabel = (r: number, total: number): string => {
-    const fromEnd = total - r;
-    if (fromEnd === 1) return "Finale";
-    if (fromEnd === 2) return "Demi-finales";
-    if (fromEnd === 3) return "Quarts de finale";
-    if (fromEnd === 4) return "Huitièmes";
-    return `Round ${r + 1}`;
-  };
-  const isWinners = bracket.name === "winners";
-
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-      <div className={`px-4 py-3 ${isWinners ? "bg-gradient-to-r from-amber-500 to-orange-500" : "bg-gradient-to-r from-slate-500 to-slate-700"}`}>
-        <p className="text-white font-display tracking-wider flex items-center gap-2">
-          <Trophy className="w-5 h-5" />
-          {isWinners ? "Bracket principal — 1ers & 2èmes" : "Bracket consolation — 3èmes & 4èmes"}
-        </p>
-      </div>
-      <div className="p-3 overflow-x-auto">
-        <div className="flex gap-4 min-w-fit">
-          {Array.from({ length: bracket.rounds }).map((_, round) => {
-            const matches = bracket.matches.filter((m) => m.round === round).sort((a, b) => a.position - b.position);
-            return (
-              <div key={round} className="space-y-3 min-w-[240px]">
-                <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold text-center">
-                  {roundLabel(round, bracket.rounds)}
-                </p>
-                {matches.map((m) => (
-                  <BracketMatchCard
-                    key={m.id}
-                    match={m}
-                    teamALabel={teamLabel(m.teamAId)}
-                    teamBLabel={teamLabel(m.teamBId)}
-                    teamASub={teamSubtitle(m.teamAId)}
-                    teamBSub={teamSubtitle(m.teamBId)}
-                    onUpdate={(patch) => onUpdateMatch(m.id, patch)}
-                  />
-                ))}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ───────────────────────────────────────────────────────────
-// Carte d'un match dans un bracket
-// ───────────────────────────────────────────────────────────
-function BracketMatchCard({ match, teamALabel, teamBLabel, teamASub, teamBSub, onUpdate }: {
-  match: BracketMatch;
-  teamALabel: string;
-  teamBLabel: string;
-  teamASub: string;
-  teamBSub: string;
-  onUpdate: (patch: Partial<BracketMatch>) => void;
-}) {
-  function setScore(key: keyof BracketMatch, val: string) {
-    if (match.locked) return;
-    const n = val === "" ? undefined : Math.max(0, Math.min(30, Number(val) || 0));
-    onUpdate({ [key]: n });
-  }
-  const filled = match.set1A !== undefined && match.set1B !== undefined;
-  const canPlay = match.teamAId && match.teamBId;
-  const winner = matchWinner(match);
-
-  return (
-    <div className={`rounded-lg border p-2 ${
-      match.locked ? "bg-emerald-50 border-emerald-200"
-      : !canPlay ? "bg-slate-50 border-slate-200 opacity-60"
-      : "bg-white border-slate-200"
-    }`}>
-      {/* Équipe A */}
-      <div className={`flex items-center gap-1 ${winner && winner === match.teamAId ? "font-bold" : ""}`}>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-slate-800 truncate">{teamALabel}</p>
-          {teamASub && <p className="text-[9px] text-slate-400 truncate">{teamASub}</p>}
-        </div>
-        <input type="number" inputMode="numeric" min={0} max={30}
-          className="input !text-xs w-10 text-center !px-1 !py-0.5 tabular-nums"
-          placeholder="-" disabled={match.locked || !canPlay}
-          value={match.set1A ?? ""} onChange={(e) => setScore("set1A", e.target.value)} />
-        <input type="number" inputMode="numeric" min={0} max={30}
-          className="input !text-xs w-10 text-center !px-1 !py-0.5 tabular-nums"
-          placeholder="-" disabled={match.locked || !canPlay}
-          value={match.set2A ?? ""} onChange={(e) => setScore("set2A", e.target.value)} />
-      </div>
-      <div className="border-t border-slate-100 my-1"></div>
-      {/* Équipe B */}
-      <div className={`flex items-center gap-1 ${winner && winner === match.teamBId ? "font-bold" : ""}`}>
-        <div className="flex-1 min-w-0">
-          <p className="text-xs text-slate-800 truncate">{teamBLabel}</p>
-          {teamBSub && <p className="text-[9px] text-slate-400 truncate">{teamBSub}</p>}
-        </div>
-        <input type="number" inputMode="numeric" min={0} max={30}
-          className="input !text-xs w-10 text-center !px-1 !py-0.5 tabular-nums"
-          placeholder="-" disabled={match.locked || !canPlay}
-          value={match.set1B ?? ""} onChange={(e) => setScore("set1B", e.target.value)} />
-        <input type="number" inputMode="numeric" min={0} max={30}
-          className="input !text-xs w-10 text-center !px-1 !py-0.5 tabular-nums"
-          placeholder="-" disabled={match.locked || !canPlay}
-          value={match.set2B ?? ""} onChange={(e) => setScore("set2B", e.target.value)} />
-      </div>
-      {filled && canPlay && (
-        <div className="flex justify-end mt-1.5">
-          {match.locked ? (
-            <button onClick={() => onUpdate({ locked: false })} className="text-[9px] text-emerald-700 hover:text-emerald-900 underline">
-              🔓 Déverrouiller
-            </button>
-          ) : (
-            <button onClick={() => onUpdate({ locked: true })} className="text-[9px] text-slate-500 hover:text-slate-700 inline-flex items-center gap-1">
-              <Save className="w-2.5 h-2.5" /> Valider
-            </button>
+      {/* Classement final */}
+      <div className="bg-gradient-to-br from-amber-50 to-yellow-50 border-2 border-amber-300 rounded-2xl p-4 md:p-6">
+        <div className="flex items-center gap-2 mb-3">
+          <Trophy className="w-5 h-5 text-amber-700" />
+          <h3 className="font-display text-lg tracking-wider text-amber-900">Classement final</h3>
+          {!allDone && (
+            <span className="text-[10px] uppercase tracking-widest text-amber-700 bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-full font-bold">
+              En cours
+            </span>
           )}
         </div>
-      )}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-2">
+          {finalRanking.map((row) => (
+            <div key={row.team.id} className={`flex items-center gap-2 rounded-lg border px-3 py-2 ${
+              row.place === 1 ? "bg-amber-100 border-amber-300"
+              : row.place === 2 ? "bg-slate-100 border-slate-300"
+              : row.place === 3 ? "bg-orange-100 border-orange-300"
+              : "bg-white border-slate-200"
+            }`}>
+              <span className="font-display font-bold text-slate-800 w-8 text-center tabular-nums">
+                {row.place === 1 ? "🥇" : row.place === 2 ? "🥈" : row.place === 3 ? "🥉" : row.place}
+              </span>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm text-slate-800 truncate font-semibold">
+                  {row.team.player1}{row.team.player2 ? " / " + row.team.player2 : ""}
+                </p>
+                <p className="text-[10px] text-slate-500 truncate">
+                  {row.team.club || "—"} · {row.bracket === "winners" ? "Bracket principal" : "Bracket consolation"} {row.poolId} (#{row.poolRank})
+                </p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ───────────────────────────────────────────────────────────
+// Vue d'un bracket de 2ème tour (winners ou consolation)
+// = liste de nouvelles poules, affichées comme en phase 1
+// ───────────────────────────────────────────────────────────
+function SecondBracketView({ title, color, pools, teams, onUpdateMatch }: {
+  title: string;
+  color: string;
+  pools: SecondPool[];
+  teams: Team[];
+  onUpdateMatch: (poolId: string, matchId: string, patch: Partial<Match>) => void;
+}) {
+  return (
+    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+      <div className={`bg-gradient-to-r ${color} px-4 py-3`}>
+        <p className="text-white font-display tracking-wider flex items-center gap-2">
+          <Trophy className="w-5 h-5" />
+          {title}
+        </p>
+      </div>
+      <div className="p-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
+          {pools.map((pool) => (
+            <PoolCard
+              key={pool.id}
+              pool={pool}
+              teams={teams}
+              onUpdateMatch={(matchId, patch) => onUpdateMatch(pool.id, matchId, patch)}
+            />
+          ))}
+        </div>
+      </div>
     </div>
   );
 }
