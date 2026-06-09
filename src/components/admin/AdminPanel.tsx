@@ -528,34 +528,6 @@ export default function AdminPanel({
               />
             </CollapsibleAdminSection>
           )}
-
-          {/* 🧪 ZONE TEST — Mini-tournoi (prototype, non visible publiquement) */}
-          <div className="lg:col-span-2 mt-4">
-            <a
-              href="/admin/test-tournoi"
-              className="block bg-gradient-to-br from-amber-50 to-orange-50 border-2 border-dashed border-amber-300 hover:border-amber-500 rounded-2xl p-5 transition group"
-            >
-              <div className="flex items-center gap-4">
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shadow-sm shrink-0">
-                  <Trophy className="w-6 h-6 text-white" />
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <p className="font-display tracking-wider text-slate-800 group-hover:text-amber-700 transition">
-                      Mini-tournoi (prototype)
-                    </p>
-                    <span className="text-[9px] uppercase tracking-widest text-amber-700 bg-amber-200 border border-amber-400 px-1.5 py-0.5 rounded-full font-bold">
-                      🧪 Test
-                    </span>
-                  </div>
-                  <p className="text-xs text-slate-500 mt-1">
-                    Page de test pour la nouvelle fonctionnalité d&apos;organisation de mini-tournois. Aucun impact sur le site public.
-                  </p>
-                </div>
-                <div className="text-amber-600 group-hover:translate-x-1 transition shrink-0">→</div>
-              </div>
-            </a>
-          </div>
         </div>
       </div>
 
