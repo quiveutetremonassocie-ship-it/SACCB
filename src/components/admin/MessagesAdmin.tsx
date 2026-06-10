@@ -147,6 +147,32 @@ export default function MessagesAdmin({
         </div>
       </div>
 
+      {/* 💡 Notice explicative : les réponses email n'arrivent PAS ici */}
+      <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3 md:p-4 flex gap-3">
+        <div className="w-8 h-8 rounded-lg bg-blue-100 flex items-center justify-center shrink-0">
+          <span className="text-base">💡</span>
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-sm text-blue-900 font-semibold">À savoir sur les réponses email</p>
+          <p className="text-xs text-blue-800 leading-relaxed mt-1">
+            Les <strong>réponses aux mails</strong> que vous envoyez depuis l&apos;admin
+            (rappels, infos, mails de masse…) <strong>n&apos;arrivent PAS ici</strong>.
+            Elles arrivent dans la boîte mail <a
+              href="mailto:saccb76310@gmail.com"
+              className="font-mono font-bold underline hover:no-underline"
+            >saccb76310@gmail.com</a>.
+            <br />
+            Ici vous voyez <strong>uniquement</strong> les messages envoyés via le
+            formulaire contact du site (<a
+              href="/contact"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="underline hover:no-underline"
+            >saccb.fr/contact</a>).
+          </p>
+        </div>
+      </div>
+
       {visible.length === 0 && (
         <div className="text-center py-10 text-slate-400">
           <Inbox className="w-12 h-12 mx-auto mb-3 text-slate-200" />
