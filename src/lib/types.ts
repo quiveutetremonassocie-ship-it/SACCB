@@ -391,6 +391,12 @@ export type ContactMessage = {
   respondedBy?: string;  // email de l'admin qui a marqué "répondu"
   respondedAt?: string;  // ISO timestamp
   archived?: boolean;    // masqué dans la liste principale
+  // 📨 Provenance du message : "form" = via formulaire contact du site (défaut),
+  // "email_reply" = réponse par email à un mail envoyé par l'admin, captée
+  // automatiquement via Brevo Inbound Parsing.
+  source?: "form" | "email_reply";
+  subject?: string; // utilisé pour les réponses email (sujet du fil)
+  threadKey?: string; // permet de regrouper les réponses d'un même fil
 };
 
 export type EmailLog = {

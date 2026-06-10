@@ -418,6 +418,14 @@ async function loadWelcomeAttachments(
 }
 
 async function sendBrevo(brevoKey: string, payload: EmailPayload): Promise<Response> {
+  // 📨 Si une adresse de réception inbound est configurée (INBOUND_REPLY_ADDRESS),
+  // on l'injecte comme Reply-To par défaut. Ainsi quand un destinataire répond,
+  // le mail va sur l'adresse inbound (parsée par Brevo) et apparaît dans l'admin
+  // « Messages reçus ». Si l'appelant a déjà défini reply_to, on respecte son choix.
+  const inboundReply = Deno.env.get("INBOUND_REPLY_ADDRESS");
+  if (inboundReply && !payload.reply_to) {
+    payload = { ...payload, reply_to: inboundReply };
+  }
   // Essai Brevo
   try {
     const res = await callBrevo(brevoKey, payload);
@@ -829,6 +837,86 @@ Deno.serve(async (req) => {
 
     // Toujours retourner 200 pour que HelloAsso ne re-tente pas
     return json({ ok: true, matched: found });
+  }
+
+  // ─── WEBHOOK BREVO INBOUND PARSING (réceptions des réponses email) ───
+  // Brevo envoie un POST avec un tableau `items` contenant les emails reçus
+  // sur l'adresse configurée (ex: replies@inbox.saccb.fr). On vérifie un secret
+  // partagé puis on enregistre chaque mail comme un ContactMessage avec
+  // source: "email_reply", visible dans l'admin "Messages reçus".
+  if (Array.isArray(body.items) && body.items.length > 0 && body.items[0]?.From) {
+    const expectedSecret = Deno.env.get("BREVO_INBOUND_SECRET");
+    if (!expectedSecret) {
+      console.error("[Brevo Inbound] BREVO_INBOUND_SECRET non configuré — webhook refusé");
+      return json({ ok: false, reason: "Webhook non configuré." }, 503);
+    }
+    const url = new URL(req.url);
+    const providedSecret =
+      url.searchParams.get("secret") ||
+      req.headers.get("x-brevo-inbound-secret") ||
+      "";
+    if (providedSecret !== expectedSecret) {
+      console.warn("[Brevo Inbound] Secret invalide depuis IP", ip);
+      return json({ ok: false, reason: "Non autorisé." }, 401);
+    }
+
+    // 📥 Lecture de la DB courante
+    const { data: dbRow, error: dbErr } = await supabaseAdmin
+      .from("saccb_db").select("data").eq("id", 1).single();
+    if (dbErr || !dbRow) return json({ ok: false, reason: "Erreur DB" }, 500);
+    const dbCurrent = dbRow.data as Record<string, unknown>;
+    const messages = ((dbCurrent.contactMessages || []) as Record<string, unknown>[]);
+
+    let processed = 0;
+    for (const item of body.items as Record<string, unknown>[]) {
+      try {
+        const fromObj = item.From as Record<string, unknown> | undefined;
+        const fromName = String(fromObj?.Name || "").trim();
+        const fromEmail = String(fromObj?.Address || "").toLowerCase().trim();
+        if (!fromEmail) continue;
+        const subject = String(item.Subject || "").trim().slice(0, 200);
+        // Corps du mail : on prend en priorité le texte simple, sinon le markdown extrait
+        const rawText = String(
+          item.ExtractedMarkdownMessage ||
+          item.RawTextBody ||
+          item.PlainText ||
+          ""
+        ).trim();
+        if (!rawText) continue;
+        // Nettoyage léger : on coupe au-dessus du séparateur de citation classique
+        // pour ne garder QUE le nouveau contenu de la réponse, pas le mail original.
+        const cleaned = rawText
+          .split(/\n-{2,}\s*\nLe .+ a écrit\s?:/)[0]
+          .split(/\nOn .+ wrote:/)[0]
+          .split(/\n>{1,}/)[0]
+          .trim()
+          .slice(0, 5000);
+        // Thread key : in-reply-to ou message-id du mail original
+        const threadKey = String(item.InReplyTo || item["In-Reply-To"] || item.MessageId || "").slice(0, 200);
+        messages.push({
+          id: `email-${Date.now()}-${processed}`,
+          name: fromName || fromEmail.split("@")[0],
+          email: fromEmail,
+          message: cleaned,
+          subject,
+          threadKey,
+          source: "email_reply",
+          createdAt: new Date().toISOString(),
+        });
+        processed++;
+      } catch (err) {
+        console.warn("[Brevo Inbound] Item ignoré :", err);
+      }
+    }
+
+    if (processed > 0) {
+      // Trim à 200 messages max (rolling window)
+      const trimmed = messages.length > 200 ? messages.slice(messages.length - 200) : messages;
+      dbCurrent.contactMessages = trimmed;
+      await supabaseAdmin.from("saccb_db").update({ data: dbCurrent }).eq("id", 1);
+    }
+
+    return json({ ok: true, processed });
   }
 
   const action = body.action as string;

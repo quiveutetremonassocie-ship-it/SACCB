@@ -195,12 +195,27 @@ export default function MessagesAdmin({
                   className="flex-1 min-w-0 text-left"
                 >
                   <div className="flex items-baseline justify-between gap-2 flex-wrap">
-                    <p className="font-medium text-slate-800 text-sm truncate">{m.name}</p>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <p className="font-medium text-slate-800 text-sm truncate">{m.name}</p>
+                      {m.source === "email_reply" && (
+                        <span
+                          className="text-[9px] uppercase tracking-widest text-violet-700 bg-violet-100 border border-violet-200 px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                          title="Réponse par email à un mail envoyé par l'admin"
+                        >
+                          ✉ Réponse
+                        </span>
+                      )}
+                    </div>
                     <p className="text-xs text-slate-400 shrink-0">
                       {new Date(m.createdAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
                     </p>
                   </div>
                   <p className="text-xs text-slate-500 truncate">{m.email}</p>
+                  {m.subject && (
+                    <p className="text-xs text-slate-600 italic truncate mt-0.5">
+                      🏷️ {m.subject}
+                    </p>
+                  )}
                   {!isOpen && (
                     <p className="text-sm text-slate-600 mt-1 line-clamp-2">{m.message}</p>
                   )}
