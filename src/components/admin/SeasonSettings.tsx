@@ -209,16 +209,22 @@ export default function SeasonSettings({
 
     const polls = (db.polls ?? []).length;
     const agItems = (db.agItems ?? []).length;
+    const facturesCount = (db.factures ?? []).length;
+    const facturesTotal = (db.factures ?? []).reduce((sum, f) => sum + (f.montant || 0), 0);
     const archiveNote =
       polls + agItems > 0
         ? `\n• ⚠️ Les ${polls} sondage${polls > 1 ? "s" : ""} et ${agItems} question${agItems > 1 ? "s" : ""} d'AG actuels seront SUPPRIMÉS définitivement\n  (les résultats tournois et compte-rendus sont eux archivés)`
         : "";
+    const facturesNote = facturesCount > 0
+      ? `\n• 💰 Les ${facturesCount} dépense${facturesCount > 1 ? "s" : ""} (${facturesTotal.toFixed(2)} €) seront ARCHIVÉES avec cette saison\n  (consultables dans l'historique, la nouvelle saison repart à 0 €)`
+      : "";
 
     if (!confirm(
       `Démarrer la saison ${newY1}–${newY2} ?\n\n` +
       `• Les ${db.membres.length} adhérents sont conservés mais remis en "non payé"\n` +
       `• Ils pourront se reconnecter et renouveler leur adhésion\n` +
-      archiveNote + "\n" +
+      archiveNote +
+      facturesNote + "\n" +
       `${dateInfo}\n` +
       `• Ceux qui ne paient pas avant la date limite seront supprimés automatiquement`
     )) return;
@@ -226,6 +232,7 @@ export default function SeasonSettings({
     // Archive minimaliste : on garde UNIQUEMENT ce qui sert vraiment sur la durée
     // - résultats tournois (historique + classement membres)
     // - comptes-rendus (utiles aux nouveaux adhérents pour les décisions passées)
+    // - factures/dépenses de la saison (comptabilité historique consultable)
     // Les sondages et questions AG sont supprimés définitivement : une fois closes,
     // ils n'apportent plus de valeur et encombrent l'admin au fil des saisons.
     const archive = {
@@ -234,6 +241,7 @@ export default function SeasonSettings({
       config_tournois: db.config_tournois,
       inscrits_tournoi: db.inscrits_tournoi,
       reunionReports: db.reunionReports ?? [],
+      factures: db.factures ?? [],
     };
     const prevArchives = db.archives ?? [];
     const filtered = prevArchives.filter((a) => !(a.y1 === db.y1 && a.y2 === db.y2));
@@ -244,6 +252,10 @@ export default function SeasonSettings({
       y2: newY2,
       archives: [...filtered, archive],
       membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
+      // 💰 La nouvelle saison repart à 0 € de dépenses — les factures de la
+      // saison passée sont conservées dans l'archive ci-dessus, consultables
+      // via l'historique des saisons.
+      factures: [],
       insc_open: true,
       insc_close_date: inscCloseDate,
       // Réactive les rappels automatiques (au cas où ils étaient désactivés par une réouverture temporaire précédente)

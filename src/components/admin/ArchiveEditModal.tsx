@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp, Trophy, Users, FileText, Calendar, FileDown, ArrowUpFromLine } from "lucide-react";
-import { DB, SeasonArchive, Tournoi, InscritTournoi, ReunionReport } from "@/lib/types";
+import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp, Trophy, Users, FileText, Calendar, FileDown, ArrowUpFromLine, Receipt } from "lucide-react";
+import { DB, SeasonArchive, Tournoi, InscritTournoi, ReunionReport, Facture } from "@/lib/types";
 
 export default function ArchiveEditModal({
   db,
@@ -16,7 +16,7 @@ export default function ArchiveEditModal({
   onClose: () => void;
 }) {
   const archive = db.archives?.[archiveIdx];
-  const [tab, setTab] = useState<"tournois" | "reports">("tournois");
+  const [tab, setTab] = useState<"tournois" | "reports" | "factures">("tournois");
   const [expandedTournoiId, setExpandedTournoiId] = useState<string | null>(null);
   const [editingTournoiId, setEditingTournoiId] = useState<string | null>(null);
   const [tournoiForm, setTournoiForm] = useState<{ name: string; date: string }>({ name: "", date: "" });
@@ -147,6 +147,13 @@ export default function ArchiveEditModal({
 
   // ─── Comptes-rendus ───
   const reports = archive.reunionReports ?? [];
+  const factures = archive.factures ?? [];
+  const facturesTotal = factures.reduce((sum, f) => sum + (f.montant || 0), 0);
+
+  async function deleteFacture(f: Facture) {
+    if (!confirm(`Supprimer cette dépense de l'archive ?\n\n💰 ${f.desc}\n💸 ${f.montant.toFixed(2)} €\n📅 ${f.date}\n\nIrréversible.`)) return;
+    await updateArchive({ factures: factures.filter((x) => x.id !== f.id) });
+  }
 
   async function deleteReport(r: ReunionReport) {
     if (!confirm(
@@ -196,6 +203,13 @@ export default function ArchiveEditModal({
           >
             <FileText className="w-4 h-4 inline mr-1.5" />
             Compte-rendus ({reports.length})
+          </button>
+          <button
+            onClick={() => setTab("factures")}
+            className={`px-3 py-3 text-sm font-medium transition border-b-2 -mb-[1px] ${tab === "factures" ? "border-blue-500 text-blue-700" : "border-transparent text-slate-400 hover:text-slate-700"}`}
+          >
+            <Receipt className="w-4 h-4 inline mr-1.5" />
+            Dépenses ({factures.length})
           </button>
         </div>
 
@@ -374,6 +388,55 @@ export default function ArchiveEditModal({
                   )}
                 </div>
               ))}
+            </div>
+          )}
+
+          {tab === "factures" && (
+            <div className="space-y-3">
+              {factures.length === 0 ? (
+                <p className="text-sm text-slate-400 text-center py-6">
+                  Aucune dépense archivée pour cette saison.
+                </p>
+              ) : (
+                <>
+                  {/* Total */}
+                  <div className="bg-gradient-to-br from-emerald-50 to-teal-50 border border-emerald-200 rounded-xl p-4 flex items-center justify-between">
+                    <div>
+                      <p className="text-[10px] uppercase tracking-widest text-emerald-700 font-bold">Total des dépenses</p>
+                      <p className="text-2xl font-display text-emerald-900 tabular-nums">{facturesTotal.toFixed(2)} €</p>
+                    </div>
+                    <Receipt className="w-10 h-10 text-emerald-500" />
+                  </div>
+
+                  {/* Liste */}
+                  {factures.slice().sort((a, b) => b.date.localeCompare(a.date)).map((f) => (
+                    <div key={f.id} className="bg-slate-50 border border-slate-200 rounded-xl p-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div className="flex items-start gap-3 min-w-0 flex-1">
+                          <Receipt className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
+                          <div className="min-w-0">
+                            <p className="font-medium text-slate-800 text-sm">{f.desc}</p>
+                            <p className="text-xs text-slate-400">
+                              {new Date(f.date).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" })}
+                            </p>
+                            {f.files && f.files.length > 0 && (
+                              <p className="text-[11px] text-slate-500 mt-1">
+                                📎 {f.files.length} fichier{f.files.length > 1 ? "s" : ""} joint{f.files.length > 1 ? "s" : ""}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2 shrink-0">
+                          <span className="font-display text-slate-800 tabular-nums">{f.montant.toFixed(2)} €</span>
+                          <button onClick={() => deleteFacture(f)} className="p-1.5 rounded hover:bg-red-50 text-red-500" title="Supprimer">
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </>
+              )}
             </div>
           )}
         </div>

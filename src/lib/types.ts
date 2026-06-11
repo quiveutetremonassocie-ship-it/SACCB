@@ -214,6 +214,10 @@ export type SeasonArchive = {
   polls?: Poll[];
   agItems?: AGItem[];
   reunionReports?: ReunionReport[];
+  // 💰 Comptabilité de la saison : factures/dépenses archivées au changement
+  // de saison pour ne pas polluer la nouvelle saison avec les dépenses passées.
+  // Permet de garder un historique consultable saison par saison.
+  factures?: Facture[];
 };
 
 export type DB = {
