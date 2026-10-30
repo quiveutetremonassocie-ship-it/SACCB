@@ -2649,7 +2649,7 @@ Deno.serve(async (req) => {
     // 🚪 On exclut ceux qui ont coché "je ne renouvelle pas" pour cette saison
     const currentSeasonKey = `${d.y1}-${d.y2}`;
     const unpaidRecipients = membres
-      .filter((m) => m.ok !== true && String(m.renewalSkippedFor || "") !== currentSeasonKey)
+      .filter((m) => m.ok !== true && m.enAttente !== true && String(m.renewalSkippedFor || "") !== currentSeasonKey)
       .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
       .filter((r) => r.email);
     const unpaidEmails = unpaidRecipients.map((r) => r.email);
@@ -3925,8 +3925,9 @@ Deno.serve(async (req) => {
 
     const membres = (d.membres || []) as Record<string, unknown>[];
     const before = membres.length;
-    const kept = membres.filter((m) => m.ok === true); // on garde uniquement les payés
-    const removedList = membres.filter((m) => m.ok !== true);
+    // On garde les payés + les personnes mises « en attente » par le bureau (jamais supprimées automatiquement)
+    const kept = membres.filter((m) => m.ok === true || m.enAttente === true);
+    const removedList = membres.filter((m) => m.ok !== true && m.enAttente !== true);
     const removed = removedList.length;
 
     if (removed === 0) return json({ ok: true, removed: 0, reason: "Aucun membre à supprimer." });

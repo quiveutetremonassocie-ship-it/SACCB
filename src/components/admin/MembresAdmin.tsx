@@ -54,11 +54,24 @@ export default function MembresAdmin({
   const virementCount = db.membres.filter((m) => m.paymentMethod === "virement").length;
   const virementUnpaidCount = db.membres.filter((m) => m.paymentMethod === "virement" && !m.ok).length;
 
+  // ⏸ Personnes mises de côté : vue séparée (les autres listes ne les montrent pas)
+  const [showAttente, setShowAttente] = useState(false);
+  const attenteCount = db.membres.filter((m) => m.enAttente === true).length;
+
+  async function toggleAttente(m: Membre) {
+    const goingIn = m.enAttente !== true;
+    if (!confirm(goingIn
+      ? `Mettre ${m.nom} en attente ?\n\nLa personne est mise de côté : elle n'apparaît plus dans la liste principale, ne reçoit pas de relance de paiement et n'est pas supprimée automatiquement.`
+      : `Sortir ${m.nom} de l'attente et la remettre dans la liste des adhérents ?`)) return;
+    await onPersist({ ...db, membres: db.membres.map((x) => (x.id === m.id ? { ...x, enAttente: goingIn ? true : undefined } : x)) });
+  }
+
   const filtered = useMemo(() => {
     const s = search.toLowerCase();
     return [...db.membres]
       .filter(
         (m) =>
+          (showAttente ? m.enAttente === true : m.enAttente !== true) &&
           (m.nom.toLowerCase().includes(s) ||
           m.email.toLowerCase().includes(s) ||
           (m.tel && m.tel.includes(s))) &&
@@ -70,7 +83,7 @@ export default function MembresAdmin({
             || (filterPayment === "virement_unpaid" && m.paymentMethod === "virement" && !m.ok))
       )
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
-  }, [db.membres, search, filterNoPhoto, filterType, filterPayment]);
+  }, [db.membres, search, filterNoPhoto, filterType, filterPayment, showAttente]);
 
   // 📧 Suit l'envoi auto pour notifier l'admin si ça échoue silencieusement
   const [autoSendStatus, setAutoSendStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -345,6 +358,14 @@ export default function MembresAdmin({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {/* ⏸ Vue « En attente » (personnes mises de côté) */}
+        <button
+          onClick={() => setShowAttente((v) => !v)}
+          className={`btn-ghost !px-3 !py-2 !text-xs whitespace-nowrap ${showAttente ? "!bg-amber-500 !text-white !border-amber-500" : ""}`}
+          title={showAttente ? "Revenir à la liste des adhérents" : "Voir les personnes mises en attente"}
+        >
+          ⏸ {showAttente ? `En attente (${attenteCount}) — retour` : `En attente (${attenteCount})`}
+        </button>
         {/* Filtre type adhérent (Tous / Adultes / Étudiants) - cycle au clic */}
         <button
           onClick={() => setFilterType((v) => v === "all" ? "Adulte" : v === "Adulte" ? "Etudiant" : "all")}
@@ -575,9 +596,12 @@ export default function MembresAdmin({
                   <Receipt className="w-3.5 h-3.5" />
                 </button>
                 {!readOnly && (
-                  <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
-                    <Pencil className="w-3.5 h-3.5" />
-                  </button>
+                  <>
+                    <button onClick={() => toggleAttente(m)} className={`btn-ghost !px-2 !py-1 !text-xs ${m.enAttente ? "!bg-amber-100 !text-amber-800" : ""}`} title={m.enAttente ? "Sortir de l'attente" : "Mettre en attente (mettre de côté)"}>{m.enAttente ? "▶" : "⏸"}</button>
+                    <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
+                      <Pencil className="w-3.5 h-3.5" />
+                    </button>
+                  </>
                 )}
                 {!readOnly && (
                   <button
@@ -724,9 +748,12 @@ export default function MembresAdmin({
                       <Receipt className="w-3 h-3" />
                     </button>
                     {!readOnly && (
-                      <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
-                        <Pencil className="w-3 h-3" />
-                      </button>
+                      <>
+                        <button onClick={() => toggleAttente(m)} className={`btn-ghost !px-2 !py-1 !text-xs ${m.enAttente ? "!bg-amber-100 !text-amber-800" : ""}`} title={m.enAttente ? "Sortir de l'attente" : "Mettre en attente (mettre de côté)"}>{m.enAttente ? "▶" : "⏸"}</button>
+                        <button onClick={() => onEdit(m)} className="btn-primary !px-2 !py-1 !text-xs" title="Modifier">
+                          <Pencil className="w-3 h-3" />
+                        </button>
+                      </>
                     )}
                     {!readOnly && (
                       <button

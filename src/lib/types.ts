@@ -10,6 +10,9 @@ export type Membre = {
   // 💶 Montant réellement encaissé (réduction, geste…). Vide = tarif normal du type.
   // Utilisé par la trésorerie, les stats et le reçu. Remis à zéro à chaque nouvelle saison.
   montantPaye?: number;
+  // ⏸ Mis de côté par le bureau (inscription d'une personne inconnue, à vérifier…).
+  // Affiché à part dans l'admin ; jamais supprimé automatiquement ni relancé.
+  enAttente?: boolean;
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements

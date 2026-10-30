@@ -1105,7 +1105,7 @@ function ClubConfigSection({
         className="w-full flex items-center justify-between"
       >
         <p className="text-xs uppercase tracking-widest text-blue-700 font-semibold flex items-center gap-1">
-          <Building2 className="w-3 h-3" /> Configuration du club
+          <Building2 className="w-3 h-3" /> Configuration du club — tarifs, liens HelloAsso, horaires, salle
         </p>
         <ChevronDown className={`w-4 h-4 text-blue-500 transition-transform ${expanded ? "rotate-180" : ""}`} />
       </button>
