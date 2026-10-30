@@ -148,7 +148,7 @@ export default function InterclubPage() {
 
       <main className="max-w-5xl mx-auto px-4 pb-16 grid lg:grid-cols-5 gap-6">
         {/* ── Inscriptions du club ── */}
-        <section className="lg:col-span-3 bg-white rounded-3xl shadow-2xl p-5 md:p-7 order-1">
+        <section className="lg:col-span-3 self-start bg-white rounded-3xl shadow-2xl p-5 md:p-7 order-1">
           <div className="flex items-start justify-between gap-3 mb-1 flex-wrap">
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Espace d&apos;inscription</p>
@@ -251,7 +251,7 @@ export default function InterclubPage() {
         </section>
 
         {/* ── Infos pratiques ── */}
-        <aside className="lg:col-span-2 space-y-6 order-2">
+        <aside className="lg:col-span-2 self-start space-y-6 order-2">
           {(t.salleNom || t.salleAdresse || t.sallePhotoUrl) && (
             <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
               {t.sallePhotoUrl && (
