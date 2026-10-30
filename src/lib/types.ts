@@ -81,6 +81,8 @@ export type InscritTournoi = {
 export type ActualiteImage = {
   url: string;
   path?: string; // chemin Supabase Storage (pour suppression)
+  // 📸 Ids des adhérents présents sur la photo (admin uniquement, jamais public)
+  people?: string[];
 };
 
 export type Actualite = {

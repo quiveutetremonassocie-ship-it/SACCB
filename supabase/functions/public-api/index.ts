@@ -156,6 +156,12 @@ function isRegistrationRateLimited(ip: string): boolean {
   return entry.count > 3;
 }
 
+// 📸 Les personnes identifiées sur les photos restent réservées à l'admin
+function actuSansPersonnes(a: Record<string, unknown>): Record<string, unknown> {
+  if (!Array.isArray(a.images)) return a;
+  return { ...a, images: (a.images as Record<string, unknown>[]).map(({ people: _p, ...img }) => img) };
+}
+
 function sanitize(str: string): string {
   return str
     .replace(/[<>]/g, "") // pas de balises HTML
@@ -1322,7 +1328,7 @@ Deno.serve(async (req) => {
       quota: d.quota ?? 65,
       config_tournois: d.config_tournois ?? [],
       inscrits_tournoi: d.inscrits_tournoi ?? [],
-      actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private),
+      actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private).map(actuSansPersonnes),
       archives: d.archives ?? [],
       // 🔒 Le lien WhatsApp n'est plus public : seulement un indicateur. Le lien est
       // donné aux adhérents payés via check_session.
@@ -1728,7 +1734,7 @@ Deno.serve(async (req) => {
 
     const privateActualites = ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter(
       (a: Record<string,unknown>) => a.private === true
-    );
+    ).map(actuSansPersonnes);
 
     return json({ ok: true, actualites: privateActualites });
   }

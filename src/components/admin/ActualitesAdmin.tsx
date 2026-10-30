@@ -19,6 +19,7 @@ import {
 import { DB, Actualite, ActualiteImage, actualiteImages } from "@/lib/types";
 import { supabaseClient, ACTU_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import Actualites from "../Actualites";
+import PhotoPeopleModal, { sansAccordPhoto } from "./PhotoPeopleModal";
 
 export default function ActualitesAdmin({
   db,
@@ -40,6 +41,21 @@ export default function ActualitesAdmin({
   const [busy, setBusy] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
   const [expandedActu, setExpandedActu] = useState<Set<string>>(new Set());
+  // 📸 Photo dont on renseigne les personnes présentes
+  const [peopleFor, setPeopleFor] = useState<{ actuId: string; idx: number } | null>(null);
+  const membres = db.membres || [];
+
+  async function setPeople(actuId: string, imgIndex: number, ids: string[]) {
+    const next = {
+      ...db,
+      actualites: list.map((x) => {
+        if (x.id !== actuId) return x;
+        const imgs = actualiteImages(x).map((img, i) => (i === imgIndex ? { ...img, people: ids } : img));
+        return { ...x, images: imgs, imageUrl: undefined, imagePath: undefined };
+      }),
+    };
+    await onPersist(next);
+  }
   const fileInput = useRef<HTMLInputElement>(null);
 
   function toggleExpanded(id: string) {
@@ -374,6 +390,7 @@ export default function ActualitesAdmin({
         {list.map((a, i) => {
           const imgs = actualiteImages(a);
           const isOpen = expandedActu.has(a.id);
+          const refusActu = new Set(imgs.flatMap((img) => sansAccordPhoto(img.people, membres).map((m) => m.id))).size;
           return (
             <div key={a.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
               {/* En-tête cliquable (toujours visible) */}
@@ -392,6 +409,11 @@ export default function ActualitesAdmin({
                   <p className="text-[10px] text-slate-400 flex items-center gap-2">
                     {imgs.length} image{imgs.length > 1 ? "s" : ""}
                     {a.private && <span className="text-purple-500 font-semibold">🔒 Membres</span>}
+                    {refusActu > 0 && (
+                      <span className="text-red-600 font-bold">
+                        ⚠ {refusActu} personne{refusActu > 1 ? "s" : ""} sans accord photo
+                      </span>
+                    )}
                   </p>
                 </div>
                 <div className="flex items-center gap-1.5 shrink-0">
@@ -478,15 +500,24 @@ export default function ActualitesAdmin({
                         </label>
                       )}
                     </div>
+                    <p className="text-[11px] text-slate-500 mb-2">
+                      👥 Clique sous une photo pour indiquer qui est dessus — en <span className="text-red-600 font-semibold">rouge</span> les personnes qui n&apos;ont pas accepté d&apos;apparaître sur le site.
+                    </p>
                     <div className="flex gap-2 flex-wrap">
-                      {imgs.map((img, idx) => (
-                        <div key={idx} className="relative group">
+                      {imgs.map((img, idx) => {
+                        const refus = sansAccordPhoto(img.people, membres);
+                        const nb = (img.people || []).length;
+                        return (
+                        <div key={idx} className="flex flex-col items-center gap-1 w-20">
+                        <div className="relative group">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={img.url}
                             alt=""
                             className={`w-20 h-20 object-cover rounded-lg border-2 ${
-                              idx === 0
+                              refus.length > 0
+                                ? "border-red-500 ring-2 ring-red-500/30"
+                                : idx === 0
                                 ? "border-yellow-400 ring-2 ring-yellow-400/20"
                                 : "border-slate-200"
                             }`}
@@ -514,7 +545,22 @@ export default function ActualitesAdmin({
                             </button>
                           </div>
                         </div>
-                      ))}
+                          <button
+                            onClick={() => setPeopleFor({ actuId: a.id, idx })}
+                            className={`w-full text-[10px] font-semibold rounded-md px-1 py-0.5 border transition ${
+                              refus.length > 0
+                                ? "bg-red-100 text-red-700 border-red-400 hover:bg-red-200"
+                                : nb > 0
+                                ? "bg-emerald-50 text-emerald-700 border-emerald-300 hover:bg-emerald-100"
+                                : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                            }`}
+                            title={refus.length > 0 ? `Sans accord : ${refus.map((m) => m.nom).join(", ")}` : "Personnes sur la photo"}
+                          >
+                            {refus.length > 0 ? `⚠ ${refus.length} sans accord` : nb > 0 ? `👥 ${nb}` : "👥 Qui ?"}
+                          </button>
+                        </div>
+                        );
+                      })}
                     </div>
                   </div>
                 </div>
@@ -523,6 +569,22 @@ export default function ActualitesAdmin({
           );
         })}
       </div>
+
+      {peopleFor && (() => {
+        const a = list.find((x) => x.id === peopleFor.actuId);
+        const img = a ? actualiteImages(a)[peopleFor.idx] : undefined;
+        if (!img) return null;
+        return (
+          <PhotoPeopleModal
+            imageUrl={img.url}
+            initial={img.people || []}
+            membres={membres}
+            readOnly={readOnly}
+            onSave={(ids) => setPeople(peopleFor.actuId, peopleFor.idx, ids)}
+            onClose={() => setPeopleFor(null)}
+          />
+        );
+      })()}
 
       {/* APERCU LIVE */}
       {showPreview && list.length > 0 && (
