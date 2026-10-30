@@ -98,46 +98,24 @@ export default function TshirtAdmin({
   const ordersBySize = TAILLES.flatMap((t) =>
     orders.filter((o) => o.taille === t).sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, "fr"))
   );
-  const floquesCount = (t: string) => orders.filter((o) => o.taille === t && o.nomFloque).length;
 
-  function exportFabricantExcel() {
-    const cell = (v: string | number) => `"${String(v).replace(/"/g, '""')}"`;
-    const lines: string[] = [
-      cell(`Bon de commande T-shirts SACCB — saison ${db.y1}-${db.y2}`),
-      cell(`Édité le ${new Date().toLocaleDateString("fr-FR")}`),
-      "",
-      ["Taille", "Quantité", "Dont floqués"].map(cell).join(";"),
-      ...TAILLES.map((t) => [t, totals[t], floquesCount(t)].map(cell).join(";")),
-      ["TOTAL", orders.length, orders.filter((o) => o.nomFloque).length].map(cell).join(";"),
-      "",
-      ["N°", "Taille", "Nom à floquer", "Adhérent"].map(cell).join(";"),
-      ...ordersBySize.map((o, i) => [i + 1, o.taille, o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()].map(cell).join(";")),
-    ];
-    const blob = new Blob(["﻿" + lines.join("\r\n")], { type: "text/csv;charset=utf-8;" });
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = `bon_commande_tshirts_saccb_${db.y1}_${db.y2}.csv`;
-    link.click();
-  }
-
-  function printFabricant() {
-    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
-    const recap = TAILLES.map((t) => `<tr><td>${t}</td><td class="n">${totals[t]}</td><td class="n">${floquesCount(t)}</td></tr>`).join("");
-    const detail = ordersBySize.map((o, i) => `<tr><td class="n">${i + 1}</td><td><b>${o.taille}</b></td><td>${esc(o.nomFloque || "—")}</td><td>${esc(`${o.prenom} ${o.nom}`.trim())}</td></tr>`).join("");
-    const w = window.open("", "_blank");
-    if (!w) { alert("Autorisez les fenêtres pop-up pour imprimer."); return; }
-    w.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>Bon de commande T-shirts SACCB</title>
-      <style>body{font-family:Arial,sans-serif;margin:32px;color:#111}h1{font-size:20px;margin:0}p{color:#555;margin:4px 0 20px}
-      table{border-collapse:collapse;width:100%;margin-bottom:24px}th,td{border:1px solid #ccc;padding:6px 10px;font-size:13px;text-align:left}
-      th{background:#f3f3f3}.n{text-align:right;width:60px}tfoot td{font-weight:bold}h2{font-size:15px;margin:0 0 8px}</style></head><body>
-      <h1>Bon de commande T-shirts — SACCB</h1><p>Saison ${db.y1}-${db.y2} · édité le ${new Date().toLocaleDateString("fr-FR")}</p>
-      <h2>Récapitulatif par taille</h2>
-      <table><thead><tr><th>Taille</th><th class="n">Quantité</th><th class="n">Dont floqués</th></tr></thead><tbody>${recap}</tbody>
-      <tfoot><tr><td>TOTAL</td><td class="n">${orders.length}</td><td class="n">${orders.filter((o) => o.nomFloque).length}</td></tr></tfoot></table>
-      <h2>Détail des t-shirts</h2>
-      <table><thead><tr><th class="n">N°</th><th>Taille</th><th>Nom à floquer</th><th>Adhérent</th></tr></thead><tbody>${detail}</tbody></table>
-      <script>window.onload=function(){window.print()}</script></body></html>`);
-    w.document.close();
+  // 📄 PDF pour le fabricant : uniquement Taille, Floquage et Nom, trié par taille
+  async function exportFabricantPdf() {
+    const { jsPDF } = await import("jspdf");
+    const autoTable = (await import("jspdf-autotable")).default;
+    const doc = new jsPDF();
+    doc.setFontSize(16);
+    doc.text(`Commande T-shirts SACCB — saison ${db.y1}-${db.y2}`, 14, 18);
+    doc.setFontSize(10);
+    doc.text(`${orders.length} t-shirt${orders.length > 1 ? "s" : ""} · ${TAILLES.map((t) => `${t} : ${totals[t]}`).join("  ·  ")}`, 14, 25);
+    autoTable(doc, {
+      startY: 31,
+      head: [["Taille", "Floquage", "Nom"]],
+      body: ordersBySize.map((o) => [o.taille, o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]),
+      styles: { fontSize: 11 },
+      headStyles: { fillColor: [30, 58, 95] },
+    });
+    doc.save(`commande_tshirts_saccb_${db.y1}_${db.y2}.pdf`);
   }
 
   return (
@@ -242,15 +220,10 @@ export default function TshirtAdmin({
       {orders.length > 0 && (
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
           <p className="text-xs uppercase tracking-widest text-blue-700 font-semibold mb-1">🏭 Bon de commande fabricant</p>
-          <p className="text-[11px] text-slate-600 mb-2">Récapitulatif par taille + liste détaillée avec les noms à floquer, à envoyer au fabricant.</p>
-          <div className="flex gap-2 flex-wrap">
-            <button onClick={exportFabricantExcel} className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-1">
-              <Download className="w-3.5 h-3.5" /> Télécharger (Excel)
-            </button>
-            <button onClick={printFabricant} className="text-xs font-semibold bg-white border border-blue-300 hover:bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg">
-              🖨️ Imprimer / PDF
-            </button>
-          </div>
+          <p className="text-[11px] text-slate-600 mb-2">PDF avec la taille, le floquage et le nom de chaque t-shirt, à envoyer au fabricant.</p>
+          <button onClick={exportFabricantPdf} className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-1">
+            <Download className="w-3.5 h-3.5" /> Télécharger le PDF
+          </button>
         </div>
       )}
 
