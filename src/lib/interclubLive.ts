@@ -220,6 +220,22 @@ export function genererPhaseSuivante(prec: LivePhase, nbPoules: number, format: 
   return { id: uid(), nom, mode: "niveau", format, poules };
 }
 
+/** 🏅 Classement général provisoire d'une phase (place de chaque équipe dans tout le tournoi).
+ *  Brassage : rang dans la poule, puis victoires, sets, points ;
+ *  phases par niveau : la poule A d'abord (les meilleures), puis B… */
+export function classementGeneral(ph: LivePhase): string[] {
+  if (ph.mode === "niveau") return ph.poules.flatMap((p) => classementPoule(p).map((l) => l.id));
+  const lignes = ph.poules.flatMap((p) => classementPoule(p).map((l, rang) => ({ ...l, rang })));
+  return lignes
+    .sort((x, y) =>
+      x.rang - y.rang ||
+      y.v - x.v ||
+      (y.setsPour - y.setsContre) - (x.setsPour - x.setsContre) ||
+      (y.ptsPour - y.ptsContre) - (x.ptsPour - x.ptsContre) ||
+      y.ptsPour - x.ptsPour)
+    .map((l) => l.id);
+}
+
 /** Classement final : poules de la dernière phase dans l'ordre (par niveau) */
 export function classementFinal(ph: LivePhase): string[] {
   if (ph.mode === "brassage") return ordreSortie(ph);

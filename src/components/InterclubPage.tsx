@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { interclubCall, interclubScore, InterclubPage as PageData } from "@/lib/db";
 import { LiveMatch, LivePhase } from "@/lib/types";
-import { matchJoue, classementPoule, formatTexte } from "@/lib/interclubLive";
+import { matchJoue, classementGeneral, formatTexte } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
 import EcranGeant from "./live/EcranGeant";
 
@@ -475,6 +475,9 @@ function MesMatchs({
   const mesEquipes = ph.poules.flatMap((p) => p.equipes.filter(mine).map((id) => ({ id, poule: p })));
   if (mesEquipes.length === 0) return null;
   const estValide = (m: LiveMatch) => m.etat === "valide" || m.par === "admin";
+  // 🏅 Place provisoire dans tout le tournoi (dès qu'un match de la phase a un score)
+  const general = classementGeneral(ph);
+  const classementVisible = ph.mode === "niveau" || ph.poules.some((p) => p.matchs.some(matchJoue));
 
   const carte = (m: LiveMatch, moi: string) => {
     const valide = estValide(m);
@@ -531,15 +534,20 @@ function MesMatchs({
           const valides = matchs.filter(estValide).length;
           const aSaisir = matchs.filter((m) => !matchJoue(m)).length;
           const aConfirmer = matchs.filter((m) => !estValide(m) && matchJoue(m) && m.par !== clubId).length;
-          const cl = classementPoule(poule);
-          const rang = cl.findIndex((l) => l.id === id) + 1;
-          const aJoue = (cl.find((l) => l.id === id)?.joues ?? 0) > 0;
+          const place = general.indexOf(id) + 1;
           const deplie = ouvert === id;
           return (
             <div key={id} className={`rounded-2xl border overflow-hidden ${deplie ? "border-[#1e3a5f]/40 shadow" : "border-slate-200"}`}>
               <button onClick={() => basculer(id)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
-                <span className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white flex flex-col items-center justify-center leading-none">
-                  <span className="text-base font-bold">{aJoue ? <>{rang}<sup className="text-[9px]">{rang === 1 ? "er" : "e"}</sup></> : "–"}</span>
+                <span className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white flex flex-col items-center justify-center leading-none" title="Place provisoire dans le tournoi">
+                  {classementVisible && place > 0 ? (
+                    <>
+                      <span className="text-lg font-bold">{place}<sup className="text-[9px]">{place === 1 ? "er" : "e"}</sup></span>
+                      <span className="text-[9px] text-white/70 mt-0.5">sur {general.length}</span>
+                    </>
+                  ) : (
+                    <span className="text-[9px] text-white/80 text-center px-1">pas encore classé</span>
+                  )}
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block font-bold text-slate-800 truncate">{e ? `${e.joueur1} / ${e.joueur2}` : "—"}</span>
