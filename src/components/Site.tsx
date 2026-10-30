@@ -68,6 +68,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       setJustificatifManquant(res.valid && res.justificatifManquant === true);
       setJustificatifInfo(res.valid ? res.justificatif : undefined);
       setMemberAdherent(res.valid ? res.adherent : undefined);
+      // 👤 Admin = adhérent : la session prend l'identité de sa fiche (id, nom, statut payé)
+      // pour voir exactement l'espace membre d'un adhérent (inscriptions, t-shirt, reçu…)
+      const a = res.adherent;
+      if (memberSession.isAdmin && res.valid && a?.id && (a.id !== memberSession.membreId || a.nom !== memberSession.nom || a.type !== memberSession.type || a.ok !== memberSession.paid)) {
+        const updated = { ...memberSession, membreId: a.id, nom: a.nom, type: a.type, paid: a.ok };
+        persistMemberSession(updated);
+        setMemberSession(updated);
+      }
     });
     return () => { cancelled = true; };
   }, [memberSession?.email, memberSession?.membreId, memberSession?.paid]);
