@@ -170,13 +170,20 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         {/* Sécurité HTTP via meta tags (GitHub Pages ne supporte pas les headers serveur) */}
         <meta httpEquiv="X-Content-Type-Options" content="nosniff" />
-        <meta httpEquiv="X-Frame-Options" content="SAMEORIGIN" />
+        {/* 🛡️ Anti-clickjacking : X-Frame-Options / frame-ancestors sont ignorés en <meta>
+            (GitHub Pages ne permet pas d'envoyer des en-têtes). Si une page du site est
+            affichée dans un cadre d'un AUTRE site, on en sort ; si c'est impossible, on la cache. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{if(window.top!==window.self){var same=false;try{same=window.top.location.origin===window.location.origin;}catch(e){}if(!same){try{window.top.location.href=window.location.href;}catch(e){document.documentElement.style.display='none';}}}}catch(e){}})();`,
+          }}
+        />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
         <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
         {/* Content-Security-Policy : limite les sources autorisées pour scripts/images/fetch */}
         <meta
           httpEquiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co https://www.helloasso.com; connect-src 'self' https://*.supabase.co; frame-src https://www.google.com; frame-ancestors 'self'; form-action 'self' https://www.helloasso.com; base-uri 'self'; object-src 'none';"
+          content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co https://www.helloasso.com; connect-src 'self' https://*.supabase.co; frame-src https://www.google.com; form-action 'self' https://www.helloasso.com; base-uri 'self'; object-src 'none';"
         />
         <script
           type="application/ld+json"

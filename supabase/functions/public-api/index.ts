@@ -180,14 +180,44 @@ async function sha256Hex(text: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
+// 🔒 Format actuel : "p2$<itérations>$<salt32>$<hash64>" — PBKDF2-SHA256, lent volontairement
+// pour qu'un code volé ne puisse pas être retrouvé par essais rapides. Les anciens formats
+// ("h$…" SHA-256 simple, ou en clair) restent acceptés et sont convertis à la connexion.
+const PBKDF2_ITERATIONS = 100_000;
+async function pbkdf2Hex(plain: string, salt: string, iterations: number): Promise<string> {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(plain), "PBKDF2", false, ["deriveBits"]);
+  const bits = await crypto.subtle.deriveBits({ name: "PBKDF2", hash: "SHA-256", salt: new TextEncoder().encode(salt), iterations }, key, 256);
+  return Array.from(new Uint8Array(bits)).map((b) => b.toString(16).padStart(2, "0")).join("");
+}
+
 async function hashCode(plain: string): Promise<string> {
   const salt = crypto.randomUUID().replace(/-/g, "");
-  const hash = await sha256Hex(salt + plain);
-  return `h$${salt}$${hash}`;
+  const hash = await pbkdf2Hex(plain, salt, PBKDF2_ITERATIONS);
+  return `p2$${PBKDF2_ITERATIONS}$${salt}$${hash}`;
+}
+
+function constantTimeEqual(a: string, b: string): boolean {
+  if (a.length !== b.length) return false;
+  let diff = 0;
+  for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
+  return diff === 0;
+}
+
+// true si le code stocké n'est pas au format le plus robuste (à re-chiffrer à la connexion)
+function needsRehash(stored: string | undefined | null): boolean {
+  return !(typeof stored === "string" && stored.startsWith(`p2$${PBKDF2_ITERATIONS}$`));
 }
 
 async function verifyCode(stored: string | undefined | null, input: string): Promise<boolean> {
   if (!stored || !input) return false;
+  if (stored.startsWith("p2$")) {
+    const parts = stored.split("$");
+    if (parts.length !== 4) return false;
+    const [, iter, salt, hash] = parts;
+    const n = Number(iter);
+    if (!Number.isInteger(n) || n < 1000 || n > 1_000_000) return false;
+    return constantTimeEqual(await pbkdf2Hex(input, salt, n), hash);
+  }
   if (stored.startsWith("h$")) {
     const parts = stored.split("$");
     if (parts.length !== 3) return false;
@@ -206,7 +236,7 @@ async function verifyCode(stored: string | undefined | null, input: string): Pro
 }
 
 function isHashedCode(stored: string | undefined | null): boolean {
-  return typeof stored === "string" && stored.startsWith("h$");
+  return typeof stored === "string" && (stored.startsWith("h$") || stored.startsWith("p2$"));
 }
 
 // Sleep helper — utilisé pour throttler les appels API email (Brevo 10/sec, Resend 2/sec)
@@ -473,8 +503,9 @@ async function logEmailToHistory(
   },
 ): Promise<void> {
   try {
-    // Lecture rapide du emailHistory existant
-    const { data } = await loadDB();
+    // Canal indépendant : l'historique ne perturbe pas la requête en cours
+    const db = createDbAccess(supabaseAdmin);
+    const { data } = await db.loadDB();
     if (!data) return;
     const d = data.data as Record<string, unknown>;
     const history = (d.emailHistory || []) as Record<string, unknown>[];
@@ -495,7 +526,7 @@ async function logEmailToHistory(
     });
     // Conserver les 200 dernières entrées (anti-explosion DB)
     d.emailHistory = history.slice(-200);
-    await saveDB(d);
+    await db.saveDB(d);
   } catch (e) {
     console.warn("[logEmailToHistory] échec :", e);
   }
@@ -536,22 +567,24 @@ async function migrateCodeIfNeeded(
   target: { type: "membre"; id: string; plainCode: string } | { type: "adminCred"; email: string; plainCode: string }
 ): Promise<void> {
   try {
+    // Canal indépendant + copie fraîche : on ne réécrit QUE le code, rien d'autre
+    void d;
+    const db = createDbAccess(supabaseAdmin);
+    const { data } = await db.loadDB();
+    if (!data) return;
+    const fresh = data.data as Record<string, unknown>;
     const hashed = await hashCode(target.plainCode);
     if (target.type === "membre") {
-      const membres = (d.membres || []) as Record<string, unknown>[];
-      const m = membres.find((x) => x.id === target.id);
-      if (m && !isHashedCode(String(m.code || ""))) {
+      const m = ((fresh.membres || []) as Record<string, unknown>[]).find((x) => x.id === target.id);
+      if (m && needsRehash(String(m.code || ""))) {
         m.code = hashed;
-        d.membres = membres;
-        await saveDB(d);
+        await db.saveDB(fresh);
       }
     } else {
-      const creds = (d.adminCredentials || []) as { email: string; code: string }[];
-      const c = creds.find((x) => String(x.email || "").toLowerCase() === target.email.toLowerCase());
-      if (c && !isHashedCode(c.code)) {
+      const c = ((fresh.adminCredentials || []) as { email: string; code: string }[]).find((x) => String(x.email || "").toLowerCase() === target.email.toLowerCase());
+      if (c && needsRehash(c.code)) {
         c.code = hashed;
-        d.adminCredentials = creds;
-        await saveDB(d);
+        await db.saveDB(fresh);
       }
     }
   } catch (e) {
@@ -792,32 +825,11 @@ function notifyTshirtOpen(supabaseAdmin: any, newData: Record<string, unknown>) 
   }
 }
 
-Deno.serve(async (req) => {
-  // Pré-vol CORS
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
-
-  if (req.method !== "POST") {
-    return json({ error: "Method not allowed" }, 405);
-  }
-
-  // Rate limiting
-  const ip = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
-  if (isRateLimited(ip)) {
-    return json({ error: "Trop de requêtes, réessayez dans une minute." }, 429);
-  }
-
-  // Client Supabase avec service_role (jamais exposé au frontend)
-  const supabaseAdmin = createClient(
-    Deno.env.get("SUPABASE_URL")!,
-    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
-  );
-
-  // 🔒 Lecture / écriture de la base avec protection contre les écritures simultanées.
-  // Chaque lecture mémorise la version (_rev) et une copie de la base. Une écriture
-  // n'aboutit que si la version n'a pas bougé ; sinon on relit, on fusionne (merge3)
-  // nos changements avec ceux de l'autre requête, et on réessaie. Rien n'est écrasé.
+// 🔒 Canal d'accès à la base (lecture/écriture protégée contre les écritures simultanées).
+// Chaque appel crée un canal INDÉPENDANT : une requête, l'historique des mails, la
+// migration des codes… ont chacun leur version lue et leur copie de référence.
+// deno-lint-ignore no-explicit-any
+function createDbAccess(supabaseAdmin: any) {
   let loadedRev: number | null = null;
   let loadedSnapshot: Record<string, unknown> | null = null;
   const revOf = (d: unknown) => Number((d as Record<string, unknown> | null)?._rev) || 0;
@@ -829,19 +841,6 @@ Deno.serve(async (req) => {
     }
     return r;
   };
-  // 👤 Admins = adhérents : partout où l'on vérifie un adhérent (email + code), le code
-  // ADMIN du même email est aussi accepté et renvoie sa fiche adhérent (payée en priorité).
-  // Un admin peut ainsi voir les actus réservées, voter, s'inscrire aux tournois, etc.
-  const findMembreOuAdmin = async (membres: Record<string, unknown>[], email: string, code: string): Promise<Record<string, unknown> | undefined> => {
-    const m = await findMembreByCredentials(membres, email, code);
-    if (m) return m;
-    const creds = ((loadedSnapshot?.adminCredentials || []) as { email: string; code: string }[]);
-    if (!(await findAdminCredByCredentials(creds, email, code))) return undefined;
-    const e = String(email || "").toLowerCase().trim();
-    const same = membres.filter((x) => String(x.email || "").toLowerCase() === e);
-    return same.find((x) => x.ok === true) || same[0];
-  };
-
   const saveDB = async (d: Record<string, unknown>): Promise<{ error: unknown }> => {
     let mine = d;
     let base = loadedSnapshot;
@@ -886,6 +885,51 @@ Deno.serve(async (req) => {
     }
     return { error: "Conflit d'écriture persistant" };
   };
+  return { loadDB, saveDB, snapshot: () => loadedSnapshot };
+}
+
+Deno.serve(async (req) => {
+  // Pré-vol CORS
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders });
+  }
+
+  if (req.method !== "POST") {
+    return json({ error: "Method not allowed" }, 405);
+  }
+
+  // Rate limiting
+  const ip = req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown";
+  if (isRateLimited(ip)) {
+    return json({ error: "Trop de requêtes, réessayez dans une minute." }, 429);
+  }
+
+  // Client Supabase avec service_role (jamais exposé au frontend)
+  const supabaseAdmin = createClient(
+    Deno.env.get("SUPABASE_URL")!,
+    Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+  );
+
+  // 🔒 Lecture / écriture de la base avec protection contre les écritures simultanées.
+  // Chaque lecture mémorise la version (_rev) et une copie de la base. Une écriture
+  // n'aboutit que si la version n'a pas bougé ; sinon on relit, on fusionne (merge3)
+  // nos changements avec ceux de l'autre requête, et on réessaie. Rien n'est écrasé.
+  const dbAccess = createDbAccess(supabaseAdmin);
+  const loadDB = dbAccess.loadDB;
+  const saveDB = dbAccess.saveDB;
+  // 👤 Admins = adhérents : partout où l'on vérifie un adhérent (email + code), le code
+  // ADMIN du même email est aussi accepté et renvoie sa fiche adhérent (payée en priorité).
+  // Un admin peut ainsi voir les actus réservées, voter, s'inscrire aux tournois, etc.
+  const findMembreOuAdmin = async (membres: Record<string, unknown>[], email: string, code: string): Promise<Record<string, unknown> | undefined> => {
+    const m = await findMembreByCredentials(membres, email, code);
+    if (m) return m;
+    const creds = ((dbAccess.snapshot()?.adminCredentials || []) as { email: string; code: string }[]);
+    if (!(await findAdminCredByCredentials(creds, email, code))) return undefined;
+    const e = String(email || "").toLowerCase().trim();
+    const same = membres.filter((x) => String(x.email || "").toLowerCase() === e);
+    return same.find((x) => x.ok === true) || same[0];
+  };
+
 
   let body: Record<string, unknown>;
   try {
@@ -1782,7 +1826,7 @@ Deno.serve(async (req) => {
       const gate = await handle2FA();
       if (gate) return gate;
       // Migration douce du code en clair → hashé
-      if (!isHashedCode(adminCred.code)) {
+      if (needsRehash(adminCred.code)) { // ancien format → PBKDF2
         await migrateCodeIfNeeded(supabaseAdmin, currentData, { type: "adminCred", email, plainCode: code });
       }
       // 🔐 Log de connexion admin (audit trail, 50 dernières conservées)
@@ -1817,7 +1861,7 @@ Deno.serve(async (req) => {
     clearLoginFailures(email);
 
     // Migration douce du code en clair → hashé
-    if (!isHashedCode(String(membre.code || ""))) {
+    if (needsRehash(String(membre.code || ""))) { // ancien format → PBKDF2
       await migrateCodeIfNeeded(supabaseAdmin, currentData, { type: "membre", id: String(membre.id), plainCode: code });
     }
 
@@ -2729,6 +2773,10 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Rappels automatiques d'inscription (J-30 et J-15) ───
   if (action === "check_reminders") {
+    // 🔒 Tâche planifiée uniquement (GitHub Actions) : sinon n'importe qui pourrait
+    // déclencher des vagues de mails vers les adhérents
+    const cronOk = Deno.env.get("CRON_SECRET");
+    if (!cronOk || String(body.secret || "") !== cronOk) return json({ ok: false, reason: "Non autorisé." }, 401);
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "BREVO_API_KEY manquant." });
 
@@ -3514,6 +3562,8 @@ Deno.serve(async (req) => {
     const membre = await findMembreOuAdmin(membres, email, oldCode);
 
     if (!adminCred && !membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
+    // 🔒 Un code admin donne accès à toute l'administration : 8 caractères minimum
+    if (adminCred && newCode.length < 8) return json({ ok: false, reason: "Pour un compte admin, le code doit contenir au moins 8 caractères." }, 400);
 
     // 🔒 SÉCURITÉ : hasher le nouveau code avant stockage
     const hashedNew = await hashCode(newCode);
@@ -4109,8 +4159,10 @@ Deno.serve(async (req) => {
     };
     if (isAdminCred) {
       // Compte admin : on rattache sa fiche adhérent du même email s'il en a une (payée en priorité)
-      const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase() === email);
-      const fiche = sameEmail.find((m) => m.ok === true) || sameEmail[0];
+      // 🔒 Un email admin seul ne suffit pas (il peut être connu) : on ne renvoie les infos
+      // (lien WhatsApp, fiche) que si l'identifiant de session est celui de sa fiche adhérent.
+      const fiche = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.id || "") === membreId);
+      if (!fiche) return json({ ok: true });
       const jf = justifInfo(fiche);
       return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info });
     }
@@ -5645,6 +5697,9 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Backup email automatique (appele par cron/keepalive) ───
   if (action === "check_backup_email") {
+    // 🔒 Tâche planifiée uniquement (envoie une copie complète de la base par mail)
+    const cronOk = Deno.env.get("CRON_SECRET");
+    if (!cronOk || String(body.secret || "") !== cronOk) return json({ ok: false, reason: "Non autorisé." }, 401);
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
