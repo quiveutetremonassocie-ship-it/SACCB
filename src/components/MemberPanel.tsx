@@ -541,8 +541,8 @@ export default function MemberPanel({
 
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
         {(() => {
+          // Code vide (ex : session admin) → le formulaire le redemande lui-même
           const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
-          if (!code) return null;
           // Split du nom complet en prénom + nom (le 1er mot = prénom, le reste = nom)
           const fullName = (session.nom || "").trim();
           const parts = fullName.split(/\s+/);

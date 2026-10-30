@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Shirt, CheckCircle2, RefreshCw } from "lucide-react";
-import { memberGetMyTshirtOrder, memberSubmitTshirtOrder } from "@/lib/db";
+import { fetchPublicDB, memberGetMyTshirtOrder, memberSubmitTshirtOrder } from "@/lib/db";
 import type { TshirtOrder } from "@/lib/types";
 
 const TAILLES = ["XS", "S", "M", "L", "XL"] as const;
@@ -32,11 +32,31 @@ export default function TshirtOrderForm({
   const [nomFloque, setNomFloque] = useState("");
   const [editMode, setEditMode] = useState(false);
 
+  // 🔑 Certaines sessions (ex : admin) ne gardent pas de code en mémoire : on le
+  // redemande dans le bloc au lieu de masquer la section (gardé en mémoire, jamais stocké).
+  const [enteredCode, setEnteredCode] = useState("");
+  const [codeInput, setCodeInput] = useState("");
+  const effCode = code || enteredCode;
+
   useEffect(() => {
     let cancelled = false;
-    memberGetMyTshirtOrder(email, code, membreId).then((r) => {
+    if (!effCode) {
+      fetchPublicDB().then((d) => {
+        if (cancelled) return;
+        setOpen(d.tshirtOpen === true);
+        setLoading(false);
+      }).catch(() => { if (!cancelled) setLoading(false); });
+      return () => { cancelled = true; };
+    }
+    setLoading(true);
+    memberGetMyTshirtOrder(email, effCode, membreId).then((r) => {
       if (cancelled) return;
       setLoading(false);
+      if (!r.ok && !code) {
+        setEnteredCode("");
+        setMsg({ ok: false, text: "Code incorrect, ou aucune fiche adhérent liée à ce compte." });
+        return;
+      }
       if (r.ok) {
         setOpen(r.open === true);
         setPrice(typeof r.price === "number" ? r.price : null);
@@ -48,7 +68,7 @@ export default function TshirtOrderForm({
       }
     });
     return () => { cancelled = true; };
-  }, [email, code, membreId]);
+  }, [email, code, effCode, membreId]);
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -56,7 +76,7 @@ export default function TshirtOrderForm({
     setMsg(null);
     // Le serveur ignore nom/prenom du body et utilise ceux du compte membre, on les envoie quand même pour le typage
     const r = await memberSubmitTshirtOrder({
-      email, code, membreId,
+      email, code: effCode, membreId,
       nom: defaultNom,
       prenom: defaultPrenom,
       taille,
@@ -82,6 +102,33 @@ export default function TshirtOrderForm({
 
   if (loading) return null;
   if (!open) return null;
+
+  // Pas de code en mémoire → on le demande pour accéder à la commande
+  if (!effCode) {
+    return (
+      <div className="mb-4 bg-gradient-to-br from-amber-50 to-orange-50 border border-amber-200 rounded-2xl p-4">
+        <div className="flex items-center gap-2 mb-2">
+          <Shirt className="w-4 h-4 text-amber-600" />
+          <p className="text-xs uppercase tracking-widest text-amber-700 font-semibold">Commande T-shirt ouverte</p>
+        </div>
+        <p className="text-sm text-slate-600 mb-3">Entre ton code personnel pour commander ou voir ta commande.</p>
+        <form
+          onSubmit={(e) => { e.preventDefault(); setMsg(null); if (codeInput.trim()) setEnteredCode(codeInput.trim()); }}
+          className="flex gap-2"
+        >
+          <input
+            type="password"
+            value={codeInput}
+            onChange={(e) => setCodeInput(e.target.value)}
+            placeholder="Code personnel"
+            className="flex-1 min-w-0 border border-amber-300 rounded-lg px-3 py-1.5 text-sm bg-white"
+          />
+          <button type="submit" className="text-sm font-semibold bg-amber-500 hover:bg-amber-600 text-white rounded-lg px-3 py-1.5">OK</button>
+        </form>
+        {msg && !msg.ok && <p className="mt-2 text-xs text-red-600">{msg.text}</p>}
+      </div>
+    );
+  }
 
   // Récap commande existante (mode lecture)
   if (order && !editMode) {

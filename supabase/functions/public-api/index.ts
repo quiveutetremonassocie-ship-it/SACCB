@@ -618,7 +618,9 @@ async function resolveTshirtMembre(
   const membres = (d.membres || []) as Record<string, unknown>[];
   const membre = await findMembreByCredentials(membres, email, code);
   if (membre && String(membre.id) === membreId) return membre;
-  if (!membreId.startsWith("admin-")) return null;
+  if (membreId !== `admin-${email}`) return null;
+  // Session admin + code personnel d'adhérent du même email → sa fiche adhérent
+  if (membre) return membre;
   const adminCredentials = (d.adminCredentials || []) as { email: string; code: string }[];
   if (!(await findAdminCredByCredentials(adminCredentials, email, code))) return null;
   const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase().trim() === email);
