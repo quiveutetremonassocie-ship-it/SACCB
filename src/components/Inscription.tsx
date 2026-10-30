@@ -5,7 +5,7 @@ import { useEffect, useState } from "react";
 import { CheckCircle2, Lock, CreditCard, Banknote, Clock, MessageCircle, Eye, EyeOff, Plus, X } from "lucide-react";
 import confetti from "canvas-confetti";
 import { DB } from "@/lib/types";
-import { publicAddMembre, publicMarkPaid } from "@/lib/db";
+import { publicAddMembre, publicMarkPaid, publicUploadJustificatif } from "@/lib/db";
 
 // 🎫 3 campagnes HelloAsso selon les types de personnes inscrites :
 //  - tarif-adulte    = MIXTE (adulte + étudiant dans la même inscription)
@@ -44,7 +44,11 @@ type Personne = {
   email?: string; // utilisé seulement si sameAccount = false
   code?: string;  // utilisé seulement si sameAccount = false
   tel?: string;   // utilisé seulement si sameAccount = false (sinon tel partagé)
+  justificatif?: File; // 🎓 certificat de scolarité (obligatoire pour un étudiant)
 };
+
+const JUSTIF_TYPES = ["application/pdf", "image/jpeg", "image/png"];
+const JUSTIF_MAX = 10 * 1024 * 1024;
 
 export default function Inscription({
   db,
@@ -174,6 +178,21 @@ export default function Inscription({
         alert("Veuillez remplir le prénom et le nom de chaque personne.");
         return;
       }
+      // 🎓 Justificatif obligatoire pour le tarif étudiant
+      if (p.type === "Etudiant") {
+        if (!p.justificatif) {
+          alert(`Le justificatif de scolarité est obligatoire pour le tarif étudiant (${p.prenom || "personne"} ${p.nom}).`);
+          return;
+        }
+        if (!JUSTIF_TYPES.includes(p.justificatif.type)) {
+          alert("Le justificatif doit être un PDF, un JPG ou un PNG.");
+          return;
+        }
+        if (p.justificatif.size > JUSTIF_MAX) {
+          alert("Le justificatif est trop lourd (10 Mo maximum).");
+          return;
+        }
+      }
     }
 
     // Validation des emails/codes selon le mode
@@ -261,6 +280,13 @@ export default function Inscription({
       });
       results.push(r);
       if (!r.ok) break;
+      // 🎓 Envoi du justificatif étudiant juste après la création de la fiche
+      if (p.type === "Etudiant" && p.justificatif && r.membreId) {
+        const up = await publicUploadJustificatif({ email: personEmail, code: personCode, membreId: r.membreId, file: p.justificatif });
+        if (!up.ok) {
+          alert(`L'inscription de ${p.prenom} est bien enregistrée, mais le justificatif n'a pas pu être envoyé (${up.reason || "erreur"}).\n\nVous pourrez le déposer depuis votre espace membre.`);
+        }
+      }
     }
 
     const failed = results.find(r => !r.ok);
@@ -455,6 +481,26 @@ export default function Inscription({
                         <option value="Adulte">Adulte ({prix.Adulte}€)</option>
                         <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
                       </select>
+
+                      {/* 🎓 Justificatif de scolarité obligatoire pour le tarif étudiant */}
+                      {p.type === "Etudiant" && (
+                        <div className="mt-2 bg-emerald-50 border border-emerald-200 rounded-xl p-3">
+                          <label className="text-xs font-semibold text-emerald-800 block mb-1">
+                            🎓 Justificatif de scolarité <span className="text-red-500">*</span>
+                          </label>
+                          <p className="text-[11px] text-slate-500 mb-2">Certificat de scolarité ou carte étudiante de l&apos;année en cours (PDF, JPG ou PNG, 10 Mo max).</p>
+                          <input
+                            type="file"
+                            accept="application/pdf,image/jpeg,image/png"
+                            onChange={(e) => {
+                              const file = e.target.files?.[0];
+                              setPersonnes((prev) => prev.map((x, i) => (i === idx ? { ...x, justificatif: file } : x)));
+                            }}
+                            className="text-xs w-full"
+                          />
+                          {p.justificatif && <p className="text-[11px] text-emerald-700 mt-1">✓ {p.justificatif.name}</p>}
+                        </div>
+                      )}
 
                       {/* Email + mdp + tel individuels (uniquement si comptes séparés et plusieurs personnes) */}
                       {!sameAccount && personnes.length > 1 && (

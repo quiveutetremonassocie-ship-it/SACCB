@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound, AlarmClock, Landmark } from "lucide-react";
 import { DB, Membre, FormerMember } from "@/lib/types";
-import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder, adminSendVirementReminder } from "@/lib/db";
+import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder, adminSendVirementReminder, adminFactureFile } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -53,6 +53,26 @@ export default function MembresAdmin({
   const etudiantsCount = db.membres.filter((m) => m.type === "Etudiant").length;
   const virementCount = db.membres.filter((m) => m.paymentMethod === "virement").length;
   const virementUnpaidCount = db.membres.filter((m) => m.paymentMethod === "virement" && !m.ok).length;
+
+  // 🎓 Justificatif étudiant : affichage (lien temporaire) ou alerte s'il manque pour la saison
+  const saisonKey = `${db.y1}-${db.y2}`;
+  async function viewJustificatif(m: Membre) {
+    if (!m.justificatif || !adminEmail || !adminCode) return;
+    const r = await adminFactureFile(adminEmail, adminCode, "url", m.justificatif.path, "justificatifs");
+    if (r.ok && r.url) window.open(r.url, "_blank");
+    else alert("Impossible d'ouvrir le justificatif : " + (r.reason || "erreur"));
+  }
+  function JustifBadge({ m }: { m: Membre }) {
+    if (m.type !== "Etudiant") return null;
+    if (m.justificatif && m.justificatif.saison === saisonKey) {
+      return (
+        <button onClick={() => viewJustificatif(m)} className="text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded" title="Voir le justificatif de scolarité">
+          📄 Justificatif
+        </button>
+      );
+    }
+    return <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded" title="Pas de justificatif de scolarité pour cette saison">⚠️ Justif. manquant</span>;
+  }
 
   // ⏸ Personnes mises de côté : vue séparée (les autres listes ne les montrent pas)
   const [showAttente, setShowAttente] = useState(false);
@@ -518,6 +538,7 @@ export default function MembresAdmin({
                 {typeof m.montantPaye === "number" && (
                   <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                 )}
+                <JustifBadge m={m} />
                 {m.paymentMethod === "online" ? (
                   <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">En ligne</span>
                 ) : m.paymentMethod === "virement" ? (
@@ -654,6 +675,7 @@ export default function MembresAdmin({
                   {typeof m.montantPaye === "number" && (
                     <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                   )}
+                  <span className="block mt-0.5"><JustifBadge m={m} /></span>
                 </td>
                 <td className="p-3">
                   <div className="flex flex-col gap-1">

@@ -4002,7 +4002,10 @@ Deno.serve(async (req) => {
 
     if (!membre) return json({ ok: false, reason: "Session expirée ou compte supprimé." });
     // 💬 Lien WhatsApp uniquement pour les adhérents à jour de paiement
-    return json({ ok: true, paid: membre.ok === true, whatsappLink: membre.ok === true ? whatsappLink : undefined });
+    // 🎓 Étudiant sans justificatif pour la saison en cours → l'espace membre le lui demande
+    const justif = membre.justificatif as { saison?: string } | undefined;
+    const justificatifManquant = membre.type === "Etudiant" && justif?.saison !== `${d.y1}-${d.y2}`;
+    return json({ ok: true, paid: membre.ok === true, whatsappLink: membre.ok === true ? whatsappLink : undefined, justificatifManquant });
   }
 
   // ─── ACTION: Upload image via admin (contourne RLS via service_role) ───
@@ -4204,24 +4207,76 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // 🎓 Justificatif de scolarité d'un étudiant (envoyé par l'adhérent lui-même, avec son code)
+  if (action === "upload_justificatif") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const fileData = String(body.fileData || "");
+    const contentType = String(body.contentType || "").toLowerCase();
+    const fileName = String(body.fileName || "justificatif").replace(/[^a-zA-Z0-9._-]/g, "_").slice(0, 120);
+    if (!email || !code || !membreId || !fileData) return json({ ok: false, reason: "Données manquantes." }, 400);
+    if (!["application/pdf", "image/jpeg", "image/png"].includes(contentType)) return json({ ok: false, reason: "Le fichier doit être un PDF, JPG ou PNG." }, 400);
+
+    let bytes: Uint8Array;
+    try {
+      const b64 = fileData.includes(",") ? fileData.split(",")[1] : fileData;
+      bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+    } catch {
+      return json({ ok: false, reason: "Fichier illisible." }, 400);
+    }
+    if (bytes.length > 10 * 1024 * 1024) return json({ ok: false, reason: "Fichier trop lourd (10 Mo max)." }, 413);
+    const magicOk =
+      (contentType === "application/pdf" && bytes[0] === 0x25 && bytes[1] === 0x50 && bytes[2] === 0x44 && bytes[3] === 0x46) ||
+      (contentType === "image/jpeg" && bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) ||
+      (contentType === "image/png" && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47);
+    if (!magicOk) return json({ ok: false, reason: "Le contenu du fichier ne correspond pas à son type." }, 400);
+
+    const { data } = await loadDB();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    // La fiche visée doit correspondre à l'email ET au code (comptes groupés : même email, même code)
+    const m = membres.find((x) => String(x.id) === membreId && String(x.email || "").toLowerCase() === email);
+    if (!m || !(await verifyCode(m.code as string, code))) return json({ ok: false, reason: "Identifiants incorrects." }, 403);
+
+    const path = `${membreId}/${Date.now()}-${fileName}`;
+    let up = await supabaseAdmin.storage.from("justificatifs").upload(path, bytes, { contentType, upsert: false });
+    if (up.error && /not found/i.test(up.error.message)) {
+      // Premier envoi : le dossier privé n'existe pas encore → on le crée
+      await supabaseAdmin.storage.createBucket("justificatifs", { public: false });
+      up = await supabaseAdmin.storage.from("justificatifs").upload(path, bytes, { contentType, upsert: false });
+    }
+    if (up.error) return json({ ok: false, reason: "Envoi impossible : " + up.error.message }, 500);
+
+    const old = m.justificatif as { path?: string } | undefined;
+    m.justificatif = { path, name: fileName, type: contentType, uploadedAt: new Date().toISOString(), saison: `${d.y1}-${d.y2}` };
+    const { error: saveErr } = await saveDB(d);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    if (old?.path) await supabaseAdmin.storage.from("justificatifs").remove([old.path]).catch(() => {});
+    return json({ ok: true });
+  }
+
   // 🧾 [ADMIN] Fichiers des factures (bucket privé) : lien de consultation temporaire ou suppression.
   // Les admins « espace membre » n'ont pas de session Supabase Auth → le navigateur ne peut pas
   // accéder directement au bucket, on passe par le serveur.
   if (action === "admin_facture_file") {
     const op = String(body.op || "");
     const path = String(body.path || "");
+    // Bucket privé visé : factures (défaut) ou justificatifs étudiants
+    const bucket = body.bucket === "justificatifs" ? "justificatifs" : "factures";
     if (!path || path.includes("..") || path.startsWith("/")) return json({ ok: false, reason: "Chemin invalide." }, 400);
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const authError = await checkAdminAuth(body, data.data as Record<string, unknown>);
     if (authError) return authError;
     if (op === "url") {
-      const { data: s, error } = await supabaseAdmin.storage.from("factures").createSignedUrl(path, 60 * 10);
+      const { data: s, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, 60 * 10);
       if (error || !s) return json({ ok: false, reason: "Fichier introuvable." }, 404);
       return json({ ok: true, url: s.signedUrl });
     }
     if (op === "delete") {
-      const { error } = await supabaseAdmin.storage.from("factures").remove([path]);
+      const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
       if (error) return json({ ok: false, reason: "Suppression impossible." }, 500);
       return json({ ok: true });
     }

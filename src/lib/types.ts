@@ -13,6 +13,8 @@ export type Membre = {
   // ⏸ Mis de côté par le bureau (inscription d'une personne inconnue, à vérifier…).
   // Affiché à part dans l'admin ; jamais supprimé automatiquement ni relancé.
   enAttente?: boolean;
+  // 🎓 Justificatif de scolarité (tarif étudiant) — bucket privé « justificatifs »
+  justificatif?: { path: string; name: string; type: string; uploadedAt: string; saison: string };
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements

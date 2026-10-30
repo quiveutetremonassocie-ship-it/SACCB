@@ -279,13 +279,38 @@ export async function adminUploadFile(args: { adminEmail: string; adminCode: str
   }
 }
 
-// 🧾 [ADMIN] Fichier de facture : lien temporaire (op "url") ou suppression (op "delete")
-export async function adminFactureFile(adminEmail: string, adminCode: string, op: "url" | "delete", path: string): Promise<{ ok: boolean; url?: string; reason?: string }> {
+// 🎓 Envoi du justificatif de scolarité par l'adhérent (à l'inscription ou depuis son espace)
+export async function publicUploadJustificatif(args: { email: string; code: string; membreId: string; file: File }): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const bytes = new Uint8Array(await args.file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({
+        action: "upload_justificatif",
+        email: args.email.toLowerCase().trim(),
+        code: args.code,
+        membreId: args.membreId,
+        fileData: btoa(binary),
+        fileName: args.file.name,
+        contentType: args.file.type,
+      }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau (fichier trop lourd ?)" };
+  }
+}
+
+// 🧾 [ADMIN] Fichier privé (facture ou justificatif étudiant) : lien temporaire (op "url") ou suppression (op "delete")
+export async function adminFactureFile(adminEmail: string, adminCode: string, op: "url" | "delete", path: string, bucket: "factures" | "justificatifs" = "factures"): Promise<{ ok: boolean; url?: string; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-      body: JSON.stringify({ action: "admin_facture_file", adminEmail, adminCode, op, path }),
+      body: JSON.stringify({ action: "admin_facture_file", adminEmail, adminCode, op, path, bucket }),
     });
     return await res.json();
   } catch {
@@ -435,7 +460,7 @@ export async function verifyMembre(
 }
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string }> {
+export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -443,7 +468,7 @@ export async function checkMemberSession(email: string, membreId: string): Promi
       body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId }),
     });
     const data = await res.json();
-    return { valid: data.ok === true, paid: data.paid, whatsappLink: typeof data.whatsappLink === "string" ? data.whatsappLink : undefined };
+    return { valid: data.ok === true, paid: data.paid, whatsappLink: typeof data.whatsappLink === "string" ? data.whatsappLink : undefined, justificatifManquant: data.justificatifManquant === true };
   } catch {
     return { valid: true }; // En cas d'erreur réseau, on laisse passer pour ne pas bloquer l'accès
   }

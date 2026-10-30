@@ -11,7 +11,7 @@ import { PRIX } from "@/lib/types";
 import type { ClubConfig, Membre, ReunionReport, OfficialDoc } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
-import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip } from "@/lib/db";
+import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 
@@ -35,6 +35,8 @@ export default function MemberPanel({
   officialDocs = [],
   officialDocsOpen = false,
   smashUrl,
+  justificatifManquant = false,
+  onJustificatifSent,
 }: {
   session: MemberSession;
   y1: number;
@@ -55,7 +57,24 @@ export default function MemberPanel({
   officialDocs?: OfficialDoc[];
   officialDocsOpen?: boolean;
   smashUrl?: string;
+  justificatifManquant?: boolean;
+  onJustificatifSent?: () => void;
 }) {
+  // 🎓 Envoi du justificatif de scolarité depuis l'espace membre
+  const [justifSending, setJustifSending] = useState(false);
+  const [justifMsg, setJustifMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  async function sendJustificatif(file: File | undefined) {
+    if (!file) return;
+    const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
+    if (!code) { setJustifMsg({ ok: false, text: "Reconnectez-vous à votre espace pour envoyer le justificatif." }); return; }
+    if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) { setJustifMsg({ ok: false, text: "PDF, JPG ou PNG uniquement." }); return; }
+    if (file.size > 10 * 1024 * 1024) { setJustifMsg({ ok: false, text: "Fichier trop lourd (10 Mo max)." }); return; }
+    setJustifSending(true);
+    const r = await publicUploadJustificatif({ email: session.email, code, membreId: session.membreId, file });
+    setJustifSending(false);
+    if (r.ok) { setJustifMsg({ ok: true, text: "Justificatif envoyé, merci !" }); onJustificatifSent?.(); }
+    else setJustifMsg({ ok: false, text: r.reason || "Erreur lors de l'envoi." });
+  }
   // 🎉 Petite explosion de confettis quand l'adhérent ouvre son espace.
   // Ne se déclenche qu'une fois par ouverture du panel (useEffect deps vides).
   useEffect(() => {
@@ -537,6 +556,29 @@ export default function MemberPanel({
             <FileSignature className="w-4 h-4" />
             📑 Documents officiels ({reunionReports.length})
           </button>
+        )}
+
+        {/* 🎓 Justificatif de scolarité manquant (tarif étudiant) */}
+        {(justificatifManquant || justifMsg?.ok) && (
+          <div className="mb-4 bg-emerald-50 border border-emerald-300 rounded-2xl p-4">
+            <p className="text-xs uppercase tracking-widest text-emerald-800 font-semibold mb-1">🎓 Justificatif de scolarité</p>
+            {justifMsg?.ok ? (
+              <p className="text-sm text-emerald-700">✓ {justifMsg.text}</p>
+            ) : (
+              <>
+                <p className="text-sm text-slate-600 mb-2">Le tarif étudiant nécessite un certificat de scolarité ou une carte étudiante de l&apos;année en cours (PDF, JPG ou PNG).</p>
+                <input
+                  type="file"
+                  accept="application/pdf,image/jpeg,image/png"
+                  disabled={justifSending}
+                  onChange={(e) => sendJustificatif(e.target.files?.[0])}
+                  className="text-xs w-full"
+                />
+                {justifSending && <p className="text-xs text-slate-500 mt-1">Envoi en cours…</p>}
+                {justifMsg && !justifMsg.ok && <p className="text-xs text-red-600 mt-1">{justifMsg.text}</p>}
+              </>
+            )}
+          </div>
         )}
 
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}

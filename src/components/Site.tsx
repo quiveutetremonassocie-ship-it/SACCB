@@ -48,11 +48,15 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [codeResetLink, setCodeResetLink] = useState<{ token: string; email: string } | null>(null);
   // 💬 Lien WhatsApp : plus public, récupéré uniquement pour une session adhérent payé (ou admin)
   const [memberWhatsapp, setMemberWhatsapp] = useState<string | undefined>(undefined);
+  // 🎓 Étudiant sans justificatif pour la saison en cours
+  const [justificatifManquant, setJustificatifManquant] = useState(false);
   useEffect(() => {
-    if (!memberSession) { setMemberWhatsapp(undefined); return; }
+    if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); return; }
     let cancelled = false;
     checkMemberSession(memberSession.email, memberSession.membreId).then((res) => {
-      if (!cancelled) setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
+      if (cancelled) return;
+      setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
+      setJustificatifManquant(res.valid && res.justificatifManquant === true);
     });
     return () => { cancelled = true; };
   }, [memberSession?.email, memberSession?.membreId, memberSession?.paid]);
@@ -603,6 +607,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           y1={db.y1}
           y2={db.y2}
           whatsappLink={memberWhatsapp}
+          justificatifManquant={justificatifManquant}
+          onJustificatifSent={() => setJustificatifManquant(false)}
           inscCloseDate={db.insc_close_date}
           configTournois={db.config_tournois ?? []}
           inscritsTournoi={db.inscrits_tournoi ?? []}
