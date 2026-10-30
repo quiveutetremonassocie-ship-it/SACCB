@@ -88,6 +88,57 @@ export default function InterclubsAdmin({
     await onPersist({ ...db, interclubs: next });
   }
 
+  // 🧪 Tournoi de démonstration : 4 clubs × 5 binômes fictifs, pour essayer le jour J
+  async function creerDemo() {
+    if (!confirm("Créer un tournoi de démonstration avec 20 équipes fictives (4 clubs) ?\n\nTu pourras le supprimer ensuite.")) return;
+    const prenoms = [
+      ["Lucas", "Emma"], ["Hugo", "Léa"], ["Louis", "Chloé"], ["Nathan", "Manon"], ["Enzo", "Camille"],
+      ["Théo", "Sarah"], ["Tom", "Inès"], ["Maxime", "Jade"], ["Paul", "Lola"], ["Axel", "Zoé"],
+      ["Noah", "Clara"], ["Jules", "Alice"], ["Victor", "Anaïs"], ["Gabriel", "Lucie"], ["Arthur", "Julie"],
+      ["Raphaël", "Margaux"], ["Adam", "Eva"], ["Antoine", "Pauline"], ["Martin", "Océane"], ["Simon", "Mathilde"],
+    ];
+    const noms = ["Martin", "Bernard", "Dubois", "Durand", "Leroy", "Moreau", "Simon", "Laurent", "Lefebvre", "Michel", "Garcia", "David", "Bertrand", "Roux", "Vincent", "Fournier", "Morel", "Girard", "André", "Mercier"];
+    const clubsDemo = ["SACCB", "Badminton Club Le Havre", "Montivilliers Bad", "Fécamp BC"];
+    const dans = (j: number) => new Date(Date.now() + j * 86_400_000).toISOString().slice(0, 10);
+    const now = new Date().toISOString();
+    const precedent = list.find((x) => x.sallePhotoUrl) || list[0];
+    const t: InterClub = {
+      id: uid(),
+      name: "DÉMO — Tournoi SACCB (à supprimer)",
+      date: dans(14),
+      type: "Mixte",
+      niveaux: [...INTERCLUB_NIVEAUX],
+      dateLimit: dans(7),
+      deroulement: MODELE_DEROULEMENT,
+      salleNom: precedent?.salleNom || cfg.salleName,
+      salleAdresse: precedent?.salleAdresse || cfg.salleAdresse,
+      sallePhotoUrl: precedent?.sallePhotoUrl,
+      sallePhotoPath: precedent?.sallePhotoPath,
+      clubs: clubsDemo.map((nom, ci) => ({
+        id: uid(),
+        nom,
+        token: nouveauJeton(),
+        code: nouveauCode(),
+        quota: 5,
+        binomes: Array.from({ length: 5 }, (_, k) => {
+          const i = ci * 5 + k;
+          return {
+            id: uid(),
+            joueur1: `${prenoms[i][0]} ${noms[i]}`,
+            joueur2: `${prenoms[i][1]} ${noms[(i + 7) % noms.length]}`,
+            niveau: INTERCLUB_NIVEAUX[(i + ci) % INTERCLUB_NIVEAUX.length],
+            createdAt: now,
+          };
+        }),
+        updatedAt: now,
+      })),
+      createdAt: now,
+    };
+    await persist([t, ...list]);
+    setOuvert(t.id);
+    setDraft(JSON.parse(JSON.stringify(t)));
+  }
+
   async function creer() {
     // 🏟 Reprend la salle et la photo du dernier tournoi (modifiables ensuite)
     const precedent = list.find((x) => x.sallePhotoUrl) || list[0];
@@ -228,6 +279,11 @@ export default function InterclubsAdmin({
         {!readOnly && (
           <button onClick={creer} className="btn-primary !px-4 !py-2 !text-xs">
             <Plus className="w-4 h-4" /> Nouveau tournoi inter-clubs
+          </button>
+        )}
+        {!readOnly && (
+          <button onClick={creerDemo} className="btn-ghost !px-4 !py-2 !text-xs" title="20 équipes fictives réparties dans 4 clubs, pour essayer">
+            🧪 Tournoi de démonstration
           </button>
         )}
       </div>
