@@ -37,6 +37,7 @@ export default function MemberPanel({
   smashUrl,
   justificatifManquant = false,
   justificatifInfo,
+  adherent,
   onJustificatifSent,
 }: {
   session: MemberSession;
@@ -60,6 +61,7 @@ export default function MemberPanel({
   smashUrl?: string;
   justificatifManquant?: boolean;
   justificatifInfo?: { fourni: boolean; date?: string; nom?: string };
+  adherent?: { nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean };
   onJustificatifSent?: () => void;
 }) {
   const [justifReplace, setJustifReplace] = useState(false);
@@ -920,9 +922,11 @@ export default function MemberPanel({
         <RecuModal
           membre={{
             id: session.membreId,
-            nom: session.nom,
+            // Fiche adhérent réelle si connue (un compte admin a l'email comme « nom » de session)
+            nom: adherent?.nom || session.nom,
             email: session.email,
-            type: (session.type as "Adulte" | "Etudiant") || "Adulte",
+            type: adherent?.type || (session.type as "Adulte" | "Etudiant") || "Adulte",
+            montantPaye: adherent?.montantPaye,
             ok: true,
           } as Membre}
           overrides={{

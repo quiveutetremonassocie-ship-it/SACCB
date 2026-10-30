@@ -51,6 +51,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   // 🎓 Étudiant sans justificatif pour la saison en cours
   const [justificatifManquant, setJustificatifManquant] = useState(false);
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
+  // 📄 Fiche adhérent réelle (nom, type, montant payé) pour le reçu d'adhésion
+  const [memberAdherent, setMemberAdherent] = useState<{ nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } | undefined>(undefined);
   useEffect(() => {
     if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); return; }
     let cancelled = false;
@@ -59,6 +61,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
       setJustificatifManquant(res.valid && res.justificatifManquant === true);
       setJustificatifInfo(res.valid ? res.justificatif : undefined);
+      setMemberAdherent(res.valid ? res.adherent : undefined);
     });
     return () => { cancelled = true; };
   }, [memberSession?.email, memberSession?.membreId, memberSession?.paid]);
@@ -612,6 +615,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           whatsappLink={memberWhatsapp}
           justificatifManquant={justificatifManquant}
           justificatifInfo={justificatifInfo}
+          adherent={memberAdherent}
           onJustificatifSent={() => { setJustificatifManquant(false); setJustificatifInfo({ fourni: true, date: new Date().toISOString() }); }}
           inscCloseDate={db.insc_close_date}
           configTournois={db.config_tournois ?? []}

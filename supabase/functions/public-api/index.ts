@@ -4008,7 +4008,14 @@ Deno.serve(async (req) => {
     // Vérifier si c'est un admin credential (pas un adhérent normal)
     const isAdminCred = adminCredentials.some((c) => String(c.email || "").toLowerCase() === email);
     const whatsappLink = typeof d.whatsappLink === "string" && d.whatsappLink ? d.whatsappLink : undefined;
-    if (isAdminCred) return json({ ok: true, whatsappLink });
+    // 📄 Fiche adhérent (nom, type, montant payé) pour le reçu d'adhésion de l'espace membre
+    const adherentInfo = (m: Record<string, unknown> | undefined) =>
+      m ? { nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : undefined, ok: m.ok === true } : undefined;
+    if (isAdminCred) {
+      // Compte admin : on rattache sa fiche adhérent du même email s'il en a une (payée en priorité)
+      const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase() === email);
+      return json({ ok: true, whatsappLink, adherent: adherentInfo(sameEmail.find((m) => m.ok === true) || sameEmail[0]) });
+    }
 
     // Vérifier si le membre existe encore par email + id
     const membre = membres.find(
@@ -4026,6 +4033,7 @@ Deno.serve(async (req) => {
       paid: membre.ok === true,
       whatsappLink: membre.ok === true ? whatsappLink : undefined,
       justificatifManquant,
+      adherent: adherentInfo(membre),
       // 🎓 État du justificatif pour l'espace membre d'un étudiant (fourni le…)
       justificatif: membre.type === "Etudiant" ? { fourni: justifOk, date: justifOk ? justif?.uploadedAt : undefined, nom: justifOk ? justif?.name : undefined } : undefined,
     });

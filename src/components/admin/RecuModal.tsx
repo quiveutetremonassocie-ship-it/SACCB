@@ -27,7 +27,8 @@ export default function RecuModal({
     y1 = overrides.y1;
     y2 = overrides.y2;
     presidentName = overrides.presidentName;
-    montant = membre.type === "Etudiant" ? overrides.montantEtudiant : overrides.montantAdulte;
+    // Montant réellement payé (réduction) s'il est connu, sinon tarif normal
+    montant = typeof membre.montantPaye === "number" ? membre.montantPaye : (membre.type === "Etudiant" ? overrides.montantEtudiant : overrides.montantAdulte);
   } else if (db) {
     montant = getMontantMembre(db, membre);
     y1 = db.y1;
@@ -55,13 +56,22 @@ export default function RecuModal({
           Président de l&apos;association SACCB, certifie avoir reçu la somme de :
         </p>
         <p className="text-center text-3xl font-bold mb-8">{montant} €</p>
-        <p className="mb-2">
-          De la part de : <strong>{
-            // 🛡️ Si le champ 'nom' ressemble à un email (cas rare des comptes admin
-            // indépendants), on n'affiche rien plutôt que de divulguer l'email
-            /@/.test(membre.nom) ? "______________________" : membre.nom
-          }</strong>
-        </p>
+        {(() => {
+          // 🛡️ Si le champ 'nom' ressemble à un email (compte admin sans fiche adhérent),
+          // on laisse des lignes à compléter plutôt que de divulguer l'email.
+          // Convention du site : 1er mot = prénom, le reste = nom.
+          const isEmail = /@/.test(membre.nom);
+          const parts = (membre.nom || "").trim().split(/\s+/);
+          const prenom = isEmail ? "" : parts[0] || "";
+          const nom = isEmail ? "" : parts.slice(1).join(" ");
+          return (
+            <div className="mb-2">
+              <p>De la part de l&apos;adhérent(e) :</p>
+              <p className="ml-4">Nom : <strong>{nom ? nom.toUpperCase() : "______________________"}</strong></p>
+              <p className="ml-4">Prénom : <strong>{prenom || "______________________"}</strong></p>
+            </div>
+          );
+        })()}
         <p className="mb-8">
           Au titre de la cotisation annuelle pour la saison{" "}
           <strong>
