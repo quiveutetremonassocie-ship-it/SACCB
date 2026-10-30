@@ -727,13 +727,15 @@ async function resolveTshirtMembre(
   const membres = (d.membres || []) as Record<string, unknown>[];
   const membre = await findMembreByCredentials(membres, email, code);
   if (membre && String(membre.id) === membreId) return membre;
-  if (membreId !== `admin-${email}`) return null;
-  // Session admin + code personnel d'adhérent du même email → sa fiche adhérent
-  if (membre) return membre;
+  const legacyAdminId = membreId === `admin-${email}`; // anciennes sessions admin
+  // Session admin (ancienne) + code personnel d'adhérent du même email → sa fiche adhérent
+  if (legacyAdminId && membre) return membre;
   const adminCredentials = (d.adminCredentials || []) as { email: string; code: string }[];
   if (!(await findAdminCredByCredentials(adminCredentials, email, code))) return null;
   const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase().trim() === email);
-  return sameEmail.find((m) => m.ok === true) || sameEmail[0] || null;
+  // Code admin : ancienne session → sa fiche (payée en priorité) ; nouvelle session → la fiche visée
+  if (legacyAdminId) return sameEmail.find((m) => m.ok === true) || sameEmail[0] || null;
+  return sameEmail.find((m) => String(m.id) === membreId) || null;
 }
 
 // 👕 Notification automatique aux adhérents quand les commandes t-shirt s'ouvrent
@@ -827,6 +829,19 @@ Deno.serve(async (req) => {
     }
     return r;
   };
+  // 👤 Admins = adhérents : partout où l'on vérifie un adhérent (email + code), le code
+  // ADMIN du même email est aussi accepté et renvoie sa fiche adhérent (payée en priorité).
+  // Un admin peut ainsi voir les actus réservées, voter, s'inscrire aux tournois, etc.
+  const findMembreOuAdmin = async (membres: Record<string, unknown>[], email: string, code: string): Promise<Record<string, unknown> | undefined> => {
+    const m = await findMembreByCredentials(membres, email, code);
+    if (m) return m;
+    const creds = ((loadedSnapshot?.adminCredentials || []) as { email: string; code: string }[]);
+    if (!(await findAdminCredByCredentials(creds, email, code))) return undefined;
+    const e = String(email || "").toLowerCase().trim();
+    const same = membres.filter((x) => String(x.email || "").toLowerCase() === e);
+    return same.find((x) => x.ok === true) || same[0];
+  };
+
   const saveDB = async (d: Record<string, unknown>): Promise<{ error: unknown }> => {
     let mine = d;
     let base = loadedSnapshot;
@@ -935,7 +950,15 @@ Deno.serve(async (req) => {
     if (formSlug && tshirtSlug && formSlug === tshirtSlug) {
       const orders = (currentData.tshirtOrders || []) as Record<string, unknown>[];
       const membresDuPayeur = new Set(membres.filter((m) => String(m.email || "").toLowerCase() === payerEmail).map((m) => String(m.id)));
-      const aMarquer = orders.filter((o) => o.paid !== true && membresDuPayeur.has(String(o.membreId)));
+      let aMarquer = orders.filter((o) => o.paid !== true && membresDuPayeur.has(String(o.membreId)));
+      if (aMarquer.length === 0) {
+        // Repli : payé avec une autre adresse → on compare les nom/prénom des participants HelloAsso
+        const norm = (s: unknown) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase().trim();
+        const items = ((paymentData?.items || order?.items || []) as Record<string, unknown>[]);
+        const noms = new Set(items.map((it) => { const u = it.user as Record<string, unknown> | undefined; return `${norm(u?.firstName)} ${norm(u?.lastName)}`; }));
+        noms.add(`${norm(payer?.firstName)} ${norm(payer?.lastName)}`);
+        aMarquer = orders.filter((o) => o.paid !== true && noms.has(`${norm(o.prenom)} ${norm(o.nom)}`));
+      }
       if (aMarquer.length === 0) {
         console.warn("[HelloAsso webhook] paiement t-shirt sans commande correspondante pour", payerEmail);
         return json({ ok: true, tshirt: true, matched: 0 });
@@ -1416,7 +1439,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
     if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
 
     const idx = membres.findIndex((m) => m.id === membreId);
@@ -1449,7 +1472,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
     if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
 
     const idx = membres.findIndex((m) => m.id === membreId);
@@ -1477,7 +1500,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
     if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
     if (membre.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour poser une question." }, 403);
 
@@ -1650,7 +1673,7 @@ Deno.serve(async (req) => {
     const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
     // Vérifier que le membre existe et que le code est correct
-    const matchedMembre = await findMembreByCredentials(membres, email, code);
+    const matchedMembre = await findMembreOuAdmin(membres, email, code);
     const membre = matchedMembre && String(matchedMembre.id || "") === membreId ? matchedMembre : undefined;
     const matchedAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
     const isAdmin = !!matchedAdminCred;
@@ -1769,17 +1792,23 @@ Deno.serve(async (req) => {
         currentData.adminLoginLog = log.slice(0, 50);
         await saveDB(currentData);
       } catch { /* best-effort */ }
+      // 👤 Admins = adhérents : si une fiche adhérent existe avec cet email, la session
+      // prend son identité (nom, type, statut payé) — sinon identité « admin » minimale.
+      const ficheAdmin = membres.filter((m) => String(m.email || "").toLowerCase() === email);
+      const fiche = ficheAdmin.find((m) => m.ok === true) || ficheAdmin[0];
       return json({
         ok: true,
-        paid: true,
+        paid: fiche ? fiche.ok === true : true,
         isAdmin: true,
-        membre: { id: "admin-" + email, nom: email, type: "Adulte", email },
+        membre: fiche
+          ? { id: String(fiche.id), nom: String(fiche.nom || email), type: fiche.type === "Etudiant" ? "Etudiant" : "Adulte", email, newsOptIn: fiche.newsOptIn !== false }
+          : { id: "admin-" + email, nom: email, type: "Adulte", email },
         trustToken: issuedTrustToken ?? undefined,
       });
     }
 
     // Sinon vérifier dans les adhérents normaux
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
 
     if (!membre) {
       recordLoginFailure(email);
@@ -1860,7 +1889,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    const matched = await findMembreByCredentials(membres, email, code);
+    const matched = await findMembreOuAdmin(membres, email, code);
     const idx = matched ? membres.findIndex((m) => m.id === matched.id && String(m.id || "") === membreId) : -1;
     if (idx === -1) return json({ ok: false, reason: "Membre introuvable ou code incorrect." }, 403);
 
@@ -1888,7 +1917,7 @@ Deno.serve(async (req) => {
 
     // Vérifier via adminCredentials (admin sans adhérent) OU via membres
     const validAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
-    const validMembre = await findMembreByCredentials(membres, email, code);
+    const validMembre = await findMembreOuAdmin(membres, email, code);
 
     if (!validAdminCred && !validMembre) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
@@ -1990,7 +2019,7 @@ Deno.serve(async (req) => {
     const adminCredentialsCheck = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
     const validAdminCredSave = await findAdminCredByCredentials(adminCredentialsCheck, email, code);
-    const validMembreSave = await findMembreByCredentials(membres, email, code);
+    const validMembreSave = await findMembreOuAdmin(membres, email, code);
 
     if (!validAdminCredSave && !validMembreSave) return json({ ok: false, reason: "Identifiants incorrects." });
     if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
@@ -2409,7 +2438,7 @@ Deno.serve(async (req) => {
     // 🔒 Vérifier que le membre existe ET qu'il a payé son adhésion
     const dbDataReg = data.data as Record<string, unknown>;
     const membresReg = (dbDataReg.membres || []) as Record<string, unknown>[];
-    const membreReg = await findMembreByCredentials(membresReg, memberEmail, memberCode);
+    const membreReg = await findMembreOuAdmin(membresReg, memberEmail, memberCode);
     if (!membreReg) return json({ ok: false, reason: "Identifiants incorrects." }, 401);
     if (membreReg.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour vous inscrire à un tournoi." }, 403);
 
@@ -3482,7 +3511,7 @@ Deno.serve(async (req) => {
     // Vérifier d'abord dans adminCredentials (avec verifyCode pour gérer hash + clair)
     const adminCred = await findAdminCredByCredentials(adminCredentials, email, oldCode);
     // Vérifier ensuite dans les adhérents
-    const membre = await findMembreByCredentials(membres, email, oldCode);
+    const membre = await findMembreOuAdmin(membres, email, oldCode);
 
     if (!adminCred && !membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
 
@@ -4135,7 +4164,7 @@ Deno.serve(async (req) => {
     const adminCredentialsImg = ((dImg.adminCredentials || []) as { email: string; code: string }[]);
 
     const validAdminCredImg = await findAdminCredByCredentials(adminCredentialsImg, email, code);
-    const validMembreImg = await findMembreByCredentials(membresImg, email, code);
+    const validMembreImg = await findMembreOuAdmin(membresImg, email, code);
 
     if (!validAdminCredImg && !validMembreImg) return json({ ok: false, reason: "Identifiants incorrects." }, 401);
     if (!adminEmailsImg.includes(email) && !validAdminCredImg) return json({ ok: false, reason: "Accès non autorisé." }, 403);
@@ -4526,7 +4555,7 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     // Vérifier auth membre + paiement (messages d'erreur précis pour debug)
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
     if (!membre) {
       return json({ ok: false, reason: "Email ou code incorrect. Reconnectez-vous à votre espace membre." }, 403);
     }
@@ -4586,7 +4615,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
     if (!membre) {
       return json({ ok: false, reason: "Email ou code incorrect. Reconnectez-vous à votre espace membre." }, 403);
     }
@@ -4630,7 +4659,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    const membre = await findMembreByCredentials(membres, email, code);
+    const membre = await findMembreOuAdmin(membres, email, code);
     if (!membre || String(membre.id) !== membreId) return json({ ok: false }, 403);
 
     const polls = (d.polls || []) as Record<string, unknown>[];

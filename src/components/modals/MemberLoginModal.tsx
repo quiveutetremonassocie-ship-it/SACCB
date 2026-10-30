@@ -85,7 +85,8 @@ export default function MemberLoginModal({
     // pour qu'il survive aux nouveaux onglets/pages (charger les actus privees, FAQ, etc.)
     const finalSession = !session.isAdmin ? { ...session, memberCode: code } : session;
     setMemberSession(finalSession);
-    if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
+    // Code gardé le temps de l'onglet (admins compris : un admin est aussi adhérent)
+    sessionStorage.setItem("saccb_member_code", code);
     onSuccess({ ...finalSession, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
     resetAll();
   }
@@ -132,7 +133,8 @@ export default function MemberLoginModal({
     // Sinon connexion normale
     const finalSession = !session.isAdmin ? { ...session, memberCode: code } : session;
     setMemberSession(finalSession);
-    if (!session.isAdmin) sessionStorage.setItem("saccb_member_code", code);
+    // Code gardé le temps de l'onglet (admins compris : un admin est aussi adhérent)
+    sessionStorage.setItem("saccb_member_code", code);
     onSuccess({ ...finalSession, expiry: Date.now() + sessionDurationMs(session.isAdmin === true) }, adminCode);
     resetAll();
   }

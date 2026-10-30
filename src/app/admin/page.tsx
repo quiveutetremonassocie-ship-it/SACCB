@@ -120,6 +120,8 @@ export default function AdminPage() {
     setMemberSession(sess);
     // 🔒 PAS de cache du code admin — il reste UNIQUEMENT en mémoire
     memberAdminCode.current = code.trim();
+    // Gardé le temps de l'onglet : en revenant sur le site, l'admin voit aussi les contenus adhérents
+    sessionStorage.setItem("saccb_member_code", code.trim());
     setMemberSessionState(sess);
 
     const data = await fetchAdminDBByMember(sess.email, code.trim());
