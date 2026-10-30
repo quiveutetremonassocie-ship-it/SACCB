@@ -1,10 +1,10 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info } from "lucide-react";
+import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { interclubCall, interclubScore, InterclubPage as PageData } from "@/lib/db";
 import { LiveMatch, LivePhase } from "@/lib/types";
-import { matchJoue } from "@/lib/interclubLive";
+import { matchJoue, classementPoule, formatTexte } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
 import EcranGeant from "./live/EcranGeant";
 
@@ -446,7 +446,7 @@ export default function InterclubPage() {
   );
 }
 
-/** 🏸 Les matchs des équipes du club dans la phase en cours, avec saisie / confirmation du score */
+/** 🏸 Les matchs des équipes du club dans la phase en cours, rangés par binôme (menus déroulants) */
 function MesMatchs({
   phases, live, clubId, edition, setEdition, envoyer,
 }: {
@@ -457,55 +457,107 @@ function MesMatchs({
   setEdition: (id: string | null) => void;
   envoyer: (m: LiveMatch, sa: number[], sb: number[]) => Promise<string | null>;
 }) {
+  // Binôme déplié (mémorisé sur le téléphone : chaque joueur retrouve directement le sien)
+  const [ouvert, setOuvert] = useState<string | null>(null);
+  useEffect(() => {
+    try { setOuvert(localStorage.getItem("saccb_interclub_binome")); } catch { /* ignore */ }
+  }, []);
+  const basculer = (id: string) => {
+    const n = ouvert === id ? null : id;
+    setOuvert(n);
+    try { if (n) localStorage.setItem("saccb_interclub_binome", n); else localStorage.removeItem("saccb_interclub_binome"); } catch { /* ignore */ }
+  };
+
   const ph = phases[phases.length - 1];
   if (!ph || live.termine) return null;
   const mine = (id: string) => live.equipes[id]?.mine;
-  const matchs = ph.poules.flatMap((p) => p.matchs.filter((m) => mine(m.a) || mine(m.b)).map((m) => ({ m, poule: p.nom })));
-  if (matchs.length === 0) return null;
-  const aJouer = matchs.filter(({ m }) => m.etat !== "valide" && m.par !== "admin");
+  // Mes binômes présents dans cette phase, avec leur poule
+  const mesEquipes = ph.poules.flatMap((p) => p.equipes.filter(mine).map((id) => ({ id, poule: p })));
+  if (mesEquipes.length === 0) return null;
+  const estValide = (m: LiveMatch) => m.etat === "valide" || m.par === "admin";
+
+  const carte = (m: LiveMatch, moi: string) => {
+    const valide = estValide(m);
+    const saisiParAdversaire = !valide && matchJoue(m) && m.par !== clubId;
+    const saisiParNous = !valide && matchJoue(m) && m.par === clubId;
+    const enEdition = edition === m.id;
+    const adversaire = m.a === moi ? m.b : m.a;
+    return (
+      <div key={m.id} className={`rounded-2xl border p-3 ${valide ? "border-emerald-200 bg-emerald-50/50" : saisiParAdversaire ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
+        <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 mb-2">
+          <span className="truncate">contre <span className="font-semibold text-slate-700">{live.equipes[adversaire] ? `${live.equipes[adversaire].joueur1} / ${live.equipes[adversaire].joueur2}` : "—"}</span>{live.equipes[adversaire] ? ` (${live.equipes[adversaire].club})` : ""}</span>
+          <EtatMatch m={m} clubs={live.clubs} />
+        </div>
+        {(!matchJoue(m) || enEdition) && !valide ? (
+          <ScoreForm m={m} format={ph.format} equipes={live.equipes} onSubmit={(sa, sb) => envoyer(m, sa, sb)} />
+        ) : (
+          <>
+            <div className="flex items-center gap-2">
+              <div className="flex-1 min-w-0"><NomEquipe id={m.a} equipes={live.equipes} compact /></div>
+              <span className="font-mono font-bold text-[#1e3a5f] text-sm">{texteScore(m)}</span>
+            </div>
+            <div className="flex items-center gap-2 mt-0.5"><div className="flex-1 min-w-0"><NomEquipe id={m.b} equipes={live.equipes} compact /></div></div>
+            {saisiParAdversaire && (
+              <div className="mt-3 flex gap-2">
+                <button onClick={() => envoyer(m, m.sa!, m.sb!)} className="flex-1 btn-primary !py-2 !text-xs"><Check className="w-4 h-4" /> Confirmer ce score</button>
+                <button onClick={() => setEdition(m.id)} className="btn-ghost !py-2 !px-3 !text-xs">Corriger</button>
+              </div>
+            )}
+            {saisiParNous && (
+              <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                <span>En attente de confirmation de l&apos;adversaire</span>
+                <button onClick={() => setEdition(m.id)} className="text-blue-600 font-semibold hover:underline">Modifier</button>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <section className="bg-white rounded-3xl shadow-2xl p-5 md:p-6">
-      <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
-        <h2 className="text-xl font-bold text-[#1e3a5f]">Vos matchs — {ph.nom}</h2>
-        <p className="text-xs text-slate-500">{matchs.length - aJouer.length}/{matchs.length} validés</p>
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
+        <h2 className="text-xl font-bold text-[#1e3a5f]">Vos binômes — {ph.nom}</h2>
+        <p className="text-xs text-slate-500">{formatTexte(ph.format)}</p>
       </div>
       <p className="text-xs text-slate-500 mb-4">
-        Après chaque match, entrez le score. L&apos;équipe adverse le confirme (ou la table de marque le valide), puis il compte au classement.
+        Touchez votre binôme pour voir vos matchs et entrer le score après chaque match. L&apos;équipe adverse le confirme (ou la table de marque le valide).
       </p>
-      <div className="grid md:grid-cols-2 gap-3">
-        {matchs.map(({ m, poule }) => {
-          const valide = m.etat === "valide" || m.par === "admin";
-          const saisiParAdversaire = !valide && matchJoue(m) && m.par !== clubId;
-          const saisiParNous = !valide && matchJoue(m) && m.par === clubId;
-          const enEdition = edition === m.id;
+      <div className="space-y-2">
+        {mesEquipes.map(({ id, poule }) => {
+          const e = live.equipes[id];
+          const matchs = poule.matchs.filter((m) => m.a === id || m.b === id);
+          const valides = matchs.filter(estValide).length;
+          const aSaisir = matchs.filter((m) => !matchJoue(m)).length;
+          const aConfirmer = matchs.filter((m) => !estValide(m) && matchJoue(m) && m.par !== clubId).length;
+          const cl = classementPoule(poule);
+          const rang = cl.findIndex((l) => l.id === id) + 1;
+          const aJoue = (cl.find((l) => l.id === id)?.joues ?? 0) > 0;
+          const deplie = ouvert === id;
           return (
-            <div key={m.id} className={`rounded-2xl border p-3 ${valide ? "border-emerald-200 bg-emerald-50/50" : saisiParAdversaire ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
-              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
-                <span className="font-semibold uppercase tracking-wider">{poule}</span>
-                <EtatMatch m={m} clubs={live.clubs} />
-              </div>
-              {(!matchJoue(m) || enEdition) && !valide ? (
-                <ScoreForm m={m} format={ph.format} equipes={live.equipes} onSubmit={(sa, sb) => envoyer(m, sa, sb)} />
-              ) : (
-                <>
-                  <div className="flex items-center gap-2">
-                    <div className="flex-1 min-w-0"><NomEquipe id={m.a} equipes={live.equipes} compact /></div>
-                    <span className="font-mono font-bold text-[#1e3a5f] text-sm">{texteScore(m)}</span>
-                  </div>
-                  <div className="flex items-center gap-2 mt-0.5"><div className="flex-1 min-w-0"><NomEquipe id={m.b} equipes={live.equipes} compact /></div></div>
-                  {saisiParAdversaire && (
-                    <div className="mt-3 flex gap-2">
-                      <button onClick={() => envoyer(m, m.sa!, m.sb!)} className="flex-1 btn-primary !py-2 !text-xs"><Check className="w-4 h-4" /> Confirmer ce score</button>
-                      <button onClick={() => setEdition(m.id)} className="btn-ghost !py-2 !px-3 !text-xs">Corriger</button>
-                    </div>
-                  )}
-                  {saisiParNous && (
-                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                      <span>En attente de confirmation de l&apos;adversaire</span>
-                      <button onClick={() => setEdition(m.id)} className="text-blue-600 font-semibold hover:underline">Modifier</button>
-                    </div>
-                  )}
-                </>
+            <div key={id} className={`rounded-2xl border overflow-hidden ${deplie ? "border-[#1e3a5f]/40 shadow" : "border-slate-200"}`}>
+              <button onClick={() => basculer(id)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
+                <span className="w-10 h-10 shrink-0 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white flex flex-col items-center justify-center leading-none">
+                  <span className="text-base font-bold">{aJoue ? <>{rang}<sup className="text-[9px]">{rang === 1 ? "er" : "e"}</sup></> : "–"}</span>
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block font-bold text-slate-800 truncate">{e ? `${e.joueur1} / ${e.joueur2}` : "—"}</span>
+                  <span className="block text-[11px] text-slate-500">
+                    {poule.nom} · {valides}/{matchs.length} matchs validés
+                  </span>
+                </span>
+                <span className="flex flex-col items-end gap-1 shrink-0">
+                  {aConfirmer > 0 && <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">⚠ {aConfirmer} à confirmer</span>}
+                  {aSaisir > 0 && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-slate-100 text-slate-600">{aSaisir} à jouer</span>}
+                  {aConfirmer === 0 && aSaisir === 0 && <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-700">✓ terminé</span>}
+                </span>
+                {deplie ? <ChevronUp className="w-5 h-5 text-slate-400 shrink-0" /> : <ChevronDown className="w-5 h-5 text-slate-400 shrink-0" />}
+              </button>
+              {deplie && (
+                <div className="border-t border-slate-100 bg-slate-50 p-3 grid md:grid-cols-2 gap-3">
+                  {matchs.map((m) => carte(m, id))}
+                </div>
               )}
             </div>
           );
