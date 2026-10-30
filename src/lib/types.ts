@@ -297,7 +297,8 @@ export type LiveMatch = {
   etat?: "saisi" | "valide"; // saisi par un club → confirmé par l'adversaire ou l'organisation
   par?: string; // id du club qui a saisi, ou "admin"
   forfait?: string; // id de l'équipe déclarée forfait (RGC FFBaD 3.4.2 : défaite 0-21, compte -1)
-  conteste?: boolean; // ❓ l'adversaire a changé le score au lieu de le confirmer → à trancher par la table de marque
+  corrige?: boolean; // ✏️ l'adversaire a corrigé le score : la 1ʳᵉ équipe doit confirmer ou contester
+  conteste?: boolean; // ❓ la 1ʳᵉ équipe conteste la correction → la table de marque vient au terrain
   ancien?: { sa?: number[]; sb?: number[]; par?: string }; // score saisi avant le désaccord
   at?: string;
 };

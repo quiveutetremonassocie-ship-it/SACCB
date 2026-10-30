@@ -4295,10 +4295,27 @@ Deno.serve(async (req) => {
       if (!mesEquipes.has(String(match.a)) && !mesEquipes.has(String(match.b))) return json({ ok: false, reason: "Vous ne pouvez saisir que les matchs de vos équipes." }, 403);
       if (phaseFinie) return json({ ok: false, reason: "Cette phase est terminée." }, 403);
       if (match.etat === "valide") return json({ ok: false, reason: "Ce score a déjà été validé. Pour une correction, voyez la table de marque." }, 403);
-      if (body.effacer === true) {
+      // ❓ Score contesté : plus rien côté clubs, la table de marque vient au terrain
+      if (match.conteste === true) return json({ ok: false, reason: "Score contesté : la table de marque vient régler le match." }, 403);
+      // Déroulé : A saisit → B confirme ou corrige → si B a corrigé, A confirme ou conteste
+      if (body.contester === true) {
+        if (match.etat !== "saisi" || match.par === cId) return json({ ok: false, reason: "Rien à contester sur ce match." }, 400);
+        match.conteste = true;
+        match.at = new Date().toISOString();
+        const { error: cErr } = await saveDB(fd);
+        if (cErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+        tournoi = ft; club = fc;
+      } else if (body.effacer === true) {
         // 🗑 Effacer un score saisi par erreur : seulement par le club qui l'a entré, tant qu'il n'est pas validé
         if (match.par !== cId) return json({ ok: false, reason: "Seul le club qui a saisi ce score peut l'effacer." }, 403);
-        delete match.sa; delete match.sb; delete match.etat; delete match.par;
+        if (match.corrige === true && match.ancien) {
+          // Effacer une correction : on revient au score saisi au départ par l'autre équipe
+          const a = match.ancien as Record<string, unknown>;
+          match.sa = a.sa; match.sb = a.sb; match.par = a.par; match.etat = "saisi";
+          delete match.corrige; delete match.ancien;
+        } else {
+          delete match.sa; delete match.sb; delete match.etat; delete match.par;
+        }
         match.at = new Date().toISOString();
         const { error: delErr } = await saveDB(fd);
         if (delErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
@@ -4308,14 +4325,16 @@ Deno.serve(async (req) => {
       if (err) return json({ ok: false, reason: err }, 400);
       const memeScore = JSON.stringify(match.sa) === JSON.stringify(sa) && JSON.stringify(match.sb) === JSON.stringify(sb);
       if (match.etat === "saisi" && match.par !== cId && memeScore) {
-        match.etat = "valide"; // l'adversaire confirme le score : accord, le désaccord éventuel est levé
-        delete match.conteste; delete match.ancien;
+        match.etat = "valide"; // l'adversaire confirme le score
+        delete match.corrige; delete match.ancien;
+      } else if (match.etat === "saisi" && match.par && match.par !== cId) {
+        // L'adversaire corrige le score saisi par l'autre équipe
+        if (match.corrige === true) return json({ ok: false, reason: "L'autre équipe a corrigé votre score : vous pouvez le confirmer ou le contester." }, 403);
+        match.ancien = { sa: match.sa, sb: match.sb, par: match.par };
+        match.corrige = true;
+        match.sa = sa; match.sb = sb; match.par = cId;
       } else {
-        // ❓ L'adversaire change un score déjà saisi au lieu de le confirmer → désaccord signalé à la table de marque
-        if (match.etat === "saisi" && match.par && match.par !== cId && !memeScore) {
-          match.conteste = true;
-          match.ancien = { sa: match.sa, sb: match.sb, par: match.par };
-        }
+        // Première saisie, ou modification de son propre score
         match.sa = sa; match.sb = sb; match.etat = "saisi"; match.par = cId;
       }
       match.at = new Date().toISOString();

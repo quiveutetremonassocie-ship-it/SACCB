@@ -1074,6 +1074,20 @@ export async function interclubLive(liveToken: string): Promise<{ ok: boolean; r
   }
 }
 
+/** ❓ Contester la correction de l'adversaire : la table de marque vient au terrain */
+export async function interclubContester(token: string, code: string, matchId: string): Promise<InterclubPage> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "interclub_score", token, code, matchId, contester: true }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
+  }
+}
+
 /** Effacer un score saisi par erreur (seulement par le club qui l'a entré, avant validation) */
 export async function interclubEffacerScore(token: string, code: string, matchId: string): Promise<InterclubPage> {
   try {

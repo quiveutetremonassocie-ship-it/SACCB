@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info, ChevronDown, ChevronUp } from "lucide-react";
-import { interclubCall, interclubScore, interclubEffacerScore, InterclubPage as PageData } from "@/lib/db";
+import { interclubCall, interclubScore, interclubEffacerScore, interclubContester, InterclubPage as PageData } from "@/lib/db";
 import { LiveMatch, LivePhase } from "@/lib/types";
 import { matchJoue, classementGeneral, formatTexte } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
@@ -84,6 +84,14 @@ export default function InterclubPage() {
     }, 5000);
     return () => clearInterval(iv);
   }, [enDirect, token, code]);
+
+  async function contesterScore(m: LiveMatch) {
+    if (!token) return;
+    if (!confirm("Contester ce score ?\n\nLa table de marque va venir au terrain pour régler le match avec les deux équipes.")) return;
+    const r = await interclubContester(token, code, m.id);
+    if (!r.ok) { alert(r.reason || "Impossible de contester ce score."); return; }
+    setPage(r);
+  }
 
   async function effacerScore(m: LiveMatch) {
     if (!token) return;
@@ -278,6 +286,7 @@ export default function InterclubPage() {
             setEdition={setEdition}
             envoyer={envoyerScore}
             effacer={effacerScore}
+            contester={contesterScore}
           />
           <LiveBoard phases={page.live.phases} equipes={page.live.equipes} termine={page.live.termine} clubs={page.live.clubs} />
           <ReglementTournoi phases={page.live.phases} />
@@ -463,7 +472,7 @@ export default function InterclubPage() {
 
 /** 🏸 Les matchs des équipes du club dans la phase en cours, rangés par binôme (menus déroulants) */
 function MesMatchs({
-  phases, live, clubId, edition, setEdition, envoyer, effacer,
+  phases, live, clubId, edition, setEdition, envoyer, effacer, contester,
 }: {
   phases: LivePhase[];
   live: NonNullable<PageData["live"]>;
@@ -472,6 +481,7 @@ function MesMatchs({
   setEdition: (id: string | null) => void;
   envoyer: (m: LiveMatch, sa: number[], sb: number[]) => Promise<string | null>;
   effacer: (m: LiveMatch) => void;
+  contester: (m: LiveMatch) => void;
 }) {
   // Binôme déplié (mémorisé sur le téléphone : chaque joueur retrouve directement le sien)
   const [ouvert, setOuvert] = useState<string | null>(null);
@@ -499,17 +509,21 @@ function MesMatchs({
 
   const carte = (m: LiveMatch, moi: string) => {
     const valide = estValide(m);
-    const saisiParAdversaire = !valide && matchJoue(m) && m.par !== clubId;
-    const saisiParNous = !valide && matchJoue(m) && m.par === clubId;
+    const conteste = !valide && m.conteste === true;
+    const saisiParAdversaire = !valide && !conteste && matchJoue(m) && m.par !== clubId;
+    const saisiParNous = !valide && !conteste && matchJoue(m) && m.par === clubId;
+    // L'adversaire a corrigé NOTRE score : on ne peut plus que confirmer ou contester
+    const corrigeParAdversaire = saisiParAdversaire && m.corrige === true;
+    const scoreTxt = (sa?: number[], sb?: number[]) => (sa && sb ? sa.map((v, i) => `${v}-${sb[i]}`).join(" · ") : "—");
     const enEdition = edition === m.id;
     const adversaire = m.a === moi ? m.b : m.a;
     return (
-      <div key={m.id} className={`rounded-2xl border p-3 ${valide ? "border-emerald-200 bg-emerald-50/50" : saisiParAdversaire ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
+      <div key={m.id} className={`rounded-2xl border p-3 ${valide ? "border-emerald-200 bg-emerald-50/50" : conteste ? "border-red-300 bg-red-50" : saisiParAdversaire ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-white"}`}>
         <div className="flex items-center justify-between gap-2 text-[11px] text-slate-500 mb-2">
           <span className="truncate">contre <span className="font-semibold text-slate-700">{live.equipes[adversaire] ? `${live.equipes[adversaire].joueur1} / ${live.equipes[adversaire].joueur2}` : "—"}</span>{live.equipes[adversaire] ? ` (${live.equipes[adversaire].club})` : ""}</span>
           <EtatMatch m={m} clubs={live.clubs} />
         </div>
-        {(!matchJoue(m) || enEdition) && !valide ? (
+        {(!matchJoue(m) || enEdition) && !valide && !conteste ? (
           <ScoreForm m={m} format={ph.format} equipes={live.equipes} onSubmit={(sa, sb) => envoyer(m, sa, sb)} />
         ) : (
           <>
@@ -518,18 +532,35 @@ function MesMatchs({
               <span className="font-mono font-bold text-[#1e3a5f] text-sm">{texteScore(m)}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5"><div className="flex-1 min-w-0"><NomEquipe id={m.b} equipes={live.equipes} compact /></div></div>
-            {saisiParAdversaire && (
+            {conteste && (
+              <p className="mt-3 text-xs font-semibold text-red-700 bg-white/70 rounded-lg px-3 py-2">
+                ❓ Score contesté : la table de marque vient au terrain pour régler le match avec les deux équipes.
+              </p>
+            )}
+            {saisiParAdversaire && !corrigeParAdversaire && (
               <div className="mt-3 flex gap-2">
                 <button onClick={() => envoyer(m, m.sa!, m.sb!)} className="flex-1 btn-primary !py-2 !text-xs"><Check className="w-4 h-4" /> Confirmer ce score</button>
                 <button onClick={() => setEdition(m.id)} className="btn-ghost !py-2 !px-3 !text-xs">Corriger</button>
               </div>
             )}
+            {corrigeParAdversaire && (
+              <div className="mt-3 space-y-2">
+                <p className="text-[11px] text-orange-800 bg-orange-100 rounded-lg px-3 py-2">
+                  ✏️ L&apos;adversaire a corrigé votre score.<br />
+                  Vous aviez saisi <span className="font-mono font-bold">{scoreTxt(m.ancien?.sa, m.ancien?.sb)}</span>, il propose <span className="font-mono font-bold">{scoreTxt(m.sa, m.sb)}</span>.
+                </p>
+                <div className="flex gap-2">
+                  <button onClick={() => envoyer(m, m.sa!, m.sb!)} className="flex-1 btn-primary !py-2 !text-xs"><Check className="w-4 h-4" /> Confirmer la correction</button>
+                  <button onClick={() => contester(m)} className="flex-1 !py-2 !text-xs rounded-xl font-bold uppercase tracking-widest text-white bg-red-600 hover:bg-red-700">❓ Contester</button>
+                </div>
+              </div>
+            )}
             {saisiParNous && (
               <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
-                <span>En attente de confirmation de l&apos;adversaire</span>
+                <span>{m.corrige ? "Correction envoyée : l'autre équipe doit confirmer ou contester" : "En attente de confirmation de l'adversaire"}</span>
                 <span className="flex gap-3">
                   <button onClick={() => setEdition(m.id)} className="text-blue-600 font-semibold hover:underline">Modifier</button>
-                  <button onClick={() => effacer(m)} className="text-red-600 font-semibold hover:underline">Supprimer</button>
+                  <button onClick={() => effacer(m)} className="text-red-600 font-semibold hover:underline">{m.corrige ? "Annuler" : "Supprimer"}</button>
                 </span>
               </div>
             )}
