@@ -3515,10 +3515,6 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
-    // 🔒 Un adhérent avec les droits admin : 8 caractères minimum
-    if (newCode.length < 8 && parseAdminEmails((currentData.adminEmails as unknown[]) || []).some((a) => a.email === email)) {
-      return json({ ok: false, reason: "Pour un compte admin, le code doit contenir au moins 8 caractères." }, 400);
-    }
 
     const tokenHash = await sha256Hex(token);
     const now = Date.now();
@@ -3566,9 +3562,6 @@ Deno.serve(async (req) => {
     const membre = await findMembreOuAdmin(membres, email, oldCode);
 
     if (!adminCred && !membre) return json({ ok: false, reason: "Email ou code actuel incorrect." });
-    // 🔒 Un code admin donne accès à toute l'administration : 8 caractères minimum
-    const estAdmin = !!adminCred || parseAdminEmails((currentData.adminEmails as unknown[]) || []).some((a) => a.email === email);
-    if (estAdmin && newCode.length < 8) return json({ ok: false, reason: "Pour un compte admin, le code doit contenir au moins 8 caractères." }, 400);
 
     // 🔒 SÉCURITÉ : hasher le nouveau code avant stockage
     const hashedNew = await hashCode(newCode);
