@@ -487,6 +487,7 @@ export default function TournoisAdmin({
                     <option value="Mixte">👫 Mixte</option>
                     <option value="Hommes">👬 Hommes</option>
                     <option value="Femmes">👭 Femmes</option>
+                    <option value="Libre">🏸 Libre</option>
                   </select>
                   <input className="input !text-sm" type="number" value={editData.quota ?? ""} onChange={(e) => setEditData({ ...editData, quota: e.target.value ? parseInt(e.target.value) : undefined })} placeholder="Quota max" />
                 </div>
@@ -689,6 +690,7 @@ export default function TournoisAdmin({
               <option value="Mixte">👫 Double Mixte</option>
               <option value="Hommes">👬 Double Hommes</option>
               <option value="Femmes">👭 Double Femmes</option>
+              <option value="Libre">🏸 Double Libre</option>
             </select>
             <input className="input" type="number" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Quota max doubles (vide = illimité)" />
           </div>
@@ -744,6 +746,7 @@ export default function TournoisAdmin({
                                       <option value="Mixte">👫 Mixte</option>
                                       <option value="Hommes">👬 Hommes</option>
                                       <option value="Femmes">👭 Femmes</option>
+                                      <option value="Libre">🏸 Libre</option>
                                     </select>
                                   </div>
                                   <div className="flex gap-2">
