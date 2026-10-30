@@ -1016,8 +1016,9 @@ export type InterclubPage = {
     name: string; date: string; type: string; niveaux: string[]; dateLimit: string; deroulement: string;
     salleNom: string; salleAdresse: string; sallePhotoUrl: string;
   };
-  club?: { nom: string; quota: number; binomes: { id: string; joueur1: string; joueur2: string; niveau: string }[]; updatedAt: string };
+  club?: { id?: string; nom: string; quota: number; binomes: { id: string; joueur1: string; joueur2: string; niveau: string }[]; updatedAt: string };
   autres?: { nom: string; equipes: number }[];
+  live?: LiveVue;
 };
 
 export async function interclubCall(
@@ -1034,5 +1035,41 @@ export async function interclubCall(
     return await res.json();
   } catch {
     return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
+  }
+}
+
+// ─── 🏁 Jour J : vue « en direct » d'un tournoi inter-clubs ───
+export type LiveVue = {
+  phases: import("./types").LivePhase[];
+  termine: boolean;
+  equipes: Record<string, { joueur1: string; joueur2: string; niveau: string; club: string; mine: boolean }>;
+  clubs: Record<string, string>; // id du club → nom (pour « saisi par »)
+};
+
+/** Saisie d'un score par un club (lien + code du club) */
+export async function interclubScore(token: string, code: string, matchId: string, sa: number[], sb: number[]): Promise<InterclubPage> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "interclub_score", token, code, matchId, sa, sb }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
+  }
+}
+
+/** Écran géant (lecture seule) */
+export async function interclubLive(liveToken: string): Promise<{ ok: boolean; reason?: string; tournoi?: { name: string; date: string; type: string; salleNom: string }; live?: LiveVue }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "interclub_live", liveToken }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
   }
 }

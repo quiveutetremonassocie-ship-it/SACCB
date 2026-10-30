@@ -156,7 +156,7 @@ function isRegistrationRateLimited(ip: string): boolean {
   return entry.count > 3;
 }
 
-// 🏆 Pages inter-clubs : 60 requêtes / 10 min par IP (anti-devinette des liens)
+// 🏆 Pages inter-clubs : 600 requêtes / 10 min par IP (anti-devinette des liens)
 const interclubLimitMap = new Map<string, { count: number; reset: number }>();
 function isInterclubRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -166,7 +166,42 @@ function isInterclubRateLimited(ip: string): boolean {
     return false;
   }
   entry.count++;
-  return entry.count > 60;
+  return entry.count > 600; // plusieurs équipes peuvent partager le wifi de la salle
+}
+
+// 🏁 Jour J inter-clubs : vérification d'un score selon le format (1 set / 2 sets gagnants, points cassants ou non)
+function erreurScoreLive(sa: number[], sb: number[], f: { sets?: number; points?: number; cassant?: boolean }): string | null {
+  const n = Number(f.points) || 21, cassant = f.cassant === true, sets = f.sets === 1 ? 1 : 3;
+  const setOk = (x: number, y: number) => {
+    if (!Number.isInteger(x) || !Number.isInteger(y) || x < 0 || y < 0) return false;
+    const hi = Math.max(x, y), lo = Math.min(x, y);
+    if (cassant) return hi === n && lo < n;
+    const plafond = n + 9;
+    return (hi === n && lo <= n - 2) || (hi > n && hi < plafond && hi - lo === 2) || (hi === plafond && lo === plafond - 1);
+  };
+  if (sa.length !== sb.length || sa.length === 0) return "Score incomplet.";
+  for (let i = 0; i < sa.length; i++) if (!setOk(sa[i], sb[i])) return "Set " + (i + 1) + " : score impossible.";
+  if (sets === 1) return sa.length === 1 ? null : "Ce match se joue en 1 seul set.";
+  if (sa.length < 2 || sa.length > 3) return "Ce match se joue en 2 sets gagnants.";
+  const ga = sa.filter((v, i) => v > sb[i]).length, gb = sa.length - ga;
+  if (sa.length === 2 && ga !== 2 && gb !== 2) return "À 1 set partout, il faut jouer le 3ᵉ set.";
+  if (sa.length === 3 && !((ga === 2 && sa[2] > sb[2]) || (gb === 2 && sb[2] > sa[2]))) return "Le 3ᵉ set n'est joué qu'à 1 set partout.";
+  return null;
+}
+
+// 🏁 Vue « en direct » d'un tournoi inter-clubs : phases + noms des équipes (sans jetons ni codes)
+function liveVue(tournoi: Record<string, unknown>, clubId?: string) {
+  const live = tournoi.live as Record<string, unknown> | undefined;
+  if (!live || !Array.isArray(live.phases)) return undefined;
+  const equipes: Record<string, unknown> = {};
+  for (const c of (tournoi.clubs || []) as Record<string, unknown>[]) {
+    for (const b of (c.binomes || []) as Record<string, unknown>[]) {
+      equipes[String(b.id)] = { joueur1: b.joueur1, joueur2: b.joueur2, niveau: b.niveau || "", club: c.nom, mine: clubId ? c.id === clubId : false };
+    }
+  }
+  const clubs: Record<string, string> = {};
+  for (const c of (tournoi.clubs || []) as Record<string, unknown>[]) clubs[String(c.id)] = String(c.nom || "");
+  return { phases: live.phases, termine: live.termine === true, equipes, clubs };
 }
 
 // 📸 Les personnes identifiées sur les photos restent réservées à l'admin
@@ -4149,7 +4184,22 @@ Deno.serve(async (req) => {
 
   // ─── ACTION: Vérifier qu'une session membre est toujours valide ───
   // ─── ACTION: Tournoi inter-clubs — page d'un club (lien unique avec token) ───
-  if (action === "interclub_get" || action === "interclub_save") {
+  // ─── ACTION: Tournoi inter-clubs — écran géant en lecture seule (lien « live ») ───
+  if (action === "interclub_live") {
+    const liveToken = String(body.liveToken || "").trim();
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(liveToken)) return json({ ok: false, reason: "Lien invalide." }, 400);
+    if (isInterclubRateLimited(ip)) return json({ ok: false, reason: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const t = (((data.data as Record<string, unknown>).interclubs || []) as Record<string, unknown>[]).find((x) => {
+      const lt = (x.live as Record<string, unknown> | undefined)?.liveToken;
+      return typeof lt === "string" && constantTimeEqual(lt, liveToken);
+    });
+    if (!t) return json({ ok: false, reason: "Ce lien n'existe pas ou a été désactivé." }, 404);
+    return json({ ok: true, tournoi: { name: t.name, date: t.date, type: t.type || "", salleNom: t.salleNom || "" }, live: liveVue(t) });
+  }
+
+  if (action === "interclub_get" || action === "interclub_save" || action === "interclub_score") {
     const token = String(body.token || "").trim();
     if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return json({ ok: false, reason: "Lien invalide." }, 400);
     if (isInterclubRateLimited(ip)) return json({ ok: false, reason: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
@@ -4177,12 +4227,13 @@ Deno.serve(async (req) => {
     // Inscriptions ouvertes jusqu'à la fin du jour limite (heure de Paris ≈ UTC+2 max)
     const limite = typeof tournoi.dateLimit === "string" && /^\d{4}-\d{2}-\d{2}$/.test(tournoi.dateLimit)
       ? new Date(tournoi.dateLimit + "T23:59:59+02:00").getTime() : Infinity;
-    const ouvert = tournoi.closed !== true && Date.now() <= limite;
+    const ouvert = tournoi.closed !== true && !tournoi.live && Date.now() <= limite; // fermé dès que le jour J commence
     const niveaux = ((tournoi.niveaux || []) as unknown[]).map(String).filter(Boolean);
     const quota = Math.max(0, Number(club.quota) || 0);
 
     if (action === "interclub_save") {
       if (!ouvert) return json({ ok: false, reason: "Les inscriptions sont fermées pour ce tournoi." }, 403);
+      if (tournoi.live) return json({ ok: false, reason: "Le tournoi a commencé : les équipes ne peuvent plus être modifiées." }, 403);
       const recus = Array.isArray(body.binomes) ? (body.binomes as Record<string, unknown>[]) : null;
       if (!recus) return json({ ok: false, reason: "Données manquantes." }, 400);
       if (recus.length > quota) return json({ ok: false, reason: `Votre club est limité à ${quota} binôme${quota > 1 ? "s" : ""}.` }, 400);
@@ -4218,6 +4269,46 @@ Deno.serve(async (req) => {
       club = fc;
     }
 
+    // 🏁 Saisie d'un score par un club (uniquement pour les matchs de ses équipes)
+    if (action === "interclub_score") {
+      const matchId = String(body.matchId || "");
+      const toNums = (v: unknown) => (Array.isArray(v) ? v.slice(0, 3).map((x) => Math.round(Number(x))) : []);
+      const sa = toNums(body.sa), sb = toNums(body.sb);
+      const tId = String(tournoi.id), cId = String(club.id);
+      const fresh = await loadDB();
+      if (fresh.error || !fresh.data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+      const fd = fresh.data.data as Record<string, unknown>;
+      const ft = ((fd.interclubs || []) as Record<string, unknown>[]).find((t) => String(t.id) === tId);
+      const fc = ft ? ((ft.clubs || []) as Record<string, unknown>[]).find((c) => String(c.id) === cId) : undefined;
+      const live = ft?.live as Record<string, unknown> | undefined;
+      if (!ft || !fc || !live) return json({ ok: false, reason: "Le tournoi n'a pas commencé." }, 400);
+      if (live.termine === true) return json({ ok: false, reason: "Le tournoi est terminé." }, 403);
+      const mesEquipes = new Set(((fc.binomes || []) as Record<string, unknown>[]).map((b) => String(b.id)));
+      let match: Record<string, unknown> | undefined, format: Record<string, unknown> | undefined, phaseFinie = false;
+      for (const ph of (live.phases || []) as Record<string, unknown>[]) {
+        for (const po of (ph.poules || []) as Record<string, unknown>[]) {
+          const m = ((po.matchs || []) as Record<string, unknown>[]).find((x) => String(x.id) === matchId);
+          if (m) { match = m; format = ph.format as Record<string, unknown>; phaseFinie = ph.terminee === true; }
+        }
+      }
+      if (!match || !format) return json({ ok: false, reason: "Match introuvable." }, 404);
+      if (!mesEquipes.has(String(match.a)) && !mesEquipes.has(String(match.b))) return json({ ok: false, reason: "Vous ne pouvez saisir que les matchs de vos équipes." }, 403);
+      if (phaseFinie) return json({ ok: false, reason: "Cette phase est terminée." }, 403);
+      if (match.etat === "valide") return json({ ok: false, reason: "Ce score a déjà été validé. Pour une correction, voyez la table de marque." }, 403);
+      const err = erreurScoreLive(sa, sb, format);
+      if (err) return json({ ok: false, reason: err }, 400);
+      const memeScore = JSON.stringify(match.sa) === JSON.stringify(sa) && JSON.stringify(match.sb) === JSON.stringify(sb);
+      if (match.etat === "saisi" && match.par !== cId && memeScore) {
+        match.etat = "valide"; // l'adversaire confirme le score
+      } else {
+        match.sa = sa; match.sb = sb; match.etat = "saisi"; match.par = cId;
+      }
+      match.at = new Date().toISOString();
+      const { error: saveErr } = await saveDB(fd);
+      if (saveErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+      tournoi = ft; club = fc;
+    }
+
     // Autres clubs : seulement le nom et le nombre d'équipes (pas les joueurs)
     const autres = ((tournoi.clubs || []) as Record<string, unknown>[])
       .filter((c) => c.id !== club!.id)
@@ -4230,8 +4321,9 @@ Deno.serve(async (req) => {
         dateLimit: tournoi.dateLimit || "", deroulement: tournoi.deroulement || "",
         salleNom: tournoi.salleNom || "", salleAdresse: tournoi.salleAdresse || "", sallePhotoUrl: tournoi.sallePhotoUrl || "",
       },
-      club: { nom: club.nom, quota, binomes: club.binomes || [], updatedAt: club.updatedAt || "" },
+      club: { id: club.id, nom: club.nom, quota, binomes: club.binomes || [], updatedAt: club.updatedAt || "" },
       autres,
+      live: liveVue(tournoi, String(club.id)),
     });
   }
 

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2, Copy, Check, RefreshCw, ExternalLink, Upload, ChevronDown, ChevronUp, Lock, Unlock, ClipboardList } from "lucide-react";
 import { DB, InterClub, InterClubClub, INTERCLUB_NIVEAUX, getEffectiveConfig } from "@/lib/types";
 import { EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
+import InterclubLiveAdmin from "./InterclubLiveAdmin";
 
 const SITE = "https://saccb.fr";
 
@@ -64,14 +65,19 @@ export default function InterclubsAdmin({
   adminEmail,
   adminCode,
   readOnly,
+  onRefresh,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
   adminEmail?: string;
   adminCode?: string;
   readOnly?: boolean;
+  onRefresh?: () => Promise<void>;
 }) {
   const list = db.interclubs || [];
+  // 🏁 Tournoi dont la table de marque (jour J) est ouverte
+  const [jourJ, setJourJ] = useState<string | null>(null);
+  const tJourJ = list.find((x) => x.id === jourJ);
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [draft, setDraft] = useState<InterClub | null>(null);
   const [copie, setCopie] = useState<string | null>(null);
@@ -229,6 +235,8 @@ export default function InterclubsAdmin({
                     <span>🏟 {t.clubs.length} club{t.clubs.length > 1 ? "s" : ""}</span>
                     <span>👥 {nbEquipes}/{nbPlaces} binômes</span>
                     {t.closed && <span className="text-red-600 font-semibold">🔒 Fermé</span>}
+                    {t.live && !t.live.termine && <span className="text-red-600 font-bold">🔴 En cours</span>}
+                    {t.live?.termine && <span className="text-amber-600 font-bold">🏆 Terminé</span>}
                   </p>
                 </div>
                 {isOpen ? <ChevronUp className="w-4 h-4 text-slate-400" /> : <ChevronDown className="w-4 h-4 text-slate-400" />}
@@ -451,6 +459,15 @@ export default function InterclubsAdmin({
 
                   {/* ── Actions ── */}
                   <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
+                    <button
+                      onClick={() => {
+                        if (modifie(t)) { alert("Enregistre d'abord tes modifications."); return; }
+                        setJourJ(t.id);
+                      }}
+                      className="!px-4 !py-2 !text-xs rounded-xl font-bold uppercase tracking-widest text-white bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 shadow flex items-center gap-1.5"
+                    >
+                      🏁 {t.live ? (t.live.termine ? "Résultats du jour J" : "Table de marque (jour J)") : "Jour J : poules & scores"}
+                    </button>
                     {!readOnly && (
                       <button onClick={enregistrer} disabled={busy || !modifie(t)} className="btn-primary !px-4 !py-2 !text-xs">
                         <Check className="w-4 h-4" /> {modifie(t) ? "Enregistrer" : "Enregistré"}
@@ -476,6 +493,18 @@ export default function InterclubsAdmin({
           );
         })}
       </div>
+
+      {tJourJ && (
+        <InterclubLiveAdmin
+          t={tJourJ}
+          readOnly={readOnly}
+          onRefresh={onRefresh}
+          onClose={() => setJourJ(null)}
+          onSave={async (live) => {
+            await persist(list.map((x) => (x.id === tJourJ.id ? { ...x, live } : x)));
+          }}
+        />
+      )}
     </div>
   );
 }

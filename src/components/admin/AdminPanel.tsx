@@ -513,7 +513,7 @@ export default function AdminPanel({
           )}
           {canSee("tournois") && (
             <CollapsibleAdminSection id="admin-interclubs" label="Tournois inter-clubs" icon={<Trophy className="w-5 h-5" />} color="from-emerald-500 to-teal-600">
-              <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
+              <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} onRefresh={onRefresh} />
             </CollapsibleAdminSection>
           )}
           {canSee("inscriptions") && (

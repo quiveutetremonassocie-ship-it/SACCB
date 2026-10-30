@@ -276,6 +276,50 @@ export type InterClub = {
   closed?: boolean; // inscriptions fermées manuellement
   clubs: InterClubClub[];
   createdAt: string;
+  live?: InterClubLive; // 🏁 Gestion du jour J (poules, scores, classements)
+};
+
+// ─── 🏁 Jour J d'un tournoi inter-clubs ───
+// Une équipe = un binôme inscrit (son id). Chaque phase est faite de poules
+// où tout le monde se rencontre ; la phase suivante est générée à partir des classements.
+export type LiveFormat = {
+  sets: 1 | 3; // 1 set sec, ou 2 sets gagnants
+  points: number; // 12, 14, 18, 21…
+  cassant: boolean; // true = le 1er à N points gagne (pas de 2 points d'écart)
+};
+
+export type LiveMatch = {
+  id: string;
+  a: string; // id équipe
+  b: string;
+  sa?: number[]; // points de a, set par set
+  sb?: number[];
+  etat?: "saisi" | "valide"; // saisi par un club → confirmé par l'adversaire ou l'organisation
+  par?: string; // id du club qui a saisi, ou "admin"
+  at?: string;
+};
+
+export type LivePoule = {
+  id: string;
+  nom: string; // "Poule A"
+  equipes: string[];
+  matchs: LiveMatch[];
+};
+
+export type LivePhase = {
+  id: string;
+  nom: string; // "Brassage", "2ᵉ tour", "Finale"…
+  mode: "brassage" | "niveau"; // brassage = poules équilibrées ; niveau = poule 1 = les meilleurs
+  format: LiveFormat;
+  poules: LivePoule[];
+  terminee?: boolean;
+};
+
+export type InterClubLive = {
+  liveToken: string; // lien « écran géant » (lecture seule)
+  phases: LivePhase[];
+  termine?: boolean;
+  startedAt: string;
 };
 
 export type DB = {

@@ -1,8 +1,12 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock } from "lucide-react";
-import { interclubCall, InterclubPage as PageData } from "@/lib/db";
+import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info } from "lucide-react";
+import { interclubCall, interclubScore, InterclubPage as PageData } from "@/lib/db";
+import { LiveMatch, LivePhase } from "@/lib/types";
+import { matchJoue } from "@/lib/interclubLive";
+import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
+import EcranGeant from "./live/EcranGeant";
 
 type Ligne = { id?: string; joueur1: string; joueur2: string; niveau: string };
 
@@ -36,6 +40,10 @@ export default function InterclubPage() {
   const [code, setCode] = useState("");
   const [saisie, setSaisie] = useState("");
   const [codeErreur, setCodeErreur] = useState("");
+  // 🏁 Jour J : onglet « En direct » / « Infos & inscriptions », écran géant
+  const [onglet, setOnglet] = useState<"direct" | "infos">("direct");
+  const [ecran, setEcran] = useState<string | null>(null);
+  const [edition, setEdition] = useState<string | null>(null); // match dont on corrige le score
 
   async function charger(t: string, c: string) {
     const r = await interclubCall(t, c);
@@ -52,13 +60,33 @@ export default function InterclubPage() {
 
   useEffect(() => {
     // Le jeton est dans le # de l'adresse : il n'est jamais envoyé à l'hébergeur du site
-    const t = (window.location.hash.replace(/^#/, "") || new URLSearchParams(window.location.search).get("c") || "").trim();
+    const hash = window.location.hash.replace(/^#/, "");
+    // Écran géant : #ecran=<jeton live>
+    if (hash.startsWith("ecran=")) { setEcran(hash.slice(6)); setToken(""); return; }
+    const t = (hash || new URLSearchParams(window.location.search).get("c") || "").trim();
     setToken(t);
     if (!t) return;
     let memo = "";
     try { memo = sessionStorage.getItem("saccb_interclub_" + t) || ""; } catch { /* ignore */ }
     charger(t, memo);
   }, []);
+
+  // 🔄 Pendant le tournoi : actualisation automatique toutes les 20 s
+  const enDirect = !!page?.live;
+  useEffect(() => {
+    if (!enDirect || !token) return;
+    const iv = setInterval(() => { if (!document.hidden) interclubCall(token, code).then((r) => { if (r.ok) setPage(r); }); }, 20000);
+    return () => clearInterval(iv);
+  }, [enDirect, token, code]);
+
+  async function envoyerScore(m: LiveMatch, sa: number[], sb: number[]): Promise<string | null> {
+    if (!token) return "Lien invalide.";
+    const r = await interclubScore(token, code, m.id, sa, sb);
+    if (!r.ok) return r.reason || "Erreur lors de l'enregistrement.";
+    setPage(r);
+    setEdition(null);
+    return null;
+  }
 
   async function validerCode(e: React.FormEvent) {
     e.preventDefault();
@@ -103,6 +131,8 @@ export default function InterclubPage() {
       setMsg({ ok: false, text: r.reason || "Erreur lors de l'enregistrement." });
     }
   }
+
+  if (ecran) return <EcranGeant liveToken={ecran} />;
 
   // ── États de chargement / erreur ──
   if (token === null || (token && !page)) {
@@ -206,6 +236,37 @@ export default function InterclubPage() {
         )}
       </header>
 
+      {page.live && (
+        <div className="max-w-5xl mx-auto px-4 mb-6 flex justify-center gap-2">
+          <button
+            onClick={() => setOnglet("direct")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition ${onglet === "direct" ? "bg-white text-[#1e3a5f] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"}`}
+          >
+            <Radio className={`w-4 h-4 ${page.live.termine ? "" : "text-red-500 animate-pulse"}`} /> {page.live.termine ? "Résultats" : "En direct"}
+          </button>
+          <button
+            onClick={() => setOnglet("infos")}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition ${onglet === "infos" ? "bg-white text-[#1e3a5f] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"}`}
+          >
+            <Info className="w-4 h-4" /> Infos pratiques
+          </button>
+        </div>
+      )}
+
+      {page.live && onglet === "direct" ? (
+        <main className="max-w-6xl mx-auto px-4 pb-16 space-y-6">
+          <MesMatchs
+            phases={page.live.phases}
+            live={page.live}
+            clubId={club.id || ""}
+            edition={edition}
+            setEdition={setEdition}
+            envoyer={envoyerScore}
+          />
+          <LiveBoard phases={page.live.phases} equipes={page.live.equipes} termine={page.live.termine} clubs={page.live.clubs} />
+          <p className="text-center text-[11px] text-white/40">Actualisation automatique toutes les 20 secondes</p>
+        </main>
+      ) : (
       <main className="max-w-5xl mx-auto px-4 pb-16 grid lg:grid-cols-5 gap-6">
         {/* ── Inscriptions du club ── */}
         <section className="lg:col-span-3 self-start bg-white rounded-3xl shadow-2xl p-5 md:p-7 order-1">
@@ -369,6 +430,7 @@ export default function InterclubPage() {
           </div>
         </aside>
       </main>
+      )}
 
       <footer className="text-center text-white/40 text-xs pb-8">
         Organisé par le{" "}
@@ -376,6 +438,75 @@ export default function InterclubPage() {
         <a href="mailto:contact@saccb.fr" className="hover:text-white/70 underline">contact@saccb.fr</a>
       </footer>
     </Fond>
+  );
+}
+
+/** 🏸 Les matchs des équipes du club dans la phase en cours, avec saisie / confirmation du score */
+function MesMatchs({
+  phases, live, clubId, edition, setEdition, envoyer,
+}: {
+  phases: LivePhase[];
+  live: NonNullable<PageData["live"]>;
+  clubId: string;
+  edition: string | null;
+  setEdition: (id: string | null) => void;
+  envoyer: (m: LiveMatch, sa: number[], sb: number[]) => Promise<string | null>;
+}) {
+  const ph = phases[phases.length - 1];
+  if (!ph || live.termine) return null;
+  const mine = (id: string) => live.equipes[id]?.mine;
+  const matchs = ph.poules.flatMap((p) => p.matchs.filter((m) => mine(m.a) || mine(m.b)).map((m) => ({ m, poule: p.nom })));
+  if (matchs.length === 0) return null;
+  const aJouer = matchs.filter(({ m }) => m.etat !== "valide" && m.par !== "admin");
+  return (
+    <section className="bg-white rounded-3xl shadow-2xl p-5 md:p-6">
+      <div className="flex items-center justify-between gap-2 flex-wrap mb-4">
+        <h2 className="text-xl font-bold text-[#1e3a5f]">Vos matchs — {ph.nom}</h2>
+        <p className="text-xs text-slate-500">{matchs.length - aJouer.length}/{matchs.length} validés</p>
+      </div>
+      <p className="text-xs text-slate-500 mb-4">
+        Après chaque match, entrez le score. L&apos;équipe adverse le confirme (ou la table de marque le valide), puis il compte au classement.
+      </p>
+      <div className="grid md:grid-cols-2 gap-3">
+        {matchs.map(({ m, poule }) => {
+          const valide = m.etat === "valide" || m.par === "admin";
+          const saisiParAdversaire = !valide && matchJoue(m) && m.par !== clubId;
+          const saisiParNous = !valide && matchJoue(m) && m.par === clubId;
+          const enEdition = edition === m.id;
+          return (
+            <div key={m.id} className={`rounded-2xl border p-3 ${valide ? "border-emerald-200 bg-emerald-50/50" : saisiParAdversaire ? "border-amber-300 bg-amber-50" : "border-slate-200 bg-slate-50"}`}>
+              <div className="flex items-center justify-between text-[11px] text-slate-500 mb-2">
+                <span className="font-semibold uppercase tracking-wider">{poule}</span>
+                <EtatMatch m={m} clubs={live.clubs} />
+              </div>
+              {(!matchJoue(m) || enEdition) && !valide ? (
+                <ScoreForm m={m} format={ph.format} equipes={live.equipes} onSubmit={(sa, sb) => envoyer(m, sa, sb)} />
+              ) : (
+                <>
+                  <div className="flex items-center gap-2">
+                    <div className="flex-1 min-w-0"><NomEquipe id={m.a} equipes={live.equipes} compact /></div>
+                    <span className="font-mono font-bold text-[#1e3a5f] text-sm">{texteScore(m)}</span>
+                  </div>
+                  <div className="flex items-center gap-2 mt-0.5"><div className="flex-1 min-w-0"><NomEquipe id={m.b} equipes={live.equipes} compact /></div></div>
+                  {saisiParAdversaire && (
+                    <div className="mt-3 flex gap-2">
+                      <button onClick={() => envoyer(m, m.sa!, m.sb!)} className="flex-1 btn-primary !py-2 !text-xs"><Check className="w-4 h-4" /> Confirmer ce score</button>
+                      <button onClick={() => setEdition(m.id)} className="btn-ghost !py-2 !px-3 !text-xs">Corriger</button>
+                    </div>
+                  )}
+                  {saisiParNous && (
+                    <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
+                      <span>En attente de confirmation de l&apos;adversaire</span>
+                      <button onClick={() => setEdition(m.id)} className="text-blue-600 font-semibold hover:underline">Modifier</button>
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </section>
   );
 }
 
