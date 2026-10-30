@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Shirt, Trash2, Download } from "lucide-react";
 import type { DB } from "@/lib/types";
-import { adminDeleteTshirtOrder } from "@/lib/db";
+import { adminDeleteTshirtOrder, adminSetTshirt } from "@/lib/db";
 
 const TAILLES = ["XS", "S", "M", "L", "XL"] as const;
 
@@ -41,7 +41,14 @@ export default function TshirtAdmin({
   async function toggleOpen() {
     if (readOnly) return;
     setSaving(true);
-    await onPersist({ ...db, tshirtOpen: !open });
+    if (adminEmail && adminCode) {
+      // Action dédiée côté serveur : ne touche que ce champ, une copie admin périmée ne peut pas l'écraser
+      const r = await adminSetTshirt(adminEmail, adminCode, { open: !open });
+      if (!r.ok) alert("Erreur : la section t-shirt n'a pas été modifiée. " + (r.reason || ""));
+      if (onRefresh) await onRefresh();
+    } else {
+      await onPersist({ ...db, tshirtOpen: !open });
+    }
     setSaving(false);
   }
 
@@ -54,7 +61,13 @@ export default function TshirtAdmin({
       return;
     }
     setSavingPrice(true);
-    await onPersist({ ...db, tshirtPrice: newPrice });
+    if (adminEmail && adminCode) {
+      const r = await adminSetTshirt(adminEmail, adminCode, { price: newPrice ?? null });
+      if (!r.ok) alert("Erreur : le prix n'a pas été enregistré. " + (r.reason || ""));
+      if (onRefresh) await onRefresh();
+    } else {
+      await onPersist({ ...db, tshirtPrice: newPrice });
+    }
     setSavingPrice(false);
   }
 

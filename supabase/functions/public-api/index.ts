@@ -606,6 +606,68 @@ async function checkAdminAuth(
   return null;
 }
 
+// 👕 Notification automatique aux adhérents quand les commandes t-shirt s'ouvrent
+// deno-lint-ignore no-explicit-any
+function notifyTshirtOpen(supabaseAdmin: any, newData: Record<string, unknown>) {
+  const brevoKeyT = Deno.env.get("BREVO_API_KEY");
+  if (brevoKeyT) {
+    const tshirtPrice = typeof newData.tshirtPrice === "number" ? newData.tshirtPrice : null;
+    const priceText = tshirtPrice !== null ? `Le t-shirt coûte ${tshirtPrice}€` : "Le prix vous sera précisé par le bureau";
+    // Adhérents payés + newsletter activée (= ceux qui consentent à recevoir les news)
+    const paidMembres = ((newData.membres || []) as Record<string, unknown>[])
+      .filter((m) => m.ok === true && m.newsOptIn !== false)
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((m) => m.email);
+    // Fire-and-forget : on envoie en boucle avec throttle, sans bloquer la réponse admin
+    (async () => {
+      for (const r of paidMembres) {
+        const greeting = r.prenom ? `Bonjour ${escapeHtml(r.prenom)},` : "Bonjour,";
+        const greetingText = r.prenom ? `Bonjour ${r.prenom},` : "Bonjour,";
+        // 📨 Design "mail perso" pour éviter le classement en Promotions Gmail.
+        // Texte plein, pas de bouton CTA, pas de liste numérotée, pas de couleur vive.
+        const subjectPrefix = r.prenom ? `${r.prenom}, ` : "";
+        await sendBrevo(brevoKeyT, {
+          from: "SACCB <contact@saccb.fr>",
+          // 🚫 Pas de header List-Unsubscribe sur les mails 1-to-1 type "mail perso"
+          // pour ne pas signaler à Gmail "ceci est un envoi de masse"
+          to: [r.email],
+          subject: `${subjectPrefix}les commandes de t-shirts sont ouvertes`,
+          text: `${greetingText}\n\nPetit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.\n\nPour commander, tu te connectes à ton espace membre sur saccb.fr et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.\n\nLe prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.\n\nTu peux modifier ou annuler ta commande à tout moment depuis ton espace membre.\n\nÀ bientôt,\nLe bureau du SACCB`,
+          // HTML très sobre, presque du texte brut avec juste un peu de mise en forme
+          html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+            <p style="margin: 0 0 14px;">${greeting}</p>
+            <p style="margin: 0 0 14px;">Petit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.</p>
+            <p style="margin: 0 0 14px;">Pour commander, tu te connectes à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a> et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.</p>
+            <p style="margin: 0 0 14px;">Le prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.</p>
+            <p style="margin: 0 0 14px;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace.</p>
+            <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
+            <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
+              <tr>
+                <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
+                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
+                </td>
+                <td style="vertical-align: middle;">
+                  <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
+                </td>
+              </tr>
+            </table>
+          </div>`,
+        }).catch(() => {});
+        await sleep(EMAIL_THROTTLE_MS);
+      }
+      await logEmailToHistory(supabaseAdmin, {
+        type: "tshirt_open_notification",
+        subject: `Commandes de t-shirts SACCB ouvertes`,
+        recipients: paidMembres.map((m) => m.email),
+        sentCount: paidMembres.length,
+        status: "sent",
+      });
+    })();
+  }
+}
+
 Deno.serve(async (req) => {
   // Pré-vol CORS
   if (req.method === "OPTIONS") {
@@ -1818,65 +1880,7 @@ Deno.serve(async (req) => {
     }
 
     // 👕 Notification automatique aux adhérents quand les commandes t-shirt s'ouvrent
-    if (tshirtJustOpened) {
-      const brevoKeyT = Deno.env.get("BREVO_API_KEY");
-      if (brevoKeyT) {
-        const tshirtPrice = typeof newData.tshirtPrice === "number" ? newData.tshirtPrice : null;
-        const priceText = tshirtPrice !== null ? `Le t-shirt coûte ${tshirtPrice}€` : "Le prix vous sera précisé par le bureau";
-        // Adhérents payés + newsletter activée (= ceux qui consentent à recevoir les news)
-        const paidMembres = ((newData.membres || []) as Record<string, unknown>[])
-          .filter((m) => m.ok === true && m.newsOptIn !== false)
-          .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
-          .filter((m) => m.email);
-        // Fire-and-forget : on envoie en boucle avec throttle, sans bloquer la réponse admin
-        (async () => {
-          for (const r of paidMembres) {
-            const greeting = r.prenom ? `Bonjour ${escapeHtml(r.prenom)},` : "Bonjour,";
-            const greetingText = r.prenom ? `Bonjour ${r.prenom},` : "Bonjour,";
-            // 📨 Design "mail perso" pour éviter le classement en Promotions Gmail.
-            // Texte plein, pas de bouton CTA, pas de liste numérotée, pas de couleur vive.
-            const subjectPrefix = r.prenom ? `${r.prenom}, ` : "";
-            await sendBrevo(brevoKeyT, {
-              from: "SACCB <contact@saccb.fr>",
-              // 🚫 Pas de header List-Unsubscribe sur les mails 1-to-1 type "mail perso"
-              // pour ne pas signaler à Gmail "ceci est un envoi de masse"
-              to: [r.email],
-              subject: `${subjectPrefix}les commandes de t-shirts sont ouvertes`,
-              text: `${greetingText}\n\nPetit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.\n\nPour commander, tu te connectes à ton espace membre sur saccb.fr et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.\n\nLe prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.\n\nTu peux modifier ou annuler ta commande à tout moment depuis ton espace membre.\n\nÀ bientôt,\nLe bureau du SACCB`,
-              // HTML très sobre, presque du texte brut avec juste un peu de mise en forme
-              html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
-                <p style="margin: 0 0 14px;">${greeting}</p>
-                <p style="margin: 0 0 14px;">Petit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.</p>
-                <p style="margin: 0 0 14px;">Pour commander, tu te connectes à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a> et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.</p>
-                <p style="margin: 0 0 14px;">Le prix est ${priceText} et tu règleras de la main à la main quand tu viendras chercher ton t-shirt.</p>
-                <p style="margin: 0 0 14px;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace.</p>
-                <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
-                <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
-                  <tr>
-                    <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
-                      <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
-                    </td>
-                    <td style="vertical-align: middle;">
-                      <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
-                      <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
-                    </td>
-                  </tr>
-                </table>
-              </div>`,
-            }).catch(() => {});
-            await sleep(EMAIL_THROTTLE_MS);
-          }
-          await logEmailToHistory(supabaseAdmin, {
-            type: "tshirt_open_notification",
-            subject: `Commandes de t-shirts SACCB ouvertes`,
-            recipients: paidMembres.map((m) => m.email),
-            sentCount: paidMembres.length,
-            status: "sent",
-          });
-        })();
-      }
-    }
+    if (tshirtJustOpened) notifyTshirtOpen(supabaseAdmin, newData);
 
     return json({ ok: true });
   }
@@ -4099,6 +4103,27 @@ Deno.serve(async (req) => {
     d.tshirtOrders = ((d.tshirtOrders || []) as Record<string, unknown>[]).filter((o) => o.id !== orderId);
     await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     return json({ ok: true });
+  }
+
+  // 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix.
+  // Modifie UNIQUEMENT ces deux champs sur la DB fraîche du serveur : une copie
+  // admin périmée ne peut pas les écraser, et cette action n'écrase rien d'autre.
+  if (action === "admin_set_tshirt") {
+    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+
+    const tshirtJustOpened = d.tshirtOpen !== true && body.open === true;
+    if (typeof body.open === "boolean") d.tshirtOpen = body.open;
+    if (body.price === null) delete d.tshirtPrice;
+    else if (typeof body.price === "number" && body.price >= 0) d.tshirtPrice = body.price;
+
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    if (tshirtJustOpened) notifyTshirtOpen(supabaseAdmin, d);
+    return json({ ok: true, open: d.tshirtOpen === true, price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null });
   }
 
   if (action === "vote_poll") {

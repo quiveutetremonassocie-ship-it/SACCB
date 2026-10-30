@@ -239,6 +239,20 @@ export async function adminFaqReject(adminEmail: string, adminCode: string, pend
   return res.json();
 }
 
+// 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix (price: null = retirer le prix)
+export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null }): Promise<{ ok: boolean; open?: boolean; price?: number | null; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_set_tshirt", adminEmail, adminCode, ...changes }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau" };
+  }
+}
+
 // 👕 [ADMIN] Supprime une commande t-shirt
 export async function adminDeleteTshirtOrder(adminEmail: string, adminCode: string, orderId: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {

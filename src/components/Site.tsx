@@ -75,7 +75,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     setDb(next);
     setMembresCount(next.membres.length);
     if (isMemberAdmin && memberSession && memberAdminCode.current) {
-      await saveDBByMember(memberSession.email, memberAdminCode.current, next);
+      const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next);
+      if (!r.ok) alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
     } else {
       await saveDB(next);
     }
