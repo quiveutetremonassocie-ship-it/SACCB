@@ -220,11 +220,11 @@ export async function adminFaqPendingList(adminEmail: string, adminCode: string)
 }
 
 // ❓ [ADMIN] Répondre à une question en attente (la déplace dans la FAQ publique)
-export async function adminFaqAnswer(adminEmail: string, adminCode: string, pendingId: string, answer: string, category?: string): Promise<{ ok: boolean; reason?: string }> {
+export async function adminFaqAnswer(adminEmail: string, adminCode: string, pendingId: string, answer: string, category?: string, notify: boolean = true): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-    body: JSON.stringify({ action: "admin_faq_answer", adminEmail, adminCode, pendingId, answer, category: category || "" }),
+    body: JSON.stringify({ action: "admin_faq_answer", adminEmail, adminCode, pendingId, answer, category: category || "", notify }),
   });
   return res.json();
 }
@@ -240,7 +240,7 @@ export async function adminFaqReject(adminEmail: string, adminCode: string, pend
 }
 
 // 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix (price: null = retirer le prix)
-export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null }): Promise<{ ok: boolean; open?: boolean; price?: number | null; reason?: string }> {
+export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null; notify?: boolean }): Promise<{ ok: boolean; open?: boolean; price?: number | null; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",

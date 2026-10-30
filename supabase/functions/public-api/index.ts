@@ -1379,9 +1379,9 @@ Deno.serve(async (req) => {
     d.faqPending = pending.filter((p) => p.id !== pendingId);
     await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
 
-    // 📧 Notifier l'adhérent que sa question a été répondue (fire and forget)
+    // 📧 Notifier l'adhérent que sa question a été répondue (fire and forget) — sauf si l'admin a refusé l'envoi
     const brevoKey = Deno.env.get("BREVO_API_KEY");
-    if (brevoKey && entry.membreEmail) {
+    if (brevoKey && entry.membreEmail && body.notify !== false) {
       const safeName = escapeHtml(String(entry.membreNom || ""));
       const safeQ = escapeHtml(entry.question);
       const safeA = escapeHtml(answer.trim()).replace(/\n/g, "<br/>");
@@ -1864,9 +1864,6 @@ Deno.serve(async (req) => {
       }
     }
 
-    // 🔍 Détection de l'ouverture des commandes t-shirt (false → true)
-    const tshirtJustOpened = d.tshirtOpen !== true && newData.tshirtOpen === true;
-
     const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
@@ -1880,7 +1877,6 @@ Deno.serve(async (req) => {
     }
 
     // 👕 Notification automatique aux adhérents quand les commandes t-shirt s'ouvrent
-    if (tshirtJustOpened) notifyTshirtOpen(supabaseAdmin, newData);
 
     return json({ ok: true });
   }
@@ -4122,7 +4118,8 @@ Deno.serve(async (req) => {
 
     const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
-    if (tshirtJustOpened) notifyTshirtOpen(supabaseAdmin, d);
+    // 📧 Email aux adhérents UNIQUEMENT si l'admin l'a confirmé (évite les envois sur fausse manip)
+    if (tshirtJustOpened && body.notify === true) notifyTshirtOpen(supabaseAdmin, d);
     return json({ ok: true, open: d.tshirtOpen === true, price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null });
   }
 

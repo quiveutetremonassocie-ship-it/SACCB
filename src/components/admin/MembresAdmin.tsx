@@ -89,6 +89,7 @@ export default function MembresAdmin({
     // affiche une notification discrète (au lieu d'ignorer silencieusement).
     const membre = db.membres.find((m) => m.id === id);
     const nom = membre?.nom || "l'adhérent";
+    if (!confirm(`Paiement validé pour ${nom}.\n\nEnvoyer le mail de confirmation d'adhésion${membre?.email ? ` à ${membre.email}` : ""} ?\n\nOK = envoyer · Annuler = ne pas envoyer`)) return;
     adminSendConfirmation(id, adminEmail, adminCode)
       .then((r) => {
         if (r.ok) {
@@ -109,6 +110,7 @@ export default function MembresAdmin({
       alert("Identifiants admin manquants pour envoyer l'email.");
       return;
     }
+    if (!confirm(`Envoyer le mail de confirmation d'adhésion à ${m.nom} (${m.email}) ?`)) return;
     setSendingEmail(m.id);
     const r = await adminSendConfirmation(m.id, adminEmail, adminCode);
     setSendingEmail(null);

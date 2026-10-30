@@ -55,7 +55,8 @@ export default function FaqAdmin({
       alert("Réponse trop courte.");
       return;
     }
-    const r = await adminFaqAnswer(adminEmail, adminCode, id, pendingAnswer.trim(), pendingCategory.trim() || undefined);
+    const notify = confirm("Envoyer un email à l'adhérent pour le prévenir de la réponse ?\n\nOK = envoyer l'email · Annuler = publier sans email");
+    const r = await adminFaqAnswer(adminEmail, adminCode, id, pendingAnswer.trim(), pendingCategory.trim() || undefined, notify);
     if (!r.ok) {
       alert("Erreur : " + (r.reason || "inconnue"));
       return;

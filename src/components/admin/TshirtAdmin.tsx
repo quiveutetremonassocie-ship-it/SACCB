@@ -43,7 +43,9 @@ export default function TshirtAdmin({
     setSaving(true);
     if (adminEmail && adminCode) {
       // Action dédiée côté serveur : ne touche que ce champ, une copie admin périmée ne peut pas l'écraser
-      const r = await adminSetTshirt(adminEmail, adminCode, { open: !open });
+      // 📧 À l'ouverture, on demande explicitement si on prévient les adhérents (évite les envois sur fausse manip)
+      const notify = !open && confirm("Les commandes vont être ouvertes.\n\nEnvoyer aussi un email à tous les adhérents (payés + news activées) pour les prévenir ?\n\nOK = ouvrir ET envoyer l'email · Annuler = ouvrir SANS email");
+      const r = await adminSetTshirt(adminEmail, adminCode, { open: !open, notify });
       if (!r.ok) alert("Erreur : la section t-shirt n'a pas été modifiée. " + (r.reason || ""));
       if (onRefresh) await onRefresh();
     } else {
