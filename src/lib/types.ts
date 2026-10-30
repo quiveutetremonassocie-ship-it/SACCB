@@ -277,7 +277,11 @@ export type InterClub = {
   clubs: InterClubClub[];
   createdAt: string;
   live?: InterClubLive; // 🏁 Gestion du jour J (poules, scores, classements)
+  programme?: PhaseProgramme[]; // 📋 Phases prévues à l'avance (brassage, 2ᵉ tour, finale…) : servent au jour J et au règlement
 };
+
+// 📋 Une phase prévue dans le programme du tournoi
+export type PhaseProgramme = { nom: string; poules: number; format: LiveFormat };
 
 // ─── 🏁 Jour J d'un tournoi inter-clubs ───
 // Une équipe = un binôme inscrit (son id). Chaque phase est faite de poules

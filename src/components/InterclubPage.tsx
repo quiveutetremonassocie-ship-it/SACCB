@@ -289,7 +289,7 @@ export default function InterclubPage() {
             contester={contesterScore}
           />
           <LiveBoard phases={page.live.phases} equipes={page.live.equipes} termine={page.live.termine} clubs={page.live.clubs} />
-          <ReglementTournoi phases={page.live.phases} />
+          <ReglementTournoi programme={t.programme} phases={page.live.phases} />
           <p className="text-center text-[11px] text-white/40">Actualisation automatique toutes les 5 secondes</p>
         </main>
       ) : (
@@ -433,7 +433,7 @@ export default function InterclubPage() {
           )}
 
           {/* 📌 Règlement épinglé */}
-          <ReglementTournoi phases={page.live?.phases} />
+          <ReglementTournoi programme={t.programme} phases={page.live?.phases} />
 
           {t.deroulement && (
             <div className="bg-white rounded-3xl shadow-2xl p-5">

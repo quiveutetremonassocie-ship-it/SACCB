@@ -51,16 +51,27 @@ export default function InterclubLiveAdmin({
   const [copie, setCopie] = useState<string | null>(null);
 
   // ── Préparation (avant le lancement) ──
-  const [nbPoules, setNbPoules] = useState(Math.max(1, Math.round(nbEquipes / 5)));
-  const [format1, setFormat1] = useState<LiveFormat>({ sets: 1, points: 12, cassant: true });
+  // 📋 Le programme prévu dans la fiche du tournoi fournit les réglages de chaque tour
+  const programme = t.programme || [];
+  const [nbPoules, setNbPoules] = useState(Math.max(1, Math.min(programme[0]?.poules ?? Math.round(nbEquipes / 5), Math.floor(nbEquipes / 2) || 1)));
+  const [format1, setFormat1] = useState<LiveFormat>(programme[0]?.format ?? { sets: 1, points: 12, cassant: true });
+  const [modifier1, setModifier1] = useState(programme.length === 0);
   const [brouillon, setBrouillon] = useState<LivePhase | null>(null);
 
   // ── Phase suivante ──
   const phases = live?.phases || [];
   const courante = phases[phases.length - 1];
-  const [suiteNom, setSuiteNom] = useState(phases.length <= 1 ? "2ᵉ tour" : "Finale");
-  const [suitePoules, setSuitePoules] = useState(courante?.poules.length || nbPoules);
-  const [suiteFormat, setSuiteFormat] = useState<LiveFormat>({ sets: 3, points: phases.length <= 1 ? 14 : 18, cassant: true });
+  const prevu = programme[phases.length]; // prochain tour prévu au programme
+  const [suiteNom, setSuiteNom] = useState(prevu?.nom ?? (phases.length <= 1 ? "2ᵉ tour" : "Finale"));
+  const [suitePoules, setSuitePoules] = useState(prevu?.poules ?? (courante?.poules.length || nbPoules));
+  const [suiteFormat, setSuiteFormat] = useState<LiveFormat>(prevu?.format ?? { sets: 3, points: phases.length <= 1 ? 14 : 18, cassant: true });
+  const [modifierSuite, setModifierSuite] = useState(false);
+  // Quand un tour est lancé, on prépare automatiquement le suivant d'après le programme
+  useEffect(() => {
+    const p = (t.programme || [])[phases.length];
+    if (p) { setSuiteNom(p.nom); setSuitePoules(p.poules); setSuiteFormat(p.format); }
+    setModifierSuite(false);
+  }, [phases.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const [edition, setEdition] = useState<string | null>(null);
 
   // 🔄 Les scores saisis par les clubs arrivent toutes les 5 s
@@ -130,8 +141,6 @@ export default function InterclubLiveAdmin({
     };
     const nouvelle = genererPhaseSuivante(fermee, Math.max(1, Math.min(suitePoules, nbEquipes)), suiteFormat, suiteNom.trim() || `Phase ${phases.length + 1}`);
     await enregistrer({ ...live, phases: [...live.phases.slice(0, -1), fermee, nouvelle] });
-    setSuiteNom("Finale");
-    setSuiteFormat({ sets: 3, points: 18, cassant: true });
   }
 
   async function annulerPhase() {
@@ -163,7 +172,7 @@ export default function InterclubLiveAdmin({
   // 🏳 Forfait (RGC FFBaD 3.4.2) : défaite 0-21 (ou 0-N selon le format) à chaque set, compte -1
   async function forfait(ph: LivePhase, m: LiveMatch, equipe: string) {
     const nom = nomEquipe(eqs[equipe]);
-    if (!confirm(`Déclarer « ${nom} » forfait pour ce match ?\n\nScore enregistré : 0-${ph.format.points}${ph.format.sets === 1 ? "" : `, 0-${ph.format.points}`} et le forfait compte -1 point au classement (règlement FFBaD).`)) return;
+    if (!confirm(`Déclarer « ${nom} » forfait pour ce match ?\n\nScore enregistré : 0-${ph.format.points}${ph.format.sets === 1 ? "" : `, 0-${ph.format.points}`} et le forfait compte -1 point au classement (règlement du tournoi).`)) return;
     const nbSets = ph.format.sets === 1 ? 1 : 2;
     const perdant = Array(nbSets).fill(0), gagnant = Array(nbSets).fill(ph.format.points);
     await majMatch(ph.id, m.id, {
@@ -179,7 +188,7 @@ export default function InterclubLiveAdmin({
     const poule = courante.poules.find((p) => p.equipes.includes(equipe));
     if (!poule) return;
     const deja = (poule.retirees || []).includes(equipe);
-    if (!deja && !confirm(`« ${nomEquipe(eqs[equipe])} » arrête le tournoi ?\n\nComme le prévoit le règlement FFBaD, tous ses résultats dans la poule sont retirés du classement, elle est classée dernière et ne passe pas à la phase suivante.`)) return;
+    if (!deja && !confirm(`« ${nomEquipe(eqs[equipe])} » arrête le tournoi ?\n\nComme le prévoit le règlement du tournoi, tous ses résultats dans la poule sont retirés du classement, elle est classée dernière et ne passe pas à la phase suivante.`)) return;
     const retirees = deja ? (poule.retirees || []).filter((x) => x !== equipe) : [...(poule.retirees || []), equipe];
     await enregistrer({
       ...live,
@@ -279,8 +288,26 @@ export default function InterclubLiveAdmin({
               <p className="text-center text-slate-500 py-8">Il faut au moins 2 binômes inscrits pour lancer le tournoi.</p>
             ) : (
               <>
+                {programme.length > 0 && (
+                  <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
+                    <p className="font-bold text-[#1e3a5f] mb-2">📋 Programme de la journée ({nbEquipes} binômes)</p>
+                    <ol className="space-y-1 text-sm">
+                      {programme.map((p, i) => (
+                        <li key={i} className="flex gap-2 items-center">
+                          <span className="w-6 h-6 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                          <span><strong>{p.nom}</strong> — {p.poules} poule{p.poules > 1 ? "s" : ""} · {formatTexte(p.format)}</span>
+                        </li>
+                      ))}
+                    </ol>
+                    <p className="text-[11px] text-slate-500 mt-2">Chaque tour se lancera en un clic avec ces réglages. Pour changer le programme : fiche du tournoi.</p>
+                  </div>
+                )}
+                {programme.length > 0 && !modifier1 ? (
+                  <button onClick={() => setModifier1(true)} className="text-xs text-slate-500 hover:text-slate-700 underline">Modifier exceptionnellement le 1er tour</button>
+                ) : (
+                <>
                 <div>
-                  <p className="font-bold text-[#1e3a5f] mb-1">1. Les poules du premier tour</p>
+                  <p className="font-bold text-[#1e3a5f] mb-1">Les poules du premier tour</p>
                   <p className="text-sm text-slate-500 mb-3">
                     {nbEquipes} binômes inscrits. Les poules sont équilibrées en niveau et on évite de mettre deux équipes du même club ensemble.
                   </p>
@@ -296,16 +323,18 @@ export default function InterclubLiveAdmin({
                   </div>
                 </div>
                 <div>
-                  <p className="font-bold text-[#1e3a5f] mb-2">2. Format des matchs</p>
+                  <p className="font-bold text-[#1e3a5f] mb-2">Format des matchs</p>
                   <FormatChoix f={format1} set={(f) => { setFormat1(f); if (brouillon) setBrouillon({ ...brouillon, format: f }); }} />
                 </div>
-                <button onClick={() => setBrouillon(genererBrassage(t, nbPoules, format1))} className="btn-primary !text-xs !px-5 !py-2.5">
+                </>
+                )}
+                <button onClick={() => setBrouillon(genererBrassage(t, nbPoules, format1, programme[0]?.nom || "Brassage"))} className="btn-primary !text-xs !px-5 !py-2.5">
                   <Shuffle className="w-4 h-4" /> {brouillon ? "Refaire le tirage" : "Générer les poules"}
                 </button>
 
                 {brouillon && (
                   <div className="border-t border-slate-200 pt-5">
-                    <p className="font-bold text-[#1e3a5f] mb-1">3. Vérifie les poules</p>
+                    <p className="font-bold text-[#1e3a5f] mb-1">Vérifie les poules</p>
                     <p className="text-sm text-slate-500 mb-3">Tu peux déplacer une équipe avec le menu à côté de son nom.</p>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       {brouillon.poules.map((p, pi) => {
@@ -333,7 +362,7 @@ export default function InterclubLiveAdmin({
                     <p className="text-[11px] text-slate-400 mt-2">Fond orange : deux équipes du même club dans la poule.</p>
                     {!readOnly && (
                       <button onClick={lancer} disabled={busy} className="btn-primary mt-5 w-full !py-3">
-                        <Rocket className="w-5 h-5" /> Lancer le tournoi
+                        <Rocket className="w-5 h-5" /> C&apos;est parti : lancer « {brouillon.nom} »
                       </button>
                     )}
                   </div>
@@ -380,11 +409,42 @@ export default function InterclubLiveAdmin({
 
             {!readOnly && !live.termine && courante && (
               <div className="bg-white rounded-3xl shadow-2xl p-5 space-y-4">
-                <p className="font-bold text-[#1e3a5f]">
-                  Fin de « {courante.nom} » : {courante.poules.reduce((s, p) => s + p.matchs.filter(matchJoue).length, 0)}/{courante.poules.reduce((s, p) => s + p.matchs.length, 0)} matchs joués
-                </p>
+                {(() => {
+                  const joues = courante.poules.reduce((s, p) => s + p.matchs.filter(matchJoue).length, 0);
+                  const total = courante.poules.reduce((s, p) => s + p.matchs.length, 0);
+                  const fini = phaseTerminee(courante);
+                  const suivant = programme[phases.length];
+                  return (
+                    <div className={`rounded-2xl p-4 ${fini ? "bg-emerald-50 border-2 border-emerald-400" : "bg-slate-50 border border-slate-200"}`}>
+                      <p className="font-bold text-[#1e3a5f]">
+                        {fini ? `✅ « ${courante.nom} » terminé` : `« ${courante.nom} » en cours : ${joues}/${total} matchs joués`}
+                      </p>
+                      {suivant ? (
+                        <>
+                          <p className="text-sm text-slate-600 mt-1">Prochain tour prévu : <strong>{suiteNom}</strong> — {suitePoules} poule{suitePoules > 1 ? "s" : ""} · {formatTexte(suiteFormat)}</p>
+                          <button onClick={phaseSuivante} disabled={busy} className={`mt-3 w-full !py-3 ${fini ? "btn-primary" : "btn-ghost"}`}>
+                            <ChevronRight className="w-5 h-5" /> Lancer « {suiteNom} »
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-slate-600 mt-1">C&apos;est le dernier tour du programme.</p>
+                          <button onClick={terminer} disabled={busy} className={`mt-3 w-full !py-3 ${fini ? "btn-primary" : "btn-ghost"}`}>
+                            <Flag className="w-5 h-5" /> Terminer le tournoi et afficher le podium
+                          </button>
+                        </>
+                      )}
+                      {!fini && <p className="text-[11px] text-slate-500 mt-2 text-center">Le bouton reste utilisable si un match ne peut pas être joué (il comptera comme non joué).</p>}
+                    </div>
+                  );
+                })()}
+                {!modifierSuite ? (
+                  <button onClick={() => setModifierSuite(true)} className="text-xs text-slate-500 hover:text-slate-700 underline">
+                    {programme[phases.length] ? "Modifier exceptionnellement le prochain tour" : "Ajouter un tour supplémentaire"}
+                  </button>
+                ) : (
                 <div className="rounded-2xl border border-slate-200 p-4 space-y-3">
-                  <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5"><ChevronRight className="w-4 h-4" /> Créer la phase suivante</p>
+                  <p className="text-sm font-semibold text-slate-700 flex items-center gap-1.5"><ChevronRight className="w-4 h-4" /> Réglages du prochain tour</p>
                   <p className="text-xs text-slate-500">
                     Les équipes sont regroupées selon leur classement : la poule A réunit les meilleures, la dernière poule les suivantes (comme dans votre tableau : 1A, 1B, 2A, 2B…).
                   </p>
@@ -399,10 +459,11 @@ export default function InterclubLiveAdmin({
                     <ChevronRight className="w-4 h-4" /> Lancer « {suiteNom || "phase suivante"} » ({formatTexte(suiteFormat)})
                   </button>
                 </div>
+                )}
                 <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
                   <p className="text-sm font-semibold text-slate-700">🚪 Une équipe arrête le tournoi (blessure, départ…)</p>
                   <p className="text-xs text-slate-500">
-                    Règlement FFBaD : ses résultats dans la poule sont retirés du classement, elle est classée dernière et ne passe pas à la phase suivante.
+                    Règlement du tournoi : ses résultats dans la poule sont retirés du classement, elle est classée dernière et ne passe pas à la phase suivante.
                   </p>
                   <select
                     value=""
@@ -430,7 +491,9 @@ export default function InterclubLiveAdmin({
                   )}
                 </div>
                 <div className="flex flex-wrap gap-2">
-                  <button onClick={terminer} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Flag className="w-4 h-4" /> Terminer le tournoi (classement final)</button>
+                  {programme[phases.length] && (
+                    <button onClick={terminer} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Flag className="w-4 h-4" /> Terminer le tournoi maintenant</button>
+                  )}
                   {phases.length > 1 && (
                     <button onClick={annulerPhase} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Undo2 className="w-4 h-4" /> Annuler « {courante.nom} »</button>
                   )}

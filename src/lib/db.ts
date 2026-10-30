@@ -1015,6 +1015,7 @@ export type InterclubPage = {
   tournoi?: {
     name: string; date: string; type: string; niveaux: string[]; dateLimit: string; deroulement: string;
     salleNom: string; salleAdresse: string; sallePhotoUrl: string;
+    programme?: import("./types").PhaseProgramme[];
   };
   club?: { id?: string; nom: string; quota: number; binomes: { id: string; joueur1: string; joueur2: string; niveau: string }[]; updatedAt: string };
   autres?: { nom: string; equipes: number }[];

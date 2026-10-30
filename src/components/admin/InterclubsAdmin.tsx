@@ -6,6 +6,8 @@ import { DB, InterClub, InterClubClub, INTERCLUB_NIVEAUX, getEffectiveConfig } f
 import { EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import InterclubLiveAdmin from "./InterclubLiveAdmin";
 import { imprimerQrCodes } from "@/lib/interclubQr";
+import ProgrammeEditor from "./ProgrammeEditor";
+import { PROGRAMME_DEFAUT } from "@/lib/interclubLive";
 
 const SITE = "https://saccb.fr";
 
@@ -25,14 +27,12 @@ function nouveauCode(): string {
 const MODELE_DEROULEMENT = `🕗 HORAIRES
 • ...h... : accueil des joueurs et pointage
 • ...h... : échauffement
-• ...h... : début des matchs de poules
+• ...h... : début du brassage
 • ...h... : pause déjeuner
-• ...h... : phases finales
+• ...h... : 2ᵉ tour puis finale
 • ...h... : remise des récompenses
 
-🏸 FORMAT
-• Poules de ... équipes, puis tableau à élimination directe
-• Matchs en ... set(s) de ... points
+🏸 MATÉRIEL
 • Volants fournis : ............ (plumes / plastique)
 
 📋 À SAVOIR
@@ -114,6 +114,7 @@ export default function InterclubsAdmin({
       niveaux: [...INTERCLUB_NIVEAUX],
       dateLimit: dans(7),
       deroulement: MODELE_DEROULEMENT,
+      programme: PROGRAMME_DEFAUT.map((p) => ({ ...p, format: { ...p.format } })),
       salleNom: precedent?.salleNom || cfg.salleName,
       salleAdresse: precedent?.salleAdresse || cfg.salleAdresse,
       sallePhotoUrl: precedent?.sallePhotoUrl,
@@ -154,6 +155,7 @@ export default function InterclubsAdmin({
       niveaux: [...INTERCLUB_NIVEAUX],
       dateLimit: "",
       deroulement: MODELE_DEROULEMENT,
+      programme: PROGRAMME_DEFAUT.map((p) => ({ ...p, format: { ...p.format } })),
       salleNom: precedent?.salleNom || cfg.salleName,
       salleAdresse: precedent?.salleAdresse || cfg.salleAdresse,
       sallePhotoUrl: precedent?.sallePhotoUrl,
@@ -379,6 +381,15 @@ export default function InterclubsAdmin({
                       onChange={(e) => majDraft({ deroulement: e.target.value })}
                     />
                   </Champ>
+
+                  {/* ── Programme de la journée ── */}
+                  <ProgrammeEditor
+                    programme={d.programme || []}
+                    nbEquipes={t.clubs.reduce((s, c) => s + c.binomes.length, 0) || d.clubs.reduce((s, c) => s + (c.quota || 0), 0)}
+                    onChange={(p) => majDraft({ programme: p })}
+                    readOnly={readOnly}
+                    verrouille={t.live?.phases.length ?? 0}
+                  />
 
                   {/* ── Salle ── */}
                   <div className="grid md:grid-cols-[1fr_auto] gap-3 items-start">

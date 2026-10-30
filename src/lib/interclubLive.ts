@@ -1,6 +1,6 @@
 // 🏁 Moteur du jour J d'un tournoi inter-clubs : validation des scores,
 // classements de poule, génération des poules et des phases suivantes.
-import { InterClub, LiveFormat, LiveMatch, LivePhase, LivePoule } from "./types";
+import { InterClub, LiveFormat, LiveMatch, LivePhase, LivePoule, PhaseProgramme } from "./types";
 
 export type Equipe = { id: string; joueur1: string; joueur2: string; niveau: string; clubId: string; club: string };
 
@@ -256,3 +256,17 @@ export function classementFinal(ph: LivePhase): string[] {
 }
 
 export const uidLive = uid;
+
+/** 📋 Programme proposé par défaut pour un nouveau tournoi (modifiable dans la fiche) */
+export const PROGRAMME_DEFAUT: PhaseProgramme[] = [
+  { nom: "Brassage", poules: 4, format: { sets: 1, points: 12, cassant: true } },
+  { nom: "2ᵉ tour", poules: 4, format: { sets: 3, points: 14, cassant: true } },
+  { nom: "Finale", poules: 4, format: { sets: 3, points: 18, cassant: true } },
+];
+
+/** Nombre de matchs par équipe dans une phase (min–max selon la taille des poules) */
+export function matchsParEquipe(nbEquipes: number, nbPoules: number): [number, number] {
+  if (nbEquipes < 2 || nbPoules < 1) return [0, 0];
+  const p = Math.min(nbPoules, Math.floor(nbEquipes / 2)) || 1;
+  return [Math.floor(nbEquipes / p) - 1, Math.ceil(nbEquipes / p) - 1];
+}

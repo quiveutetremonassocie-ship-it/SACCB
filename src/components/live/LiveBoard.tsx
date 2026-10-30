@@ -141,7 +141,7 @@ export function PouleCard({
           {cl.map((l, i) => {
             const mine = equipes[l.id]?.mine;
             return (
-              <tr key={l.id} className={`border-b border-slate-50 ${mine ? "bg-emerald-50" : ""} ${l.retiree ? "opacity-40 line-through" : ""}`} title={l.retiree ? "A arrêté le tournoi : résultats retirés (règlement FFBaD)" : undefined}>
+              <tr key={l.id} className={`border-b border-slate-50 ${mine ? "bg-emerald-50" : ""} ${l.retiree ? "opacity-40 line-through" : ""}`} title={l.retiree ? "A arrêté le tournoi : résultats retirés" : undefined}>
                 <td className="pl-3 py-1.5">
                   <span className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[11px] font-bold ${i === 0 && l.joues > 0 ? "bg-amber-400 text-white" : "bg-slate-100 text-slate-500"}`}>{i + 1}</span>
                 </td>

@@ -4369,6 +4369,7 @@ Deno.serve(async (req) => {
         name: tournoi.name, date: tournoi.date, type: tournoi.type || "", niveaux,
         dateLimit: tournoi.dateLimit || "", deroulement: tournoi.deroulement || "",
         salleNom: tournoi.salleNom || "", salleAdresse: tournoi.salleAdresse || "", sallePhotoUrl: tournoi.sallePhotoUrl || "",
+        programme: Array.isArray(tournoi.programme) ? tournoi.programme : [],
       },
       club: { id: club.id, nom: club.nom, quota, binomes: club.binomes || [], updatedAt: club.updatedAt || "" },
       autres,
