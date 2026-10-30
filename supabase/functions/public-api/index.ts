@@ -4308,8 +4308,14 @@ Deno.serve(async (req) => {
       if (err) return json({ ok: false, reason: err }, 400);
       const memeScore = JSON.stringify(match.sa) === JSON.stringify(sa) && JSON.stringify(match.sb) === JSON.stringify(sb);
       if (match.etat === "saisi" && match.par !== cId && memeScore) {
-        match.etat = "valide"; // l'adversaire confirme le score
+        match.etat = "valide"; // l'adversaire confirme le score : accord, le désaccord éventuel est levé
+        delete match.conteste; delete match.ancien;
       } else {
+        // ❓ L'adversaire change un score déjà saisi au lieu de le confirmer → désaccord signalé à la table de marque
+        if (match.etat === "saisi" && match.par && match.par !== cId && !memeScore) {
+          match.conteste = true;
+          match.ancien = { sa: match.sa, sb: match.sb, par: match.par };
+        }
         match.sa = sa; match.sb = sb; match.etat = "saisi"; match.par = cId;
       }
       match.at = new Date().toISOString();

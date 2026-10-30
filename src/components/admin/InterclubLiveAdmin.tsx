@@ -186,21 +186,40 @@ export default function InterclubLiveAdmin({
       return (
         <div className="mt-1 flex justify-center items-center gap-2 text-[11px]">
           <span className="text-red-600 font-semibold">🏳 Forfait de {eqs[m.forfait]?.joueur1 || "?"} / {eqs[m.forfait]?.joueur2 || "?"}</span>
-          <button onClick={() => majMatch(ph.id, m.id, { sa: undefined, sb: undefined, forfait: undefined, etat: undefined, par: undefined })} className="text-blue-600 hover:underline">annuler</button>
+          <button onClick={() => majMatch(ph.id, m.id, { sa: undefined, sb: undefined, forfait: undefined, etat: undefined, par: undefined, conteste: undefined, ancien: undefined })} className="text-blue-600 hover:underline">annuler</button>
         </div>
       );
     }
+    const desaccord = m.conteste && m.etat !== "valide" && m.par !== "admin";
+    const score = (sa?: number[], sb?: number[]) => (sa && sb ? sa.map((v, i) => `${v}-${sb[i]}`).join(" · ") : "—");
     return (
       <div className="mt-1.5">
+        {desaccord && !enEdition && (
+          <div className="mb-1.5 rounded-lg border-2 border-red-300 bg-red-50 px-2 py-1.5 text-[11px] text-red-800">
+            <p className="font-bold">❓ Désaccord entre les équipes</p>
+            <p>{clubs[m.ancien?.par || ""] || "1ʳᵉ équipe"} : <span className="font-mono font-bold">{score(m.ancien?.sa, m.ancien?.sb)}</span></p>
+            <p>{clubs[m.par || ""] || "2ᵉ équipe"} : <span className="font-mono font-bold">{score(m.sa, m.sb)}</span></p>
+            <p className="text-red-600 mt-0.5">Valide le bon score (ou corrige-le).</p>
+            {m.ancien?.sa && m.ancien?.sb && (
+              <button
+                onClick={() => majMatch(ph.id, m.id, { sa: m.ancien!.sa, sb: m.ancien!.sb, etat: "valide", par: "admin", conteste: undefined, ancien: undefined })}
+                disabled={busy}
+                className="mt-1 text-[11px] font-semibold text-red-700 underline"
+              >
+                Garder le 1ᵉʳ score ({score(m.ancien.sa, m.ancien.sb)})
+              </button>
+            )}
+          </div>
+        )}
         {enEdition ? (
           <ScoreForm
             m={m} format={ph.format} equipes={equipes} labelBouton="Valider ce score"
-            onSubmit={async (sa, sb) => { await majMatch(ph.id, m.id, { sa, sb, etat: "valide", par: "admin" }); setEdition(null); return null; }}
+            onSubmit={async (sa, sb) => { await majMatch(ph.id, m.id, { sa, sb, etat: "valide", par: "admin", conteste: undefined, ancien: undefined }); setEdition(null); return null; }}
           />
         ) : (
           <div className="flex justify-center gap-2">
             {aValider && (
-              <button onClick={() => majMatch(ph.id, m.id, { etat: "valide" })} disabled={busy} className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5 hover:bg-emerald-100 flex items-center gap-1">
+              <button onClick={() => majMatch(ph.id, m.id, { etat: "valide", conteste: undefined, ancien: undefined })} disabled={busy} className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5 hover:bg-emerald-100 flex items-center gap-1">
                 <Check className="w-3 h-3" /> Valider
               </button>
             )}
@@ -209,7 +228,7 @@ export default function InterclubLiveAdmin({
             </button>
             {matchJoue(m) && (
               <button
-                onClick={() => { if (confirm("Effacer ce score ? Le match repassera « à jouer ».")) majMatch(ph.id, m.id, { sa: undefined, sb: undefined, etat: undefined, par: undefined }); }}
+                onClick={() => { if (confirm("Effacer ce score ? Le match repassera « à jouer ».")) majMatch(ph.id, m.id, { sa: undefined, sb: undefined, etat: undefined, par: undefined, conteste: undefined, ancien: undefined }); }}
                 disabled={busy}
                 className="text-[11px] font-semibold text-red-600 bg-white border border-red-200 rounded-md px-2 py-0.5 hover:bg-red-50 flex items-center gap-1"
               >
@@ -318,6 +337,14 @@ export default function InterclubLiveAdmin({
         {live && (
           <div className="space-y-5">
             <div className="bg-white rounded-2xl shadow-xl p-4 flex flex-wrap items-center gap-2 text-sm">
+              {(() => {
+                const n = courante ? courante.poules.reduce((s, p) => s + p.matchs.filter((m) => m.conteste && m.etat !== "valide" && m.par !== "admin").length, 0) : 0;
+                return n > 0 ? (
+                  <span className="w-full mb-1 rounded-xl bg-red-600 text-white font-bold px-3 py-2 flex items-center gap-2 animate-pulse">
+                    ❓ {n} désaccord{n > 1 ? "s" : ""} de score à trancher — repère les matchs encadrés en rouge
+                  </span>
+                ) : null;
+              })()}
               <Monitor className="w-4 h-4 text-[#1e3a5f]" />
               <span className="font-semibold text-[#1e3a5f]">Écran géant pour la salle :</span>
               <button onClick={() => copier(lienEcran, "ecran")} className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 flex items-center gap-1">

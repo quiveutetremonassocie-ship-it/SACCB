@@ -40,6 +40,7 @@ export function texteScore(m: LiveMatch): string {
 
 export function EtatMatch({ m, clubs }: { m: LiveMatch; clubs?: Record<string, string> }) {
   if (m.forfait) return <span className="text-[10px] text-red-600 font-semibold">🏳 forfait</span>;
+  if (m.conteste && m.etat !== "valide" && m.par !== "admin") return <span className="text-[10px] text-red-600 font-bold" title="Les deux équipes ne sont pas d'accord : la table de marque va trancher">❓ désaccord · la table de marque tranche</span>;
   if (!matchJoue(m)) return <span className="text-[10px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" /> à jouer</span>;
   if (m.etat === "valide" || m.par === "admin") return <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><Check className="w-3 h-3" /> validé</span>;
   return (
