@@ -117,14 +117,24 @@ export default function InterclubsAdmin({
     setDraft(JSON.parse(JSON.stringify(t)));
   }
 
-  const modifie = (t: InterClub) => draft && draft.id === t.id && JSON.stringify(draft) !== JSON.stringify(t);
+  // Compare uniquement ce que l'admin modifie dans la fiche (pas les binômes ni le jour J, qui
+  // évoluent côté serveur), clés triées : la base peut renvoyer les champs dans un autre ordre.
+  const empreinte = (x: InterClub) => {
+    const tri = (v: unknown): unknown =>
+      Array.isArray(v) ? v.map(tri)
+      : v && typeof v === "object" ? Object.fromEntries(Object.keys(v as object).sort().filter((k) => (v as Record<string, unknown>)[k] !== undefined).map((k) => [k, tri((v as Record<string, unknown>)[k])]))
+      : v;
+    const { live: _l, closed: _c, ...reste } = x;
+    return JSON.stringify(tri({ ...reste, clubs: x.clubs.map(({ binomes: _b, updatedAt: _u, ...c }) => c) }));
+  };
+  const modifie = (t: InterClub) => !!draft && draft.id === t.id && empreinte(draft) !== empreinte(t);
 
-  async function enregistrer() {
-    if (!draft) return;
-    if (!draft.name.trim()) { alert("Donne un nom au tournoi."); return; }
-    if (!draft.type) { alert("Choisis le type du tournoi (mixte, hommes, dames ou libre)."); return; }
+  async function enregistrer(): Promise<boolean> {
+    if (!draft) return false;
+    if (!draft.name.trim()) { alert("Donne un nom au tournoi."); return false; }
+    if (!draft.type) { alert("Choisis le type du tournoi (mixte, hommes, dames ou libre)."); return false; }
     const bad = draft.clubs.find((c) => !c.nom.trim());
-    if (bad) { alert("Chaque club doit avoir un nom."); return; }
+    if (bad) { alert("Chaque club doit avoir un nom."); return false; }
     setBusy(true);
     try {
       // On n'écrase pas les binômes saisis par les clubs entre-temps
@@ -133,7 +143,11 @@ export default function InterclubsAdmin({
         const live = actuel?.clubs.find((x) => x.id === c.id);
         return live ? { ...c, binomes: live.binomes, updatedAt: live.updatedAt } : c;
       });
-      await persist(list.map((x) => (x.id === draft.id ? { ...draft, clubs } : x)));
+      // Le jour J et l'ouverture/fermeture sont gérés à part : on garde la version actuelle
+      await persist(list.map((x) => (x.id === draft.id ? { ...draft, clubs, live: actuel?.live, closed: actuel?.closed } : x)));
+      return true;
+    } catch {
+      return false;
     } finally {
       setBusy(false);
     }
@@ -461,7 +475,11 @@ export default function InterclubsAdmin({
                   <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                     <button
                       onClick={() => {
-                        if (modifie(t)) { alert("Enregistre d'abord tes modifications."); return; }
+                        if (modifie(t)) {
+                          if (!confirm("Tu as des modifications non enregistrées. Les enregistrer et ouvrir le jour J ?")) return;
+                          enregistrer().then((ok) => { if (ok) setJourJ(t.id); });
+                          return;
+                        }
                         setJourJ(t.id);
                       }}
                       className="!px-4 !py-2 !text-xs rounded-xl font-bold uppercase tracking-widest text-white bg-gradient-to-r from-red-500 to-orange-500 hover:opacity-90 shadow flex items-center gap-1.5"

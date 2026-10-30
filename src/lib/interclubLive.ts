@@ -86,14 +86,42 @@ export function classementPoule(p: LivePoule): Ligne[] {
     const w = m ? vainqueur(m) : null;
     return w === x ? -1 : w === y ? 1 : 0;
   };
-  return Object.values(t).sort((x, y) =>
-    y.v - x.v ||
-    (y.setsPour - y.setsContre) - (x.setsPour - x.setsContre) ||
-    (y.ptsPour - y.ptsContre) - (x.ptsPour - x.ptsContre) ||
-    duel(x.id, y.id) ||
-    y.ptsPour - x.ptsPour ||
-    (ordre.get(x.id)! - ordre.get(y.id)!)
-  );
+  // Départage façon FFBaD : à égalité de victoires,
+  //  • 2 équipes → le vainqueur de leur match ;
+  //  • 3 équipes ou plus → différence de sets, puis de points ; dès qu'il n'en reste
+  //    que 2 à égalité, on revient à leur match.
+  const criteres: ((l: Ligne) => number)[] = [
+    (l) => l.setsPour - l.setsContre,
+    (l) => l.ptsPour - l.ptsContre,
+    (l) => l.ptsPour,
+  ];
+  const departage = (groupe: Ligne[], k: number): Ligne[] => {
+    if (groupe.length <= 1) return groupe;
+    if (groupe.length === 2) {
+      const d = duel(groupe[0].id, groupe[1].id);
+      if (d !== 0) return d < 0 ? groupe : [groupe[1], groupe[0]];
+    }
+    if (k >= criteres.length) return [...groupe].sort((x, y) => ordre.get(x.id)! - ordre.get(y.id)!);
+    const c = criteres[k];
+    const tries = [...groupe].sort((x, y) => c(y) - c(x));
+    const out: Ligne[] = [];
+    for (let i = 0; i < tries.length; ) {
+      let j = i;
+      while (j < tries.length && c(tries[j]) === c(tries[i])) j++;
+      out.push(...departage(tries.slice(i, j), k + 1));
+      i = j;
+    }
+    return out;
+  };
+  const parVictoires = Object.values(t).sort((x, y) => y.v - x.v);
+  const res: Ligne[] = [];
+  for (let i = 0; i < parVictoires.length; ) {
+    let j = i;
+    while (j < parVictoires.length && parVictoires[j].v === parVictoires[i].v) j++;
+    res.push(...departage(parVictoires.slice(i, j), 0));
+    i = j;
+  }
+  return res;
 }
 
 export const pouleTerminee = (p: LivePoule) => p.matchs.every(matchJoue);
