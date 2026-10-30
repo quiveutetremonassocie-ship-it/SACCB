@@ -4018,9 +4018,17 @@ Deno.serve(async (req) => {
     if (!membre) return json({ ok: false, reason: "Session expirée ou compte supprimé." });
     // 💬 Lien WhatsApp uniquement pour les adhérents à jour de paiement
     // 🎓 Étudiant sans justificatif pour la saison en cours → l'espace membre le lui demande
-    const justif = membre.justificatif as { saison?: string } | undefined;
-    const justificatifManquant = membre.type === "Etudiant" && justif?.saison !== `${d.y1}-${d.y2}`;
-    return json({ ok: true, paid: membre.ok === true, whatsappLink: membre.ok === true ? whatsappLink : undefined, justificatifManquant });
+    const justif = membre.justificatif as { saison?: string; uploadedAt?: string; name?: string } | undefined;
+    const justifOk = justif?.saison === `${d.y1}-${d.y2}`;
+    const justificatifManquant = membre.type === "Etudiant" && !justifOk;
+    return json({
+      ok: true,
+      paid: membre.ok === true,
+      whatsappLink: membre.ok === true ? whatsappLink : undefined,
+      justificatifManquant,
+      // 🎓 État du justificatif pour l'espace membre d'un étudiant (fourni le…)
+      justificatif: membre.type === "Etudiant" ? { fourni: justifOk, date: justifOk ? justif?.uploadedAt : undefined, nom: justifOk ? justif?.name : undefined } : undefined,
+    });
   }
 
   // ─── ACTION: Upload image via admin (contourne RLS via service_role) ───

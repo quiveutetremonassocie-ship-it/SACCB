@@ -177,6 +177,36 @@ export default function Accounting({
     const solde = totalRecettes - totalDepenses;
     const today = new Date().toLocaleDateString("fr-FR");
 
+    // 💶 Adhérents payés à tarif réduit (montant payé différent du tarif normal)
+    const esc = (s: string) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c] as string));
+    const reduits = db.membres
+      .filter((m) => m.ok && typeof m.montantPaye === "number")
+      .map((m) => {
+        const tarif = m.type === "Etudiant" ? effectivePrix.Etudiant : effectivePrix.Adulte;
+        return { nom: m.nom, type: m.type, tarif, paye: m.montantPaye as number, ecart: tarif - (m.montantPaye as number) };
+      })
+      .filter((r) => r.ecart !== 0)
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    const totalReductions = reduits.reduce((s, r) => s + r.ecart, 0);
+    const reduitsRows = reduits.map((r) => `
+      <tr>
+        <td>${esc(r.nom)}</td>
+        <td>${r.type === "Etudiant" ? "Étudiant" : "Adulte"}</td>
+        <td class="montant">${r.tarif.toFixed(2)} €</td>
+        <td class="montant">${r.paye.toFixed(2)} €</td>
+        <td class="montant red">${r.ecart > 0 ? "−" : "+"}${Math.abs(r.ecart).toFixed(2)} €</td>
+      </tr>`).join("");
+    const reduitsSection = reduits.length === 0 ? "" : `
+  <h2>Tarifs réduits (${reduits.length})</h2>
+  <p class="subtitle" style="margin: 0 0 8px;">Adhérents ayant payé un montant différent du tarif normal. Ces montants sont déjà pris en compte dans les recettes ci-dessus.</p>
+  <table>
+    <thead><tr><th>Adhérent</th><th>Type</th><th class="montant">Tarif normal</th><th class="montant">Payé</th><th class="montant">Réduction</th></tr></thead>
+    <tbody>
+      ${reduitsRows}
+      <tr class="total-row"><td colspan="4">TOTAL DES RÉDUCTIONS ACCORDÉES</td><td class="montant red">${totalReductions >= 0 ? "−" : "+"}${Math.abs(totalReductions).toFixed(2)} €</td></tr>
+    </tbody>
+  </table>`;
+
     const facturesRows = [...(db.factures || [])].sort((a, b) => a.date.localeCompare(b.date)).map((f) => `
       <tr>
         <td>${f.date}</td>
@@ -225,12 +255,13 @@ export default function Accounting({
   <table>
     <thead><tr><th>Catégorie</th><th>Détail</th><th class="montant">Montant</th></tr></thead>
     <tbody>
-      <tr><td>Adhésions adultes</td><td>${aPayes} payé(s) sur ${aTotal} (tarif ${effectivePrix.Adulte} €, réductions comprises)</td><td class="montant green">${recetteAdultes.toFixed(2)} €</td></tr>
-      <tr><td>Adhésions étudiants</td><td>${ePayes} payé(s) sur ${eTotal} (tarif ${effectivePrix.Etudiant} €, réductions comprises)</td><td class="montant green">${recetteEtudiants.toFixed(2)} €</td></tr>
+      <tr><td>Adhésions adultes</td><td>${aPayes} payé(s) sur ${aTotal} (tarif ${effectivePrix.Adulte} €${reduits.some((r) => r.type === "Adulte") ? `, dont ${reduits.filter((r) => r.type === "Adulte").length} à tarif réduit — voir détail` : ""})</td><td class="montant green">${recetteAdultes.toFixed(2)} €</td></tr>
+      <tr><td>Adhésions étudiants</td><td>${ePayes} payé(s) sur ${eTotal} (tarif ${effectivePrix.Etudiant} €${reduits.some((r) => r.type === "Etudiant") ? `, dont ${reduits.filter((r) => r.type === "Etudiant").length} à tarif réduit — voir détail` : ""})</td><td class="montant green">${recetteEtudiants.toFixed(2)} €</td></tr>
       ${report > 0 ? `<tr><td>Report saison précédente</td><td>Trésorerie reportée</td><td class="montant blue">${report.toFixed(2)} €</td></tr>` : ""}
       <tr class="total-row"><td colspan="2">TOTAL RECETTES</td><td class="montant green">${totalRecettes.toFixed(2)} €</td></tr>
     </tbody>
   </table>
+${reduitsSection}
 
   <h2>Dépenses</h2>
   <table>

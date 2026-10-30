@@ -66,8 +66,8 @@ export default function MembresAdmin({
     if (m.type !== "Etudiant") return null;
     if (m.justificatif && m.justificatif.saison === saisonKey) {
       return (
-        <button onClick={() => viewJustificatif(m)} className="text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded" title="Voir le justificatif de scolarité">
-          📄 Justificatif
+        <button onClick={() => viewJustificatif(m)} className="text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded" title="Justificatif fourni — cliquer pour l'ouvrir">
+          ✅ Justif. fourni le {new Date(m.justificatif.uploadedAt).toLocaleDateString("fr-FR")} · voir
         </button>
       );
     }

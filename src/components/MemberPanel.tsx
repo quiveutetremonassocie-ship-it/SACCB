@@ -36,6 +36,7 @@ export default function MemberPanel({
   officialDocsOpen = false,
   smashUrl,
   justificatifManquant = false,
+  justificatifInfo,
   onJustificatifSent,
 }: {
   session: MemberSession;
@@ -58,8 +59,10 @@ export default function MemberPanel({
   officialDocsOpen?: boolean;
   smashUrl?: string;
   justificatifManquant?: boolean;
+  justificatifInfo?: { fourni: boolean; date?: string; nom?: string };
   onJustificatifSent?: () => void;
 }) {
+  const [justifReplace, setJustifReplace] = useState(false);
   // 🎓 Envoi du justificatif de scolarité depuis l'espace membre
   const [justifSending, setJustifSending] = useState(false);
   const [justifMsg, setJustifMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -72,7 +75,7 @@ export default function MemberPanel({
     setJustifSending(true);
     const r = await publicUploadJustificatif({ email: session.email, code, membreId: session.membreId, file });
     setJustifSending(false);
-    if (r.ok) { setJustifMsg({ ok: true, text: "Justificatif envoyé, merci !" }); onJustificatifSent?.(); }
+    if (r.ok) { setJustifMsg({ ok: true, text: "Justificatif envoyé, merci ! Le bureau le voit dans l'admin." }); setJustifReplace(false); onJustificatifSent?.(); }
     else setJustifMsg({ ok: false, text: r.reason || "Erreur lors de l'envoi." });
   }
   // 🎉 Petite explosion de confettis quand l'adhérent ouvre son espace.
@@ -559,11 +562,18 @@ export default function MemberPanel({
         )}
 
         {/* 🎓 Justificatif de scolarité manquant (tarif étudiant) */}
-        {(justificatifManquant || justifMsg?.ok) && (
-          <div className="mb-4 bg-emerald-50 border border-emerald-300 rounded-2xl p-4">
+        {(justificatifManquant || justificatifInfo || justifMsg?.ok) && (
+          <div className={`mb-4 rounded-2xl p-4 border ${justificatifInfo?.fourni && !justificatifManquant ? "bg-emerald-50 border-emerald-300" : "bg-amber-50 border-amber-300"}`}>
             <p className="text-xs uppercase tracking-widest text-emerald-800 font-semibold mb-1">🎓 Justificatif de scolarité</p>
             {justifMsg?.ok ? (
               <p className="text-sm text-emerald-700">✓ {justifMsg.text}</p>
+            ) : justificatifInfo?.fourni && !justificatifManquant && !justifReplace ? (
+              <div className="flex items-center justify-between gap-2 flex-wrap">
+                <p className="text-sm text-emerald-700">
+                  ✓ Fourni{justificatifInfo.date ? ` le ${new Date(justificatifInfo.date).toLocaleDateString("fr-FR")}` : ""} — merci !
+                </p>
+                <button onClick={() => setJustifReplace(true)} className="text-xs text-emerald-800 underline">Remplacer le document</button>
+              </div>
             ) : (
               <>
                 <p className="text-sm text-slate-600 mb-2">Le tarif étudiant nécessite un certificat de scolarité ou une carte étudiante de l&apos;année en cours (PDF, JPG ou PNG).</p>
