@@ -12,7 +12,27 @@ function nouveauJeton(): string {
   crypto.getRandomValues(b);
   return btoa(String.fromCharCode(...Array.from(b))).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
+// Code d'accès lisible (sans 0/O, 1/I/L pour éviter les confusions)
+function nouveauCode(): string {
+  const alphabet = "ABCDEFGHJKMNPQRSTUVWXYZ23456789";
+  const b = new Uint8Array(6);
+  crypto.getRandomValues(b);
+  return Array.from(b, (x) => alphabet[x % alphabet.length]).join("");
+}
 const lienClub = (c: InterClubClub) => `${SITE}/interclub/#${c.token}`;
+function messageClub(t: InterClub, c: InterClubClub): string {
+  return [
+    `Bonjour ${c.nom},`,
+    "",
+    `Voici votre accès pour inscrire vos binômes au tournoi « ${t.name} »${t.date ? ` du ${new Date(t.date + "T12:00:00").toLocaleDateString("fr-FR")}` : ""} :`,
+    `🔗 Lien : ${lienClub(c)}`,
+    ...(c.code ? [`🔑 Code d'accès : ${c.code}`] : []),
+    `👥 Jusqu'à ${c.quota} binôme${c.quota > 1 ? "s" : ""}${t.dateLimit ? `, inscriptions jusqu'au ${new Date(t.dateLimit + "T12:00:00").toLocaleDateString("fr-FR")}` : ""}.`,
+    "",
+    "Sportivement,",
+    "Le SACCB",
+  ].join("\n");
+}
 const uid = () => (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
 
 export default function InterclubsAdmin({
@@ -277,7 +297,7 @@ export default function InterclubsAdmin({
                       <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold">Clubs invités</p>
                       {!readOnly && (
                         <button
-                          onClick={() => majDraft({ clubs: [...d.clubs, { id: uid(), nom: "", token: nouveauJeton(), quota: 4, binomes: [] }] })}
+                          onClick={() => majDraft({ clubs: [...d.clubs, { id: uid(), nom: "", token: nouveauJeton(), code: nouveauCode(), quota: 4, binomes: [] }] })}
                           className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-100 flex items-center gap-1"
                         >
                           <Plus className="w-3.5 h-3.5" /> Ajouter un club
@@ -318,6 +338,25 @@ export default function InterclubsAdmin({
                             </div>
 
                             <div className="mt-2 flex items-center gap-2 flex-wrap">
+                              <span className="text-[11px] text-slate-500 font-semibold">🔑 Code d&apos;accès</span>
+                              <input
+                                className="input !py-1 !px-2 !text-sm font-mono tracking-widest uppercase w-32"
+                                value={c.code || ""}
+                                placeholder="aucun"
+                                maxLength={40}
+                                disabled={readOnly}
+                                onChange={(e) => majClub(c.id, { code: e.target.value.toUpperCase().replace(/\s/g, "") })}
+                              />
+                              {!readOnly && (
+                                <button onClick={() => majClub(c.id, { code: nouveauCode() })} className="text-[11px] text-slate-500 hover:text-slate-700 flex items-center gap-1">
+                                  <RefreshCw className="w-3 h-3" /> Générer
+                                </button>
+                              )}
+                              {!c.code && <span className="text-[11px] text-amber-600">Sans code, le lien suffit pour accéder</span>}
+                              {live && (live.code || "") !== (c.code || "") && <span className="text-[11px] text-amber-600 font-semibold">Enregistre pour appliquer</span>}
+                            </div>
+
+                            <div className="mt-2 flex items-center gap-2 flex-wrap">
                               <code className="text-[11px] bg-slate-100 rounded px-2 py-1 text-slate-600 truncate max-w-full">{lienClub(c)}</code>
                               {nouveau ? (
                                 <span className="text-[11px] text-amber-600 font-semibold">Enregistre pour activer ce lien</span>
@@ -326,6 +365,11 @@ export default function InterclubsAdmin({
                                   <button onClick={() => copier(lienClub(c), c.id)} className="text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 flex items-center gap-1 hover:bg-blue-100">
                                     {copie === c.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copie === c.id ? "Copié" : "Copier le lien"}
                                   </button>
+                                  {live && (
+                                    <button onClick={() => copier(messageClub(t, live), "msg-" + c.id)} className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 flex items-center gap-1 hover:bg-emerald-100" title="Message prêt à envoyer au club (lien + code)">
+                                      {copie === "msg-" + c.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copie === "msg-" + c.id ? "Copié" : "Copier le message (lien + code)"}
+                                    </button>
+                                  )}
                                   <a href={lienClub(c)} target="_blank" rel="noopener noreferrer" className="text-[11px] font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1 hover:bg-slate-100">
                                     <ExternalLink className="w-3 h-3" /> Voir la page
                                   </a>

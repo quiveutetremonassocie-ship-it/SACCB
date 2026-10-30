@@ -254,6 +254,7 @@ export type InterClubClub = {
   id: string;
   nom: string;
   token: string; // secret du lien d'inscription du club
+  code?: string; // code d'accès à donner au club en plus du lien (vide = lien seul)
   quota: number; // nombre maximum de binômes
   contact?: string; // email / téléphone du référent (facultatif)
   binomes: InterClubBinome[];

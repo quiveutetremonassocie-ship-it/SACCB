@@ -32,17 +32,42 @@ export default function InterclubPage() {
   const [lignes, setLignes] = useState<Ligne[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // 🔑 Code d'accès du club (gardé pour l'onglet, pour ne pas le retaper à chaque rechargement)
+  const [code, setCode] = useState("");
+  const [saisie, setSaisie] = useState("");
+  const [codeErreur, setCodeErreur] = useState("");
+
+  async function charger(t: string, c: string) {
+    const r = await interclubCall(t, c);
+    if (r.needCode) {
+      try { sessionStorage.removeItem("saccb_interclub_" + t); } catch { /* ignore */ }
+      setCodeErreur(c ? r.reason || "Code incorrect." : "");
+    } else if (r.ok) {
+      try { if (c) sessionStorage.setItem("saccb_interclub_" + t, c); } catch { /* ignore */ }
+      setCode(c);
+      if (r.club) setLignes(r.club.binomes.map((b) => ({ ...b })));
+    }
+    setPage(r);
+  }
 
   useEffect(() => {
     // Le jeton est dans le # de l'adresse : il n'est jamais envoyé à l'hébergeur du site
     const t = (window.location.hash.replace(/^#/, "") || new URLSearchParams(window.location.search).get("c") || "").trim();
     setToken(t);
     if (!t) return;
-    interclubCall(t).then((r) => {
-      setPage(r);
-      if (r.ok && r.club) setLignes(r.club.binomes.map((b) => ({ ...b })));
-    });
+    let memo = "";
+    try { memo = sessionStorage.getItem("saccb_interclub_" + t) || ""; } catch { /* ignore */ }
+    charger(t, memo);
   }, []);
+
+  async function validerCode(e: React.FormEvent) {
+    e.preventDefault();
+    if (!token || !saisie.trim()) return;
+    setBusy(true);
+    setCodeErreur("");
+    await charger(token, saisie.trim());
+    setBusy(false);
+  }
 
   const t = page?.tournoi;
   const club = page?.club;
@@ -68,7 +93,7 @@ export default function InterclubPage() {
       }
     }
     setBusy(true);
-    const r = await interclubCall(token, lignes);
+    const r = await interclubCall(token, code, lignes);
     setBusy(false);
     if (r.ok && r.club) {
       setPage(r);
@@ -87,6 +112,34 @@ export default function InterclubPage() {
           <Loader2 className="w-8 h-8 animate-spin" />
           <p>Chargement du tournoi…</p>
         </div>
+      </Fond>
+    );
+  }
+  if (token && page?.needCode) {
+    return (
+      <Fond>
+        <form onSubmit={validerCode} className="max-w-sm mx-auto bg-white rounded-3xl p-8 text-center shadow-2xl my-24 mx-4 sm:mx-auto">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="SACCB" className="w-16 h-16 mx-auto mb-3 object-contain" />
+          <p className="text-xs uppercase tracking-[0.3em] text-emerald-600 font-semibold mb-1">Tournoi inter-clubs</p>
+          <p className="font-bold text-[#1e3a5f] text-xl mb-1 flex items-center justify-center gap-2">
+            <Lock className="w-5 h-5" /> Espace réservé
+          </p>
+          <p className="text-slate-500 text-sm mb-5">Entrez le code d&apos;accès communiqué à votre club par le SACCB.</p>
+          <input
+            className="input w-full text-center text-xl tracking-[0.3em] font-mono uppercase"
+            value={saisie}
+            onChange={(e) => { setSaisie(e.target.value); setCodeErreur(""); }}
+            placeholder="CODE"
+            autoFocus
+            autoComplete="off"
+            maxLength={40}
+          />
+          {codeErreur && <p className="text-red-600 text-sm mt-2">{codeErreur}</p>}
+          <button type="submit" disabled={busy || !saisie.trim()} className="btn-primary w-full mt-4">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />} Accéder
+          </button>
+        </form>
       </Fond>
     );
   }

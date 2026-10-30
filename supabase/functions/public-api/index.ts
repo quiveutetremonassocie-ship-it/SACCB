@@ -4166,6 +4166,14 @@ Deno.serve(async (req) => {
     }
     if (!tournoi || !club) return json({ ok: false, reason: "Ce lien n'existe pas ou a été désactivé. Contactez le SACCB." }, 404);
 
+    // 🔑 Code d'accès du club (en plus du lien) : rien n'est montré sans le bon code
+    const codeAttendu = typeof club.code === "string" ? club.code.trim().toUpperCase() : "";
+    if (codeAttendu) {
+      const codeRecu = String(body.code || "").trim().toUpperCase().slice(0, 40);
+      if (!codeRecu) return json({ ok: false, needCode: true });
+      if (!constantTimeEqual(codeRecu, codeAttendu)) return json({ ok: false, needCode: true, reason: "Code incorrect." }, 403);
+    }
+
     // Inscriptions ouvertes jusqu'à la fin du jour limite (heure de Paris ≈ UTC+2 max)
     const limite = typeof tournoi.dateLimit === "string" && /^\d{4}-\d{2}-\d{2}$/.test(tournoi.dateLimit)
       ? new Date(tournoi.dateLimit + "T23:59:59+02:00").getTime() : Infinity;

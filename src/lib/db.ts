@@ -1010,6 +1010,7 @@ export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }>
 export type InterclubPage = {
   ok: boolean;
   reason?: string;
+  needCode?: boolean; // le club doit saisir son code d'accès
   ouvert?: boolean;
   tournoi?: {
     name: string; date: string; type: string; niveaux: string[]; dateLimit: string; deroulement: string;
@@ -1021,13 +1022,14 @@ export type InterclubPage = {
 
 export async function interclubCall(
   token: string,
+  code: string,
   binomes?: { id?: string; joueur1: string; joueur2: string; niveau: string }[]
 ): Promise<InterclubPage> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-      body: JSON.stringify(binomes ? { action: "interclub_save", token, binomes } : { action: "interclub_get", token }),
+      body: JSON.stringify(binomes ? { action: "interclub_save", token, code, binomes } : { action: "interclub_get", token, code }),
     });
     return await res.json();
   } catch {
