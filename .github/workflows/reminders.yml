@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Vérifier rappels J-30 / J-15 / J-5 / J-1 (saison + tournois)
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           set +e
           echo "📤 Appel de check_reminders..."
@@ -20,12 +22,14 @@ jobs:
             -H "Content-Type: application/json" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -d '{"action":"check_reminders"}')
+            -d "{\"action\":\"check_reminders\",\"secret\":\"$CRON_SECRET\"}")
           echo "HTTP $STATUS"
           cat /tmp/body.txt
           echo ""
 
       - name: Vérifier backup email mensuel
+        env:
+          CRON_SECRET: ${{ secrets.CRON_SECRET }}
         run: |
           echo "📤 Appel de check_backup_email..."
           STATUS=$(curl -s -o /tmp/backup.txt -w "%{http_code}" \
@@ -34,7 +38,7 @@ jobs:
             -H "Content-Type: application/json" \
             -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
             -H "Authorization: Bearer ${{ secrets.SUPABASE_ANON_KEY }}" \
-            -d '{"action":"check_backup_email"}')
+            -d "{\"action\":\"check_backup_email\",\"secret\":\"$CRON_SECRET\"}")
           echo "HTTP $STATUS"
           cat /tmp/backup.txt
           echo ""
