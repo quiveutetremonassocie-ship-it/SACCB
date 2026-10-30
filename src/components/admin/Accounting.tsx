@@ -4,18 +4,25 @@ import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet, FileDown } from "lucide-react";
 import { DB, Facture, FactureFile, getEffectivePrix, getMontantMembre } from "@/lib/types";
 import { supabaseClient, FACTURE_BUCKET } from "@/lib/supabase";
+import { adminUploadFile, adminFactureFile } from "@/lib/db";
 
 export default function Accounting({
   db,
   totals,
   onPersist,
   readOnly,
+  adminEmail,
+  adminCode,
 }: {
   db: DB;
   totals: { totalRecolte: number; totalDepenses: number; solde: number };
   onPersist: (db: DB) => Promise<void>;
   readOnly?: boolean;
+  adminEmail?: string;
+  adminCode?: string;
 }) {
+  // Admin « espace membre » → fichiers via le serveur ; admin Supabase Auth → accès direct au bucket
+  const viaServer = !!(adminEmail && adminCode);
   const [desc, setDesc] = useState("");
   const [montant, setMontant] = useState("");
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
@@ -48,6 +55,12 @@ export default function Accounting({
   async function uploadFiles(factureId: string, files: File[]): Promise<FactureFile[]> {
     const out: FactureFile[] = [];
     for (const f of files) {
+      if (viaServer) {
+        const r = await adminUploadFile({ adminEmail: adminEmail!, adminCode: adminCode!, file: f, bucket: FACTURE_BUCKET, pathPrefix: factureId });
+        if (!r.ok || !r.path) { alert(`Erreur envoi de « ${f.name} » : ${r.reason || "inconnue"}`); continue; }
+        out.push({ path: r.path, name: f.name, type: f.type, size: f.size });
+        continue;
+      }
       const path = `${factureId}/${Date.now()}-${f.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
       const { error } = await supabaseClient.storage
         .from(FACTURE_BUCKET)
@@ -85,13 +98,19 @@ export default function Accounting({
   async function delFacture(id: string) {
     const f = db.factures.find((x) => x.id === id);
     if (f?.files?.length) {
-      await supabaseClient.storage.from(FACTURE_BUCKET).remove(f.files.map((x) => x.path));
+      if (viaServer) for (const x of f.files) await adminFactureFile(adminEmail!, adminCode!, "delete", x.path);
+      else await supabaseClient.storage.from(FACTURE_BUCKET).remove(f.files.map((x) => x.path));
     }
     const next = { ...db, factures: db.factures.filter((x) => x.id !== id) };
     await onPersist(next);
   }
 
   async function getSignedUrl(path: string): Promise<string | null> {
+    if (viaServer) {
+      const r = await adminFactureFile(adminEmail!, adminCode!, "url", path);
+      if (!r.ok || !r.url) { alert("Impossible d'ouvrir le fichier : " + (r.reason || "erreur")); return null; }
+      return r.url;
+    }
     const { data, error } = await supabaseClient.storage
       .from(FACTURE_BUCKET)
       .createSignedUrl(path, 60 * 10);
@@ -132,7 +151,8 @@ export default function Accounting({
 
   async function removeFile(factureId: string, file: FactureFile) {
     if (!confirm("Supprimer ce fichier ?")) return;
-    await supabaseClient.storage.from(FACTURE_BUCKET).remove([file.path]);
+    if (viaServer) await adminFactureFile(adminEmail!, adminCode!, "delete", file.path);
+    else await supabaseClient.storage.from(FACTURE_BUCKET).remove([file.path]);
     const next = {
       ...db,
       factures: db.factures.map((f) =>

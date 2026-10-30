@@ -253,6 +253,46 @@ export async function adminSetTshirt(adminEmail: string, adminCode: string, chan
   }
 }
 
+// 📎 [ADMIN] Envoie un fichier (PDF/image) dans un bucket via le serveur
+export async function adminUploadFile(args: { adminEmail: string; adminCode: string; file: File; bucket: string; pathPrefix?: string }): Promise<{ ok: boolean; path?: string; url?: string; reason?: string }> {
+  try {
+    const bytes = new Uint8Array(await args.file.arrayBuffer());
+    let binary = "";
+    for (let i = 0; i < bytes.length; i += 8192) binary += String.fromCharCode.apply(null, Array.from(bytes.subarray(i, i + 8192)));
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({
+        action: "upload_image",
+        email: args.adminEmail,
+        code: args.adminCode,
+        fileData: btoa(binary),
+        fileName: args.file.name.replace(/[^a-zA-Z0-9._-]/g, "_"),
+        contentType: args.file.type || "application/pdf",
+        bucket: args.bucket,
+        pathPrefix: args.pathPrefix,
+      }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau (fichier trop gros ?)" };
+  }
+}
+
+// 🧾 [ADMIN] Fichier de facture : lien temporaire (op "url") ou suppression (op "delete")
+export async function adminFactureFile(adminEmail: string, adminCode: string, op: "url" | "delete", path: string): Promise<{ ok: boolean; url?: string; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_facture_file", adminEmail, adminCode, op, path }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau" };
+  }
+}
+
 // 👕 [ADMIN] Supprime une commande t-shirt
 export async function adminDeleteTshirtOrder(adminEmail: string, adminCode: string, orderId: string): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {

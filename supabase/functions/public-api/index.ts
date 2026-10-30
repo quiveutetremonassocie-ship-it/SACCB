@@ -4218,6 +4218,30 @@ Deno.serve(async (req) => {
     return json({ ok: true });
   }
 
+  // 🧾 [ADMIN] Fichiers des factures (bucket privé) : lien de consultation temporaire ou suppression.
+  // Les admins « espace membre » n'ont pas de session Supabase Auth → le navigateur ne peut pas
+  // accéder directement au bucket, on passe par le serveur.
+  if (action === "admin_facture_file") {
+    const op = String(body.op || "");
+    const path = String(body.path || "");
+    if (!path || path.includes("..") || path.startsWith("/")) return json({ ok: false, reason: "Chemin invalide." }, 400);
+    const { data } = await loadDB();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const authError = await checkAdminAuth(body, data.data as Record<string, unknown>);
+    if (authError) return authError;
+    if (op === "url") {
+      const { data: s, error } = await supabaseAdmin.storage.from("factures").createSignedUrl(path, 60 * 10);
+      if (error || !s) return json({ ok: false, reason: "Fichier introuvable." }, 404);
+      return json({ ok: true, url: s.signedUrl });
+    }
+    if (op === "delete") {
+      const { error } = await supabaseAdmin.storage.from("factures").remove([path]);
+      if (error) return json({ ok: false, reason: "Suppression impossible." }, 500);
+      return json({ ok: true });
+    }
+    return json({ ok: false, reason: "Opération inconnue." }, 400);
+  }
+
   // 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix.
   // Modifie UNIQUEMENT ces deux champs sur la DB fraîche du serveur : une copie
   // admin périmée ne peut pas les écraser, et cette action n'écrase rien d'autre.

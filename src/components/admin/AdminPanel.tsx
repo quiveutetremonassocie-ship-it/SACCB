@@ -352,7 +352,7 @@ export default function AdminPanel({
           {/* ── Ordre d'origine, avec chaque section repliable ── */}
           {canSee("comptabilite") && (
             <CollapsibleAdminSection id="admin-comptabilite" label="Comptabilité" icon={<Receipt className="w-5 h-5" />} color="from-green-500 to-emerald-500">
-              <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} />
+              <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} adminEmail={adminEmail} adminCode={adminCode} />
             </CollapsibleAdminSection>
           )}
           {canSee("saison") && (
