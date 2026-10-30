@@ -712,36 +712,21 @@ function notifyTshirtOpen(supabaseAdmin: any, newData: Record<string, unknown>) 
       for (const r of paidMembres) {
         const greeting = r.prenom ? `Bonjour ${escapeHtml(r.prenom)},` : "Bonjour,";
         const greetingText = r.prenom ? `Bonjour ${r.prenom},` : "Bonjour,";
-        // 📨 Design "mail perso" pour éviter le classement en Promotions Gmail.
-        // Texte plein, pas de bouton CTA, pas de liste numérotée, pas de couleur vive.
+        // 📨 Écrit comme un message du bureau (pas une pub) pour éviter Spam/Promotions :
+        // pas de « commande » ni de prix dans l'objet, un seul lien, pas d'image, texte court.
         const subjectPrefix = r.prenom ? `${r.prenom}, ` : "";
+        const priceLine = escapeHtml(priceText);
         await sendBrevo(brevoKeyT, {
           from: "SACCB <contact@saccb.fr>",
-          // 🚫 Pas de header List-Unsubscribe sur les mails 1-to-1 type "mail perso"
-          // pour ne pas signaler à Gmail "ceci est un envoi de masse"
           to: [r.email],
-          subject: `${subjectPrefix}les commandes de t-shirts sont ouvertes`,
-          text: `${greetingText}\n\nPetit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.\n\nPour commander, tu te connectes à ton espace membre sur saccb.fr et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.\n\n${priceText}\n\nTu peux modifier ou annuler ta commande à tout moment depuis ton espace membre.\n\nÀ bientôt,\nLe bureau du SACCB`,
-          // HTML très sobre, presque du texte brut avec juste un peu de mise en forme
-          html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; max-width: 560px; margin: 0; padding: 16px; color: #1f2937; line-height: 1.6; font-size: 15px;">
-            <p style="margin: 0 0 14px;">${greeting}</p>
-            <p style="margin: 0 0 14px;">Petit message rapide pour te dire que les commandes de t-shirts SACCB sont ouvertes.</p>
-            <p style="margin: 0 0 14px;">Pour commander, tu te connectes à ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1f2937;">saccb.fr</a> et tu trouveras le bloc de commande directement dans ton espace. Tu choisis ta taille et tu peux ajouter un nom ou surnom à floquer si tu veux.</p>
-            <p style="margin: 0 0 14px;">${priceText}</p>
-            <p style="margin: 0 0 14px;">Tu peux modifier ou annuler ta commande à tout moment depuis ton espace.</p>
-            <p style="margin: 14px 0 0;">À bientôt,<br/>Le bureau du SACCB</p>
-            <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 22px; padding-top: 14px; border-top: 1px solid #e2e8f0; width: 100%;">
-              <tr>
-                <td style="vertical-align: middle; padding-right: 12px; width: 44px;">
-                  <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" />
-                </td>
-                <td style="vertical-align: middle;">
-                  <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
-                  <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
-                </td>
-              </tr>
-            </table>
+          subject: `${subjectPrefix}les t-shirts du club sont disponibles`,
+          text: `${greetingText}\n\nLe bureau prépare une série de t-shirts aux couleurs du SACCB. Si tu en veux un, indique simplement ta taille dans ton espace membre sur saccb.fr (tu peux aussi ajouter un nom ou surnom à floquer).\n\n${priceText}\n\nTu peux modifier ou annuler ton choix à tout moment depuis ton espace.\n\nÀ bientôt à la salle,\nLe bureau du SACCB`,
+          html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+            <p>${greeting}</p>
+            <p>Le bureau prépare une série de t-shirts aux couleurs du SACCB. Si tu en veux un, indique simplement ta taille dans ton espace membre sur <a href="https://saccb.fr/?member=1" style="color: #1e3a5f;">saccb.fr</a> (tu peux aussi ajouter un nom ou surnom à floquer).</p>
+            <p>${priceLine}</p>
+            <p>Tu peux modifier ou annuler ton choix à tout moment depuis ton espace.</p>
+            <p>À bientôt à la salle,<br/>Le bureau du SACCB</p>
           </div>`,
         }).catch(() => {});
         await sleep(EMAIL_THROTTLE_MS);
