@@ -8,6 +8,8 @@ import {
   jetonAleatoire, classementFinal, nomEquipe, lettre,
 } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, EquipesMap, NomEquipe } from "../live/LiveBoard";
+import { exporterResultatsPdf } from "@/lib/interclubPdf";
+import { imprimerQrCodes } from "@/lib/interclubQr";
 
 const SITE = "https://saccb.fr";
 const POINTS = [11, 12, 14, 15, 18, 21];
@@ -99,13 +101,20 @@ export default function InterclubLiveAdmin({
   }
 
   // Modifie un match de la phase courante (ou d'une autre) et enregistre
-  async function majMatch(phaseId: string, matchId: string, patch: Partial<LiveMatch>) {
+  async function majMatch(phaseId: string, matchId: string, patch: Partial<LiveMatch>, action: string) {
     if (!live) return;
+    const at = new Date().toISOString();
     const l: InterClubLive = {
       ...live,
       phases: live.phases.map((ph) => ph.id !== phaseId ? ph : {
         ...ph,
-        poules: ph.poules.map((p) => ({ ...p, matchs: p.matchs.map((m) => (m.id === matchId ? { ...m, ...patch, at: new Date().toISOString() } : m)) })),
+        poules: ph.poules.map((p) => ({ ...p, matchs: p.matchs.map((m) => {
+          if (m.id !== matchId) return m;
+          const n = { ...m, ...patch, at };
+          // 🕘 Historique : la table de marque apparaît comme « admin »
+          n.historique = [...(m.historique || []), { at, par: "admin", action, sa: n.sa, sb: n.sb }].slice(-30);
+          return n;
+        }) })),
       }),
     };
     await enregistrer(l);
@@ -161,7 +170,7 @@ export default function InterclubLiveAdmin({
       sa: m.a === equipe ? perdant : gagnant,
       sb: m.a === equipe ? gagnant : perdant,
       forfait: equipe, etat: "valide", par: "admin",
-    });
+    }, `forfait de ${nom}`);
   }
 
   // 🚪 Équipe qui arrête (RGC FFBaD 3.4.4) : ses résultats ne comptent plus dans sa poule
@@ -186,7 +195,7 @@ export default function InterclubLiveAdmin({
       return (
         <div className="mt-1 flex justify-center items-center gap-2 text-[11px]">
           <span className="text-red-600 font-semibold">🏳 Forfait de {eqs[m.forfait]?.joueur1 || "?"} / {eqs[m.forfait]?.joueur2 || "?"}</span>
-          <button onClick={() => majMatch(ph.id, m.id, { sa: undefined, sb: undefined, forfait: undefined, etat: undefined, par: undefined, conteste: undefined, corrige: undefined, ancien: undefined })} className="text-blue-600 hover:underline">annuler</button>
+          <button onClick={() => majMatch(ph.id, m.id, { sa: undefined, sb: undefined, forfait: undefined, etat: undefined, par: undefined, conteste: undefined, corrige: undefined, ancien: undefined }, "forfait annulé")} className="text-blue-600 hover:underline">annuler</button>
         </div>
       );
     }
@@ -202,7 +211,7 @@ export default function InterclubLiveAdmin({
             <p className="text-red-600 mt-0.5">Une fois sur place : garde le bon score, valide la correction, ou saisis le score décidé.</p>
             {m.ancien?.sa && m.ancien?.sb && (
               <button
-                onClick={() => majMatch(ph.id, m.id, { sa: m.ancien!.sa, sb: m.ancien!.sb, etat: "valide", par: "admin", conteste: undefined, corrige: undefined, ancien: undefined })}
+                onClick={() => majMatch(ph.id, m.id, { sa: m.ancien!.sa, sb: m.ancien!.sb, etat: "valide", par: "admin", conteste: undefined, corrige: undefined, ancien: undefined }, "1er score gardé (table de marque)")}
                 disabled={busy}
                 className="mt-1 text-[11px] font-semibold text-red-700 underline"
               >
@@ -214,12 +223,12 @@ export default function InterclubLiveAdmin({
         {enEdition ? (
           <ScoreForm
             m={m} format={ph.format} equipes={equipes} labelBouton="Valider ce score"
-            onSubmit={async (sa, sb) => { await majMatch(ph.id, m.id, { sa, sb, etat: "valide", par: "admin", conteste: undefined, corrige: undefined, ancien: undefined }); setEdition(null); return null; }}
+            onSubmit={async (sa, sb) => { await majMatch(ph.id, m.id, { sa, sb, etat: "valide", par: "admin", conteste: undefined, corrige: undefined, ancien: undefined }, "score saisi par la table de marque"); setEdition(null); return null; }}
           />
         ) : (
           <div className="flex justify-center gap-2">
             {aValider && (
-              <button onClick={() => majMatch(ph.id, m.id, { etat: "valide", conteste: undefined, corrige: undefined, ancien: undefined })} disabled={busy} className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5 hover:bg-emerald-100 flex items-center gap-1">
+              <button onClick={() => majMatch(ph.id, m.id, { etat: "valide", conteste: undefined, corrige: undefined, ancien: undefined }, "validé par la table de marque")} disabled={busy} className="text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-0.5 hover:bg-emerald-100 flex items-center gap-1">
                 <Check className="w-3 h-3" /> Valider
               </button>
             )}
@@ -228,7 +237,7 @@ export default function InterclubLiveAdmin({
             </button>
             {matchJoue(m) && (
               <button
-                onClick={() => { if (confirm("Effacer ce score ? Le match repassera « à jouer ».")) majMatch(ph.id, m.id, { sa: undefined, sb: undefined, etat: undefined, par: undefined, conteste: undefined, corrige: undefined, ancien: undefined }); }}
+                onClick={() => { if (confirm("Effacer ce score ? Le match repassera « à jouer ».")) majMatch(ph.id, m.id, { sa: undefined, sb: undefined, etat: undefined, par: undefined, conteste: undefined, corrige: undefined, ancien: undefined }, "effacé par la table de marque"); }}
                 disabled={busy}
                 className="text-[11px] font-semibold text-red-600 bg-white border border-red-200 rounded-md px-2 py-0.5 hover:bg-red-50 flex items-center gap-1"
               >
@@ -247,6 +256,7 @@ export default function InterclubLiveAdmin({
             </select>
           </div>
         )}
+        {(m.historique?.length ?? 0) > 0 && <HistoriqueMatch m={m} clubs={clubs} />}
       </div>
     );
   };
@@ -353,6 +363,12 @@ export default function InterclubLiveAdmin({
               <a href={lienEcran} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1">
                 <ExternalLink className="w-3 h-3" /> Ouvrir
               </a>
+              <button onClick={() => exporterResultatsPdf(t)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 flex items-center gap-1" title="Classement et toutes les poules, prêt à imprimer ou envoyer">
+                📄 Résultats en PDF
+              </button>
+              <button onClick={() => imprimerQrCodes(t)} className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1" title="QR codes des clubs et de l'écran géant, à imprimer">
+                🖨 QR codes
+              </button>
               {onRefresh && (
                 <button onClick={() => onRefresh()} className="ml-auto text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1">
                   <RefreshCw className="w-3 h-3" /> Actualiser (auto toutes les 5 s)
@@ -445,6 +461,32 @@ export default function InterclubLiveAdmin({
           </div>
         )}
       </div>
+    </div>
+  );
+}
+
+/** 🕘 Historique d'un match : qui a saisi, corrigé, confirmé, contesté… et à quelle heure */
+function HistoriqueMatch({ m, clubs }: { m: LiveMatch; clubs: Record<string, string> }) {
+  const [ouvert, setOuvert] = useState(false);
+  const h = m.historique || [];
+  const score = (sa?: number[], sb?: number[]) => (sa && sb && sa.length ? sa.map((v, i) => `${v}-${sb[i]}`).join(" · ") : "");
+  return (
+    <div className="mt-1 text-center">
+      <button onClick={() => setOuvert(!ouvert)} className="text-[10px] text-slate-400 hover:text-slate-600">
+        🕘 Historique ({h.length}) {ouvert ? "▲" : "▼"}
+      </button>
+      {ouvert && (
+        <ol className="mt-1 text-left text-[10px] text-slate-600 bg-white border border-slate-200 rounded-md divide-y divide-slate-100">
+          {h.map((e, i) => (
+            <li key={i} className="px-2 py-1 flex gap-2">
+              <span className="font-mono text-slate-400 shrink-0">{new Date(e.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
+              <span className="font-semibold shrink-0">{e.par === "admin" ? "Table de marque" : clubs[e.par] || "?"}</span>
+              <span className="flex-1">{e.action}</span>
+              {score(e.sa, e.sb) && <span className="font-mono font-bold text-[#1e3a5f] shrink-0">{score(e.sa, e.sb)}</span>}
+            </li>
+          ))}
+        </ol>
+      )}
     </div>
   );
 }

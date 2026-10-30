@@ -190,6 +190,13 @@ function erreurScoreLive(sa: number[], sb: number[], f: { sets?: number; points?
 }
 
 // 🏁 Vue « en direct » d'un tournoi inter-clubs : phases + noms des équipes (sans jetons ni codes)
+// 🕘 Historique d'un match (qui a saisi, corrigé, confirmé, contesté… et quand), 30 entrées max
+function noteHisto(match: Record<string, unknown>, par: string, action: string) {
+  const h = Array.isArray(match.historique) ? (match.historique as unknown[]) : [];
+  h.push({ at: new Date().toISOString(), par, action, sa: match.sa, sb: match.sb });
+  match.historique = h.slice(-30);
+}
+
 function liveVue(tournoi: Record<string, unknown>, clubId?: string) {
   const live = tournoi.live as Record<string, unknown> | undefined;
   if (!live || !Array.isArray(live.phases)) return undefined;
@@ -4301,6 +4308,7 @@ Deno.serve(async (req) => {
       if (body.contester === true) {
         if (match.etat !== "saisi" || match.par === cId) return json({ ok: false, reason: "Rien à contester sur ce match." }, 400);
         match.conteste = true;
+        noteHisto(match, cId, "score contesté");
         match.at = new Date().toISOString();
         const { error: cErr } = await saveDB(fd);
         if (cErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
@@ -4313,8 +4321,10 @@ Deno.serve(async (req) => {
           const a = match.ancien as Record<string, unknown>;
           match.sa = a.sa; match.sb = a.sb; match.par = a.par; match.etat = "saisi";
           delete match.corrige; delete match.ancien;
+          noteHisto(match, cId, "correction annulée");
         } else {
           delete match.sa; delete match.sb; delete match.etat; delete match.par;
+          noteHisto(match, cId, "score effacé");
         }
         match.at = new Date().toISOString();
         const { error: delErr } = await saveDB(fd);
@@ -4324,8 +4334,10 @@ Deno.serve(async (req) => {
       const err = erreurScoreLive(sa, sb, format);
       if (err) return json({ ok: false, reason: err }, 400);
       const memeScore = JSON.stringify(match.sa) === JSON.stringify(sa) && JSON.stringify(match.sb) === JSON.stringify(sb);
+      const matchJoue0 = Array.isArray(match.sa) && (match.sa as unknown[]).length > 0;
       if (match.etat === "saisi" && match.par !== cId && memeScore) {
         match.etat = "valide"; // l'adversaire confirme le score
+        noteHisto(match, cId, "score confirmé");
         delete match.corrige; delete match.ancien;
       } else if (match.etat === "saisi" && match.par && match.par !== cId) {
         // L'adversaire corrige le score saisi par l'autre équipe
@@ -4333,9 +4345,11 @@ Deno.serve(async (req) => {
         match.ancien = { sa: match.sa, sb: match.sb, par: match.par };
         match.corrige = true;
         match.sa = sa; match.sb = sb; match.par = cId;
+        noteHisto(match, cId, "score corrigé");
       } else {
         // Première saisie, ou modification de son propre score
         match.sa = sa; match.sb = sb; match.etat = "saisi"; match.par = cId;
+        noteHisto(match, cId, matchJoue0 ? "score modifié" : "score saisi");
       }
       match.at = new Date().toISOString();
       const { error: saveErr } = await saveDB(fd);

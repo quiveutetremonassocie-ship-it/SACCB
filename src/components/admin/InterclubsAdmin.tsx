@@ -5,6 +5,7 @@ import { Plus, Trash2, Copy, Check, RefreshCw, ExternalLink, Upload, ChevronDown
 import { DB, InterClub, InterClubClub, INTERCLUB_NIVEAUX, getEffectiveConfig } from "@/lib/types";
 import { EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import InterclubLiveAdmin from "./InterclubLiveAdmin";
+import { imprimerQrCodes } from "@/lib/interclubQr";
 
 const SITE = "https://saccb.fr";
 
@@ -596,6 +597,17 @@ export default function InterclubsAdmin({
                     )}
                     <button onClick={() => copier(texteBinomes(t), "liste-" + t.id)} disabled={nbEquipes === 0} className="btn-ghost !px-4 !py-2 !text-xs">
                       {copie === "liste-" + t.id ? <Check className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />} Copier tous les binômes
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (modifie(t) && !confirm("Des modifications ne sont pas enregistrées : les QR codes utiliseront les liens et codes déjà enregistrés. Continuer ?")) return;
+                        imprimerQrCodes(t);
+                      }}
+                      disabled={t.clubs.length === 0}
+                      className="btn-ghost !px-4 !py-2 !text-xs"
+                      title="Une fiche par club avec QR code + code d'accès (et l'écran géant), à imprimer"
+                    >
+                      🖨 QR codes à imprimer
                     </button>
                     {!readOnly && (
                       <button onClick={() => basculerFerme(t)} className="btn-ghost !px-4 !py-2 !text-xs">

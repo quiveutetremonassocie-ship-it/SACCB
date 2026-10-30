@@ -300,6 +300,7 @@ export type LiveMatch = {
   corrige?: boolean; // ✏️ l'adversaire a corrigé le score : la 1ʳᵉ équipe doit confirmer ou contester
   conteste?: boolean; // ❓ la 1ʳᵉ équipe conteste la correction → la table de marque vient au terrain
   ancien?: { sa?: number[]; sb?: number[]; par?: string }; // score saisi avant le désaccord
+  historique?: { at: string; par: string; action: string; sa?: number[]; sb?: number[] }[]; // 🕘 qui a fait quoi, et quand
   at?: string;
 };
 
