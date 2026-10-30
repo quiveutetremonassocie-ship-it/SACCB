@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone, BellOff, Bell } from "lucide-react";
 import { useState } from "react";
-import { DB, Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
+import { DB, Tournoi, InscritTournoi, SeasonArchive, joueursCourts } from "@/lib/types";
 import { publicRegisterTournoiWithCovoiturage, memberToggleTournoiIgnored } from "@/lib/db";
 import { MemberSession } from "@/lib/useMemberSession";
 import { MiniCalendarBadge } from "./MiniCalendar";
@@ -249,7 +249,7 @@ function TournoiTermineCard({ t, inscrits, memberSession, onLoginRequest }: {
                 return (
                   <div key={i.id} className="flex items-center gap-2 text-sm">
                     <span>{rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`}</span>
-                    <span className="text-slate-700">{i.joueurs}</span>
+                    <span className="text-slate-700">{joueursCourts(i.joueurs)}</span>
                     <span className="text-slate-400 text-xs ml-auto">{i.resultat}</span>
                   </div>
                 );
@@ -261,7 +261,7 @@ function TournoiTermineCard({ t, inscrits, memberSession, onLoginRequest }: {
             <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">Participants</p>
             <div className="space-y-1">
               {inscrits.map((i) => (
-                <p key={i.id} className="text-sm text-slate-600">• {i.joueurs}</p>
+                <p key={i.id} className="text-sm text-slate-600">• {joueursCourts(i.joueurs)}</p>
               ))}
             </div>
           </div>
@@ -481,7 +481,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
               <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Binômes inscrits</p>
               {inscrits.length === 0 ? <p className="text-slate-400 text-sm">Aucun pour le moment</p> : (
                 <ul className="space-y-1">
-                  {inscrits.map((i) => <li key={i.id} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {i.joueurs}</li>)}
+                  {inscrits.map((i) => <li key={i.id} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {joueursCourts(i.joueurs)}</li>)}
                 </ul>
               )}
             </>
@@ -510,7 +510,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
               {covoiturageOffers.map((i) => (
                 <div key={i.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 text-sm border border-blue-100">
                   <span className="text-blue-600 font-bold shrink-0">{i.covoiturage!.seats} place{i.covoiturage!.seats > 1 ? "s" : ""}</span>
-                  <span className="text-slate-600 truncate">{i.joueurs}</span>
+                  <span className="text-slate-600 truncate">{joueursCourts(i.joueurs)}</span>
                   {i.covoiturage!.depart && (
                     <span className="flex items-center gap-1 text-xs text-slate-400 shrink-0">
                       <MapPin className="w-3 h-3" /> {i.covoiturage!.depart}

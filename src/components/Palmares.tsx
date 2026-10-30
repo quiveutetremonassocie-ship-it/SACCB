@@ -3,7 +3,7 @@
 import { motion } from "framer-motion";
 import { Trophy, Medal, ChevronDown, ChevronUp, Lock } from "lucide-react";
 import { useState } from "react";
-import { DB, SeasonArchive, InscritTournoi, Tournoi } from "@/lib/types";
+import { DB, SeasonArchive, InscritTournoi, Tournoi, joueursCourts } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
 
 // ─── Helpers ────────────────────────────────────────────
@@ -116,7 +116,7 @@ function SeasonBlock({
                             <p className="text-xs text-slate-400">{r.tournoiDate}</p>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-slate-600">{r.joueurs}</td>
+                        <td className="px-3 py-2 text-slate-600">{joueursCourts(r.joueurs)}</td>
                         <td className="px-3 py-2 text-center">
                           <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-bold ${
                             r.rank === 1 ? "bg-yellow-100 text-yellow-700" :

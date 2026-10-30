@@ -439,6 +439,18 @@ export type EmailLog = {
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
 export const QUOTA_DEFAULT = 65;
 
+// 🔒 Affichage public discret d'un nom : « Gabin Ranson » → « Gabin R. »
+// (le nom complet reste en base et dans l'admin)
+export function nomCourt(full: string): string {
+  const parts = (full || "").trim().split(/\s+/).filter(Boolean);
+  if (parts.length <= 1) return parts[0] || "";
+  return `${parts[0]} ${parts[1].charAt(0).toUpperCase()}.`;
+}
+// Binôme « Gabin Ranson / Julie Martin » → « Gabin R. / Julie M. » (séparateurs / & , + conservés)
+export function joueursCourts(joueurs: string): string {
+  return (joueurs || "").split(/(\s*[\/&,+]\s*)/).map((part, i) => (i % 2 === 1 ? part : nomCourt(part))).join("");
+}
+
 // 👕 Tailles de t-shirt : catalogue complet (ordre d'affichage) et tailles proposées par défaut
 export const TSHIRT_SIZES_ALL = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
 export const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
