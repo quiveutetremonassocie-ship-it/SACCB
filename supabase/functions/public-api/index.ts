@@ -474,7 +474,7 @@ async function logEmailToHistory(
 ): Promise<void> {
   try {
     // Lecture rapide du emailHistory existant
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return;
     const d = data.data as Record<string, unknown>;
     const history = (d.emailHistory || []) as Record<string, unknown>[];
@@ -495,7 +495,7 @@ async function logEmailToHistory(
     });
     // Conserver les 200 dernières entrées (anti-explosion DB)
     d.emailHistory = history.slice(-200);
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
   } catch (e) {
     console.warn("[logEmailToHistory] échec :", e);
   }
@@ -543,7 +543,7 @@ async function migrateCodeIfNeeded(
       if (m && !isHashedCode(String(m.code || ""))) {
         m.code = hashed;
         d.membres = membres;
-        await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+        await saveDB(d);
       }
     } else {
       const creds = (d.adminCredentials || []) as { email: string; code: string }[];
@@ -551,7 +551,7 @@ async function migrateCodeIfNeeded(
       if (c && !isHashedCode(c.code)) {
         c.code = hashed;
         d.adminCredentials = creds;
-        await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+        await saveDB(d);
       }
     }
   } catch (e) {
@@ -604,6 +604,66 @@ async function checkAdminAuth(
     return json({ ok: false, reason: "Accès non autorisé." }, 403);
   }
   return null;
+}
+
+// ─── 🔒 Écritures concurrentes : fusion à 3 voies ───
+// Toute la base tient dans un seul JSON. Si deux requêtes le modifient en même temps,
+// la seconde ne doit pas écraser la première. merge3(base, mine, theirs) combine :
+//  - base   = la base telle qu'on l'a lue
+//  - mine   = notre version modifiée
+//  - theirs = la version actuelle (modifiée entre-temps par quelqu'un d'autre)
+// Clé non modifiée par nous → on garde la leur ; modifiée seulement par nous → la nôtre ;
+// modifiée des deux côtés → objets fusionnés récursivement, listes d'éléments à `id`
+// fusionnées élément par élément (ajouts/suppressions des deux côtés conservés),
+// sinon notre version l'emporte.
+function stableStringify(v: unknown): string {
+  if (v === null || typeof v !== "object") return JSON.stringify(v) ?? "undefined";
+  if (Array.isArray(v)) return `[${v.map(stableStringify).join(",")}]`;
+  const o = v as Record<string, unknown>;
+  return `{${Object.keys(o).filter((k) => o[k] !== undefined).sort().map((k) => `${JSON.stringify(k)}:${stableStringify(o[k])}`).join(",")}}`;
+}
+function sameValue(a: unknown, b: unknown): boolean {
+  return stableStringify(a) === stableStringify(b);
+}
+function isPlainObject(v: unknown): v is Record<string, unknown> {
+  return v !== null && typeof v === "object" && !Array.isArray(v);
+}
+function isIdList(v: unknown): v is Record<string, unknown>[] {
+  return Array.isArray(v) && v.every((x) => isPlainObject(x) && (typeof x.id === "string" || typeof x.id === "number"));
+}
+function mergeIdLists(base: Record<string, unknown>[], mine: Record<string, unknown>[], theirs: Record<string, unknown>[]): Record<string, unknown>[] {
+  const key = (x: Record<string, unknown>) => String(x.id);
+  const b = new Map(base.map((x) => [key(x), x]));
+  const m = new Map(mine.map((x) => [key(x), x]));
+  const out: Record<string, unknown>[] = [];
+  for (const t of theirs) {
+    const k = key(t);
+    if (b.has(k) && !m.has(k)) continue; // supprimé de notre côté
+    const mi = m.get(k);
+    if (mi && b.has(k) && !sameValue(mi, b.get(k))) out.push(merge3(b.get(k), mi, t) as Record<string, unknown>);
+    else out.push(t);
+  }
+  const outKeys = new Set(out.map(key));
+  const theirKeys = new Set(theirs.map(key));
+  for (const mi of mine) {
+    const k = key(mi);
+    if (!b.has(k) && !theirKeys.has(k) && !outKeys.has(k)) out.push(mi); // ajouté de notre côté
+  }
+  return out;
+}
+function merge3(base: unknown, mine: unknown, theirs: unknown): unknown {
+  if (sameValue(mine, base)) return theirs;
+  if (sameValue(theirs, base) || sameValue(theirs, mine)) return mine;
+  if (isPlainObject(base) && isPlainObject(mine) && isPlainObject(theirs)) {
+    const out: Record<string, unknown> = {};
+    for (const k of new Set([...Object.keys(base), ...Object.keys(mine), ...Object.keys(theirs)])) {
+      const v = merge3(base[k], mine[k], theirs[k]);
+      if (v !== undefined) out[k] = v;
+    }
+    return out;
+  }
+  if (isIdList(base) && isIdList(mine) && isIdList(theirs)) return mergeIdLists(base, mine, theirs);
+  return mine;
 }
 
 // 👕 Retrouve l'adhérent derrière une session t-shirt. Un admin connecté avec son
@@ -711,6 +771,66 @@ Deno.serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
   );
 
+  // 🔒 Lecture / écriture de la base avec protection contre les écritures simultanées.
+  // Chaque lecture mémorise la version (_rev) et une copie de la base. Une écriture
+  // n'aboutit que si la version n'a pas bougé ; sinon on relit, on fusionne (merge3)
+  // nos changements avec ceux de l'autre requête, et on réessaie. Rien n'est écrasé.
+  let loadedRev: number | null = null;
+  let loadedSnapshot: Record<string, unknown> | null = null;
+  const revOf = (d: unknown) => Number((d as Record<string, unknown> | null)?._rev) || 0;
+  const loadDB = async () => {
+    const r = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (r.data?.data) {
+      loadedRev = revOf(r.data.data);
+      loadedSnapshot = structuredClone(r.data.data as Record<string, unknown>);
+    }
+    return r;
+  };
+  const saveDB = async (d: Record<string, unknown>): Promise<{ error: unknown }> => {
+    let mine = d;
+    let base = loadedSnapshot;
+    let expected = loadedRev;
+    for (let attempt = 0; attempt < 8; attempt++) {
+      if (expected === null) {
+        // Pas de lecture préalable dans cette requête : on part de la version actuelle
+        const cur = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+        if (cur.error || !cur.data) return { error: cur.error || "lecture impossible" };
+        expected = revOf(cur.data.data);
+      }
+      const next = { ...mine, _rev: expected + 1 };
+      const upd = supabaseAdmin.from("saccb_db").update({ data: next }).eq("id", 1);
+      const { data: rows, error } = await (expected === 0 ? upd.is("data->>_rev", null) : upd.eq("data->>_rev", String(expected))).select("id");
+      if (error) {
+        // Filet de sécurité : si la vérification de version échoue techniquement,
+        // on enregistre comme avant plutôt que de bloquer le site.
+        console.error("[saveDB] écriture conditionnelle impossible, repli :", error);
+        const r = await supabaseAdmin.from("saccb_db").update({ data: next }).eq("id", 1);
+        if (!r.error) { loadedRev = expected + 1; loadedSnapshot = structuredClone(next); Object.assign(d, next); }
+        return { error: r.error };
+      }
+      if (rows && rows.length > 0) {
+        loadedRev = expected + 1;
+        loadedSnapshot = structuredClone(next);
+        Object.assign(d, next); // garde l'objet de l'appelant à jour (_rev, fusion)
+        return { error: null };
+      }
+      // ⚠️ Quelqu'un a écrit entre-temps → relire et fusionner
+      const cur = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+      if (cur.error || !cur.data) return { error: cur.error || "lecture impossible" };
+      const theirs = cur.data.data as Record<string, unknown>;
+      if (base) {
+        const { _rev: _a, ...b } = base;
+        const { _rev: _b, ...m } = mine;
+        const { _rev: _c, ...t } = theirs;
+        mine = merge3(b, m, t) as Record<string, unknown>;
+      }
+      base = structuredClone(theirs);
+      expected = revOf(theirs);
+      await sleep(20 + Math.floor(Math.random() * 60));
+    }
+    return { error: "Conflit d'écriture persistant" };
+  };
+
   let body: Record<string, unknown>;
   try {
     body = await req.json();
@@ -758,11 +878,7 @@ Deno.serve(async (req) => {
     }
 
     // Lire la BDD
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false }, 500);
 
@@ -783,10 +899,7 @@ Deno.serve(async (req) => {
 
     if (found) {
       currentData.membres = membres;
-      await supabaseAdmin
-        .from("saccb_db")
-        .update({ data: currentData })
-        .eq("id", 1);
+      await saveDB(currentData);
 
       // Email de confirmation (fire and forget)
       const paidMembre = membres.find((m) => String(m.email || "").toLowerCase() === payerEmail);
@@ -944,8 +1057,7 @@ Deno.serve(async (req) => {
     }
 
     // 📥 Lecture de la DB courante
-    const { data: dbRow, error: dbErr } = await supabaseAdmin
-      .from("saccb_db").select("data").eq("id", 1).single();
+    const { data: dbRow, error: dbErr } = await loadDB();
     if (dbErr || !dbRow) return json({ ok: false, reason: "Erreur DB" }, 500);
     const dbCurrent = dbRow.data as Record<string, unknown>;
     const messages = ((dbCurrent.contactMessages || []) as Record<string, unknown>[]);
@@ -996,7 +1108,7 @@ Deno.serve(async (req) => {
       // Trim à 200 messages max (rolling window)
       const trimmed = messages.length > 200 ? messages.slice(messages.length - 200) : messages;
       dbCurrent.contactMessages = trimmed;
-      await supabaseAdmin.from("saccb_db").update({ data: dbCurrent }).eq("id", 1);
+      await saveDB(dbCurrent);
     }
 
     return json({ ok: true, processed });
@@ -1021,7 +1133,7 @@ Deno.serve(async (req) => {
     }
     const today = new Date().toISOString().slice(0, 10);
     try {
-      const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+      const { data } = await loadDB();
       if (!data) return json({ ok: true });
       const d = data.data as Record<string, unknown>;
       const list = ((d.analyticsDaily || []) as Record<string, unknown>[]);
@@ -1042,18 +1154,14 @@ Deno.serve(async (req) => {
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
       const cutoffStr = cutoff.toISOString().slice(0, 10);
       d.analyticsDaily = list.filter((e) => String(e.date) >= cutoffStr);
-      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      await saveDB(d);
     } catch (_e) {}
     return json({ ok: true });
   }
 
   // ─── ACTION: Récupérer les données publiques ───
   if (action === "fetch_public") {
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ error: "DB error" }, 500);
 
@@ -1242,7 +1350,7 @@ Deno.serve(async (req) => {
     const skip = body.skip === true;
     if (!email || !code || !membreId) return json({ ok: false, reason: "Paramètres manquants." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -1261,7 +1369,7 @@ Deno.serve(async (req) => {
       membres[idx] = next;
     }
     d.membres = membres;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true, renewalSkippedFor: skip ? currentSeasonKey : null });
   }
 
@@ -1275,7 +1383,7 @@ Deno.serve(async (req) => {
     const ignored = body.ignored === true; // true = ne plus recevoir, false = réactiver
     if (!email || !code || !membreId || !tournoiId) return json({ ok: false, reason: "Paramètres manquants." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -1291,7 +1399,7 @@ Deno.serve(async (req) => {
       : current.filter((id) => id !== tournoiId);
     membres[idx] = { ...membres[idx], tournoisIgnored: next };
     d.membres = membres;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true, tournoisIgnored: next });
   }
 
@@ -1303,7 +1411,7 @@ Deno.serve(async (req) => {
     if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
     if (!question.trim() || question.trim().length < 5) return json({ ok: false, reason: "Question trop courte (5 caractères minimum)." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -1325,7 +1433,7 @@ Deno.serve(async (req) => {
       createdAt: new Date().toISOString(),
     });
     d.faqPending = pending;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
     // 📧 Notification aux admins (fire and forget)
@@ -1380,7 +1488,7 @@ Deno.serve(async (req) => {
     const category = sanitize(String(body.category || "")).slice(0, 40);
     if (!pendingId || !answer.trim()) return json({ ok: false, reason: "Paramètres manquants." }, 400);
 
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -1400,7 +1508,7 @@ Deno.serve(async (req) => {
     });
     d.faqItems = faqItems;
     d.faqPending = pending.filter((p) => p.id !== pendingId);
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
 
     // 📧 Notifier l'adhérent que sa question a été répondue (fire and forget) — sauf si l'admin a refusé l'envoi
     const brevoKey = Deno.env.get("BREVO_API_KEY");
@@ -1443,19 +1551,19 @@ Deno.serve(async (req) => {
   if (action === "admin_faq_reject") {
     const pendingId = String(body.pendingId || "");
     if (!pendingId) return json({ ok: false, reason: "pendingId manquant." }, 400);
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
     if (authError) return authError;
     d.faqPending = ((d.faqPending || []) as { id: string }[]).filter((p) => p.id !== pendingId);
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true });
   }
 
   // ❓ ADMIN : lister les questions en attente
   if (action === "admin_faq_pending_list") {
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -1471,11 +1579,7 @@ Deno.serve(async (req) => {
 
     if (!email || !code) return json({ ok: false, reason: "Auth requise." }, 401);
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -1520,11 +1624,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: `Compte temporairement bloqué après plusieurs tentatives. Réessayez dans ${lockStatus.minutesLeft} min ou contactez l'association.` }, 429);
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -1560,7 +1660,7 @@ Deno.serve(async (req) => {
         const newCode = generate2FACode();
         set2FAEntry(currentData, email, await hashCode(newCode));
         // Persister immédiatement (sinon une autre invocation ne verra pas le code)
-        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+        await saveDB(currentData);
         try {
           await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
@@ -1585,7 +1685,7 @@ Deno.serve(async (req) => {
       // Consomme l'entrée (usage unique) + émet un trust token + persiste
       delete2FAEntry(currentData, email);
       issuedTrustToken = await issueTrustToken(currentData, email);
-      await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+      await saveDB(currentData);
       return null; // OK, on continue
     }
 
@@ -1605,7 +1705,7 @@ Deno.serve(async (req) => {
         const log = ((currentData.adminLoginLog || []) as { email: string; date: string; ip?: string }[]);
         log.unshift({ email, date: new Date().toISOString(), ip });
         currentData.adminLoginLog = log.slice(0, 50);
-        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+        await saveDB(currentData);
       } catch { /* best-effort */ }
       return json({
         ok: true,
@@ -1661,7 +1761,7 @@ Deno.serve(async (req) => {
     // Persist si nécessaire (codeJustReset OU log admin ajouté)
     if (codeJustReset || isAdmin) {
       try {
-        await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+        await saveDB(currentData);
       } catch { /* best-effort */ }
     }
 
@@ -1692,7 +1792,7 @@ Deno.serve(async (req) => {
 
     if (!email || !code || !membreId) return json({ ok: false, reason: "Paramètres manquants." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const d = data.data as Record<string, unknown>;
@@ -1704,7 +1804,7 @@ Deno.serve(async (req) => {
 
     membres[idx] = { ...membres[idx], newsOptIn };
     d.membres = membres;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -1715,7 +1815,7 @@ Deno.serve(async (req) => {
     const code = sanitize(String(body.code || ""));
     if (!email || !code) return json({ ok: false, reason: "Identifiants manquants." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const d = data.data as Record<string, unknown>;
@@ -1762,11 +1862,7 @@ Deno.serve(async (req) => {
   // Retourne le JSON complet de saccb_db sans masquage des codes hashés
   // (la sauvegarde doit être fidèle pour permettre une restauration)
   if (action === "admin_export_backup") {
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
@@ -1782,11 +1878,7 @@ Deno.serve(async (req) => {
   // Remplace integralement le contenu de saccb_db.data par le payload fourni.
   // Securite : double check sur la structure + flag explicite confirmRestore=true.
   if (action === "admin_import_backup") {
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
@@ -1808,10 +1900,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Flag de confirmation manquant." }, 400);
     }
 
-    const { error: updateError } = await supabaseAdmin
-      .from("saccb_db")
-      .update({ data: newData })
-      .eq("id", 1);
+    const { error: updateError } = await saveDB(newData);
     if (updateError) return json({ ok: false, reason: "Erreur lors de la restauration : " + updateError.message }, 500);
 
     const stats = {
@@ -1826,10 +1915,10 @@ Deno.serve(async (req) => {
   if (action === "admin_save") {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const code = sanitize(String(body.code || ""));
-    const newData = body.data as Record<string, unknown>;
+    let newData = body.data as Record<string, unknown>;
     if (!email || !code || !newData) return json({ ok: false, reason: "Données manquantes." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const d = data.data as Record<string, unknown>;
@@ -1850,6 +1939,17 @@ Deno.serve(async (req) => {
     const newAdminEmailSet = JSON.stringify(parseAdminEmails((newData.adminEmails as unknown[] || [])).map((e) => e.email).sort());
     if (currentAdminEmailSet !== newAdminEmailSet && !SUPER_ADMINS.includes(email)) {
       return json({ ok: false, reason: "Seul un super-administrateur peut modifier la liste des admins." }, 403);
+    }
+
+    // 🔒 L'admin envoie aussi la version de la base sur laquelle il a travaillé (base) :
+    // on n'applique QUE ses changements par-dessus la base actuelle. Inscriptions,
+    // commandes, votes… arrivés entre-temps sont conservés au lieu d'être écrasés.
+    const clientBase = body.base;
+    if (isPlainObject(clientBase)) {
+      const { _rev: _rb, ...b } = clientBase;
+      const { _rev: _rm, ...m } = newData;
+      const { _rev: _rt, ...t } = d;
+      newData = merge3(b, m, t) as Record<string, unknown>;
     }
 
     // 🔒 SÉCURITÉ : préserver les codes hashés et hasher les nouveaux codes en clair
@@ -1887,7 +1987,7 @@ Deno.serve(async (req) => {
       }
     }
 
-    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: newData }).eq("id", 1);
+    const { error: saveError } = await saveDB(newData);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
     // 🔄 Sync Google Sheets en temps réel après chaque modification admin (fire and forget)
@@ -1933,11 +2033,7 @@ Deno.serve(async (req) => {
     }
 
     // Lire les données actuelles
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -1969,10 +2065,7 @@ Deno.serve(async (req) => {
           ok: false,
         };
         currentData.membres = membres;
-        const { error: renewError } = await supabaseAdmin
-          .from("saccb_db")
-          .update({ data: currentData })
-          .eq("id", 1);
+        const { error: renewError } = await saveDB(currentData);
         if (renewError) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
         // 📧 Mail de confirmation pour un renouvellement aussi (en attente de paiement)
@@ -2057,10 +2150,7 @@ Deno.serve(async (req) => {
     membres.push(newMembre);
     currentData.membres = membres;
 
-    const { error: updateError } = await supabaseAdmin
-      .from("saccb_db")
-      .update({ data: currentData })
-      .eq("id", 1);
+    const { error: updateError } = await saveDB(currentData);
 
     if (updateError) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2197,11 +2287,7 @@ Deno.serve(async (req) => {
     const membreId = String(body.membreId || "");
     if (!membreId) return json({ ok: false }, 400);
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false }, 500);
 
@@ -2219,7 +2305,7 @@ Deno.serve(async (req) => {
   // ─── ACTION: Sync Google Sheets (appelé depuis l'admin après saveDB) ───
   if (action === "sync_sheets") {
     // 🔒 SÉCURITÉ : Auth admin obligatoire (sinon n'importe qui peut spammer le webhook Sheets)
-    const { data: dbDataSync } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data: dbDataSync } = await loadDB();
     if (!dbDataSync) return json({ ok: false }, 500);
     const dSync = dbDataSync.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, dSync);
@@ -2252,11 +2338,7 @@ Deno.serve(async (req) => {
     if (p1.length < 2 || p2.length < 2) return json({ ok: false, reason: "Noms trop courts." }, 400);
     if (!memberEmail || !memberCode) return json({ ok: false, reason: "Vous devez être connecté pour vous inscrire à un tournoi." }, 401);
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2300,10 +2382,7 @@ Deno.serve(async (req) => {
     inscrits.push(newInscrit);
     currentData.inscrits_tournoi = inscrits;
 
-    const { error: updateError } = await supabaseAdmin
-      .from("saccb_db")
-      .update({ data: currentData })
-      .eq("id", 1);
+    const { error: updateError } = await saveDB(currentData);
 
     if (updateError) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2328,11 +2407,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Service email non configuré (BREVO_API_KEY manquant)." });
     }
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2453,11 +2528,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2567,11 +2638,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "BREVO_API_KEY manquant." });
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2716,7 +2783,7 @@ Deno.serve(async (req) => {
         d.formerMembers = formerMembers;
         d.membres = kept;
         d.insc_open = false;
-        await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+        await saveDB(d);
         results.cleanup = { removed: removed.length };
       }
     }
@@ -2726,7 +2793,7 @@ Deno.serve(async (req) => {
     if (remindersDisabled && !isNaN(daysLeft) && daysLeft < 0 && d.insc_open === true) {
       d.insc_open = false;
       d.seasonRemindersDisabled = false; // on désactive le flag aussi
-      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      await saveDB(d);
       results.tempReopenClosed = true;
     }
 
@@ -2848,7 +2915,7 @@ Deno.serve(async (req) => {
     }
     if (tournoisUpdated) {
       d.config_tournois = tournois;
-      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      await saveDB(d);
       results.tournois_closed = tournois.filter((t) => t.closed).map((t) => t.name);
     }
 
@@ -2868,11 +2935,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -2900,7 +2963,7 @@ Deno.serve(async (req) => {
         }
       }
       currentData.membres = membres;
-      await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+      await saveDB(currentData);
       const resetUrl = `https://saccb.fr/?reset=${resetToken}&email=${encodeURIComponent(email)}`;
       await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
@@ -2972,7 +3035,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
@@ -3109,7 +3172,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -3195,7 +3258,7 @@ Deno.serve(async (req) => {
   if (action === "admin_unlock_account") {
     const targetEmail = sanitize(String(body.targetEmail || "")).toLowerCase();
     if (!targetEmail) return json({ ok: false, reason: "Email cible manquant." }, 400);
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
@@ -3206,7 +3269,7 @@ Deno.serve(async (req) => {
 
   // 🔍 Récupère la liste des comptes actuellement bloqués (admin only)
   if (action === "admin_list_locked_accounts") {
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
@@ -3228,11 +3291,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -3254,7 +3313,7 @@ Deno.serve(async (req) => {
     const newPlainCode = String(Math.floor(100000 + Math.random() * 900000));
     membres[membreIdx] = { ...membre, code: await hashCode(newPlainCode), codeJustReset: true };
     currentData.membres = membres;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+    const { error: saveErr } = await saveDB(currentData);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
     // Envoi email avec le nouveau code en clair
@@ -3307,7 +3366,7 @@ Deno.serve(async (req) => {
     if (!email || !token) return json({ ok: false, reason: "Lien invalide." }, 400);
     if (newCode.length < 4) return json({ ok: false, reason: "Le code doit contenir au moins 4 caractères." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
@@ -3330,7 +3389,7 @@ Deno.serve(async (req) => {
       delete m.codeJustReset;
     }
     currentData.membres = membres;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+    const { error: saveErr } = await saveDB(currentData);
     if (saveErr) return json({ ok: false, reason: "Erreur serveur." }, 500);
     clearLoginFailures(email);
     return json({ ok: true });
@@ -3344,11 +3403,7 @@ Deno.serve(async (req) => {
     if (!email || !oldCode || !newCode) return json({ ok: false, reason: "Champs manquants." }, 400);
     if (newCode.length < 4) return json({ ok: false, reason: "Le mot de passe doit contenir au moins 4 caractères." }, 400);
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -3375,10 +3430,7 @@ Deno.serve(async (req) => {
     currentData.membres = membres;
     currentData.adminCredentials = adminCredentials;
 
-    const { error: updateError } = await supabaseAdmin
-      .from("saccb_db")
-      .update({ data: currentData })
-      .eq("id", 1);
+    const { error: updateError } = await saveDB(currentData);
 
     if (updateError) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -3393,11 +3445,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -3589,7 +3637,7 @@ Deno.serve(async (req) => {
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
     // Lire les emails de contact depuis la DB, sinon fallback sur les emails par défaut
-    const { data: dbData } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data: dbData } = await loadDB();
     const dbD = (dbData?.data ?? {}) as Record<string, unknown>;
     const contactEmails = ((dbD.contactEmails || []) as string[]);
     const toEmails = contactEmails.length > 0 ? contactEmails : ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
@@ -3636,7 +3684,7 @@ Deno.serve(async (req) => {
       // Conserver max 200 messages (on coupe les + anciens si > 200)
       const trimmed = messages.length > 200 ? messages.slice(messages.length - 200) : messages;
       dbCurrent.contactMessages = trimmed;
-      await supabaseAdmin.from("saccb_db").update({ data: dbCurrent }).eq("id", 1);
+      await saveDB(dbCurrent);
     } catch (_e) {
       // L'email est parti, c'est l'essentiel — on n'echoue pas si la sauvegarde echoue
     }
@@ -3656,7 +3704,7 @@ Deno.serve(async (req) => {
     const messageId = String(body.messageId || "");
     if (!messageId) return json({ ok: false, reason: "messageId manquant." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -3677,7 +3725,7 @@ Deno.serve(async (req) => {
     }
     d.contactMessages = messages;
 
-    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveError } = await saveDB(d);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -3687,7 +3735,7 @@ Deno.serve(async (req) => {
     const messageId = String(body.messageId || "");
     if (!messageId) return json({ ok: false, reason: "messageId manquant." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -3704,7 +3752,7 @@ Deno.serve(async (req) => {
         m.id === messageId ? { ...m, archived: body.archived !== false } : m
       );
     }
-    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveError } = await saveDB(d);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -3717,11 +3765,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin
-      .from("saccb_db")
-      .select("data")
-      .eq("id", 1)
-      .single();
+    const { data, error } = await loadDB();
 
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
@@ -3741,7 +3785,7 @@ Deno.serve(async (req) => {
     const membreCode = String(Math.floor(100000 + Math.random() * 900000));
     membres[membreIdx] = { ...membre, code: await hashCode(membreCode) };
     currentData.membres = membres;
-    await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+    await saveDB(currentData);
 
     // 📎 Chargement des PDFs marqués 'attachToWelcome' pour les joindre au mail
     // Best-effort : si ça échoue, on continue sans PJ plutôt que de bloquer le mail
@@ -3873,7 +3917,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Non autorisé." }, 401);
     }
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const d = data.data as Record<string, unknown>;
@@ -3909,7 +3953,7 @@ Deno.serve(async (req) => {
     }
     d.formerMembers = formerMembers;
     d.membres = kept;
-    const { error: saveError } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveError } = await saveDB(d);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
     // Notifier les admins par email
@@ -3945,7 +3989,7 @@ Deno.serve(async (req) => {
 
     if (!email || !membreId) return json({ ok: false });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: true }); // Erreur serveur : on laisse passer
 
     const d = data.data as Record<string, unknown>;
@@ -3985,7 +4029,7 @@ Deno.serve(async (req) => {
     if (!allowedBuckets.includes(bucket)) return json({ ok: false, reason: "Bucket non autorisé." }, 400);
 
     // Vérifier les credentials admin (avec verifyCode pour gérer hash + clair)
-    const { data: dbDataImg, error: dbErrorImg } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data: dbDataImg, error: dbErrorImg } = await loadDB();
     if (dbErrorImg || !dbDataImg) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
     const dImg = dbDataImg.data as Record<string, unknown>;
@@ -4089,7 +4133,7 @@ Deno.serve(async (req) => {
     if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
     if (!TAILLES.includes(taille)) return json({ ok: false, reason: "Taille invalide." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -4124,7 +4168,7 @@ Deno.serve(async (req) => {
     else orders.push(newOrder);
 
     d.tshirtOrders = orders;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -4135,7 +4179,7 @@ Deno.serve(async (req) => {
     const code = sanitize(String(body.code || ""));
     const membreId = String(body.membreId || "");
     if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membre = await resolveTshirtMembre(d, email, code, membreId);
@@ -4154,13 +4198,13 @@ Deno.serve(async (req) => {
   if (action === "admin_delete_tshirt_order") {
     const orderId = String(body.orderId || "");
     if (!orderId) return json({ ok: false, reason: "orderId manquant." }, 400);
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
     if (authError) return authError;
     d.tshirtOrders = ((d.tshirtOrders || []) as Record<string, unknown>[]).filter((o) => o.id !== orderId);
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true });
   }
 
@@ -4168,7 +4212,7 @@ Deno.serve(async (req) => {
   // Modifie UNIQUEMENT ces deux champs sur la DB fraîche du serveur : une copie
   // admin périmée ne peut pas les écraser, et cette action n'écrase rien d'autre.
   if (action === "admin_set_tshirt") {
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -4179,7 +4223,7 @@ Deno.serve(async (req) => {
     if (body.price === null) delete d.tshirtPrice;
     else if (typeof body.price === "number" && body.price >= 0) d.tshirtPrice = body.price;
 
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     // 📧 Email aux adhérents UNIQUEMENT si l'admin l'a confirmé (évite les envois sur fausse manip)
     if (tshirtJustOpened && body.notify === true) notifyTshirtOpen(supabaseAdmin, d);
@@ -4197,7 +4241,7 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Paramètres manquants." }, 400);
     }
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -4241,7 +4285,7 @@ Deno.serve(async (req) => {
     if (multiple) poll.votes = votes;
 
     d.polls = polls;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -4258,7 +4302,7 @@ Deno.serve(async (req) => {
     if (!email || !code || !membreId) return json({ ok: false, reason: "Auth requise." }, 401);
     if (!text || text.trim().length < 5) return json({ ok: false, reason: "Texte trop court." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -4289,7 +4333,7 @@ Deno.serve(async (req) => {
     });
     d.agItems = agItems;
 
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -4302,7 +4346,7 @@ Deno.serve(async (req) => {
 
     if (!email || !code || !membreId) return json({ ok: false }, 401);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false }, 500);
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -4334,7 +4378,7 @@ Deno.serve(async (req) => {
   // ⚠️ CODE INACTIF — ancien envoi programmé, conservé pour référence
   // (jamais exécuté car l'action est interceptée juste au-dessus)
   if (action === "__DISABLED_cron_send_scheduled_drafts__") {
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "DB error" }, 500);
     const d = data.data as Record<string, unknown>;
     const drafts = (d.emailDrafts || []) as Array<Record<string, unknown>>;
@@ -4449,13 +4493,13 @@ Deno.serve(async (req) => {
 
     // Met à jour la DB en retirant les brouillons consommés
     d.emailDrafts = remainingDrafts;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true, sent: sentDrafts });
   }
 
   // 📑 [ADMIN] Crée ou met à jour un document officiel
   if (action === "admin_official_doc_save") {
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -4491,7 +4535,7 @@ Deno.serve(async (req) => {
     if (existingIdx !== -1) docs[existingIdx] = doc;
     else docs.push(doc);
     d.officialDocs = docs;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true, docId: doc.id });
   }
 
@@ -4499,7 +4543,7 @@ Deno.serve(async (req) => {
   if (action === "admin_official_doc_delete") {
     const docId = String(body.docId || "");
     if (!docId) return json({ ok: false, reason: "docId manquant." }, 400);
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -4516,7 +4560,7 @@ Deno.serve(async (req) => {
       }
     }
     d.officialDocs = docs.filter((x) => x.id !== docId);
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true });
   }
 
@@ -4525,7 +4569,7 @@ Deno.serve(async (req) => {
     const docId = String(body.docId || "");
     const direction = body.direction === "up" ? -1 : 1;
     if (!docId) return json({ ok: false, reason: "docId manquant." }, 400);
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -4540,13 +4584,13 @@ Deno.serve(async (req) => {
     [docs[idx], docs[newIdx]] = [docs[newIdx], docs[idx]];
     const updated = docs.map((x, i) => ({ ...x, order: i }));
     d.officialDocs = updated;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true });
   }
 
   // 📝 [ADMIN] Liste les brouillons d'emails (partagés entre tous les admins)
   if (action === "admin_drafts_list") {
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -4556,7 +4600,7 @@ Deno.serve(async (req) => {
 
   // 📝 [ADMIN] Crée ou met à jour un brouillon
   if (action === "admin_draft_save") {
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -4594,7 +4638,7 @@ Deno.serve(async (req) => {
     if (existingIdx !== -1) drafts[existingIdx] = draft;
     else drafts.push(draft);
     d.emailDrafts = drafts;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true, draftId: draft.id });
   }
 
@@ -4602,13 +4646,13 @@ Deno.serve(async (req) => {
   if (action === "admin_draft_delete") {
     const draftId = String(body.draftId || "");
     if (!draftId) return json({ ok: false, reason: "draftId manquant." }, 400);
-    const { data } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
     if (authError) return authError;
     d.emailDrafts = ((d.emailDrafts || []) as { id: string }[]).filter((x) => x.id !== draftId);
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
     return json({ ok: true });
   }
 
@@ -4616,7 +4660,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -4824,7 +4868,7 @@ Deno.serve(async (req) => {
       if (consumedDraftId) {
         d.emailDrafts = ((d.emailDrafts || []) as { id: string }[]).filter((x) => x.id !== consumedDraftId);
       }
-      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      await saveDB(d);
     } catch (e) {
       console.warn("[admin_send_email] Failed to log:", e);
     }
@@ -4842,7 +4886,7 @@ Deno.serve(async (req) => {
     const logId = String(body.logId || "");
     if (!logId) return json({ ok: false, reason: "logId manquant." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -4856,14 +4900,14 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Entrée introuvable." });
     }
     d.emailHistory = filtered;
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
 
   // ─── ACTION: Vider tout l'historique d'emails ───
   if (action === "clear_email_history") {
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -4871,7 +4915,7 @@ Deno.serve(async (req) => {
     if (authError) return authError;
 
     d.emailHistory = [];
-    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     return json({ ok: true });
   }
@@ -4884,7 +4928,7 @@ Deno.serve(async (req) => {
     const pollId = String(body.pollId || "");
     if (!pollId) return json({ ok: false, reason: "pollId manquant." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -4969,7 +5013,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -5109,7 +5153,7 @@ Deno.serve(async (req) => {
     const reportId = String(body.reportId || "");
     if (!reportId) return json({ ok: false, reason: "reportId manquant." }, 400);
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -5225,7 +5269,7 @@ Deno.serve(async (req) => {
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configure." });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, d);
@@ -5286,14 +5330,14 @@ Deno.serve(async (req) => {
       lastSentAt: new Date().toISOString(),
     };
     d.backupEmailConfig = updatedConfig;
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
 
     return json({ ok: true });
   }
 
   // ─── ACTION: Backup email automatique (appele par cron/keepalive) ───
   if (action === "check_backup_email") {
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -5350,7 +5394,7 @@ Deno.serve(async (req) => {
     if (!sendRes.ok) return json({ ok: false, reason: "Erreur d'envoi." });
 
     d.backupEmailConfig = { ...backupConfig, lastSentAt: new Date().toISOString() };
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
 
     return json({ ok: true, message: "Backup automatique envoye." });
   }
@@ -5365,7 +5409,7 @@ Deno.serve(async (req) => {
     if (!expected) return json({ ok: false, reason: "Code secret non configure sur le serveur." });
     if (secret !== expected) return json({ ok: false, reason: "Code incorrect." });
 
-    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
@@ -5373,21 +5417,21 @@ Deno.serve(async (req) => {
       // Suppression définitive : désactiver + marquer comme supprimé
       d.presentationMode = false;
       d.presentationModeRemoved = true;
-      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      await saveDB(d);
       return json({ ok: true, presentationMode: false, removed: true });
     }
 
     if (isRestore) {
       // Restaurer le bouton présentation (annuler le :remove)
       d.presentationModeRemoved = false;
-      await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+      await saveDB(d);
       return json({ ok: true, restored: true });
     }
 
     const currentMode = d.presentationMode === true;
     d.presentationMode = !currentMode;
 
-    await supabaseAdmin.from("saccb_db").update({ data: d }).eq("id", 1);
+    await saveDB(d);
 
     return json({ ok: true, presentationMode: !currentMode });
   }

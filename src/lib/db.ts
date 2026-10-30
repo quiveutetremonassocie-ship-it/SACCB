@@ -675,12 +675,13 @@ export async function fetchAdminDBByMember(email: string, code: string): Promise
   };
 }
 
-export async function saveDBByMember(email: string, code: string, db: DB): Promise<{ ok: boolean; reason?: string }> {
+// base = la base telle que l'admin l'a chargée → le serveur n'applique que la différence
+export async function saveDBByMember(email: string, code: string, db: DB, base?: DB): Promise<{ ok: boolean; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-      body: JSON.stringify({ action: "admin_save", email: email.toLowerCase().trim(), code, data: db }),
+      body: JSON.stringify({ action: "admin_save", email: email.toLowerCase().trim(), code, data: db, base }),
     });
     if (!res.ok) {
       const text = await res.text().catch(() => "");

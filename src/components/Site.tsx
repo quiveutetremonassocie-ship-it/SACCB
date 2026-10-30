@@ -65,21 +65,27 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [adminPermissions, setAdminPermissions] = useState<string[] | undefined>(undefined);
   const [supabaseAdminEmail, setSupabaseAdminEmail] = useState<string | undefined>(undefined);
 
+  // 🔒 Copie de la base telle que l'admin l'a chargée : envoyée avec chaque sauvegarde
+  // pour que le serveur n'applique QUE les changements de l'admin (rien d'autre n'est écrasé).
+  const adminBaseRef = useRef<DB | null>(null);
+
   const refreshPublic = useCallback(async () => {
     try {
       const d = await fetchPublicDB();
-      setDb((prev) => ({ ...prev, ...d, membres: prev.membres, factures: prev.factures }));
       setMembresCount(d.membresCount);
+      // Admin connecté : on ne mélange pas la version publique (filtrée) dans sa copie complète
+      if (adminBaseRef.current) return;
+      setDb((prev) => ({ ...prev, ...d, membres: prev.membres, factures: prev.factures }));
     } catch {}
   }, []);
 
   const refreshAdmin = useCallback(async () => {
     if (isMemberAdmin && memberSession && memberAdminCode.current) {
       const result = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
-      if (result) { setDb(result.db); setMembresCount(result.db.membres.length); setIsReadOnlyAdmin(result.readOnly); setAdminPermissions(result.permissions); }
+      if (result) { adminBaseRef.current = result.db; setDb(result.db); setMembresCount(result.db.membres.length); setIsReadOnlyAdmin(result.readOnly); setAdminPermissions(result.permissions); }
     } else {
       const data = await fetchAdminDB();
-      if (data) { setDb(data); setMembresCount(data.membres.length); }
+      if (data) { adminBaseRef.current = data; setDb(data); setMembresCount(data.membres.length); }
     }
   }, [isMemberAdmin, memberSession]);
 
@@ -87,7 +93,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     setDb(next);
     setMembresCount(next.membres.length);
     if (isMemberAdmin && memberSession && memberAdminCode.current) {
-      const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next);
+      const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next, adminBaseRef.current ?? undefined);
+      if (r.ok) adminBaseRef.current = next;
       if (!r.ok) alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
     } else {
       await saveDB(next);
@@ -173,7 +180,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         if (data.session) {
           setSupabaseAdminEmail(data.session.user?.email ?? undefined);
           setAdminOpen(true);
-          fetchAdminDB().then((d) => { if (d) { setDb(d); setMembresCount(d.membres.length); } });
+          fetchAdminDB().then((d) => { if (d) { adminBaseRef.current = d; setDb(d); setMembresCount(d.membres.length); } });
         }
       });
     }
@@ -217,7 +224,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     setAdminOpen(true);
     const { data: { session } } = await supabaseClient.auth.getSession();
     setSupabaseAdminEmail(session?.user?.email ?? undefined);
-    await fetchAdminDB().then((d) => { if (d) { setDb(d); setMembresCount(d.membres.length); } });
+    await fetchAdminDB().then((d) => { if (d) { adminBaseRef.current = d; setDb(d); setMembresCount(d.membres.length); } });
   };
 
   const onCloseAdmin = async () => {
@@ -230,6 +237,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       setAdminPermissions(undefined);
       memberAdminCode.current = null;
       localStorage.removeItem("saccb_admin_code");
+      adminBaseRef.current = null;
       setDb((d) => ({ ...d, membres: [], factures: [] }));
     }
     // Admin via membre : on garde le code en mémoire + localStorage, bouton Admin reste visible

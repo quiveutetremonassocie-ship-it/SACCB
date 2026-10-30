@@ -62,17 +62,24 @@ export default function AdminPage() {
     setBootChecking(false);
   }, []);
 
+  // 🔒 Copie de la base telle que chargée : envoyée avec chaque sauvegarde pour que le
+  // serveur n'applique QUE les changements de l'admin (inscriptions, commandes… arrivées
+  // entre-temps ne sont pas écrasées).
+  const adminBaseRef = useRef<DB | null>(null);
+
   const persist = useCallback(async (next: DB) => {
     setDb(next);
     if (memberSession && memberAdminCode.current) {
-      await saveDBByMember(memberSession.email, memberAdminCode.current, next);
+      const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next, adminBaseRef.current ?? undefined);
+      if (r.ok) adminBaseRef.current = next;
+      else alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
     }
   }, [memberSession]);
 
   const refresh = useCallback(async () => {
     if (memberSession && memberAdminCode.current) {
       const data = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
-      if (data) setDb(data.db);
+      if (data) { adminBaseRef.current = data.db; setDb(data.db); }
     }
   }, [memberSession]);
 
@@ -117,6 +124,7 @@ export default function AdminPage() {
 
     const data = await fetchAdminDBByMember(sess.email, code.trim());
     if (data) {
+      adminBaseRef.current = data.db;
       setDb(data.db);
       setAdminReady(true);
       setQuickAuthMode(false);
