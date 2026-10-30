@@ -74,6 +74,14 @@ export default function MembresAdmin({
     return <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded" title="Pas de justificatif de scolarité pour cette saison">⚠️ Justif. manquant</span>;
   }
 
+  // 👫 Fille / garçon (sert aux mails des tournois Femmes / Hommes)
+  const sansSexeCount = db.membres.filter((m) => m.sexe !== "F" && m.sexe !== "H").length;
+  function SexeBadge({ m }: { m: Membre }) {
+    if (m.sexe === "F") return <span className="text-[10px] px-1 py-0.5 mr-1" title="Fille">👧</span>;
+    if (m.sexe === "H") return <span className="text-[10px] px-1 py-0.5 mr-1" title="Garçon">👦</span>;
+    return <span className="text-[10px] text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded mr-1" title="Fille ou garçon non renseigné : à compléter via « Modifier »">❔ sexe</span>;
+  }
+
   // ⏸ Personnes mises de côté : vue séparée (les autres listes ne les montrent pas)
   const [showAttente, setShowAttente] = useState(false);
   const attenteCount = db.membres.filter((m) => m.enAttente === true).length;
@@ -378,6 +386,11 @@ export default function MembresAdmin({
             onChange={(e) => setSearch(e.target.value)}
           />
         </div>
+        {sansSexeCount > 0 && (
+          <span className="text-[11px] text-slate-600 bg-slate-100 rounded-lg px-2 py-1 self-center" title="Ces adhérents ne recevront pas les mails des tournois Femmes / Hommes tant que ce n'est pas renseigné (bouton Modifier)">
+            ❔ {sansSexeCount} sans fille/garçon
+          </span>
+        )}
         {/* ⏸ Vue « En attente » (personnes mises de côté) */}
         <button
           onClick={() => setShowAttente((v) => !v)}
@@ -538,7 +551,7 @@ export default function MembresAdmin({
                 {typeof m.montantPaye === "number" && (
                   <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                 )}
-                <JustifBadge m={m} />
+                <SexeBadge m={m} /><JustifBadge m={m} />
                 {m.paymentMethod === "online" ? (
                   <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">En ligne</span>
                 ) : m.paymentMethod === "virement" ? (
@@ -675,7 +688,7 @@ export default function MembresAdmin({
                   {typeof m.montantPaye === "number" && (
                     <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                   )}
-                  <span className="block mt-0.5"><JustifBadge m={m} /></span>
+                  <span className="block mt-0.5"><SexeBadge m={m} /><JustifBadge m={m} /></span>
                 </td>
                 <td className="p-3">
                   <div className="flex flex-col gap-1">

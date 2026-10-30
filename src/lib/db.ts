@@ -382,6 +382,7 @@ export async function publicAddMembre(membre: {
   code?: string;
   newsOptIn?: boolean;
   photoConsent?: boolean;
+  sexe?: "F" | "H";
   grouped?: boolean; // true = inscription groupée, ne pas écraser les autres membres du même email
   website?: string; // honeypot anti-bot (doit rester vide)
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {

@@ -13,6 +13,9 @@ export type Membre = {
   // ⏸ Mis de côté par le bureau (inscription d'une personne inconnue, à vérifier…).
   // Affiché à part dans l'admin ; jamais supprimé automatiquement ni relancé.
   enAttente?: boolean;
+  // 👫 F = fille/femme, H = garçon/homme — sert à n'envoyer les mails des tournois
+  // Femmes / Hommes qu'aux personnes concernées (Mixte / Libre : tout le monde)
+  sexe?: "F" | "H";
   // 🎓 Justificatif de scolarité (tarif étudiant) — bucket privé « justificatifs »
   justificatif?: { path: string; name: string; type: string; uploadedAt: string; saison: string };
   code?: string; // code personnel (4+ chiffres) pour l'espace membre

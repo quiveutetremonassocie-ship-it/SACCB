@@ -666,6 +666,15 @@ function merge3(base: unknown, mine: unknown, theirs: unknown): unknown {
   return mine;
 }
 
+// 👫 Un adhérent est-il concerné par un tournoi ? Femmes → sexe F, Hommes → sexe H,
+// Mixte / Libre / non précisé → tout le monde. Sexe non renseigné → exclu des tournois
+// réservés (le bureau le complète dans l'admin).
+function tournoiConcerne(t: Record<string, unknown>, m: { sexe?: unknown }): boolean {
+  if (t.type === "Femmes") return m.sexe === "F";
+  if (t.type === "Hommes") return m.sexe === "H";
+  return true;
+}
+
 // 👕 Tailles de t-shirt : catalogue complet + tailles proposées choisies par l'admin
 const TSHIRT_SIZES_ALL = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
@@ -2015,6 +2024,7 @@ Deno.serve(async (req) => {
     const code = sanitize(String(body.code || ""));
     const newsOptIn = body.newsOptIn === true || body.newsOptIn === "true";
     const photoConsent = body.photoConsent === true || body.photoConsent === "true";
+    const sexe = body.sexe === "F" || body.sexe === "H" ? body.sexe : undefined; // F = fille/femme, H = garçon/homme
     const grouped = body.grouped === true; // inscription groupée = ne pas écraser les autres membres du même email
 
     // Validation
@@ -2138,6 +2148,7 @@ Deno.serve(async (req) => {
       code: hashedCode, // 🔒 Code hashé en base
       newsOptIn,
       photoConsent,
+      ...(sexe ? { sexe } : {}),
     };
 
     membres.push(newMembre);
@@ -2417,8 +2428,9 @@ Deno.serve(async (req) => {
     if (!tournoi) return json({ ok: false, reason: "Tournoi introuvable." });
 
     // Récupère les membres ayant payé ET abonnés aux news (avec prénom pour personnalisation)
+    // 👫 Tournoi Femmes → seulement les filles, Hommes → seulement les garçons, Mixte/Libre → tout le monde
     const recipientsNotify = membres
-      .filter((m) => m.ok === true && m.newsOptIn !== false)
+      .filter((m) => m.ok === true && m.newsOptIn !== false && tournoiConcerne(tournoi, m))
       .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
       .filter((r) => r.email);
     const emails = recipientsNotify.map((r) => r.email);
@@ -2663,6 +2675,7 @@ Deno.serve(async (req) => {
         email: String(m.email || ""),
         prenom: extractFirstName(String(m.nom || "")),
         membreId: String(m.id || ""),
+        sexe: m.sexe,
         tournoisIgnored: Array.isArray(m.tournoisIgnored) ? (m.tournoisIgnored as string[]) : [],
       }))
       .filter((r) => r.email);
@@ -2814,6 +2827,8 @@ Deno.serve(async (req) => {
       const newsRecipientsForThisT = newsRecipients.filter((r) => {
         // 🔕 Filtre 1 : pas intéressé(e) explicite
         if (r.tournoisIgnored.includes(tournoiId)) return false;
+        // 👫 Filtre 1 bis : tournoi Femmes / Hommes → seulement les personnes concernées
+        if (!tournoiConcerne(t, r)) return false;
         // Filtre 2 : déjà inscrit (basé sur le prénom)
         if (!r.prenom) return true; // si pas de prénom, on ne peut pas matcher → on garde par sécurité
         const nameLower = r.prenom.toLowerCase();

@@ -45,6 +45,7 @@ type Personne = {
   code?: string;  // utilisé seulement si sameAccount = false
   tel?: string;   // utilisé seulement si sameAccount = false (sinon tel partagé)
   justificatif?: File; // 🎓 certificat de scolarité (obligatoire pour un étudiant)
+  sexe?: "F" | "H";    // 👫 pour cibler les mails des tournois Femmes / Hommes
 };
 
 const JUSTIF_TYPES = ["application/pdf", "image/jpeg", "image/png"];
@@ -178,6 +179,10 @@ export default function Inscription({
         alert("Veuillez remplir le prénom et le nom de chaque personne.");
         return;
       }
+      if (p.sexe !== "F" && p.sexe !== "H") {
+        alert(`Veuillez indiquer « Fille » ou « Garçon » pour ${p.prenom || "chaque personne"}.`);
+        return;
+      }
       // 🎓 Justificatif obligatoire pour le tarif étudiant
       if (p.type === "Etudiant") {
         if (!p.justificatif) {
@@ -275,6 +280,7 @@ export default function Inscription({
         code: personCode,
         newsOptIn,
         photoConsent,
+        sexe: p.sexe,
         grouped: isGrouped,
         website: honeypot,
       });
@@ -481,6 +487,20 @@ export default function Inscription({
                         <option value="Adulte">Adulte ({prix.Adulte}€)</option>
                         <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
                       </select>
+
+                      {/* 👫 Fille / Garçon (pour les tournois Femmes / Hommes) */}
+                      <div className="mt-2 grid grid-cols-2 gap-2">
+                        {([["F", "👧 Fille"], ["H", "👦 Garçon"]] as const).map(([val, label]) => (
+                          <button
+                            key={val}
+                            type="button"
+                            onClick={() => setPersonnes((prev) => prev.map((x, i) => (i === idx ? { ...x, sexe: val } : x)))}
+                            className={`text-sm rounded-xl border py-2 transition ${p.sexe === val ? "bg-blue-600 border-blue-600 text-white font-semibold" : "bg-white border-slate-300 text-slate-600 hover:bg-slate-50"}`}
+                          >
+                            {label}
+                          </button>
+                        ))}
+                      </div>
 
                       {/* 🎓 Justificatif de scolarité obligatoire pour le tarif étudiant */}
                       {p.type === "Etudiant" && (

@@ -35,6 +35,13 @@ export default function EditMembreModal({
             <option value="Etudiant">Etudiant</option>
           </select>
 
+          {/* 👫 Fille / Garçon — pour les mails des tournois Femmes / Hommes */}
+          <select className="input" value={m.sexe ?? ""} onChange={(e) => setM({ ...m, sexe: e.target.value === "F" || e.target.value === "H" ? e.target.value : undefined })}>
+            <option value="">Fille ou garçon ? (non renseigné)</option>
+            <option value="F">👧 Fille</option>
+            <option value="H">👦 Garçon</option>
+          </select>
+
           {/* 💶 Montant réellement payé (réduction) */}
           <div>
             <label className="text-xs text-slate-500 mb-1 block">Montant réellement payé (€) — en cas de réduction</label>
