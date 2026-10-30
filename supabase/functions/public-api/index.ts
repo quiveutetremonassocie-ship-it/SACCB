@@ -666,6 +666,14 @@ function merge3(base: unknown, mine: unknown, theirs: unknown): unknown {
   return mine;
 }
 
+// 👕 Tailles de t-shirt : catalogue complet + tailles proposées choisies par l'admin
+const TSHIRT_SIZES_ALL = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
+const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
+function tshirtSizesOf(d: Record<string, unknown>): string[] {
+  const s = Array.isArray(d.tshirtSizes) ? TSHIRT_SIZES_ALL.filter((x) => (d.tshirtSizes as unknown[]).includes(x)) : [];
+  return s.length > 0 ? s : TSHIRT_SIZES_DEFAULT;
+}
+
 // 👕 Retrouve l'adhérent derrière une session t-shirt. Un admin connecté avec son
 // code admin a un membreId factice "admin-<email>" : s'il est AUSSI inscrit comme
 // adhérent (même email), on le rattache à sa fiche adhérent (en priorité celle payée).
@@ -4129,13 +4137,14 @@ Deno.serve(async (req) => {
     const taille = String(body.taille || "");
     const nomFloque = sanitize(String(body.nomFloque || "")).slice(0, 30);
 
-    const TAILLES = ["XS", "S", "M", "L", "XL"];
     if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
-    if (!TAILLES.includes(taille)) return json({ ok: false, reason: "Taille invalide." }, 400);
 
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
+    // Tailles proposées par l'admin ; on accepte aussi la taille déjà commandée (modif d'une ancienne commande)
+    const existingTaille = ((d.tshirtOrders || []) as Record<string, unknown>[]).find((o) => o.membreId === membreId)?.taille;
+    if (!tshirtSizesOf(d).includes(taille) && taille !== existingTaille) return json({ ok: false, reason: "Cette taille n'est pas disponible." }, 400);
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     const membre = await resolveTshirtMembre(d, email, code, membreId);
@@ -4191,6 +4200,7 @@ Deno.serve(async (req) => {
       order: my,
       open: d.tshirtOpen === true,
       price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
+      sizes: tshirtSizesOf(d),
     });
   }
 
@@ -4222,12 +4232,17 @@ Deno.serve(async (req) => {
     if (typeof body.open === "boolean") d.tshirtOpen = body.open;
     if (body.price === null) delete d.tshirtPrice;
     else if (typeof body.price === "number" && body.price >= 0) d.tshirtPrice = body.price;
+    if (Array.isArray(body.sizes)) {
+      const sizes = TSHIRT_SIZES_ALL.filter((s) => (body.sizes as unknown[]).includes(s));
+      if (sizes.length === 0) return json({ ok: false, reason: "Choisissez au moins une taille." }, 400);
+      d.tshirtSizes = sizes;
+    }
 
     const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     // 📧 Email aux adhérents UNIQUEMENT si l'admin l'a confirmé (évite les envois sur fausse manip)
     if (tshirtJustOpened && body.notify === true) notifyTshirtOpen(supabaseAdmin, d);
-    return json({ ok: true, open: d.tshirtOpen === true, price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null });
+    return json({ ok: true, open: d.tshirtOpen === true, price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null, sizes: tshirtSizesOf(d) });
   }
 
   if (action === "vote_poll") {

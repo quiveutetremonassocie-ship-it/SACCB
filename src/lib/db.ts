@@ -98,7 +98,7 @@ export async function adminOfficialDocReorder(adminEmail: string, adminCode: str
 }
 
 // 👕 Récupère ma commande t-shirt
-export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; reason?: string }> {
+export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; sizes?: string[]; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -240,7 +240,7 @@ export async function adminFaqReject(adminEmail: string, adminCode: string, pend
 }
 
 // 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix (price: null = retirer le prix)
-export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null; notify?: boolean }): Promise<{ ok: boolean; open?: boolean; price?: number | null; reason?: string }> {
+export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null; notify?: boolean; sizes?: string[] }): Promise<{ ok: boolean; open?: boolean; price?: number | null; sizes?: string[]; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",

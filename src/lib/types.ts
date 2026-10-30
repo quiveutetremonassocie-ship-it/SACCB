@@ -259,6 +259,7 @@ export type DB = {
   // 👕 Commande de t-shirts (membres connectés uniquement)
   tshirtOpen?: boolean; // Section commande t-shirt visible/ouverte dans l'espace membre
   tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
+  tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   // ❓ FAQ adhérents : visible sur la home + page /faq
   faqOpen?: boolean; // Affiche/cache la section FAQ côté public
@@ -432,6 +433,14 @@ export type EmailLog = {
 
 export const PRIX = { Adulte: 50, Etudiant: 30 } as const;
 export const QUOTA_DEFAULT = 65;
+
+// 👕 Tailles de t-shirt : catalogue complet (ordre d'affichage) et tailles proposées par défaut
+export const TSHIRT_SIZES_ALL = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
+export const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
+export function getTshirtSizes(db: { tshirtSizes?: string[] }): string[] {
+  const s = TSHIRT_SIZES_ALL.filter((x) => (db.tshirtSizes ?? []).includes(x));
+  return s.length > 0 ? s : TSHIRT_SIZES_DEFAULT;
+}
 
 // Retourne les prix effectifs (DB ou défaut)
 export function getEffectivePrix(db: DB): { Adulte: number; Etudiant: number } {

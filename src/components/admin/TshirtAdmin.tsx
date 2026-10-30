@@ -2,10 +2,10 @@
 
 import { useMemo, useState } from "react";
 import { Shirt, Trash2, Download } from "lucide-react";
-import type { DB } from "@/lib/types";
+import { type DB, TSHIRT_SIZES_ALL, getTshirtSizes } from "@/lib/types";
 import { adminDeleteTshirtOrder, adminSetTshirt } from "@/lib/db";
 
-const TAILLES = ["XS", "S", "M", "L", "XL"] as const;
+const TAILLES = TSHIRT_SIZES_ALL;
 
 export default function TshirtAdmin({
   db,
@@ -31,10 +31,31 @@ export default function TshirtAdmin({
 
   // Totaux par taille
   const totals = useMemo(() => {
-    const t: Record<string, number> = { XS: 0, S: 0, M: 0, L: 0, XL: 0 };
+    const t: Record<string, number> = Object.fromEntries(TAILLES.map((s) => [s, 0]));
     orders.forEach((o) => { if (t[o.taille] !== undefined) t[o.taille]++; });
     return t;
   }, [orders]);
+
+  // 📏 Tailles proposées aux adhérents (choisies ici) ; on affiche aussi celles déjà commandées
+  const availableSizes = getTshirtSizes(db);
+  const shownSizes = TAILLES.filter((t) => availableSizes.includes(t) || totals[t] > 0);
+  const [savingSizes, setSavingSizes] = useState(false);
+
+  async function toggleSize(size: string) {
+    if (readOnly) return;
+    const next = availableSizes.includes(size) ? availableSizes.filter((s) => s !== size) : [...availableSizes, size];
+    if (next.length === 0) { alert("Il faut proposer au moins une taille."); return; }
+    const ordered = TAILLES.filter((t) => next.includes(t));
+    setSavingSizes(true);
+    if (adminEmail && adminCode) {
+      const r = await adminSetTshirt(adminEmail, adminCode, { sizes: [...ordered] });
+      if (!r.ok) alert("Erreur : les tailles n'ont pas été enregistrées. " + (r.reason || ""));
+      if (onRefresh) await onRefresh();
+    } else {
+      await onPersist({ ...db, tshirtSizes: [...ordered] });
+    }
+    setSavingSizes(false);
+  }
 
   const totalRecette = price !== null ? orders.length * price : null;
 
@@ -107,7 +128,7 @@ export default function TshirtAdmin({
     doc.setFontSize(16);
     doc.text(`Commande T-shirts SACCB — saison ${db.y1}-${db.y2}`, 14, 18);
     doc.setFontSize(10);
-    doc.text(`${orders.length} t-shirt${orders.length > 1 ? "s" : ""} · ${TAILLES.map((t) => `${t} : ${totals[t]}`).join("  ·  ")}`, 14, 25);
+    doc.text(`${orders.length} t-shirt${orders.length > 1 ? "s" : ""} · ${shownSizes.map((t) => `${t} : ${totals[t]}`).join("  ·  ")}`, 14, 25);
     autoTable(doc, {
       startY: 31,
       head: [["Taille", "Floquage", "Nom"]],
@@ -204,11 +225,35 @@ export default function TshirtAdmin({
         </p>
       </div>
 
+      {/* 📏 Tailles proposées aux adhérents */}
+      <div className="mb-4 bg-white border border-slate-200 rounded-xl p-3">
+        <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-2">📏 Tailles disponibles</p>
+        <div className="flex flex-wrap gap-2">
+          {TAILLES.map((t) => {
+            const on = availableSizes.includes(t);
+            return (
+              <button
+                key={t}
+                onClick={() => toggleSize(t)}
+                disabled={readOnly || savingSizes}
+                className={`min-w-[3rem] text-sm font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-60 ${
+                  on ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-slate-300 text-slate-400 line-through"
+                }`}
+                title={on ? "Proposée — cliquer pour la retirer" : "Non proposée — cliquer pour l'ajouter"}
+              >
+                {t}
+              </button>
+            );
+          })}
+        </div>
+        <p className="text-[11px] text-slate-500 mt-1.5">Cliquez sur une taille pour la proposer ou la retirer. Seules les tailles en vert sont proposées aux adhérents.</p>
+      </div>
+
       {/* Totaux par taille */}
       {orders.length > 0 && (
-        <div className="grid grid-cols-5 gap-2 mb-4">
-          {TAILLES.map((t) => (
-            <div key={t} className="bg-amber-50 border border-amber-200 rounded-xl p-2 text-center">
+        <div className="flex flex-wrap gap-2 mb-4">
+          {shownSizes.map((t) => (
+            <div key={t} className="flex-1 min-w-[3.5rem] bg-amber-50 border border-amber-200 rounded-xl p-2 text-center">
               <p className="text-[10px] uppercase tracking-widest text-amber-700 font-semibold">{t}</p>
               <p className="text-xl font-bold text-amber-900">{totals[t]}</p>
             </div>

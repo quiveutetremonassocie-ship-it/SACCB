@@ -3,10 +3,9 @@
 import { useEffect, useState } from "react";
 import { Shirt, CheckCircle2, RefreshCw } from "lucide-react";
 import { fetchPublicDB, memberGetMyTshirtOrder, memberSubmitTshirtOrder } from "@/lib/db";
-import type { TshirtOrder } from "@/lib/types";
+import { TSHIRT_SIZES_DEFAULT, type TshirtOrder } from "@/lib/types";
 
-const TAILLES = ["XS", "S", "M", "L", "XL"] as const;
-type Taille = typeof TAILLES[number];
+type Taille = string;
 
 export default function TshirtOrderForm({
   email,
@@ -23,6 +22,8 @@ export default function TshirtOrderForm({
 }) {
   const [open, setOpen] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
+  // Tailles proposées par l'admin (renvoyées par le serveur)
+  const [sizes, setSizes] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
   const [order, setOrder] = useState<TshirtOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -60,6 +61,9 @@ export default function TshirtOrderForm({
       if (r.ok) {
         setOpen(r.open === true);
         setPrice(typeof r.price === "number" ? r.price : null);
+        const avail = Array.isArray(r.sizes) && r.sizes.length > 0 ? r.sizes : TSHIRT_SIZES_DEFAULT;
+        setSizes(avail);
+        if (!r.order) setTaille(avail.includes("M") ? "M" : avail[0]);
         if (r.order) {
           setOrder(r.order);
           setTaille(r.order.taille as Taille);
@@ -187,7 +191,7 @@ export default function TshirtOrderForm({
             onChange={(e) => setTaille(e.target.value as Taille)}
             className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500 bg-white"
           >
-            {TAILLES.map((t) => (
+            {(sizes.includes(taille) ? sizes : [...sizes, taille]).map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
