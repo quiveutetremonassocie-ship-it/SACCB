@@ -478,6 +478,8 @@ function MesMatchs({
   // 🏅 Place provisoire dans tout le tournoi (dès qu'un match de la phase a un score)
   const general = classementGeneral(ph);
   const classementVisible = ph.mode === "niveau" || ph.poules.some((p) => p.matchs.some(matchJoue));
+  // Binômes du club rangés du mieux classé au moins bien classé dès que le classement existe
+  if (classementVisible) mesEquipes.sort((x, y) => general.indexOf(x.id) - general.indexOf(y.id));
 
   const carte = (m: LiveMatch, moi: string) => {
     const valide = estValide(m);
