@@ -15,7 +15,7 @@ export default function Page() {
         <h2>1. Éditeur du site</h2>
         <p>
           Le présent site <strong>saccb.fr</strong> est édité par l'association{" "}
-          <strong>Sainte-Adresse Côte Caux Badminton (SACCB)</strong>, association loi 1901 à but
+          <strong>Sainte-Adresse Club Compétition Badminton (SACCB)</strong>, association loi 1901 à but
           non lucratif.
         </p>
         <ul>

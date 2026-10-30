@@ -14,7 +14,7 @@ export default function Page() {
         <h2>Article 1 — Objet</h2>
         <p>
           Les présentes Conditions Générales de Vente (ci-après « CGV ») s'appliquent à toute
-          adhésion souscrite auprès de l'association <strong>Sainte-Adresse Côte Caux Badminton
+          adhésion souscrite auprès de l'association <strong>Sainte-Adresse Club Compétition Badminton
           (SACCB)</strong>, association loi 1901 à but non lucratif.
         </p>
         <p>

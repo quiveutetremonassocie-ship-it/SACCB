@@ -78,7 +78,7 @@ export const viewport = {
 const jsonLd = {
   "@context": "https://schema.org",
   "@type": ["SportsClub", "LocalBusiness", "SportsActivityLocation"],
-  name: "SACCB — Sainte-Adresse Club de Compétition de Badminton",
+  name: "SACCB — Sainte-Adresse Club Compétition Badminton",
   alternateName: "SACCB",
   url: "https://saccb.fr",
   logo: "https://saccb.fr/logo.png",

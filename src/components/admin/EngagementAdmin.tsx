@@ -449,7 +449,7 @@ function AGTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Pro
   ${ameliorations.length === 0 ? `<p class="empty">Aucune idée d'amélioration soumise pour cette saison.</p>` : ameliorations.slice().reverse().map(renderItem).join("")}
 
   <div class="footer">
-    SACCB — Sainte-Adresse Club de Compétition de Badminton<br>
+    SACCB — Sainte-Adresse Club Compétition Badminton<br>
     contact@saccb.fr · saccb.fr
   </div>
 

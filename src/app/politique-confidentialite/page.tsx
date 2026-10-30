@@ -15,7 +15,7 @@ export default function Page() {
         <h2>1. Responsable du traitement</h2>
         <p>
           Le responsable du traitement des données personnelles collectées sur le site saccb.fr
-          est l&apos;association <strong>Sainte-Adresse Côte Caux Badminton (SACCB)</strong>,
+          est l&apos;association <strong>Sainte-Adresse Club Compétition Badminton (SACCB)</strong>,
           représentée par <strong><PresidentName /></strong>, Président(e).
         </p>
         <p>

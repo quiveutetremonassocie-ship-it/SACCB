@@ -15,7 +15,7 @@ export default function Page() {
         <p>
           Les présentes Conditions Générales d'Utilisation (ci-après « CGU ») ont pour objet de
           définir les modalités et conditions d'utilisation du site <strong>saccb.fr</strong>{" "}
-          édité par l'association Sainte-Adresse Côte Caux Badminton (SACCB).
+          édité par l'association Sainte-Adresse Club Compétition Badminton (SACCB).
         </p>
         <p>
           L'utilisation du site implique l'acceptation pleine et entière des présentes CGU par
