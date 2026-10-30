@@ -87,9 +87,9 @@ export default function InterclubsAdmin({
     const precedent = list.find((x) => x.sallePhotoUrl) || list[0];
     const t: InterClub = {
       id: uid(),
-      name: "Tournoi inter-clubs",
+      name: "Tournoi SACCB",
       date: "",
-      type: "Mixte",
+      type: "",
       niveaux: [...INTERCLUB_NIVEAUX],
       dateLimit: "",
       deroulement: MODELE_DEROULEMENT,
@@ -116,6 +116,7 @@ export default function InterclubsAdmin({
   async function enregistrer() {
     if (!draft) return;
     if (!draft.name.trim()) { alert("Donne un nom au tournoi."); return; }
+    if (!draft.type) { alert("Choisis le type du tournoi (mixte, hommes, dames ou libre)."); return; }
     const bad = draft.clubs.find((c) => !c.nom.trim());
     if (bad) { alert("Chaque club doit avoir un nom."); return; }
     setBusy(true);
@@ -241,7 +242,8 @@ export default function InterclubsAdmin({
                       <input className="input w-full !text-sm" value={d.name} disabled={readOnly} onChange={(e) => majDraft({ name: e.target.value })} />
                     </Champ>
                     <Champ label="Type">
-                      <select className="input w-full !text-sm" value={d.type || ""} disabled={readOnly} onChange={(e) => majDraft({ type: e.target.value })}>
+                      <select className={`input w-full !text-sm ${!d.type ? "!border-red-400 !text-slate-400" : ""}`} value={d.type || ""} disabled={readOnly} onChange={(e) => majDraft({ type: e.target.value })}>
+                        <option value="" disabled>— Choisir le type (obligatoire) —</option>
                         <option value="Mixte">👫 Double mixte</option>
                         <option value="Hommes">👬 Double hommes</option>
                         <option value="Femmes">👭 Double dames</option>
