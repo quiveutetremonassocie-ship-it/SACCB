@@ -3,7 +3,7 @@
 import { useMemo, useState } from "react";
 import { Shirt, Trash2, Download } from "lucide-react";
 import { type DB, TSHIRT_SIZES_ALL, getTshirtSizes } from "@/lib/types";
-import { adminDeleteTshirtOrder, adminSetTshirt } from "@/lib/db";
+import { adminDeleteTshirtOrder, adminSetTshirt, adminTshirtPaid, adminTshirtRelance } from "@/lib/db";
 
 const TAILLES = TSHIRT_SIZES_ALL;
 
@@ -92,6 +92,51 @@ export default function TshirtAdmin({
       await onPersist({ ...db, tshirtPrice: newPrice });
     }
     setSavingPrice(false);
+  }
+
+  // 💳 Paiement en ligne (lien HelloAsso) + suivi payé / non payé + relances
+  const paymentUrl = typeof db.tshirtPaymentUrl === "string" ? db.tshirtPaymentUrl : "";
+  const [payUrlInput, setPayUrlInput] = useState(paymentUrl);
+  const [savingPayUrl, setSavingPayUrl] = useState(false);
+  const [busyOrder, setBusyOrder] = useState<string | null>(null);
+  const [relancing, setRelancing] = useState(false);
+  const [payFilter, setPayFilter] = useState<"all" | "paid" | "unpaid">("all");
+  const paidCount = orders.filter((o) => o.paid).length;
+  const unpaidOrders = orders.filter((o) => !o.paid);
+  const encaisse = price !== null ? paidCount * price : null;
+  const shownOrders = orders.filter((o) => payFilter === "all" || (payFilter === "paid" ? o.paid : !o.paid));
+
+  async function savePaymentUrl() {
+    if (readOnly || !adminEmail || !adminCode) return;
+    const v = payUrlInput.trim();
+    if (v && !/^https:\/\//.test(v)) { alert("Le lien doit commencer par https://"); return; }
+    setSavingPayUrl(true);
+    const r = await adminSetTshirt(adminEmail, adminCode, { paymentUrl: v || null });
+    if (!r.ok) alert("Erreur : le lien n'a pas été enregistré. " + (r.reason || ""));
+    if (onRefresh) await onRefresh();
+    setSavingPayUrl(false);
+  }
+
+  async function togglePaid(orderId: string, paid: boolean) {
+    if (readOnly || !adminEmail || !adminCode) return;
+    setBusyOrder(orderId);
+    const r = await adminTshirtPaid(adminEmail, adminCode, orderId, paid);
+    if (!r.ok) alert("Erreur : " + (r.reason || "inconnue"));
+    if (onRefresh) await onRefresh();
+    setBusyOrder(null);
+  }
+
+  async function relancer(orderIds?: string[]) {
+    if (readOnly || !adminEmail || !adminCode) return;
+    const n = orderIds ? orderIds.length : unpaidOrders.length;
+    if (n === 0) return;
+    if (!confirm(`Envoyer un email de rappel de paiement à ${n === 1 && orderIds ? "cette personne" : `${n} personne${n > 1 ? "s" : ""} qui n'ont pas encore payé`} ?`)) return;
+    setRelancing(true);
+    const r = await adminTshirtRelance(adminEmail, adminCode, orderIds);
+    setRelancing(false);
+    if (r.ok) alert(`✅ ${r.sent ?? 0} rappel${(r.sent ?? 0) > 1 ? "s" : ""} envoyé${(r.sent ?? 0) > 1 ? "s" : ""}.`);
+    else alert("Erreur : " + (r.reason || "inconnue"));
+    if (onRefresh) await onRefresh();
   }
 
   async function handleDelete(orderId: string) {
@@ -272,13 +317,59 @@ export default function TshirtAdmin({
         </div>
       )}
 
+      {/* 💳 Paiement en ligne + suivi des paiements */}
+      <div className="mb-4 bg-white border border-slate-200 rounded-xl p-3">
+        <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-2">💳 Paiement en ligne (facultatif)</p>
+        <div className="flex gap-2 items-center">
+          <input
+            type="url"
+            value={payUrlInput}
+            onChange={(e) => setPayUrlInput(e.target.value)}
+            disabled={readOnly}
+            placeholder="Lien HelloAsso de la campagne t-shirts (https://www.helloasso.com/…)"
+            className="flex-1 min-w-0 text-sm border border-slate-300 rounded-lg px-3 py-1.5 bg-white"
+          />
+          {!readOnly && (
+            <button onClick={savePaymentUrl} disabled={savingPayUrl || payUrlInput.trim() === paymentUrl} className="text-xs bg-blue-600 hover:bg-blue-700 text-white font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50">
+              {savingPayUrl ? "..." : "Enregistrer"}
+            </button>
+          )}
+        </div>
+        <p className="text-[11px] text-slate-500 mt-1.5">
+          {paymentUrl
+            ? "✓ Les adhérents voient un bouton « Payer mon t-shirt en ligne » dans leur commande. Vide le champ et enregistre pour revenir au paiement au magasin."
+            : "Sans lien : paiement au magasin. Avec un lien : les adhérents paient en ligne et n'ont plus qu'à venir chercher leur t-shirt."}
+        </p>
+
+        {orders.length > 0 && (
+          <div className="mt-3 pt-3 border-t border-slate-100">
+            <div className="flex flex-wrap items-center gap-2 text-xs">
+              <button onClick={() => setPayFilter("all")} className={`px-2.5 py-1 rounded-lg border ${payFilter === "all" ? "bg-slate-700 text-white border-slate-700" : "border-slate-300 text-slate-600"}`}>Tous ({orders.length})</button>
+              <button onClick={() => setPayFilter("paid")} className={`px-2.5 py-1 rounded-lg border ${payFilter === "paid" ? "bg-emerald-500 text-white border-emerald-500" : "border-emerald-300 text-emerald-700"}`}>✓ Payés ({paidCount})</button>
+              <button onClick={() => setPayFilter("unpaid")} className={`px-2.5 py-1 rounded-lg border ${payFilter === "unpaid" ? "bg-red-500 text-white border-red-500" : "border-red-300 text-red-700"}`}>✗ Non payés ({unpaidOrders.length})</button>
+              {encaisse !== null && <span className="text-slate-600">· Encaissé : <strong>{encaisse.toFixed(2)}€</strong>{totalRecette !== null ? ` / ${totalRecette.toFixed(2)}€` : ""}</span>}
+            </div>
+            {!readOnly && unpaidOrders.length > 0 && (
+              <button
+                onClick={() => relancer()}
+                disabled={relancing}
+                className="mt-2 w-full text-xs font-semibold bg-blue-50 hover:bg-blue-100 text-blue-800 border border-blue-200 rounded-lg py-1.5 disabled:opacity-50"
+              >
+                {relancing ? "Envoi des rappels…" : `📨 Relancer les ${unpaidOrders.length} personne${unpaidOrders.length > 1 ? "s" : ""} qui n'ont pas payé`}
+              </button>
+            )}
+            <p className="text-[11px] text-slate-500 mt-1.5">Coche « ✓ Payé » sur chaque commande quand tu vois le paiement dans HelloAsso (ou quand la personne paie au magasin).</p>
+          </div>
+        )}
+      </div>
+
       {/* Liste des commandes */}
       {orders.length === 0 ? (
         <p className="text-sm text-slate-400 italic text-center py-6">Aucune commande pour le moment.</p>
       ) : (
         <ul className="space-y-2">
-          {orders.map((o) => (
-            <li key={o.id} className="bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-3">
+          {shownOrders.map((o) => (
+            <li key={o.id} className={`bg-white border rounded-xl p-3 flex items-center gap-3 flex-wrap ${o.paid ? "border-emerald-200" : "border-slate-200"}`}>
               <div className="w-9 h-9 rounded-lg bg-amber-100 flex items-center justify-center shrink-0 font-mono text-sm font-bold text-amber-800">
                 {o.taille}
               </div>
@@ -289,8 +380,30 @@ export default function TshirtAdmin({
                 <p className="text-xs text-slate-500 truncate">
                   {o.nomFloque ? <>Floqué : <strong>&quot;{o.nomFloque}&quot;</strong> · </> : null}
                   {new Date(o.createdAt).toLocaleDateString("fr-FR")}
+                  {o.relances && o.relances.length > 0 && (
+                    <> · relancé {o.relances.length}× (dernier le {new Date(o.relances[o.relances.length - 1]).toLocaleDateString("fr-FR")})</>
+                  )}
                 </p>
               </div>
+              {/* 💳 Payé / non payé (clic pour changer) */}
+              <button
+                onClick={() => togglePaid(o.id, !o.paid)}
+                disabled={readOnly || busyOrder === o.id}
+                className={`text-xs font-semibold px-2.5 py-1 rounded-lg border shrink-0 disabled:opacity-60 ${o.paid ? "bg-emerald-500 border-emerald-500 text-white" : "bg-red-50 border-red-300 text-red-700"}`}
+                title={o.paid ? `Payé${o.paidAt ? " le " + new Date(o.paidAt).toLocaleDateString("fr-FR") : ""} — cliquer pour annuler` : "Non payé — cliquer quand le paiement est reçu"}
+              >
+                {busyOrder === o.id ? "…" : o.paid ? "✓ Payé" : "✗ Non payé"}
+              </button>
+              {!readOnly && !o.paid && (
+                <button
+                  onClick={() => relancer([o.id])}
+                  disabled={relancing}
+                  className="text-xs text-blue-700 border border-blue-200 hover:bg-blue-50 px-2 py-1 rounded-lg shrink-0 disabled:opacity-50"
+                  title="Envoyer un rappel de paiement à cette personne"
+                >
+                  📨 Relancer
+                </button>
+              )}
               {!readOnly && (
                 <button
                   onClick={() => handleDelete(o.id)}

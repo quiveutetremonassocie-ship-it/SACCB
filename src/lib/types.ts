@@ -190,6 +190,9 @@ export type TshirtOrder = {
   nomFloque?: string;      // nom/surnom à floquer sur le t-shirt (optionnel)
   createdAt: string;       // ISO timestamp
   status?: "pending" | "ordered" | "delivered"; // pour suivi admin
+  paid?: boolean;          // 💳 payé (coché par le bureau)
+  paidAt?: string;
+  relances?: string[];     // dates des relances de paiement envoyées
   notes?: string;          // note admin libre
   saison?: string;
 };
@@ -267,6 +270,7 @@ export type DB = {
   // 👕 Commande de t-shirts (membres connectés uniquement)
   tshirtOpen?: boolean; // Section commande t-shirt visible/ouverte dans l'espace membre
   tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
+  tshirtPaymentUrl?: string; // 💳 lien HelloAsso pour payer le t-shirt en ligne (facultatif)
   tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   // ❓ FAQ adhérents : visible sur la home + page /faq

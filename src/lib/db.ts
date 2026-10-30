@@ -98,7 +98,7 @@ export async function adminOfficialDocReorder(adminEmail: string, adminCode: str
 }
 
 // 👕 Récupère ma commande t-shirt
-export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; sizes?: string[]; reason?: string }> {
+export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; sizes?: string[]; paymentUrl?: string | null; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -240,7 +240,7 @@ export async function adminFaqReject(adminEmail: string, adminCode: string, pend
 }
 
 // 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix (price: null = retirer le prix)
-export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null; notify?: boolean; sizes?: string[] }): Promise<{ ok: boolean; open?: boolean; price?: number | null; sizes?: string[]; reason?: string }> {
+export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null; notify?: boolean; sizes?: string[]; paymentUrl?: string | null }): Promise<{ ok: boolean; open?: boolean; price?: number | null; sizes?: string[]; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -311,6 +311,34 @@ export async function adminFactureFile(adminEmail: string, adminCode: string, op
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
       body: JSON.stringify({ action: "admin_facture_file", adminEmail, adminCode, op, path, bucket }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau" };
+  }
+}
+
+// 💳 [ADMIN] Marque une commande t-shirt payée / non payée
+export async function adminTshirtPaid(adminEmail: string, adminCode: string, orderId: string, paid: boolean): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_tshirt_paid", adminEmail, adminCode, orderId, paid }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau" };
+  }
+}
+
+// 📨 [ADMIN] Relance par email les commandes non payées (toutes si orderIds absent)
+export async function adminTshirtRelance(adminEmail: string, adminCode: string, orderIds?: string[]): Promise<{ ok: boolean; sent?: number; total?: number; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_tshirt_relance", adminEmail, adminCode, orderIds }),
     });
     return await res.json();
   } catch {

@@ -24,6 +24,7 @@ export default function TshirtOrderForm({
   const [price, setPrice] = useState<number | null>(null);
   // Tailles proposées par l'admin (renvoyées par le serveur)
   const [sizes, setSizes] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
+  const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   const [order, setOrder] = useState<TshirtOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -63,6 +64,7 @@ export default function TshirtOrderForm({
         setPrice(typeof r.price === "number" ? r.price : null);
         const avail = Array.isArray(r.sizes) && r.sizes.length > 0 ? r.sizes : TSHIRT_SIZES_DEFAULT;
         setSizes(avail);
+        setPaymentUrl(typeof r.paymentUrl === "string" && r.paymentUrl ? r.paymentUrl : null);
         if (!r.order) setTaille(avail.includes("M") ? "M" : avail[0]);
         if (r.order) {
           setOrder(r.order);
@@ -90,6 +92,7 @@ export default function TshirtOrderForm({
     if (r.ok) {
       setMsg({ ok: true, text: order ? "Commande mise à jour ✓" : "Commande enregistrée ✓" });
       setOrder({
+        ...(order ?? {}),
         id: order?.id || "tmp",
         membreId,
         nom: defaultNom,
@@ -152,6 +155,28 @@ export default function TshirtOrderForm({
           <p><strong>Taille :</strong> <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">{order.taille}</span></p>
           {order.nomFloque && <p><strong>Floqué :</strong> &quot;{order.nomFloque}&quot;</p>}
         </div>
+        {/* 💳 Paiement */}
+        {order.paid ? (
+          <p className="mt-3 text-sm font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-xl px-3 py-2">
+            ✓ Payé — il ne te reste plus qu&apos;à venir chercher ton t-shirt !
+          </p>
+        ) : paymentUrl ? (
+          <div className="mt-3">
+            <a
+              href={paymentUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="block text-center text-sm font-semibold bg-blue-600 hover:bg-blue-700 text-white rounded-xl py-2 transition"
+            >
+              💳 Payer mon t-shirt en ligne{price !== null ? ` (${price}€)` : ""}
+            </a>
+            <p className="text-[11px] text-slate-500 mt-1 text-center">
+              Paiement sécurisé HelloAsso. Le bureau valide ensuite ton paiement, puis tu n&apos;as plus qu&apos;à venir chercher ton t-shirt.
+            </p>
+          </div>
+        ) : (
+          <p className="mt-3 text-xs text-slate-600">Paiement : à régler au magasin quand tu viendras chercher ton t-shirt.</p>
+        )}
         <button
           onClick={() => setEditMode(true)}
           className="mt-3 w-full text-xs text-amber-700 hover:text-amber-900 font-medium border border-amber-300 rounded-lg py-1.5 hover:bg-amber-100 transition"

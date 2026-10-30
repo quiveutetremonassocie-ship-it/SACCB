@@ -710,7 +710,14 @@ function notifyTshirtOpen(supabaseAdmin: any, newData: Record<string, unknown>) 
   const brevoKeyT = Deno.env.get("BREVO_API_KEY");
   if (brevoKeyT) {
     const tshirtPrice = typeof newData.tshirtPrice === "number" ? newData.tshirtPrice : null;
-    const priceText = tshirtPrice !== null ? `Le prix du t-shirt est de ${tshirtPrice}€, à régler directement au magasin quand tu iras chercher ton t-shirt.` : "Le prix te sera précisé par le bureau, et il sera à régler directement au magasin quand tu iras chercher ton t-shirt.";
+    const hasPayUrl = typeof newData.tshirtPaymentUrl === "string" && newData.tshirtPaymentUrl !== "";
+    const priceText = hasPayUrl
+      ? (tshirtPrice !== null
+          ? `Le prix du t-shirt est de ${tshirtPrice}€. Tu peux le régler en ligne depuis ton espace membre, puis tu n'auras plus qu'à venir le chercher.`
+          : "Tu pourras le régler en ligne depuis ton espace membre, puis tu n'auras plus qu'à venir le chercher.")
+      : (tshirtPrice !== null
+          ? `Le prix du t-shirt est de ${tshirtPrice}€, à régler directement au magasin quand tu iras chercher ton t-shirt.`
+          : "Le prix te sera précisé par le bureau, et il sera à régler directement au magasin quand tu iras chercher ton t-shirt.");
     // Adhérents payés + newsletter activée (= ceux qui consentent à recevoir les news)
     const paidMembres = ((newData.membres || []) as Record<string, unknown>[])
       .filter((m) => m.ok === true && m.newsOptIn !== false)
@@ -4192,6 +4199,8 @@ Deno.serve(async (req) => {
     // 1 commande par membre uniquement (modifier si déjà existante)
     const existingIdx = orders.findIndex((o) => o.membreId === realMembreId);
     const newOrder = {
+      // On conserve le suivi admin (payé, relances…) quand l'adhérent modifie sa commande
+      ...(existingIdx !== -1 ? orders[existingIdx] : {}),
       id: existingIdx !== -1 ? orders[existingIdx].id : `tshirt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       membreId: realMembreId,
       nom,
@@ -4230,7 +4239,84 @@ Deno.serve(async (req) => {
       open: d.tshirtOpen === true,
       price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
       sizes: tshirtSizesOf(d),
+      paymentUrl: typeof d.tshirtPaymentUrl === "string" && d.tshirtPaymentUrl ? d.tshirtPaymentUrl : null,
     });
+  }
+
+  // 💳 [ADMIN] Marquer une commande t-shirt payée / non payée
+  if (action === "admin_tshirt_paid") {
+    const orderId = String(body.orderId || "");
+    const { data } = await loadDB();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
+    const o = orders.find((x) => x.id === orderId);
+    if (!o) return json({ ok: false, reason: "Commande introuvable." }, 404);
+    if (body.paid === true) { o.paid = true; o.paidAt = new Date().toISOString(); }
+    else { delete o.paid; delete o.paidAt; }
+    const { error } = await saveDB(d);
+    if (error) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true });
+  }
+
+  // 📨 [ADMIN] Relancer par email les commandes t-shirt non payées (toutes, ou celles listées)
+  if (action === "admin_tshirt_relance") {
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
+    const { data } = await loadDB();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const ids = Array.isArray(body.orderIds) ? (body.orderIds as unknown[]).map(String) : null;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const orders = ((d.tshirtOrders || []) as Record<string, unknown>[]).filter((o) => o.paid !== true && (!ids || ids.includes(String(o.id))));
+    const price = typeof d.tshirtPrice === "number" ? d.tshirtPrice : null;
+    const payUrl = typeof d.tshirtPaymentUrl === "string" && d.tshirtPaymentUrl ? d.tshirtPaymentUrl : null;
+    let sent = 0;
+    for (const o of orders) {
+      const m = membres.find((x) => String(x.id) === String(o.membreId));
+      const to = String(m?.email || "");
+      if (!to) continue;
+      const prenom = String(o.prenom || "");
+      const hello = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+      const prixTxt = price !== null ? ` de ${price}€` : "";
+      const payTxt = payUrl
+        ? `Tu peux le régler en ligne ici : ${payUrl}\nUne fois payé, tu n'auras plus qu'à venir chercher ton t-shirt.`
+        : `Tu pourras le régler directement au magasin quand tu iras chercher ton t-shirt.`;
+      const payHtml = payUrl
+        ? `<p>Tu peux le régler en ligne ici : <a href="${escapeHtml(payUrl)}" style="color: #1e3a5f;">payer mon t-shirt</a>. Une fois payé, tu n'auras plus qu'à venir chercher ton t-shirt.</p>`
+        : `<p>Tu pourras le régler directement au magasin quand tu iras chercher ton t-shirt.</p>`;
+      const r = await sendBrevo(brevoKey, {
+        from: "SACCB <contact@saccb.fr>",
+        to: [to],
+        subject: `${prenom ? prenom + ", " : ""}ton t-shirt du club`,
+        text: `${hello}\n\nPetit rappel du bureau : ton t-shirt SACCB (taille ${o.taille}${o.nomFloque ? `, floqué « ${o.nomFloque} »` : ""}) n'est pas encore réglé. Le montant est${prixTxt}.\n\n${payTxt}\n\nSi tu as déjà payé, ne tiens pas compte de ce message.\n\nÀ bientôt à la salle,\nLe bureau du SACCB`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+          <p>${escapeHtml(hello)}</p>
+          <p>Petit rappel du bureau : ton t-shirt SACCB (taille ${escapeHtml(String(o.taille || ""))}${o.nomFloque ? `, floqué « ${escapeHtml(String(o.nomFloque))} »` : ""}) n'est pas encore réglé. Le montant est${escapeHtml(prixTxt)}.</p>
+          ${payHtml}
+          <p>Si tu as déjà payé, ne tiens pas compte de ce message.</p>
+          <p>À bientôt à la salle,<br/>Le bureau du SACCB</p>
+        </div>`,
+      }).catch(() => null);
+      if (r && r.ok) {
+        sent++;
+        o.relances = [...((o.relances as string[] | undefined) ?? []), new Date().toISOString()];
+      }
+      await sleep(EMAIL_THROTTLE_MS);
+    }
+    if (sent > 0) await saveDB(d);
+    await logEmailToHistory(supabaseAdmin, {
+      type: "tshirt_payment_reminder",
+      subject: "Rappel paiement t-shirt",
+      recipients: [],
+      sentCount: sent,
+      status: "sent",
+    });
+    return json({ ok: true, sent, total: orders.length });
   }
 
   // 👕 [ADMIN] Supprime une commande t-shirt
@@ -4340,6 +4426,13 @@ Deno.serve(async (req) => {
     if (typeof body.open === "boolean") d.tshirtOpen = body.open;
     if (body.price === null) delete d.tshirtPrice;
     else if (typeof body.price === "number" && body.price >= 0) d.tshirtPrice = body.price;
+    // 💳 Lien de paiement HelloAsso (facultatif) — null/"" pour le retirer
+    if (body.paymentUrl === null || body.paymentUrl === "") delete d.tshirtPaymentUrl;
+    else if (typeof body.paymentUrl === "string") {
+      const u = body.paymentUrl.trim();
+      if (!/^https:\/\/[^\s]+$/.test(u)) return json({ ok: false, reason: "Le lien doit commencer par https://" }, 400);
+      d.tshirtPaymentUrl = u.slice(0, 500);
+    }
     if (Array.isArray(body.sizes)) {
       const sizes = TSHIRT_SIZES_ALL.filter((s) => (body.sizes as unknown[]).includes(s));
       if (sizes.length === 0) return json({ ok: false, reason: "Choisissez au moins une taille." }, 400);
