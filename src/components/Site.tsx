@@ -204,13 +204,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
   // Charger les actualités privées quand un membre est connecté
   useEffect(() => {
-    if (!memberSession || memberSession.isAdmin) {
+    if (!memberSession) {
       setPrivateActualites([]);
       return;
     }
-    // 🔑 Priorité : code en session persistante (localStorage), sinon sessionStorage de l'onglet
-    const savedCode = memberSession.memberCode || sessionStorage.getItem("saccb_member_code");
-    if (!savedCode) return;
+    // 🔑 Priorité : code en session persistante (localStorage), sinon sessionStorage de l'onglet,
+    // sinon code admin en mémoire (un admin doit aussi voir les actus réservées aux membres)
+    const savedCode = memberSession.memberCode || sessionStorage.getItem("saccb_member_code") || memberAdminCode.current;
+    if (!savedCode) { setPrivateActualites([]); return; }
     fetchPrivateActualites(memberSession.email, savedCode, memberSession.membreId)
       .then(setPrivateActualites)
       .catch(() => {});
