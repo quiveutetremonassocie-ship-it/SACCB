@@ -4161,7 +4161,13 @@ Deno.serve(async (req) => {
       // Compte admin : on rattache sa fiche adhérent du même email s'il en a une (payée en priorité)
       // 🔒 Un email admin seul ne suffit pas (il peut être connu) : on ne renvoie les infos
       // (lien WhatsApp, fiche) que si l'identifiant de session est celui de sa fiche adhérent.
-      const fiche = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.id || "") === membreId);
+      let fiche = membres.find((m) => String(m.email || "").toLowerCase() === email && String(m.id || "") === membreId);
+      // Ancienne session admin (id « admin-… ») : avec le bon code admin, on retrouve la fiche par email
+      const sessionCode = sanitize(String(body.code || ""));
+      if (!fiche && sessionCode && (await findAdminCredByCredentials(adminCredentials, email, sessionCode))) {
+        const fiches = membres.filter((m) => String(m.email || "").toLowerCase() === email);
+        fiche = fiches.find((m) => m.ok === true) || fiches[0];
+      }
       if (!fiche) return json({ ok: true });
       const jf = justifInfo(fiche);
       return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info });

@@ -56,7 +56,13 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   useEffect(() => {
     if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); return; }
     let cancelled = false;
-    checkMemberSession(memberSession.email, memberSession.membreId).then((res) => {
+    // Compte admin : le code permet de retrouver sa fiche adhérent même avec une ancienne session
+    let adminSessionCode: string | undefined;
+    if (memberSession.isAdmin) {
+      try { adminSessionCode = sessionStorage.getItem("saccb_member_code") || undefined; } catch { /* ignore */ }
+      adminSessionCode = adminSessionCode || memberAdminCode.current || undefined;
+    }
+    checkMemberSession(memberSession.email, memberSession.membreId, adminSessionCode).then((res) => {
       if (cancelled) return;
       setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
       setJustificatifManquant(res.valid && res.justificatifManquant === true);

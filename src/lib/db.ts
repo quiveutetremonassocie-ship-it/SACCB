@@ -489,12 +489,12 @@ export async function verifyMembre(
 }
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } }> {
+export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-      body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId }),
+      body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId, code: code || undefined }),
     });
     const data = await res.json();
     return { valid: data.ok === true, paid: data.paid, whatsappLink: typeof data.whatsappLink === "string" ? data.whatsappLink : undefined, justificatifManquant: data.justificatifManquant === true, justificatif: data.justificatif, adherent: data.adherent };
