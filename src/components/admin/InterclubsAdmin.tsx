@@ -19,6 +19,29 @@ function nouveauCode(): string {
   crypto.getRandomValues(b);
   return Array.from(b, (x) => alphabet[x % alphabet.length]).join("");
 }
+// 📝 Modèle de déroulement pré-rempli : il suffit de compléter les pointillés
+const MODELE_DEROULEMENT = `🕗 HORAIRES
+• ...h... : accueil des joueurs et pointage
+• ...h... : échauffement
+• ...h... : début des matchs de poules
+• ...h... : pause déjeuner
+• ...h... : phases finales
+• ...h... : remise des récompenses
+
+🏸 FORMAT
+• Poules de ... équipes, puis tableau à élimination directe
+• Matchs en ... set(s) de ... points
+• Volants fournis : ............ (plumes / plastique)
+
+📋 À SAVOIR
+• Arrivée au plus tard à ...h... pour le pointage
+• Tenue de sport et chaussures de salle obligatoires
+• Buvette sur place : ............
+• Parking : ............
+
+📞 CONTACT LE JOUR J
+• ............ — ... .. .. .. ..`;
+
 const lienClub = (c: InterClubClub) => `${SITE}/interclub/#${c.token}`;
 function messageClub(t: InterClub, c: InterClubClub): string {
   return [
@@ -67,7 +90,7 @@ export default function InterclubsAdmin({
       type: "Mixte",
       niveaux: [...INTERCLUB_NIVEAUX],
       dateLimit: "",
-      deroulement: "",
+      deroulement: MODELE_DEROULEMENT,
       salleNom: cfg.salleName,
       salleAdresse: cfg.salleAdresse,
       clubs: [],
@@ -247,9 +270,21 @@ export default function InterclubsAdmin({
                     </div>
                   </Champ>
 
-                  <Champ label="Déroulement (horaires, format, règles…)">
+                  <Champ label="Déroulement (horaires, format, règles…) — remplace les pointillés">
+                    {!readOnly && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if ((d.deroulement || "").trim() && !confirm("Remplacer le texte actuel par le modèle ?")) return;
+                          majDraft({ deroulement: MODELE_DEROULEMENT });
+                        }}
+                        className="mb-1.5 text-[11px] font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 hover:bg-blue-100"
+                      >
+                        📝 Insérer le modèle à compléter
+                      </button>
+                    )}
                     <textarea
-                      className="input w-full !text-sm min-h-[90px] resize-y"
+                      className="input w-full !text-sm min-h-[260px] resize-y font-mono"
                       value={d.deroulement || ""}
                       disabled={readOnly}
                       placeholder={"8h30 : accueil des joueurs\n9h : début des poules\n…"}
