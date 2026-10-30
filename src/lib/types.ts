@@ -7,6 +7,9 @@ export type Membre = {
   ok?: boolean;
   paymentMethod?: "online" | "virement";
   paymentDate?: string;
+  // 💶 Montant réellement encaissé (réduction, geste…). Vide = tarif normal du type.
+  // Utilisé par la trésorerie, les stats et le reçu. Remis à zéro à chaque nouvelle saison.
+  montantPaye?: number;
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
@@ -436,6 +439,14 @@ export function getEffectivePrix(db: DB): { Adulte: number; Etudiant: number } {
     Adulte: db.clubConfig?.prixAdulte ?? PRIX.Adulte,
     Etudiant: db.clubConfig?.prixEtudiant ?? PRIX.Etudiant,
   };
+}
+
+// 💶 Montant d'adhésion d'un adhérent : le montant réellement payé s'il a été saisi
+// (réduction…), sinon le tarif normal de son type.
+export function getMontantMembre(db: DB, m: Membre): number {
+  if (typeof m.montantPaye === "number" && m.montantPaye >= 0) return m.montantPaye;
+  const prix = getEffectivePrix(db);
+  return m.type === "Etudiant" ? prix.Etudiant : prix.Adulte;
 }
 
 // Retourne les horaires effectifs (DB ou défaut)

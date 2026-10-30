@@ -1,7 +1,7 @@
 "use client";
 
 import { Printer, X } from "lucide-react";
-import { DB, Membre, getEffectivePrix } from "@/lib/types";
+import { DB, Membre, getMontantMembre } from "@/lib/types";
 
 export default function RecuModal({
   membre,
@@ -29,8 +29,7 @@ export default function RecuModal({
     presidentName = overrides.presidentName;
     montant = membre.type === "Etudiant" ? overrides.montantEtudiant : overrides.montantAdulte;
   } else if (db) {
-    const effectivePrix = getEffectivePrix(db);
-    montant = membre.type === "Etudiant" ? effectivePrix.Etudiant : effectivePrix.Adulte;
+    montant = getMontantMembre(db, membre);
     y1 = db.y1;
     y2 = db.y2;
     presidentName = db.presidentName;

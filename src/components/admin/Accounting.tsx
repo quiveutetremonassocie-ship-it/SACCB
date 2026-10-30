@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet, FileDown } from "lucide-react";
-import { DB, Facture, FactureFile, getEffectivePrix } from "@/lib/types";
+import { DB, Facture, FactureFile, getEffectivePrix, getMontantMembre } from "@/lib/types";
 import { supabaseClient, FACTURE_BUCKET } from "@/lib/supabase";
 
 export default function Accounting({
@@ -144,14 +144,13 @@ export default function Accounting({
 
   function exportBilan() {
     // Calcul des stats membres
-    let aPayes = 0, ePayes = 0, aTotal = 0, eTotal = 0;
+    // Recettes = somme des montants réellement payés (réductions comprises)
+    let aPayes = 0, ePayes = 0, aTotal = 0, eTotal = 0, recetteAdultes = 0, recetteEtudiants = 0;
     db.membres.forEach((m) => {
-      if (m.type === "Adulte") { aTotal++; if (m.ok) aPayes++; }
-      else { eTotal++; if (m.ok) ePayes++; }
+      if (m.type === "Adulte") { aTotal++; if (m.ok) { aPayes++; recetteAdultes += getMontantMembre(db, m); } }
+      else { eTotal++; if (m.ok) { ePayes++; recetteEtudiants += getMontantMembre(db, m); } }
     });
     const effectivePrix = getEffectivePrix(db);
-    const recetteAdultes = aPayes * effectivePrix.Adulte;
-    const recetteEtudiants = ePayes * effectivePrix.Etudiant;
     const report = db.reportPrecedent ?? 0;
     const totalRecettes = recetteAdultes + recetteEtudiants + report;
     const totalDepenses = (db.factures || []).reduce((s, f) => s + f.montant, 0);
@@ -206,8 +205,8 @@ export default function Accounting({
   <table>
     <thead><tr><th>Catégorie</th><th>Détail</th><th class="montant">Montant</th></tr></thead>
     <tbody>
-      <tr><td>Adhésions adultes</td><td>${aPayes} payé(s) sur ${aTotal} (${effectivePrix.Adulte} € × ${aPayes})</td><td class="montant green">${recetteAdultes.toFixed(2)} €</td></tr>
-      <tr><td>Adhésions étudiants</td><td>${ePayes} payé(s) sur ${eTotal} (${effectivePrix.Etudiant} € × ${ePayes})</td><td class="montant green">${recetteEtudiants.toFixed(2)} €</td></tr>
+      <tr><td>Adhésions adultes</td><td>${aPayes} payé(s) sur ${aTotal} (tarif ${effectivePrix.Adulte} €, réductions comprises)</td><td class="montant green">${recetteAdultes.toFixed(2)} €</td></tr>
+      <tr><td>Adhésions étudiants</td><td>${ePayes} payé(s) sur ${eTotal} (tarif ${effectivePrix.Etudiant} €, réductions comprises)</td><td class="montant green">${recetteEtudiants.toFixed(2)} €</td></tr>
       ${report > 0 ? `<tr><td>Report saison précédente</td><td>Trésorerie reportée</td><td class="montant blue">${report.toFixed(2)} €</td></tr>` : ""}
       <tr class="total-row"><td colspan="2">TOTAL RECETTES</td><td class="montant green">${totalRecettes.toFixed(2)} €</td></tr>
     </tbody>

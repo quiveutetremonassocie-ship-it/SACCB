@@ -494,6 +494,9 @@ export default function MembresAdmin({
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className="text-xs text-slate-400">{m.type}</span>
+                {typeof m.montantPaye === "number" && (
+                  <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
+                )}
                 {m.paymentMethod === "online" ? (
                   <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">En ligne</span>
                 ) : m.paymentMethod === "virement" ? (
@@ -622,7 +625,12 @@ export default function MembresAdmin({
                 <td className="p-3 text-slate-800">{m.nom}</td>
                 <td className="p-3 text-slate-500 break-all">{m.email}</td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}</td>
-                <td className="p-3 text-slate-500">{m.type}</td>
+                <td className="p-3 text-slate-500">
+                  {m.type}
+                  {typeof m.montantPaye === "number" && (
+                    <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
+                  )}
+                </td>
                 <td className="p-3">
                   <div className="flex flex-col gap-1">
                     {m.paymentMethod === "online" ? (

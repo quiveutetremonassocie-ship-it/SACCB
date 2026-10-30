@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, ChevronDown, Send, HelpCircle, Shirt, BarChart3 } from "lucide-react";
 // FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
-import { DB, Membre, getEffectivePrix } from "@/lib/types";
+import { DB, Membre, getMontantMembre } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
 import Accounting from "./Accounting";
@@ -107,8 +107,8 @@ export default function AdminPanel({
       ePayes = 0,
       eTotal = 0;
     db.membres.forEach((m) => {
-      const effectivePrix = getEffectivePrix(db);
-      const prix = m.type === "Etudiant" ? effectivePrix.Etudiant : effectivePrix.Adulte;
+      // Montant réellement payé si saisi (réduction), sinon tarif normal
+      const prix = getMontantMembre(db, m);
       if (m.type === "Adulte") aTotal++;
       else eTotal++;
       if (m.ok) {

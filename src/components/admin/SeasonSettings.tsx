@@ -251,7 +251,7 @@ export default function SeasonSettings({
       y1: newY1,
       y2: newY2,
       archives: [...filtered, archive],
-      membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined })),
+      membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined, montantPaye: undefined })),
       // 💰 La nouvelle saison repart à 0 € de dépenses — les factures de la
       // saison passée sont conservées dans l'archive ci-dessus, consultables
       // via l'historique des saisons.

@@ -35,6 +35,23 @@ export default function EditMembreModal({
             <option value="Etudiant">Etudiant</option>
           </select>
 
+          {/* 💶 Montant réellement payé (réduction) */}
+          <div>
+            <label className="text-xs text-slate-500 mb-1 block">Montant réellement payé (€) — en cas de réduction</label>
+            <input
+              className="input"
+              type="number"
+              min={0}
+              step="0.01"
+              value={typeof m.montantPaye === "number" ? m.montantPaye : ""}
+              onChange={(e) => {
+                const v = e.target.value.replace(",", ".");
+                setM({ ...m, montantPaye: v === "" ? undefined : Math.max(0, Number(v)) });
+              }}
+              placeholder="Vide = tarif normal"
+            />
+          </div>
+
           {/* Préférences */}
           <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
             <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Préférences</p>
