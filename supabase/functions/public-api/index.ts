@@ -606,6 +606,25 @@ async function checkAdminAuth(
   return null;
 }
 
+// 👕 Retrouve l'adhérent derrière une session t-shirt. Un admin connecté avec son
+// code admin a un membreId factice "admin-<email>" : s'il est AUSSI inscrit comme
+// adhérent (même email), on le rattache à sa fiche adhérent (en priorité celle payée).
+async function resolveTshirtMembre(
+  d: Record<string, unknown>,
+  email: string,
+  code: string,
+  membreId: string,
+): Promise<Record<string, unknown> | null> {
+  const membres = (d.membres || []) as Record<string, unknown>[];
+  const membre = await findMembreByCredentials(membres, email, code);
+  if (membre && String(membre.id) === membreId) return membre;
+  if (!membreId.startsWith("admin-")) return null;
+  const adminCredentials = (d.adminCredentials || []) as { email: string; code: string }[];
+  if (!(await findAdminCredByCredentials(adminCredentials, email, code))) return null;
+  const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase().trim() === email);
+  return sameEmail.find((m) => m.ok === true) || sameEmail[0] || null;
+}
+
 // 👕 Notification automatique aux adhérents quand les commandes t-shirt s'ouvrent
 // deno-lint-ignore no-explicit-any
 function notifyTshirtOpen(supabaseAdmin: any, newData: Record<string, unknown>) {
@@ -4030,9 +4049,9 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
 
-    const membre = await findMembreByCredentials(membres, email, code);
-    if (!membre) return json({ ok: false, reason: "Email ou code incorrect." }, 403);
-    if (String(membre.id) !== membreId) return json({ ok: false, reason: "Session périmée." }, 403);
+    const membre = await resolveTshirtMembre(d, email, code, membreId);
+    if (!membre) return json({ ok: false, reason: "Session invalide ou aucune fiche adhérent associée à ce compte." }, 403);
+    const realMembreId = String(membre.id);
     if (membre.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour commander." }, 403);
     if (d.tshirtOpen !== true) return json({ ok: false, reason: "Les commandes de t-shirts ne sont pas ouvertes." }, 403);
 
@@ -4044,10 +4063,10 @@ Deno.serve(async (req) => {
 
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
     // 1 commande par membre uniquement (modifier si déjà existante)
-    const existingIdx = orders.findIndex((o) => o.membreId === membreId);
+    const existingIdx = orders.findIndex((o) => o.membreId === realMembreId);
     const newOrder = {
       id: existingIdx !== -1 ? orders[existingIdx].id : `tshirt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
-      membreId,
+      membreId: realMembreId,
       nom,
       prenom,
       taille,
@@ -4074,11 +4093,10 @@ Deno.serve(async (req) => {
     const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const membres = (d.membres || []) as Record<string, unknown>[];
-    const membre = await findMembreByCredentials(membres, email, code);
-    if (!membre || String(membre.id) !== membreId) return json({ ok: false, reason: "Session invalide." }, 403);
+    const membre = await resolveTshirtMembre(d, email, code, membreId);
+    if (!membre) return json({ ok: false, reason: "Session invalide." }, 403);
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
-    const my = orders.find((o) => o.membreId === membreId) || null;
+    const my = orders.find((o) => o.membreId === String(membre.id)) || null;
     return json({
       ok: true,
       order: my,
