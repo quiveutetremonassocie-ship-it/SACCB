@@ -77,6 +77,9 @@ export default function InterclubsAdmin({
   const list = db.interclubs || [];
   // 🏁 Tournoi dont la table de marque (jour J) est ouverte
   const [jourJ, setJourJ] = useState<string | null>(null);
+  // 📂 Clubs dépliés dans la fiche du tournoi
+  const [clubsOuverts, setClubsOuverts] = useState<Set<string>>(new Set());
+  const basculerClub = (id: string) => setClubsOuverts((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const tJourJ = list.find((x) => x.id === jourJ);
   const [ouvert, setOuvert] = useState<string | null>(null);
   const [draft, setDraft] = useState<InterClub | null>(null);
@@ -416,7 +419,11 @@ export default function InterclubsAdmin({
                       <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold">Clubs invités</p>
                       {!readOnly && (
                         <button
-                          onClick={() => majDraft({ clubs: [...d.clubs, { id: uid(), nom: "", token: nouveauJeton(), code: nouveauCode(), quota: 4, binomes: [] }] })}
+                          onClick={() => {
+                            const id = uid();
+                            majDraft({ clubs: [...d.clubs, { id, nom: "", token: nouveauJeton(), code: nouveauCode(), quota: 4, binomes: [] }] });
+                            setClubsOuverts((s) => new Set(s).add(id));
+                          }}
                           className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-1.5 hover:bg-emerald-100 flex items-center gap-1"
                         >
                           <Plus className="w-3.5 h-3.5" /> Ajouter un club
@@ -424,13 +431,48 @@ export default function InterclubsAdmin({
                       )}
                     </div>
                     {d.clubs.length === 0 && <p className="text-sm text-slate-400 text-center py-3">Aucun club invité</p>}
-                    <div className="space-y-3">
+                    {d.clubs.length > 1 && (
+                      <div className="flex justify-end gap-3 mb-2 text-[11px]">
+                        <button onClick={() => setClubsOuverts(new Set(d.clubs.map((c) => c.id)))} className="text-blue-600 hover:underline">Tout déplier</button>
+                        <button onClick={() => setClubsOuverts(new Set())} className="text-blue-600 hover:underline">Tout replier</button>
+                      </div>
+                    )}
+                    <div className="space-y-2">
                       {d.clubs.map((c) => {
                         const live = t.clubs.find((x) => x.id === c.id);
                         const binomes = live?.binomes || [];
                         const nouveau = !live;
+                        const deplie = clubsOuverts.has(c.id);
+                        const complet = binomes.length >= c.quota;
                         return (
-                          <div key={c.id} className="bg-white rounded-xl border border-slate-200 p-3">
+                          <div key={c.id} className={"bg-white rounded-xl border overflow-hidden " + (deplie ? "border-[#1e3a5f]/40 shadow-sm" : "border-slate-200")}>
+                            {/* En-tête du club (toujours visible) */}
+                            <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 cursor-pointer" onClick={() => basculerClub(c.id)}>
+                              <span className="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white font-bold flex items-center justify-center">
+                                {(c.nom.trim()[0] || "?").toUpperCase()}
+                              </span>
+                              <div className="flex-1 min-w-0">
+                                <p className="font-semibold text-slate-800 truncate">{c.nom.trim() || <span className="text-slate-400 italic">Nouveau club</span>}</p>
+                                <p className="text-[11px] text-slate-500 flex flex-wrap gap-x-2">
+                                  <span className={complet ? "text-emerald-600 font-semibold" : ""}>👥 {binomes.length}/{c.quota} binômes</span>
+                                  {c.code && <span>🔑 {c.code}</span>}
+                                  {nouveau && <span className="text-amber-600 font-semibold">à enregistrer</span>}
+                                </p>
+                              </div>
+                              {live && (
+                                <button
+                                  onClick={(e) => { e.stopPropagation(); copier(messageClub(t, live), "msg-" + c.id); }}
+                                  className="hidden sm:flex text-[11px] font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 items-center gap-1 hover:bg-emerald-100"
+                                  title="Message prêt à envoyer au club (lien + code)"
+                                >
+                                  {copie === "msg-" + c.id ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copie === "msg-" + c.id ? "Copié" : "Message"}
+                                </button>
+                              )}
+                              {deplie ? <ChevronUp className="w-4 h-4 text-slate-400 shrink-0" /> : <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />}
+                            </div>
+
+                            {deplie && (
+                            <div className="border-t border-slate-100 p-3">
                             <div className="grid sm:grid-cols-[1fr_90px_1fr_auto] gap-2 items-end">
                               <Champ label="Club">
                                 <input className="input w-full !text-sm" value={c.nom} placeholder="Nom du club" disabled={readOnly} onChange={(e) => majClub(c.id, { nom: e.target.value })} />
@@ -505,22 +547,27 @@ export default function InterclubsAdmin({
                               )}
                             </div>
 
-                            <div className="mt-2">
-                              <p className="text-[11px] text-slate-500 mb-1">
-                                {binomes.length}/{c.quota} binôme{c.quota > 1 ? "s" : ""} inscrit{binomes.length > 1 ? "s" : ""}
-                                {live?.updatedAt && ` · dernière modif. ${new Date(live.updatedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`}
+                            <div className="mt-3 rounded-lg border border-slate-200 overflow-hidden">
+                              <p className="text-[11px] uppercase tracking-wider text-slate-500 font-semibold bg-slate-50 px-3 py-1.5 flex justify-between gap-2">
+                                <span>Binômes inscrits ({binomes.length}/{c.quota})</span>
+                                {live?.updatedAt && <span className="normal-case tracking-normal font-normal">modifié le {new Date(live.updatedAt).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</span>}
                               </p>
-                              {binomes.length > 0 && (
-                                <ul className="text-xs text-slate-700 space-y-0.5">
-                                  {binomes.map((b) => (
-                                    <li key={b.id} className="flex gap-2">
-                                      <span>• {b.joueur1} / {b.joueur2}</span>
-                                      {b.niveau && <span className="text-[10px] px-1.5 rounded bg-slate-100 text-slate-500">{b.niveau}</span>}
+                              {binomes.length === 0 ? (
+                                <p className="text-xs text-slate-400 px-3 py-2">Aucun binôme inscrit pour l&apos;instant</p>
+                              ) : (
+                                <ol className="divide-y divide-slate-100">
+                                  {binomes.map((b, i) => (
+                                    <li key={b.id} className="flex items-center gap-2 px-3 py-1.5 text-sm">
+                                      <span className="w-5 text-[11px] text-slate-400 font-semibold">{i + 1}.</span>
+                                      <span className="flex-1 min-w-0 truncate text-slate-700">{b.joueur1} / {b.joueur2}</span>
+                                      {b.niveau && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">{b.niveau}</span>}
                                     </li>
                                   ))}
-                                </ul>
+                                </ol>
                               )}
                             </div>
+                            </div>
+                            )}
                           </div>
                         );
                       })}
