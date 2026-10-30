@@ -363,8 +363,8 @@ export default function InterclubLiveAdmin({
               <a href={lienEcran} target="_blank" rel="noopener noreferrer" className="text-xs font-semibold text-slate-600 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1">
                 <ExternalLink className="w-3 h-3" /> Ouvrir
               </a>
-              <button onClick={() => exporterResultatsPdf(t)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 flex items-center gap-1" title="Classement et toutes les poules, prêt à imprimer ou envoyer">
-                📄 Résultats en PDF
+              <button onClick={() => exporterResultatsPdf(t)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 flex items-center gap-1" title="Classement final de toutes les équipes, prêt à imprimer ou envoyer">
+                📄 Classement en PDF
               </button>
               <button onClick={() => imprimerQrCodes(t)} className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1" title="QR codes des clubs et de l'écran géant, à imprimer">
                 🖨 QR codes

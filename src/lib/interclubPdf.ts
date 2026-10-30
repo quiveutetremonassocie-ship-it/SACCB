@@ -1,6 +1,6 @@
-// 📄 Résultats d'un tournoi inter-clubs en PDF (classement final + chaque phase, poule par poule)
+// 📄 Résultat final d'un tournoi inter-clubs en PDF (classement de toutes les équipes)
 import { InterClub } from "./types";
-import { classementPoule, classementFinal, equipesDuTournoi, formatTexte, matchJoue } from "./interclubLive";
+import { classementFinal, equipesDuTournoi } from "./interclubLive";
 
 const BLEU: [number, number, number] = [30, 58, 95];
 
@@ -13,7 +13,6 @@ export async function exporterResultatsPdf(t: InterClub) {
   const eq = equipesDuTournoi(t);
   const nom = (id: string) => (eq[id] ? `${eq[id].joueur1} / ${eq[id].joueur2}` : "Équipe retirée");
   const club = (id: string) => eq[id]?.club || "";
-  const score = (sa?: number[], sb?: number[]) => (sa && sb ? sa.map((v, i) => `${v}-${sb[i]}`).join("  ") : "");
   const finY = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 
   // En-tête
@@ -29,10 +28,10 @@ export async function exporterResultatsPdf(t: InterClub) {
 
   // Classement final
   const derniere = live.phases[live.phases.length - 1];
-  if (live.termine && derniere) {
+  if (derniere) {
     doc.setFontSize(13);
     doc.setTextColor(...BLEU);
-    doc.text("Classement final", 14, y);
+    doc.text(live.termine ? "Classement final" : "Classement provisoire (tournoi en cours)", 14, y);
     autoTable(doc, {
       startY: y + 3,
       head: [["Place", "Équipe", "Club"]],
@@ -44,50 +43,7 @@ export async function exporterResultatsPdf(t: InterClub) {
         if (d.section === "body" && d.row.index < 3) d.cell.styles.fillColor = [[255, 236, 179], [226, 232, 240], [254, 215, 170]][d.row.index] as [number, number, number];
       },
     });
-    y = finY() + 10;
-  }
 
-  // Chaque phase, poule par poule
-  for (const ph of live.phases) {
-    if (y > 250) { doc.addPage(); y = 18; }
-    doc.setFontSize(13);
-    doc.setTextColor(...BLEU);
-    doc.text(`${ph.nom} — ${formatTexte(ph.format)}`, 14, y);
-    y += 3;
-    for (const p of ph.poules) {
-      if (y > 240) { doc.addPage(); y = 18; }
-      const retirees = new Set(p.retirees || []);
-      autoTable(doc, {
-        startY: y + 2,
-        head: [[{ content: p.nom, colSpan: 7, styles: { halign: "left", fillColor: BLEU } }], ["#", "Équipe", "Club", "J", "V", "Sets", "Points"]],
-        body: classementPoule(p).map((l, i) => [
-          String(i + 1),
-          nom(l.id) + (retirees.has(l.id) ? " (a arrêté)" : ""),
-          club(l.id),
-          String(l.joues),
-          String(l.v),
-          `${l.setsPour - l.setsContre > 0 ? "+" : ""}${l.setsPour - l.setsContre}`,
-          `${l.ptsPour - l.ptsContre > 0 ? "+" : ""}${l.ptsPour - l.ptsContre}`,
-        ]),
-        styles: { fontSize: 9 },
-        headStyles: { fillColor: [71, 85, 105] },
-        columnStyles: { 0: { cellWidth: 9, halign: "center" }, 3: { cellWidth: 10, halign: "center" }, 4: { cellWidth: 10, halign: "center", fontStyle: "bold" }, 5: { cellWidth: 14, halign: "center" }, 6: { cellWidth: 16, halign: "center" } },
-      });
-      autoTable(doc, {
-        startY: finY() + 1,
-        body: p.matchs.map((m) => [
-          nom(m.a),
-          matchJoue(m) ? score(m.sa, m.sb) : "à jouer",
-          nom(m.b),
-          m.forfait ? `forfait ${nom(m.forfait)}` : m.etat === "valide" || m.par === "admin" ? "validé" : matchJoue(m) ? "non validé" : "",
-        ]),
-        styles: { fontSize: 8, textColor: 70 },
-        columnStyles: { 0: { halign: "right" }, 1: { halign: "center", fontStyle: "bold", cellWidth: 30 }, 3: { cellWidth: 28, textColor: 130 } },
-        theme: "plain",
-      });
-      y = finY() + 6;
-    }
-    y += 4;
   }
 
   // Pied de page
