@@ -156,7 +156,7 @@ function isRegistrationRateLimited(ip: string): boolean {
   return entry.count > 3;
 }
 
-// 🏆 Pages inter-clubs : 600 requêtes / 10 min par IP (anti-devinette des liens)
+// 🏆 Pages inter-clubs : 3000 requêtes / 10 min par IP (anti-devinette des liens)
 const interclubLimitMap = new Map<string, { count: number; reset: number }>();
 function isInterclubRateLimited(ip: string): boolean {
   const now = Date.now();
@@ -166,7 +166,7 @@ function isInterclubRateLimited(ip: string): boolean {
     return false;
   }
   entry.count++;
-  return entry.count > 600; // plusieurs équipes peuvent partager le wifi de la salle
+  return entry.count > 3000; // actualisation toutes les 5 s + plusieurs appareils sur le wifi de la salle
 }
 
 // 🏁 Jour J inter-clubs : vérification d'un score selon le format (1 set / 2 sets gagnants, points cassants ou non)

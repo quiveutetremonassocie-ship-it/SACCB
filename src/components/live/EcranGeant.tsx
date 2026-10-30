@@ -7,18 +7,23 @@ import { LiveBoard } from "./LiveBoard";
 
 type Donnees = Awaited<ReturnType<typeof interclubLive>>;
 
-/** 📺 Écran géant pour la salle : tableau en lecture seule, actualisé toutes les 15 s */
+/** 📺 Écran géant pour la salle : tableau en lecture seule, actualisé toutes les 5 s */
 export default function EcranGeant({ liveToken }: { liveToken: string }) {
   const [d, setD] = useState<Donnees | null>(null);
   const [maj, setMaj] = useState<Date | null>(null);
 
   useEffect(() => {
     let actif = true;
-    const charger = () => interclubLive(liveToken).then((r) => { if (actif && (r.ok || !d)) { setD(r); setMaj(new Date()); } });
+    let enCours = false;
+    const charger = () => {
+      if (enCours) return;
+      enCours = true;
+      // Une coupure réseau passagère ne doit pas effacer le tableau déjà affiché
+      interclubLive(liveToken).then((r) => { if (!actif) return; setD((prev) => (r.ok || !prev ? r : prev)); if (r.ok) setMaj(new Date()); }).finally(() => { enCours = false; });
+    };
     charger();
-    const iv = setInterval(charger, 15000);
+    const iv = setInterval(charger, 5000);
     return () => { actif = false; clearInterval(iv); };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [liveToken]);
 
   return (

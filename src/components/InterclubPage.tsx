@@ -71,11 +71,16 @@ export default function InterclubPage() {
     charger(t, memo);
   }, []);
 
-  // 🔄 Pendant le tournoi : actualisation automatique toutes les 20 s
+  // 🔄 Pendant le tournoi : actualisation automatique toutes les 5 s (une requête à la fois, en pause si l'onglet est caché)
   const enDirect = !!page?.live;
   useEffect(() => {
     if (!enDirect || !token) return;
-    const iv = setInterval(() => { if (!document.hidden) interclubCall(token, code).then((r) => { if (r.ok) setPage(r); }); }, 20000);
+    let enCours = false;
+    const iv = setInterval(() => {
+      if (document.hidden || enCours) return;
+      enCours = true;
+      interclubCall(token, code).then((r) => { if (r.ok) setPage(r); }).finally(() => { enCours = false; });
+    }, 5000);
     return () => clearInterval(iv);
   }, [enDirect, token, code]);
 
@@ -264,7 +269,7 @@ export default function InterclubPage() {
             envoyer={envoyerScore}
           />
           <LiveBoard phases={page.live.phases} equipes={page.live.equipes} termine={page.live.termine} clubs={page.live.clubs} />
-          <p className="text-center text-[11px] text-white/40">Actualisation automatique toutes les 20 secondes</p>
+          <p className="text-center text-[11px] text-white/40">Actualisation automatique toutes les 5 secondes</p>
         </main>
       ) : (
       <main className="max-w-5xl mx-auto px-4 pb-16 grid lg:grid-cols-5 gap-6">

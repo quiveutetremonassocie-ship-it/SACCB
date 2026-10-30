@@ -61,10 +61,15 @@ export default function InterclubLiveAdmin({
   const [suiteFormat, setSuiteFormat] = useState<LiveFormat>({ sets: 3, points: phases.length <= 1 ? 14 : 18, cassant: true });
   const [edition, setEdition] = useState<string | null>(null);
 
-  // 🔄 Les scores saisis par les clubs arrivent toutes les 20 s
+  // 🔄 Les scores saisis par les clubs arrivent toutes les 5 s
   useEffect(() => {
     if (!live || !onRefresh) return;
-    const iv = setInterval(() => { if (!document.hidden) onRefresh().catch(() => {}); }, 20000);
+    let enCours = false;
+    const iv = setInterval(() => {
+      if (document.hidden || enCours) return;
+      enCours = true;
+      onRefresh().catch(() => {}).finally(() => { enCours = false; });
+    }, 5000);
     return () => clearInterval(iv);
   }, [!!live, onRefresh]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -269,7 +274,7 @@ export default function InterclubLiveAdmin({
               </a>
               {onRefresh && (
                 <button onClick={() => onRefresh()} className="ml-auto text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1">
-                  <RefreshCw className="w-3 h-3" /> Actualiser (auto toutes les 20 s)
+                  <RefreshCw className="w-3 h-3" /> Actualiser (auto toutes les 5 s)
                 </button>
               )}
             </div>
