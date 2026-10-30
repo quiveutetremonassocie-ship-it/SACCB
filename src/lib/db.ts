@@ -1005,3 +1005,32 @@ export async function publicMarkPaid(membreId: string): Promise<{ ok: boolean }>
   });
   return res.json();
 }
+
+// ─── 🏆 Tournoi inter-clubs : page d'inscription d'un club (lien unique) ───
+export type InterclubPage = {
+  ok: boolean;
+  reason?: string;
+  ouvert?: boolean;
+  tournoi?: {
+    name: string; date: string; type: string; niveaux: string[]; dateLimit: string; deroulement: string;
+    salleNom: string; salleAdresse: string; sallePhotoUrl: string;
+  };
+  club?: { nom: string; quota: number; binomes: { id: string; joueur1: string; joueur2: string; niveau: string }[]; updatedAt: string };
+  autres?: { nom: string; equipes: number }[];
+};
+
+export async function interclubCall(
+  token: string,
+  binomes?: { id?: string; joueur1: string; joueur2: string; niveau: string }[]
+): Promise<InterclubPage> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify(binomes ? { action: "interclub_save", token, binomes } : { action: "interclub_get", token }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
+  }
+}

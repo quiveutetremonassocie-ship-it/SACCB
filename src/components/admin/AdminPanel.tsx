@@ -13,6 +13,7 @@ import StatsVisites from "./StatsVisites";
 import LockedAccounts from "./LockedAccounts";
 import GlobalSearch from "./GlobalSearch";
 import TournoisAdmin from "./TournoisAdmin";
+import InterclubsAdmin from "./InterclubsAdmin";
 import InscriptionsAdmin from "./InscriptionsAdmin";
 import MembresAdmin from "./MembresAdmin";
 import ActualitesAdmin from "./ActualitesAdmin";
@@ -510,6 +511,11 @@ export default function AdminPanel({
               <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
             </CollapsibleAdminSection>
           )}
+          {canSee("tournois") && (
+            <CollapsibleAdminSection id="admin-interclubs" label="Tournois inter-clubs" icon={<Trophy className="w-5 h-5" />} color="from-emerald-500 to-teal-600">
+              <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
+            </CollapsibleAdminSection>
+          )}
           {canSee("inscriptions") && (
             <CollapsibleAdminSection id="admin-inscriptions" label="Inscriptions" icon={<Users className="w-5 h-5" />} color="from-purple-500 to-pink-500">
               <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
@@ -598,6 +604,7 @@ function QuickNav({
     { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined, permission: "emailing" },
     { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500", permission: "emailing" },
     { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "tournois" },
+    { id: "admin-interclubs", label: "Inter-clubs", icon: <Trophy className="w-4 h-4" />, color: "from-emerald-500 to-teal-600", permission: "tournois" },
     { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "inscriptions" },
     { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500", permission: "comptabilite" },
     { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500", permission: "actualites" },

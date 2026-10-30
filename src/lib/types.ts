@@ -238,6 +238,45 @@ export type SeasonArchive = {
   factures?: Facture[];
 };
 
+// 🏆 Tournoi inter-clubs : chaque club invité reçoit un lien unique (token)
+// vers une page dédiée où il inscrit ses binômes, dans la limite de son quota.
+export const INTERCLUB_NIVEAUX = ["Débutant", "Intermédiaire", "Confirmé", "Très confirmé"] as const;
+
+export type InterClubBinome = {
+  id: string;
+  joueur1: string;
+  joueur2: string;
+  niveau: string;
+  createdAt: string;
+};
+
+export type InterClubClub = {
+  id: string;
+  nom: string;
+  token: string; // secret du lien d'inscription du club
+  quota: number; // nombre maximum de binômes
+  contact?: string; // email / téléphone du référent (facultatif)
+  binomes: InterClubBinome[];
+  updatedAt?: string;
+};
+
+export type InterClub = {
+  id: string;
+  name: string;
+  date: string; // YYYY-MM-DD
+  type?: string; // Mixte | Hommes | Femmes | Libre
+  niveaux: string[];
+  dateLimit?: string; // dernier jour d'inscription (YYYY-MM-DD) inclus
+  deroulement?: string; // horaires, format, règles…
+  salleNom?: string;
+  salleAdresse?: string;
+  sallePhotoUrl?: string;
+  sallePhotoPath?: string;
+  closed?: boolean; // inscriptions fermées manuellement
+  clubs: InterClubClub[];
+  createdAt: string;
+};
+
 export type DB = {
   membres: Membre[];
   factures: Facture[];
@@ -276,6 +315,7 @@ export type DB = {
   tshirtPaymentUrl?: string; // 💳 lien HelloAsso pour payer le t-shirt en ligne (facultatif)
   tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
+  interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)
   // ❓ FAQ adhérents : visible sur la home + page /faq
   faqOpen?: boolean; // Affiche/cache la section FAQ côté public
   faqItems?: FaqItem[];

@@ -156,6 +156,19 @@ function isRegistrationRateLimited(ip: string): boolean {
   return entry.count > 3;
 }
 
+// 🏆 Pages inter-clubs : 60 requêtes / 10 min par IP (anti-devinette des liens)
+const interclubLimitMap = new Map<string, { count: number; reset: number }>();
+function isInterclubRateLimited(ip: string): boolean {
+  const now = Date.now();
+  const entry = interclubLimitMap.get(ip);
+  if (!entry || now > entry.reset) {
+    interclubLimitMap.set(ip, { count: 1, reset: now + 10 * 60_000 });
+    return false;
+  }
+  entry.count++;
+  return entry.count > 60;
+}
+
 // 📸 Les personnes identifiées sur les photos restent réservées à l'admin
 function actuSansPersonnes(a: Record<string, unknown>): Record<string, unknown> {
   if (!Array.isArray(a.images)) return a;
@@ -4135,6 +4148,85 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: Vérifier qu'une session membre est toujours valide ───
+  // ─── ACTION: Tournoi inter-clubs — page d'un club (lien unique avec token) ───
+  if (action === "interclub_get" || action === "interclub_save") {
+    const token = String(body.token || "").trim();
+    if (!/^[A-Za-z0-9_-]{16,64}$/.test(token)) return json({ ok: false, reason: "Lien invalide." }, 400);
+    if (isInterclubRateLimited(ip)) return json({ ok: false, reason: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
+
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const interclubs = (d.interclubs || []) as Record<string, unknown>[];
+    let tournoi: Record<string, unknown> | undefined;
+    let club: Record<string, unknown> | undefined;
+    for (const t of interclubs) {
+      const c = ((t.clubs || []) as Record<string, unknown>[]).find((x) => typeof x.token === "string" && constantTimeEqual(x.token, token));
+      if (c) { tournoi = t; club = c; break; }
+    }
+    if (!tournoi || !club) return json({ ok: false, reason: "Ce lien n'existe pas ou a été désactivé. Contactez le SACCB." }, 404);
+
+    // Inscriptions ouvertes jusqu'à la fin du jour limite (heure de Paris ≈ UTC+2 max)
+    const limite = typeof tournoi.dateLimit === "string" && /^\d{4}-\d{2}-\d{2}$/.test(tournoi.dateLimit)
+      ? new Date(tournoi.dateLimit + "T23:59:59+02:00").getTime() : Infinity;
+    const ouvert = tournoi.closed !== true && Date.now() <= limite;
+    const niveaux = ((tournoi.niveaux || []) as unknown[]).map(String).filter(Boolean);
+    const quota = Math.max(0, Number(club.quota) || 0);
+
+    if (action === "interclub_save") {
+      if (!ouvert) return json({ ok: false, reason: "Les inscriptions sont fermées pour ce tournoi." }, 403);
+      const recus = Array.isArray(body.binomes) ? (body.binomes as Record<string, unknown>[]) : null;
+      if (!recus) return json({ ok: false, reason: "Données manquantes." }, 400);
+      if (recus.length > quota) return json({ ok: false, reason: `Votre club est limité à ${quota} binôme${quota > 1 ? "s" : ""}.` }, 400);
+      const anciens = new Map(((club.binomes || []) as Record<string, unknown>[]).map((b) => [String(b.id), b]));
+      const binomes: Record<string, unknown>[] = [];
+      for (const r of recus) {
+        const joueur1 = sanitize(String(r.joueur1 || "")).slice(0, 80);
+        const joueur2 = sanitize(String(r.joueur2 || "")).slice(0, 80);
+        const niveau = String(r.niveau || "");
+        if (joueur1.length < 2 || joueur2.length < 2) return json({ ok: false, reason: "Chaque binôme doit avoir deux joueurs (prénom et nom)." }, 400);
+        if (niveaux.length > 0 && !niveaux.includes(niveau)) return json({ ok: false, reason: "Niveau invalide." }, 400);
+        const id = String(r.id || "");
+        const ancien = anciens.get(id);
+        binomes.push({
+          id: ancien ? id : crypto.randomUUID(),
+          joueur1, joueur2,
+          niveau: niveaux.length > 0 ? niveau : "",
+          createdAt: ancien ? ancien.createdAt : new Date().toISOString(),
+        });
+      }
+      // On repart d'une copie fraîche pour ne modifier que ce club
+      const tId = String(tournoi.id), cId = String(club.id);
+      const fresh = await loadDB();
+      if (fresh.error || !fresh.data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+      const fd = fresh.data.data as Record<string, unknown>;
+      const ft = ((fd.interclubs || []) as Record<string, unknown>[]).find((t) => String(t.id) === tId);
+      const fc = ft ? ((ft.clubs || []) as Record<string, unknown>[]).find((c) => String(c.id) === cId) : undefined;
+      if (!fc) return json({ ok: false, reason: "Ce lien a été désactivé." }, 404);
+      fc.binomes = binomes;
+      fc.updatedAt = new Date().toISOString();
+      const { error: saveErr } = await saveDB(fd);
+      if (saveErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+      club = fc;
+    }
+
+    // Autres clubs : seulement le nom et le nombre d'équipes (pas les joueurs)
+    const autres = ((tournoi.clubs || []) as Record<string, unknown>[])
+      .filter((c) => c.id !== club!.id)
+      .map((c) => ({ nom: String(c.nom || ""), equipes: ((c.binomes || []) as unknown[]).length }));
+    return json({
+      ok: true,
+      ouvert,
+      tournoi: {
+        name: tournoi.name, date: tournoi.date, type: tournoi.type || "", niveaux,
+        dateLimit: tournoi.dateLimit || "", deroulement: tournoi.deroulement || "",
+        salleNom: tournoi.salleNom || "", salleAdresse: tournoi.salleAdresse || "", sallePhotoUrl: tournoi.sallePhotoUrl || "",
+      },
+      club: { nom: club.nom, quota, binomes: club.binomes || [], updatedAt: club.updatedAt || "" },
+      autres,
+    });
+  }
+
   if (action === "check_session") {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const membreId = String(body.membreId || "");
