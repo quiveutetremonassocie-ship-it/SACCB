@@ -26,6 +26,7 @@ export default function TournoisAdmin({
   const [dateLimit, setDateLimit] = useState("");
   const [type, setType] = useState("");
   const [q, setQ] = useState("");
+  const [desc, setDesc] = useState("");
 
   // Edition en ligne (saison courante)
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -60,17 +61,37 @@ export default function TournoisAdmin({
           dateLimit: dateLimit || null,
           type: type || null,
           quota: q ? parseInt(q) : null,
+          description: desc.trim() || null,
           saison: `${db.y1}-${db.y2}`,
         },
       ],
     };
     await onPersist(next);
-    setN(""); setD(""); setDateLimit(""); setType(""); setQ("");
+    setN(""); setD(""); setDateLimit(""); setType(""); setQ(""); setDesc("");
+  }
+
+  // 📋 Copie les binômes d'un tournoi en tableau (colonnes séparées par tabulation :
+  // se colle directement dans Excel / Google Sheets, et reste lisible dans un mail)
+  async function copyBinomes(t: Tournoi, inscrits: { joueurs: string; resultat?: string | null }[]) {
+    const lines = [
+      ["N°", "Joueur 1", "Joueur 2", "Résultat"].join("\t"),
+      ...inscrits.map((i, idx) => {
+        const [j1 = "", j2 = ""] = i.joueurs.split(" / ");
+        return [String(idx + 1), j1.trim(), j2.trim(), i.resultat || ""].join("\t");
+      }),
+    ];
+    const text = `${t.name} — ${t.date}\n${lines.join("\n")}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      alert(`✅ ${inscrits.length} binôme${inscrits.length > 1 ? "s" : ""} copié${inscrits.length > 1 ? "s" : ""}. Colle (Ctrl+V) où tu veux.`);
+    } catch {
+      prompt("Copie ce texte (Ctrl+C) :", text);
+    }
   }
 
   function startEdit(t: Tournoi) {
     setEditingId(t.id);
-    setEditData({ name: t.name, date: t.date, dateLimit: t.dateLimit || "", type: t.type || "", quota: t.quota ?? undefined });
+    setEditData({ name: t.name, date: t.date, dateLimit: t.dateLimit || "", type: t.type || "", quota: t.quota ?? undefined, description: t.description || "" });
   }
 
   async function saveEdit(id: string) {
@@ -85,6 +106,7 @@ export default function TournoisAdmin({
               dateLimit: (editData.dateLimit as string) || null,
               type: (editData.type as string) || null,
               quota: editData.quota ? Number(editData.quota) : null,
+              description: ((editData.description as string) || "").trim() || null,
             }
           : t
       ),
@@ -449,7 +471,7 @@ export default function TournoisAdmin({
 
       {/* ── Saison courante ── */}
       <div className="space-y-2 mb-6">
-        {(db.config_tournois || []).map((t) => (
+        {(db.config_tournois || []).slice().sort((a, b) => (parseTournoiDate(a.date)?.getTime() ?? Number.MAX_SAFE_INTEGER) - (parseTournoiDate(b.date)?.getTime() ?? Number.MAX_SAFE_INTEGER)).map((t) => (
           <div key={t.id} className="bg-slate-50 rounded-xl border border-slate-200">
             {editingId === t.id ? (
               <div className="p-3 space-y-2">
@@ -468,6 +490,7 @@ export default function TournoisAdmin({
                   </select>
                   <input className="input !text-sm" type="number" value={editData.quota ?? ""} onChange={(e) => setEditData({ ...editData, quota: e.target.value ? parseInt(e.target.value) : undefined })} placeholder="Quota max" />
                 </div>
+                <textarea className="input !text-sm w-full" rows={2} value={(editData.description as string) || ""} onChange={(e) => setEditData({ ...editData, description: e.target.value })} placeholder="Explication (facultatif)" />
                 <div className="flex gap-2">
                   <button onClick={() => saveEdit(t.id)} className="btn-primary !px-3 !py-1.5 !text-xs flex-1"><Check className="w-3.5 h-3.5" /> Enregistrer</button>
                   <button onClick={() => setEditingId(null)} className="btn-ghost !px-3 !py-1.5 !text-xs"><X className="w-3.5 h-3.5" /> Annuler</button>
@@ -488,6 +511,7 @@ export default function TournoisAdmin({
                     <p className="text-xs text-slate-400">{t.date}</p>
                     {t.dateLimit && <p className="text-xs text-amber-600">Limite : {t.dateLimit}</p>}
                     {t.type && <p className="text-xs text-blue-500">{t.type}</p>}
+                    {t.description && <p className="text-xs text-slate-500 mt-1 whitespace-pre-line">{t.description}</p>}
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
                     {!readOnly && <button onClick={() => startEdit(t)} className="btn-primary !px-2.5 !py-1.5 !text-xs" title="Modifier"><Pencil className="w-3.5 h-3.5" /></button>}
@@ -523,6 +547,14 @@ export default function TournoisAdmin({
                       </button>
                       {isOpen && (
                         <div className="px-3 pb-3 space-y-1.5">
+                          {inscrits.length > 0 && (
+                            <button
+                              onClick={() => copyBinomes(t, inscrits)}
+                              className="w-full text-xs font-semibold text-blue-700 border border-blue-200 hover:bg-blue-50 rounded-lg py-1.5 transition"
+                            >
+                              📋 Copier la liste des binômes (pour Excel, mail…)
+                            </button>
+                          )}
                           {inscrits.map((inscrit) => {
                             const isEditing = editingCurrentResultat?.tournoiId === t.id && editingCurrentResultat?.inscritId === inscrit.id;
                             return (
@@ -660,6 +692,7 @@ export default function TournoisAdmin({
             </select>
             <input className="input" type="number" value={q} onChange={(e) => setQ(e.target.value)} placeholder="Quota max doubles (vide = illimité)" />
           </div>
+          <textarea className="input w-full mb-3" rows={3} value={desc} onChange={(e) => setDesc(e.target.value)} placeholder="Explication / infos pratiques (facultatif) — ex : lieu, horaires, niveau conseillé…" />
           <button onClick={add} className="btn-primary w-full mb-8">
             <Plus className="w-4 h-4" /> Publier
           </button>

@@ -21,8 +21,15 @@ function parseTournoiDate(dateStr: string): string | null {
   return null;
 }
 
+// Clé de tri chronologique (dates en texte libre "25 mai 2026" comprises) ; date illisible → à la fin
+function tournoiTime(t: Tournoi): number {
+  const d = parseFreeDate(t.date);
+  return d ? d.getTime() : Number.MAX_SAFE_INTEGER;
+}
+
 function isTermine(t: Tournoi) {
-  const parsed = parseTournoiDate(t.date);
+  const free = parseFreeDate(t.date);
+  const parsed = free ? `${free.getFullYear()}-${String(free.getMonth() + 1).padStart(2, "0")}-${String(free.getDate()).padStart(2, "0")}` : parseTournoiDate(t.date);
   // Si la date est parsable, comparer avec aujourd'hui
   if (parsed) return parsed < today;
   // Date en texte libre non parsable → on ne sait pas, on considère "à venir" par défaut
@@ -43,8 +50,9 @@ export default function Tournois({
   readOnly?: boolean;
 }) {
   const tournois = db.config_tournois ?? [];
-  const upcoming = tournois.filter((t) => !isTermine(t));
-  const done = tournois.filter((t) => isTermine(t));
+  // 📅 À venir : le plus proche en premier · Passés : le plus récent en premier
+  const upcoming = tournois.filter((t) => !isTermine(t)).sort((a, b) => tournoiTime(a) - tournoiTime(b));
+  const done = tournois.filter((t) => isTermine(t)).sort((a, b) => tournoiTime(b) - tournoiTime(a));
   const archives = db.archives ?? [];
 
   const hasPast = done.length > 0 || archives.length > 0;
@@ -449,6 +457,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
                 {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-red-50 text-red-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
                 {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-red-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
               </div>
+              {t.description && <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">{t.description}</p>}
               {t.dateLimit && !inscriptionsClosed && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
               <button
                 onClick={() => downloadIcs(t)}
