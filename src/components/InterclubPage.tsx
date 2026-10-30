@@ -7,6 +7,7 @@ import { LiveMatch, LivePhase } from "@/lib/types";
 import { matchJoue, classementGeneral, formatTexte } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
 import EcranGeant from "./live/EcranGeant";
+import ReglementTournoi from "./live/ReglementTournoi";
 
 type Ligne = { id?: string; joueur1: string; joueur2: string; niveau: string };
 
@@ -279,6 +280,7 @@ export default function InterclubPage() {
             effacer={effacerScore}
           />
           <LiveBoard phases={page.live.phases} equipes={page.live.equipes} termine={page.live.termine} clubs={page.live.clubs} />
+          <ReglementTournoi phases={page.live.phases} />
           <p className="text-center text-[11px] text-white/40">Actualisation automatique toutes les 5 secondes</p>
         </main>
       ) : (
@@ -420,6 +422,9 @@ export default function InterclubPage() {
               )}
             </div>
           )}
+
+          {/* 📌 Règlement épinglé */}
+          <ReglementTournoi phases={page.live?.phases} />
 
           {t.deroulement && (
             <div className="bg-white rounded-3xl shadow-2xl p-5">
