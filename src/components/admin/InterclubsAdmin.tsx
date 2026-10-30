@@ -83,6 +83,8 @@ export default function InterclubsAdmin({
   }
 
   async function creer() {
+    // 🏟 Reprend la salle et la photo du dernier tournoi (modifiables ensuite)
+    const precedent = list.find((x) => x.sallePhotoUrl) || list[0];
     const t: InterClub = {
       id: uid(),
       name: "Tournoi inter-clubs",
@@ -91,8 +93,10 @@ export default function InterclubsAdmin({
       niveaux: [...INTERCLUB_NIVEAUX],
       dateLimit: "",
       deroulement: MODELE_DEROULEMENT,
-      salleNom: cfg.salleName,
-      salleAdresse: cfg.salleAdresse,
+      salleNom: precedent?.salleNom || cfg.salleName,
+      salleAdresse: precedent?.salleAdresse || cfg.salleAdresse,
+      sallePhotoUrl: precedent?.sallePhotoUrl,
+      sallePhotoPath: precedent?.sallePhotoPath,
       clubs: [],
       createdAt: new Date().toISOString(),
     };
