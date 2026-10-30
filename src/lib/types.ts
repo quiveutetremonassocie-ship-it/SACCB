@@ -178,7 +178,7 @@ export type TshirtOrder = {
   membreId?: string;       // si commandé depuis l'espace membre (lien avec l'adhérent)
   nom: string;
   prenom: string;
-  taille: "XS" | "S" | "M" | "L" | "XL";
+  taille: string; // une des TSHIRT_SIZES_ALL
   nomFloque?: string;      // nom/surnom à floquer sur le t-shirt (optionnel)
   createdAt: string;       // ISO timestamp
   status?: "pending" | "ordered" | "delivered"; // pour suivi admin

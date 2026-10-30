@@ -114,7 +114,7 @@ export async function memberSubmitTshirtOrder(args: {
   membreId: string;
   nom: string;
   prenom: string;
-  taille: "XS" | "S" | "M" | "L" | "XL";
+  taille: string; // une des TSHIRT_SIZES_ALL
   nomFloque?: string;
 }): Promise<{ ok: boolean; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
