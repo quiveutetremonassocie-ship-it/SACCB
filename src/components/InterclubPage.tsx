@@ -168,14 +168,21 @@ export default function InterclubPage() {
     <Fond>
       {/* ── En-tête ── */}
       <header className="max-w-5xl mx-auto px-4 pt-8 pb-10 text-center text-white">
-        <div className="flex items-center justify-center gap-3 mb-6">
+        {/* Lien vers le site du SACCB (nouvel onglet : la page d'inscription reste ouverte) */}
+        <a
+          href="/"
+          target="_blank"
+          rel="noopener"
+          title="Découvrir le site du SACCB"
+          className="inline-flex items-center justify-center gap-3 mb-6 rounded-2xl px-3 py-2 hover:bg-white/10 transition"
+        >
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="SACCB" className="w-12 h-12 rounded-xl bg-white/10 p-1" />
-          <div className="text-left">
-            <p className="font-bold tracking-[0.25em] text-sm" style={{ fontFamily: "Oswald, sans-serif" }}>SACCB</p>
-            <p className="text-[10px] uppercase tracking-[0.3em] text-white/50">Badminton · Sainte-Adresse</p>
-          </div>
-        </div>
+          <span className="text-left">
+            <span className="block font-bold tracking-[0.25em] text-sm" style={{ fontFamily: "Oswald, sans-serif" }}>SACCB</span>
+            <span className="block text-[10px] uppercase tracking-[0.3em] text-white/50">Badminton · Sainte-Adresse</span>
+          </span>
+        </a>
         <p className="text-xs uppercase tracking-[0.35em] text-emerald-300 mb-3">Tournoi inter-clubs</p>
         <h1
           className="text-5xl md:text-7xl leading-none mb-5 bg-gradient-to-r from-white via-blue-200 to-emerald-200 bg-clip-text text-transparent"
@@ -364,7 +371,8 @@ export default function InterclubPage() {
       </main>
 
       <footer className="text-center text-white/40 text-xs pb-8">
-        Organisé par le SACCB — Sainte-Adresse Club Compétition Badminton ·{" "}
+        Organisé par le{" "}
+        <a href="/" target="_blank" rel="noopener" className="hover:text-white/70 underline">SACCB — Sainte-Adresse Club Compétition Badminton</a> ·{" "}
         <a href="mailto:contact@saccb.fr" className="hover:text-white/70 underline">contact@saccb.fr</a>
       </footer>
     </Fond>
