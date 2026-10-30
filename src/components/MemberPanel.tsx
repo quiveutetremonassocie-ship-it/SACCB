@@ -61,21 +61,25 @@ export default function MemberPanel({
   smashUrl?: string;
   justificatifManquant?: boolean;
   justificatifInfo?: { fourni: boolean; date?: string; nom?: string };
-  adherent?: { nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean };
+  adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean };
   onJustificatifSent?: () => void;
 }) {
   const [justifReplace, setJustifReplace] = useState(false);
   // 🎓 Envoi du justificatif de scolarité depuis l'espace membre
   const [justifSending, setJustifSending] = useState(false);
   const [justifMsg, setJustifMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  // Code en mémoire, ou saisi dans l'encadré (sessions admin : aucun code gardé)
+  const storedCode = session.memberCode || session.adminCode || (typeof window !== "undefined" ? sessionStorage.getItem("saccb_member_code") : "") || "";
+  const [justifCode, setJustifCode] = useState("");
   async function sendJustificatif(file: File | undefined) {
     if (!file) return;
-    const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
-    if (!code) { setJustifMsg({ ok: false, text: "Reconnectez-vous à votre espace pour envoyer le justificatif." }); return; }
+    const code = storedCode || justifCode.trim();
+    if (!code) { setJustifMsg({ ok: false, text: "Entrez d'abord votre code personnel (ou admin) ci-dessus." }); return; }
     if (!["application/pdf", "image/jpeg", "image/png"].includes(file.type)) { setJustifMsg({ ok: false, text: "PDF, JPG ou PNG uniquement." }); return; }
     if (file.size > 10 * 1024 * 1024) { setJustifMsg({ ok: false, text: "Fichier trop lourd (10 Mo max)." }); return; }
     setJustifSending(true);
-    const r = await publicUploadJustificatif({ email: session.email, code, membreId: session.membreId, file });
+    // Fiche adhérent réelle (un compte admin a un identifiant de session « admin-… »)
+    const r = await publicUploadJustificatif({ email: session.email, code, membreId: adherent?.id || session.membreId, file });
     setJustifSending(false);
     if (r.ok) { setJustifMsg({ ok: true, text: "Justificatif envoyé, merci ! Le bureau le voit dans l'admin." }); setJustifReplace(false); onJustificatifSent?.(); }
     else setJustifMsg({ ok: false, text: r.reason || "Erreur lors de l'envoi." });
@@ -579,6 +583,15 @@ export default function MemberPanel({
             ) : (
               <>
                 <p className="text-sm text-slate-600 mb-2">Le tarif étudiant nécessite un certificat de scolarité ou une carte étudiante de l&apos;année en cours (PDF, JPG ou PNG).</p>
+                {!storedCode && (
+                  <input
+                    type="password"
+                    value={justifCode}
+                    onChange={(e) => setJustifCode(e.target.value)}
+                    placeholder="Votre code personnel (ou admin)"
+                    className="w-full mb-2 border border-emerald-300 rounded-lg px-3 py-1.5 text-sm bg-white"
+                  />
+                )}
                 <input
                   type="file"
                   accept="application/pdf,image/jpeg,image/png"

@@ -461,7 +461,7 @@ export async function verifyMembre(
 }
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } }> {
+export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",

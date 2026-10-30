@@ -4010,11 +4010,20 @@ Deno.serve(async (req) => {
     const whatsappLink = typeof d.whatsappLink === "string" && d.whatsappLink ? d.whatsappLink : undefined;
     // 📄 Fiche adhérent (nom, type, montant payé) pour le reçu d'adhésion de l'espace membre
     const adherentInfo = (m: Record<string, unknown> | undefined) =>
-      m ? { nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : undefined, ok: m.ok === true } : undefined;
+      m ? { id: String(m.id || ""), nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : undefined, ok: m.ok === true } : undefined;
+    // 🎓 État du justificatif d'une fiche étudiante pour la saison en cours
+    const justifInfo = (m: Record<string, unknown> | undefined) => {
+      if (!m || m.type !== "Etudiant") return { manquant: false, info: undefined };
+      const j = m.justificatif as { saison?: string; uploadedAt?: string; name?: string } | undefined;
+      const fourni = j?.saison === `${d.y1}-${d.y2}`;
+      return { manquant: !fourni, info: { fourni, date: fourni ? j?.uploadedAt : undefined, nom: fourni ? j?.name : undefined } };
+    };
     if (isAdminCred) {
       // Compte admin : on rattache sa fiche adhérent du même email s'il en a une (payée en priorité)
       const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase() === email);
-      return json({ ok: true, whatsappLink, adherent: adherentInfo(sameEmail.find((m) => m.ok === true) || sameEmail[0]) });
+      const fiche = sameEmail.find((m) => m.ok === true) || sameEmail[0];
+      const jf = justifInfo(fiche);
+      return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info });
     }
 
     // Vérifier si le membre existe encore par email + id
@@ -4269,7 +4278,10 @@ Deno.serve(async (req) => {
     const membres = (d.membres || []) as Record<string, unknown>[];
     // La fiche visée doit correspondre à l'email ET au code (comptes groupés : même email, même code)
     const m = membres.find((x) => String(x.id) === membreId && String(x.email || "").toLowerCase() === email);
-    if (!m || !(await verifyCode(m.code as string, code))) return json({ ok: false, reason: "Identifiants incorrects." }, 403);
+    // Code d'adhérent de la fiche, ou code admin du même email (admin qui est aussi étudiant)
+    const adminCreds = (d.adminCredentials || []) as { email: string; code: string }[];
+    const autorise = !!m && ((await verifyCode(m.code as string, code)) || !!(await findAdminCredByCredentials(adminCreds, email, code)));
+    if (!m || !autorise) return json({ ok: false, reason: "Identifiants incorrects." }, 403);
 
     const path = `${membreId}/${Date.now()}-${fileName}`;
     let up = await supabaseAdmin.storage.from("justificatifs").upload(path, bytes, { contentType, upsert: false });

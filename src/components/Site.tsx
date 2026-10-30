@@ -52,7 +52,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [justificatifManquant, setJustificatifManquant] = useState(false);
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
   // 📄 Fiche adhérent réelle (nom, type, montant payé) pour le reçu d'adhésion
-  const [memberAdherent, setMemberAdherent] = useState<{ nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } | undefined>(undefined);
+  const [memberAdherent, setMemberAdherent] = useState<{ id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } | undefined>(undefined);
   useEffect(() => {
     if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); return; }
     let cancelled = false;

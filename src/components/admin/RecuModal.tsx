@@ -53,9 +53,8 @@ export default function RecuModal({
         <h2 className="text-center underline font-bold text-lg mb-8">REÇU DE COTISATION</h2>
         <p className="mb-4">
           Je soussigné, <strong>{presidentName?.trim() || "Le/La Président(e)"}</strong>,
-          Président de l&apos;association SACCB, certifie avoir reçu la somme de :
+          Président de l&apos;association SACCB, certifie avoir reçu le règlement de l&apos;adhésion
         </p>
-        <p className="text-center text-3xl font-bold mb-8">{montant} €</p>
         {(() => {
           // 🛡️ Si le champ 'nom' ressemble à un email (compte admin sans fiche adhérent),
           // on laisse des lignes à compléter plutôt que de divulguer l'email.
