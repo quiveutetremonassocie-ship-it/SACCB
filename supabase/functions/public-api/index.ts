@@ -675,6 +675,38 @@ function tournoiConcerne(t: Record<string, unknown>, m: { sexe?: unknown }): boo
   return true;
 }
 
+// 👕 Identifiant HelloAsso (formSlug) de la campagne t-shirts, tiré du lien enregistré dans l'admin
+// ex. https://www.helloasso.com/associations/xxx/boutiques/commande-t-shirt-saccb → "commande-t-shirt-saccb"
+function tshirtSlugOf(url: unknown): string {
+  if (typeof url !== "string" || !url) return "";
+  try {
+    const parts = new URL(url).pathname.split("/").filter(Boolean);
+    const last = parts[parts.length - 1] || "";
+    return ["widget", "widget-bouton", "widget-vignette"].includes(last) ? (parts[parts.length - 2] || "").toLowerCase() : last.toLowerCase();
+  } catch {
+    return "";
+  }
+}
+
+// ✅ Mail « paiement du t-shirt confirmé »
+async function sendTshirtPaidMail(brevoKey: string, to: string, o: Record<string, unknown>): Promise<void> {
+  const prenom = String(o.prenom || "");
+  const hello = prenom ? `Bonjour ${prenom},` : "Bonjour,";
+  const detail = `taille ${String(o.taille || "")}${o.nomFloque ? `, floqué « ${String(o.nomFloque)} »` : ""}`;
+  await sendBrevo(brevoKey, {
+    from: "SACCB <contact@saccb.fr>",
+    to: [to],
+    subject: `${prenom ? prenom + ", " : ""}paiement de ton t-shirt confirmé`,
+    text: `${hello}\n\nLe bureau confirme la bonne réception du paiement de ton t-shirt SACCB (${detail}).\n\nIl ne te reste plus qu'à venir le chercher quand il sera disponible : on te tiendra au courant.\n\nÀ bientôt à la salle,\nLe bureau du SACCB`,
+    html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+      <p>${escapeHtml(hello)}</p>
+      <p>Le bureau confirme la bonne réception du paiement de ton t-shirt SACCB (${escapeHtml(detail)}).</p>
+      <p>Il ne te reste plus qu'à venir le chercher quand il sera disponible : on te tiendra au courant.</p>
+      <p>À bientôt à la salle,<br/>Le bureau du SACCB</p>
+    </div>`,
+  }).catch(() => {});
+}
+
 // 👕 Tailles de t-shirt : catalogue complet + tailles proposées choisies par l'admin
 const TSHIRT_SIZES_ALL = ["XS", "S", "M", "L", "XL", "XXL", "3XL"];
 const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
@@ -893,6 +925,27 @@ Deno.serve(async (req) => {
 
     const currentData = data.data as Record<string, unknown>;
     const membres = (currentData.membres || []) as Record<string, unknown>[];
+
+    // 👕 Paiement de la campagne T-SHIRTS (et pas d'une adhésion) ?
+    // HelloAsso envoie toutes les campagnes de l'asso au même webhook : on reconnaît la
+    // campagne t-shirts grâce au lien enregistré dans l'admin (dernier segment = formSlug).
+    const order = paymentData?.order as Record<string, unknown> | undefined;
+    const formSlug = String(paymentData?.formSlug || order?.formSlug || "").toLowerCase();
+    const tshirtSlug = tshirtSlugOf(currentData.tshirtPaymentUrl);
+    if (formSlug && tshirtSlug && formSlug === tshirtSlug) {
+      const orders = (currentData.tshirtOrders || []) as Record<string, unknown>[];
+      const membresDuPayeur = new Set(membres.filter((m) => String(m.email || "").toLowerCase() === payerEmail).map((m) => String(m.id)));
+      const aMarquer = orders.filter((o) => o.paid !== true && membresDuPayeur.has(String(o.membreId)));
+      if (aMarquer.length === 0) {
+        console.warn("[HelloAsso webhook] paiement t-shirt sans commande correspondante pour", payerEmail);
+        return json({ ok: true, tshirt: true, matched: 0 });
+      }
+      for (const o of aMarquer) { o.paid = true; o.paidAt = new Date().toISOString(); o.paidVia = "helloasso"; }
+      await saveDB(currentData);
+      const brevoKeyT = Deno.env.get("BREVO_API_KEY");
+      if (brevoKeyT) for (const o of aMarquer) await sendTshirtPaidMail(brevoKeyT, payerEmail, o);
+      return json({ ok: true, tshirt: true, matched: aMarquer.length });
+    }
 
     // Chercher le membre par email
     let found = false;
@@ -4254,11 +4307,20 @@ Deno.serve(async (req) => {
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
     const o = orders.find((x) => x.id === orderId);
     if (!o) return json({ ok: false, reason: "Commande introuvable." }, 404);
+    const devientPaye = body.paid === true && o.paid !== true;
     if (body.paid === true) { o.paid = true; o.paidAt = new Date().toISOString(); }
-    else { delete o.paid; delete o.paidAt; }
+    else { delete o.paid; delete o.paidAt; delete o.paidVia; }
     const { error } = await saveDB(d);
     if (error) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
-    return json({ ok: true });
+    // ✅ Mail « paiement confirmé » si l'admin l'a demandé
+    let mailEnvoye = false;
+    if (devientPaye && body.notify === true) {
+      const brevoKey = Deno.env.get("BREVO_API_KEY");
+      const m = ((d.membres || []) as Record<string, unknown>[]).find((x) => String(x.id) === String(o.membreId));
+      const to = String(m?.email || "");
+      if (brevoKey && to) { await sendTshirtPaidMail(brevoKey, to, o); mailEnvoye = true; }
+    }
+    return json({ ok: true, mailEnvoye });
   }
 
   // 📨 [ADMIN] Relancer par email les commandes t-shirt non payées (toutes, ou celles listées)
@@ -4283,12 +4345,13 @@ Deno.serve(async (req) => {
       const prenom = String(o.prenom || "");
       const hello = prenom ? `Bonjour ${prenom},` : "Bonjour,";
       const prixTxt = price !== null ? ` de ${price}€` : "";
+      // Lien HelloAsso enregistré → paiement sur HelloAsso ; sinon → paiement au magasin
       const payTxt = payUrl
-        ? `Tu peux le régler en ligne ici : ${payUrl}\nUne fois payé, tu n'auras plus qu'à venir chercher ton t-shirt.`
-        : `Tu pourras le régler directement au magasin quand tu iras chercher ton t-shirt.`;
+        ? `Le paiement se fait sur HelloAsso : ${payUrl}\nUne fois payé, tu n'auras plus qu'à venir chercher ton t-shirt.`
+        : `Le paiement se fait directement au magasin, quand tu iras chercher ton t-shirt.`;
       const payHtml = payUrl
-        ? `<p>Tu peux le régler en ligne ici : <a href="${escapeHtml(payUrl)}" style="color: #1e3a5f;">payer mon t-shirt</a>. Une fois payé, tu n'auras plus qu'à venir chercher ton t-shirt.</p>`
-        : `<p>Tu pourras le régler directement au magasin quand tu iras chercher ton t-shirt.</p>`;
+        ? `<p>Le paiement se fait sur HelloAsso : <a href="${escapeHtml(payUrl)}" style="color: #1e3a5f;">payer mon t-shirt sur HelloAsso</a>. Une fois payé, tu n'auras plus qu'à venir chercher ton t-shirt.</p>`
+        : `<p>Le paiement se fait directement au magasin, quand tu iras chercher ton t-shirt.</p>`;
       const r = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",
         to: [to],

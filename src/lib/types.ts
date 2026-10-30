@@ -193,6 +193,7 @@ export type TshirtOrder = {
   paid?: boolean;          // 💳 payé (coché par le bureau)
   paidAt?: string;
   relances?: string[];     // dates des relances de paiement envoyées
+  paidVia?: string;        // "helloasso" si marqué payé automatiquement par HelloAsso
   notes?: string;          // note admin libre
   saison?: string;
 };

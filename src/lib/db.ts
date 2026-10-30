@@ -319,12 +319,12 @@ export async function adminFactureFile(adminEmail: string, adminCode: string, op
 }
 
 // 💳 [ADMIN] Marque une commande t-shirt payée / non payée
-export async function adminTshirtPaid(adminEmail: string, adminCode: string, orderId: string, paid: boolean): Promise<{ ok: boolean; reason?: string }> {
+export async function adminTshirtPaid(adminEmail: string, adminCode: string, orderId: string, paid: boolean, notify = false): Promise<{ ok: boolean; mailEnvoye?: boolean; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
-      body: JSON.stringify({ action: "admin_tshirt_paid", adminEmail, adminCode, orderId, paid }),
+      body: JSON.stringify({ action: "admin_tshirt_paid", adminEmail, adminCode, orderId, paid, notify }),
     });
     return await res.json();
   } catch {

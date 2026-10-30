@@ -119,9 +119,13 @@ export default function TshirtAdmin({
 
   async function togglePaid(orderId: string, paid: boolean) {
     if (readOnly || !adminEmail || !adminCode) return;
+    const o = orders.find((x) => x.id === orderId);
+    // ✅ En validant le paiement, on propose d'envoyer le mail de confirmation
+    const notify = paid && confirm(`Paiement validé pour ${o ? `${o.prenom} ${o.nom}`.trim() : "cette commande"}.\n\nEnvoyer le mail « paiement de ton t-shirt confirmé » ?\n\nOK = envoyer · Annuler = ne pas envoyer`);
     setBusyOrder(orderId);
-    const r = await adminTshirtPaid(adminEmail, adminCode, orderId, paid);
+    const r = await adminTshirtPaid(adminEmail, adminCode, orderId, paid, notify);
     if (!r.ok) alert("Erreur : " + (r.reason || "inconnue"));
+    else if (notify && !r.mailEnvoye) alert("Paiement enregistré, mais le mail n'a pas pu être envoyé (adresse introuvable).");
     if (onRefresh) await onRefresh();
     setBusyOrder(null);
   }
@@ -390,7 +394,7 @@ export default function TshirtAdmin({
                 onClick={() => togglePaid(o.id, !o.paid)}
                 disabled={readOnly || busyOrder === o.id}
                 className={`text-xs font-semibold px-2.5 py-1 rounded-lg border shrink-0 disabled:opacity-60 ${o.paid ? "bg-emerald-500 border-emerald-500 text-white" : "bg-red-50 border-red-300 text-red-700"}`}
-                title={o.paid ? `Payé${o.paidAt ? " le " + new Date(o.paidAt).toLocaleDateString("fr-FR") : ""} — cliquer pour annuler` : "Non payé — cliquer quand le paiement est reçu"}
+                title={o.paid ? `Payé${o.paidVia === "helloasso" ? " sur HelloAsso (automatique)" : ""}${o.paidAt ? " le " + new Date(o.paidAt).toLocaleDateString("fr-FR") : ""} — cliquer pour annuler` : "Non payé — cliquer quand le paiement est reçu"}
               >
                 {busyOrder === o.id ? "…" : o.paid ? "✓ Payé" : "✗ Non payé"}
               </button>
