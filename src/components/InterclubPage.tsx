@@ -541,12 +541,15 @@ function MesMatchs({
               <button onClick={() => basculer(id)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
                 <span className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white flex flex-col items-center justify-center leading-none" title="Place provisoire dans le tournoi">
                   {classementVisible && place > 0 ? (
-                    <>
-                      <span className="text-lg font-bold">{place}<sup className="text-[9px]">{place === 1 ? "er" : "e"}</sup></span>
-                      <span className="text-[9px] text-white/70 mt-0.5">sur {general.length}</span>
-                    </>
+                    <span className="font-bold whitespace-nowrap">
+                      <span className="text-lg">{place}</span>
+                      <span className="text-[11px] text-white/70">/{general.length}</span>
+                    </span>
                   ) : (
-                    <span className="text-[9px] text-white/80 text-center px-1">pas encore classé</span>
+                    <span className="font-bold whitespace-nowrap text-white/70">
+                      <span className="text-lg">–</span>
+                      <span className="text-[11px]">/{general.length}</span>
+                    </span>
                   )}
                 </span>
                 <span className="flex-1 min-w-0">
