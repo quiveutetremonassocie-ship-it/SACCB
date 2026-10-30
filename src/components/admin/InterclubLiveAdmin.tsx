@@ -151,10 +151,45 @@ export default function InterclubLiveAdmin({
     return [`${t.name} — classement final`, "", ...classementFinal(courante).map((id, i) => `${i + 1}. ${nomEquipe(eqs[id])} (${eqs[id]?.club || "?"})`)].join("\n");
   };
 
+  // 🏳 Forfait (RGC FFBaD 3.4.2) : défaite 0-21 (ou 0-N selon le format) à chaque set, compte -1
+  async function forfait(ph: LivePhase, m: LiveMatch, equipe: string) {
+    const nom = nomEquipe(eqs[equipe]);
+    if (!confirm(`Déclarer « ${nom} » forfait pour ce match ?\n\nScore enregistré : 0-${ph.format.points}${ph.format.sets === 1 ? "" : `, 0-${ph.format.points}`} et le forfait compte -1 point au classement (règlement FFBaD).`)) return;
+    const nbSets = ph.format.sets === 1 ? 1 : 2;
+    const perdant = Array(nbSets).fill(0), gagnant = Array(nbSets).fill(ph.format.points);
+    await majMatch(ph.id, m.id, {
+      sa: m.a === equipe ? perdant : gagnant,
+      sb: m.a === equipe ? gagnant : perdant,
+      forfait: equipe, etat: "valide", par: "admin",
+    });
+  }
+
+  // 🚪 Équipe qui arrête (RGC FFBaD 3.4.4) : ses résultats ne comptent plus dans sa poule
+  async function basculerRetrait(equipe: string) {
+    if (!live || !courante) return;
+    const poule = courante.poules.find((p) => p.equipes.includes(equipe));
+    if (!poule) return;
+    const deja = (poule.retirees || []).includes(equipe);
+    if (!deja && !confirm(`« ${nomEquipe(eqs[equipe])} » arrête le tournoi ?\n\nComme le prévoit le règlement FFBaD, tous ses résultats dans la poule sont retirés du classement, elle est classée dernière et ne passe pas à la phase suivante.`)) return;
+    const retirees = deja ? (poule.retirees || []).filter((x) => x !== equipe) : [...(poule.retirees || []), equipe];
+    await enregistrer({
+      ...live,
+      phases: live.phases.map((ph) => ph.id !== courante.id ? ph : { ...ph, poules: ph.poules.map((p) => (p.id === poule.id ? { ...p, retirees } : p)) }),
+    });
+  }
+
   const renderAction = (m: LiveMatch, ph: LivePhase) => {
     if (readOnly || live?.termine) return null;
     const enEdition = edition === m.id;
     const aValider = matchJoue(m) && m.etat !== "valide" && m.par !== "admin";
+    if (m.forfait) {
+      return (
+        <div className="mt-1 flex justify-center items-center gap-2 text-[11px]">
+          <span className="text-red-600 font-semibold">🏳 Forfait de {eqs[m.forfait]?.joueur1 || "?"} / {eqs[m.forfait]?.joueur2 || "?"}</span>
+          <button onClick={() => majMatch(ph.id, m.id, { sa: undefined, sb: undefined, forfait: undefined, etat: undefined, par: undefined })} className="text-blue-600 hover:underline">annuler</button>
+        </div>
+      );
+    }
     return (
       <div className="mt-1.5">
         {enEdition ? (
@@ -172,6 +207,25 @@ export default function InterclubLiveAdmin({
             <button onClick={() => setEdition(m.id)} className="text-[11px] font-semibold text-slate-600 bg-white border border-slate-200 rounded-md px-2 py-0.5 hover:bg-slate-100 flex items-center gap-1">
               <Pencil className="w-3 h-3" /> {matchJoue(m) ? "Corriger" : "Saisir"}
             </button>
+            {matchJoue(m) && (
+              <button
+                onClick={() => { if (confirm("Effacer ce score ? Le match repassera « à jouer ».")) majMatch(ph.id, m.id, { sa: undefined, sb: undefined, etat: undefined, par: undefined }); }}
+                disabled={busy}
+                className="text-[11px] font-semibold text-red-600 bg-white border border-red-200 rounded-md px-2 py-0.5 hover:bg-red-50 flex items-center gap-1"
+              >
+                <Trash2 className="w-3 h-3" /> Effacer
+              </button>
+            )}
+            <select
+              value=""
+              onChange={(e) => { if (e.target.value) forfait(ph, m, e.target.value); }}
+              className="text-[11px] text-slate-500 bg-white border border-slate-200 rounded-md px-1 py-0.5"
+              title="Déclarer une équipe forfait"
+            >
+              <option value="">🏳 Forfait…</option>
+              <option value={m.a}>{eqs[m.a]?.joueur1} / {eqs[m.a]?.joueur2}</option>
+              <option value={m.b}>{eqs[m.b]?.joueur1} / {eqs[m.b]?.joueur2}</option>
+            </select>
           </div>
         )}
       </div>
@@ -301,6 +355,36 @@ export default function InterclubLiveAdmin({
                   <button onClick={phaseSuivante} disabled={busy} className="btn-primary !text-xs !px-5 !py-2.5">
                     <ChevronRight className="w-4 h-4" /> Lancer « {suiteNom || "phase suivante"} » ({formatTexte(suiteFormat)})
                   </button>
+                </div>
+                <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
+                  <p className="text-sm font-semibold text-slate-700">🚪 Une équipe arrête le tournoi (blessure, départ…)</p>
+                  <p className="text-xs text-slate-500">
+                    Règlement FFBaD : ses résultats dans la poule sont retirés du classement, elle est classée dernière et ne passe pas à la phase suivante.
+                  </p>
+                  <select
+                    value=""
+                    onChange={(e) => { if (e.target.value) basculerRetrait(e.target.value); }}
+                    className="input !py-1.5 !text-sm w-auto"
+                  >
+                    <option value="">Choisir l&apos;équipe…</option>
+                    {courante.poules.map((p) => (
+                      <optgroup key={p.id} label={p.nom}>
+                        {p.equipes.filter((id) => !(p.retirees || []).includes(id)).map((id) => (
+                          <option key={id} value={id}>{nomEquipe(eqs[id])} ({eqs[id]?.club})</option>
+                        ))}
+                      </optgroup>
+                    ))}
+                  </select>
+                  {courante.poules.some((p) => (p.retirees || []).length > 0) && (
+                    <div className="flex flex-wrap gap-2 pt-1">
+                      {courante.poules.flatMap((p) => (p.retirees || []).map((id) => (
+                        <span key={id} className="text-xs bg-red-50 text-red-700 border border-red-200 rounded-full px-2 py-0.5 flex items-center gap-1">
+                          {nomEquipe(eqs[id])} a arrêté
+                          <button onClick={() => basculerRetrait(id)} className="text-blue-600 hover:underline ml-1">annuler</button>
+                        </span>
+                      )))}
+                    </div>
+                  )}
                 </div>
                 <div className="flex flex-wrap gap-2">
                   <button onClick={terminer} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Flag className="w-4 h-4" /> Terminer le tournoi (classement final)</button>

@@ -64,13 +64,17 @@ export function vainqueur(m: LiveMatch): string | null {
 
 // ─── Classement d'une poule ───
 
-export type Ligne = { id: string; joues: number; v: number; d: number; setsPour: number; setsContre: number; ptsPour: number; ptsContre: number };
+export type Ligne = { id: string; joues: number; v: number; d: number; forfaits: number; points: number; retiree: boolean; setsPour: number; setsContre: number; ptsPour: number; ptsContre: number };
 
 export function classementPoule(p: LivePoule): Ligne[] {
   const t: Record<string, Ligne> = {};
-  for (const id of p.equipes) t[id] = { id, joues: 0, v: 0, d: 0, setsPour: 0, setsContre: 0, ptsPour: 0, ptsContre: 0 };
+  // Règlement FFBaD (RGC 3.4.1) : victoire +1, défaite 0, forfait -1.
+  // Une équipe qui a arrêté (3.4.4) : ses matchs ne comptent pour personne, elle finit dernière.
+  const retirees = new Set(p.retirees || []);
+  for (const id of p.equipes) t[id] = { id, joues: 0, v: 0, d: 0, forfaits: 0, points: 0, retiree: retirees.has(id), setsPour: 0, setsContre: 0, ptsPour: 0, ptsContre: 0 };
   for (const m of p.matchs) {
     if (!matchJoue(m) || !t[m.a] || !t[m.b]) continue;
+    if (retirees.has(m.a) || retirees.has(m.b)) continue;
     const A = t[m.a], B = t[m.b];
     A.joues++; B.joues++;
     m.sa!.forEach((pa, i) => {
@@ -79,6 +83,8 @@ export function classementPoule(p: LivePoule): Ligne[] {
       if (pa > pb) { A.setsPour++; B.setsContre++; } else { B.setsPour++; A.setsContre++; }
     });
     if (vainqueur(m) === m.a) { A.v++; B.d++; } else { B.v++; A.d++; }
+    if (m.forfait === m.a) A.forfaits++;
+    if (m.forfait === m.b) B.forfaits++;
   }
   const ordre = new Map(p.equipes.map((id, i) => [id, i]));
   const duel = (x: string, y: string) => {
@@ -86,14 +92,14 @@ export function classementPoule(p: LivePoule): Ligne[] {
     const w = m ? vainqueur(m) : null;
     return w === x ? -1 : w === y ? 1 : 0;
   };
-  // Départage façon FFBaD : à égalité de victoires,
+  // Départage selon le Règlement Général des Compétitions FFBaD (art. 3.4.1), à égalité de points :
   //  • 2 équipes → le vainqueur de leur match ;
-  //  • 3 équipes ou plus → différence de sets, puis de points ; dès qu'il n'en reste
-  //    que 2 à égalité, on revient à leur match.
+  //  • 3 équipes ou plus → différence de sets, puis différence de points ; dès qu'il n'en
+  //    reste que 2 à égalité, on revient à leur match ;
+  //  • en dernier ressort (tirage au sort) : l'ordre du tirage des poules.
   const criteres: ((l: Ligne) => number)[] = [
     (l) => l.setsPour - l.setsContre,
     (l) => l.ptsPour - l.ptsContre,
-    (l) => l.ptsPour,
   ];
   const departage = (groupe: Ligne[], k: number): Ligne[] => {
     if (groupe.length <= 1) return groupe;
@@ -113,18 +119,23 @@ export function classementPoule(p: LivePoule): Ligne[] {
     }
     return out;
   };
-  const parVictoires = Object.values(t).sort((x, y) => y.v - x.v);
+  for (const l of Object.values(t)) l.points = l.v - l.forfaits;
+  // Équipes retirées à la fin ; les autres par points (victoires − forfaits)
+  const parVictoires = Object.values(t).sort((x, y) => Number(x.retiree) - Number(y.retiree) || y.points - x.points);
   const res: Ligne[] = [];
   for (let i = 0; i < parVictoires.length; ) {
     let j = i;
-    while (j < parVictoires.length && parVictoires[j].v === parVictoires[i].v) j++;
+    while (j < parVictoires.length && parVictoires[j].points === parVictoires[i].points && parVictoires[j].retiree === parVictoires[i].retiree) j++;
     res.push(...departage(parVictoires.slice(i, j), 0));
     i = j;
   }
   return res;
 }
 
-export const pouleTerminee = (p: LivePoule) => p.matchs.every(matchJoue);
+export const pouleTerminee = (p: LivePoule) => {
+  const r = new Set(p.retirees || []);
+  return p.matchs.every((m) => matchJoue(m) || r.has(m.a) || r.has(m.b));
+};
 export const phaseTerminee = (ph: LivePhase) => ph.poules.every(pouleTerminee);
 
 // ─── Génération ───
@@ -209,7 +220,9 @@ export function ordreSortie(ph: LivePhase): string[] {
 
 /** Phase suivante : poule 1 = les meilleures équipes de la phase précédente, etc. */
 export function genererPhaseSuivante(prec: LivePhase, nbPoules: number, format: LiveFormat, nom: string): LivePhase {
-  const ordre = ordreSortie(prec);
+  // Les équipes qui ont arrêté ne passent pas à la phase suivante
+  const parties = new Set(prec.poules.flatMap((p) => p.retirees || []));
+  const ordre = ordreSortie(prec).filter((id) => !parties.has(id));
   const tailles = taillesPoules(ordre.length, nbPoules);
   let k = 0;
   const poules: LivePoule[] = tailles.map((n, i) => {
@@ -229,7 +242,7 @@ export function classementGeneral(ph: LivePhase): string[] {
   return lignes
     .sort((x, y) =>
       x.rang - y.rang ||
-      y.v - x.v ||
+      y.points - x.points ||
       (y.setsPour - y.setsContre) - (x.setsPour - x.setsContre) ||
       (y.ptsPour - y.ptsContre) - (x.ptsPour - x.ptsContre) ||
       y.ptsPour - x.ptsPour)

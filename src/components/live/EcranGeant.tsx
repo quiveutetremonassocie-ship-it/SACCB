@@ -171,7 +171,7 @@ function PouleTV({ poule, equipes }: { poule: LivePoule; equipes: EquipesMap }) 
         </thead>
         <tbody>
           {cl.map((l, i) => (
-            <tr key={l.id} className="border-t border-slate-100">
+            <tr key={l.id} className={`border-t border-slate-100 ${l.retiree ? "opacity-40 line-through" : ""}`}>
               <td className="pl-3 py-1.5">
                 <span className={`inline-flex w-7 h-7 rounded-full items-center justify-center text-sm font-bold ${i === 0 && l.joues > 0 ? "bg-amber-400 text-white" : "bg-slate-100 text-slate-500"}`}>{i + 1}</span>
               </td>
@@ -193,7 +193,7 @@ function PouleTV({ poule, equipes }: { poule: LivePoule; equipes: EquipesMap }) 
           const court = (e?: { joueur1: string; joueur2: string }) => (e ? `${e.joueur1.split(" ")[0]}/${e.joueur2.split(" ")[0]}` : "—");
           return (
             <div key={m.id} className="flex items-center gap-1.5 text-sm leading-tight min-w-0">
-              <span className={`w-2 h-2 rounded-full shrink-0 ${!matchJoue(m) ? "bg-slate-300" : m.etat === "valide" || m.par === "admin" ? "bg-emerald-500" : "bg-amber-400"}`} />
+              <span className={`w-2 h-2 rounded-full shrink-0 ${m.forfait ? "bg-red-500" : !matchJoue(m) ? "bg-slate-300" : m.etat === "valide" || m.par === "admin" ? "bg-emerald-500" : "bg-amber-400"}`} />
               <span className={`truncate ${w === m.a ? "font-bold" : w ? "text-slate-400" : ""}`}>{court(e1)}</span>
               <span className="shrink-0 font-mono font-bold text-[#1e3a5f]">{matchJoue(m) ? m.sa!.map((v, i) => `${v}-${m.sb![i]}`).join(" ") : "–"}</span>
               <span className={`truncate ${w === m.b ? "font-bold" : w ? "text-slate-400" : ""}`}>{court(e2)}</span>

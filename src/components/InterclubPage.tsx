@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info, ChevronDown, ChevronUp } from "lucide-react";
-import { interclubCall, interclubScore, InterclubPage as PageData } from "@/lib/db";
+import { interclubCall, interclubScore, interclubEffacerScore, InterclubPage as PageData } from "@/lib/db";
 import { LiveMatch, LivePhase } from "@/lib/types";
 import { matchJoue, classementGeneral, formatTexte } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
@@ -83,6 +83,15 @@ export default function InterclubPage() {
     }, 5000);
     return () => clearInterval(iv);
   }, [enDirect, token, code]);
+
+  async function effacerScore(m: LiveMatch) {
+    if (!token) return;
+    if (!confirm("Effacer ce score ? Le match repassera « à jouer ».")) return;
+    const r = await interclubEffacerScore(token, code, m.id);
+    if (!r.ok) { alert(r.reason || "Impossible d'effacer ce score."); return; }
+    setPage(r);
+    setEdition(null);
+  }
 
   async function envoyerScore(m: LiveMatch, sa: number[], sb: number[]): Promise<string | null> {
     if (!token) return "Lien invalide.";
@@ -267,6 +276,7 @@ export default function InterclubPage() {
             edition={edition}
             setEdition={setEdition}
             envoyer={envoyerScore}
+            effacer={effacerScore}
           />
           <LiveBoard phases={page.live.phases} equipes={page.live.equipes} termine={page.live.termine} clubs={page.live.clubs} />
           <p className="text-center text-[11px] text-white/40">Actualisation automatique toutes les 5 secondes</p>
@@ -448,7 +458,7 @@ export default function InterclubPage() {
 
 /** 🏸 Les matchs des équipes du club dans la phase en cours, rangés par binôme (menus déroulants) */
 function MesMatchs({
-  phases, live, clubId, edition, setEdition, envoyer,
+  phases, live, clubId, edition, setEdition, envoyer, effacer,
 }: {
   phases: LivePhase[];
   live: NonNullable<PageData["live"]>;
@@ -456,6 +466,7 @@ function MesMatchs({
   edition: string | null;
   setEdition: (id: string | null) => void;
   envoyer: (m: LiveMatch, sa: number[], sb: number[]) => Promise<string | null>;
+  effacer: (m: LiveMatch) => void;
 }) {
   // Binôme déplié (mémorisé sur le téléphone : chaque joueur retrouve directement le sien)
   const [ouvert, setOuvert] = useState<string | null>(null);
@@ -511,7 +522,10 @@ function MesMatchs({
             {saisiParNous && (
               <div className="mt-2 flex items-center justify-between text-[11px] text-slate-500">
                 <span>En attente de confirmation de l&apos;adversaire</span>
-                <button onClick={() => setEdition(m.id)} className="text-blue-600 font-semibold hover:underline">Modifier</button>
+                <span className="flex gap-3">
+                  <button onClick={() => setEdition(m.id)} className="text-blue-600 font-semibold hover:underline">Modifier</button>
+                  <button onClick={() => effacer(m)} className="text-red-600 font-semibold hover:underline">Supprimer</button>
+                </span>
               </div>
             )}
           </>

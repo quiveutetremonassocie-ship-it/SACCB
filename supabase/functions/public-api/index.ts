@@ -4295,6 +4295,15 @@ Deno.serve(async (req) => {
       if (!mesEquipes.has(String(match.a)) && !mesEquipes.has(String(match.b))) return json({ ok: false, reason: "Vous ne pouvez saisir que les matchs de vos équipes." }, 403);
       if (phaseFinie) return json({ ok: false, reason: "Cette phase est terminée." }, 403);
       if (match.etat === "valide") return json({ ok: false, reason: "Ce score a déjà été validé. Pour une correction, voyez la table de marque." }, 403);
+      if (body.effacer === true) {
+        // 🗑 Effacer un score saisi par erreur : seulement par le club qui l'a entré, tant qu'il n'est pas validé
+        if (match.par !== cId) return json({ ok: false, reason: "Seul le club qui a saisi ce score peut l'effacer." }, 403);
+        delete match.sa; delete match.sb; delete match.etat; delete match.par;
+        match.at = new Date().toISOString();
+        const { error: delErr } = await saveDB(fd);
+        if (delErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+        tournoi = ft; club = fc;
+      } else {
       const err = erreurScoreLive(sa, sb, format);
       if (err) return json({ ok: false, reason: err }, 400);
       const memeScore = JSON.stringify(match.sa) === JSON.stringify(sa) && JSON.stringify(match.sb) === JSON.stringify(sb);
@@ -4307,6 +4316,7 @@ Deno.serve(async (req) => {
       const { error: saveErr } = await saveDB(fd);
       if (saveErr) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
       tournoi = ft; club = fc;
+      }
     }
 
     // Autres clubs : seulement le nom et le nombre d'équipes (pas les joueurs)

@@ -296,6 +296,7 @@ export type LiveMatch = {
   sb?: number[];
   etat?: "saisi" | "valide"; // saisi par un club → confirmé par l'adversaire ou l'organisation
   par?: string; // id du club qui a saisi, ou "admin"
+  forfait?: string; // id de l'équipe déclarée forfait (RGC FFBaD 3.4.2 : défaite 0-21, compte -1)
   at?: string;
 };
 
@@ -304,6 +305,7 @@ export type LivePoule = {
   nom: string; // "Poule A"
   equipes: string[];
   matchs: LiveMatch[];
+  retirees?: string[]; // équipes qui ont arrêté : leurs résultats ne comptent plus (RGC FFBaD 3.4.4)
 };
 
 export type LivePhase = {

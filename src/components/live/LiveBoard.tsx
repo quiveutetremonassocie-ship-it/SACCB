@@ -39,6 +39,7 @@ export function texteScore(m: LiveMatch): string {
 }
 
 export function EtatMatch({ m, clubs }: { m: LiveMatch; clubs?: Record<string, string> }) {
+  if (m.forfait) return <span className="text-[10px] text-red-600 font-semibold">🏳 forfait</span>;
   if (!matchJoue(m)) return <span className="text-[10px] text-slate-400 flex items-center gap-1"><Clock className="w-3 h-3" /> à jouer</span>;
   if (m.etat === "valide" || m.par === "admin") return <span className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><Check className="w-3 h-3" /> validé</span>;
   return (
@@ -138,7 +139,7 @@ export function PouleCard({
           {cl.map((l, i) => {
             const mine = equipes[l.id]?.mine;
             return (
-              <tr key={l.id} className={`border-b border-slate-50 ${mine ? "bg-emerald-50" : ""}`}>
+              <tr key={l.id} className={`border-b border-slate-50 ${mine ? "bg-emerald-50" : ""} ${l.retiree ? "opacity-40 line-through" : ""}`} title={l.retiree ? "A arrêté le tournoi : résultats retirés (règlement FFBaD)" : undefined}>
                 <td className="pl-3 py-1.5">
                   <span className={`inline-flex w-5 h-5 rounded-full items-center justify-center text-[11px] font-bold ${i === 0 && l.joues > 0 ? "bg-amber-400 text-white" : "bg-slate-100 text-slate-500"}`}>{i + 1}</span>
                 </td>
