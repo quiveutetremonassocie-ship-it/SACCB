@@ -44,6 +44,16 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [autoOpenProcuration, setAutoOpenProcuration] = useState(false);
   const [demoPanelOpen, setDemoPanelOpen] = useState(false);
   const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
+  // 💬 Lien WhatsApp : plus public, récupéré uniquement pour une session adhérent payé (ou admin)
+  const [memberWhatsapp, setMemberWhatsapp] = useState<string | undefined>(undefined);
+  useEffect(() => {
+    if (!memberSession) { setMemberWhatsapp(undefined); return; }
+    let cancelled = false;
+    checkMemberSession(memberSession.email, memberSession.membreId).then((res) => {
+      if (!cancelled) setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
+    });
+    return () => { cancelled = true; };
+  }, [memberSession?.email, memberSession?.membreId, memberSession?.paid]);
   const [privateActualites, setPrivateActualites] = useState<import("@/lib/types").Actualite[]>([]);
 
   // Credentials admin via espace membre (stockés en mémoire uniquement, jamais en localStorage)
@@ -525,7 +535,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
         {mode === "contact" && (
           <FadeInSection>
-            <ContactSection whatsappLink={db.whatsappLink} />
+            <ContactSection />
           </FadeInSection>
         )}
 
@@ -566,7 +576,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           session={memberSession}
           y1={db.y1}
           y2={db.y2}
-          whatsappLink={db.whatsappLink}
+          whatsappLink={memberWhatsapp}
           inscCloseDate={db.insc_close_date}
           configTournois={db.config_tournois ?? []}
           inscritsTournoi={db.inscrits_tournoi ?? []}

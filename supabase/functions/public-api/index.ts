@@ -669,7 +669,7 @@ function notifyTshirtOpen(supabaseAdmin: any, newData: Record<string, unknown>) 
                 </td>
                 <td style="vertical-align: middle;">
                   <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                   <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                 </td>
               </tr>
@@ -809,7 +809,7 @@ Deno.serve(async (req) => {
                   <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
                   <div>
                     <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
                   </div>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -896,7 +896,7 @@ Deno.serve(async (req) => {
                         <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                         <td style="vertical-align: middle;">
                           <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                          <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                          <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                           <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                         </td>
                       </tr></table>
@@ -1087,7 +1087,9 @@ Deno.serve(async (req) => {
       inscrits_tournoi: d.inscrits_tournoi ?? [],
       actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private),
       archives: d.archives ?? [],
-      whatsappLink: d.whatsappLink ?? null,
+      // 🔒 Le lien WhatsApp n'est plus public : seulement un indicateur. Le lien est
+      // donné aux adhérents payés via check_session.
+      whatsappEnabled: !!d.whatsappLink,
       membresCount: ((d.membres as unknown[]) || []).length,
       // Liste des noms des adhérents PAYÉS (pour autocomplétion inscription tournoi)
       // On expose juste le nom (pas email ni tél), car c'est déjà visible dans les inscriptions tournois
@@ -2002,7 +2004,7 @@ Deno.serve(async (req) => {
             html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 14px;">
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="background: white; border-radius: 10px; padding: 4px; display: block;" />
-                <div><h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club de Compétition de Badminton</p></div>
+                <div><h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club Compétition Badminton</p></div>
               </div>
               <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <p style="color: #475569; margin: 0 0 14px;">${greeting}</p>
@@ -2095,14 +2097,14 @@ Deno.serve(async (req) => {
         },
         to: [email],
         subject: `📝 Votre inscription au SACCB a bien été enregistrée — saison ${yearLabel}`,
-        text: `${greetingText}\n\nVotre inscription au SACCB pour la saison ${yearLabel} a bien été enregistrée. Elle est actuellement en attente de paiement.\n\n${paymentBlockText}\n\nÀ très bientôt sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+        text: `${greetingText}\n\nVotre inscription au SACCB pour la saison ${yearLabel} a bien été enregistrée. Elle est actuellement en attente de paiement.\n\n${paymentBlockText}\n\nÀ très bientôt sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
             <div style="background: #1e3a5f; padding: 18px 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 14px;">
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="background: white; border-radius: 10px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 20px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <p style="color: rgba(255,255,255,0.7); margin: 2px 0 0; font-size: 12px;">Sainte-Adresse Club Compétition Badminton</p>
               </div>
             </div>
             <div style="background: #ffffff; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -2367,7 +2369,7 @@ Deno.serve(async (req) => {
     for (const recipient of recipientsNotify) {
       const greetingN = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
       const greetingTextN = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
-      const plainTextN = `${greetingTextN}\n\nUn nouveau tournoi vient d'être ajouté sur le site de l'association : ${tournoi.name}\n${dateStr}\n\nConnectez-vous à votre espace membre pour inscrire votre binôme : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainTextN = `${greetingTextN}\n\nUn nouveau tournoi vient d'être ajouté sur le site de l'association : ${tournoi.name}\n${dateStr}\n\nConnectez-vous à votre espace membre pour inscrire votre binôme : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -2385,7 +2387,7 @@ Deno.serve(async (req) => {
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -2411,7 +2413,7 @@ Deno.serve(async (req) => {
                     <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                     <td style="vertical-align: middle;">
                       <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                       <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                     </td>
                   </tr></table>
@@ -2481,7 +2483,7 @@ Deno.serve(async (req) => {
     for (const recipient of recipientsSeason) {
       const greetingS = recipient.prenom ? `Bonjour ${escapeHtml(recipient.prenom)},` : "Bonjour,";
       const greetingTextS = recipient.prenom ? `Bonjour ${recipient.prenom},` : "Bonjour,";
-      const plainTextS = `${greetingTextS}\n\nLa saison ${d.y1}-${d.y2} du SACCB est maintenant ouverte !\nLes places partent vite, alors ne tardez pas à renouveler votre adhésion.\n\nVotre code personnel vous permettra de vous reconnecter directement sur le site.\nSi vous l'avez oublié, cliquez sur "Code oublié ?" sur la page de connexion.\n\nJe renouvelle mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainTextS = `${greetingTextS}\n\nLa saison ${d.y1}-${d.y2} du SACCB est maintenant ouverte !\nLes places partent vite, alors ne tardez pas à renouveler votre adhésion.\n\nVotre code personnel vous permettra de vous reconnecter directement sur le site.\nSi vous l'avez oublié, cliquez sur "Code oublié ?" sur la page de connexion.\n\nJe renouvelle mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -2499,7 +2501,7 @@ Deno.serve(async (req) => {
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -2526,7 +2528,7 @@ Deno.serve(async (req) => {
                     <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                     <td style="vertical-align: middle;">
                       <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                       <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                     </td>
                   </tr></table>
@@ -2628,7 +2630,7 @@ Deno.serve(async (req) => {
             ? `${recipient.prenom}, votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`
             : `Votre adhésion SACCB ${daysLeft === 1 ? "expire demain" : `expire dans ${daysLeft} jours`}`);
           const closeFormattedSafe = closeFormatted;
-          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Vous pouvez régler en ligne via HelloAsso ou par virement bancaire. Si vous n'avez plus le RIB de l'association, merci de nous le demander via la page contact (https://saccb.fr/contact) et nous vous l'enverrons."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+          const plainText = `${greetingText}\n\nVotre adhésion au SACCB pour la saison ${d.y1}-${d.y2} n'est pas encore finalisée.\nLa date limite de paiement est le ${closeFormattedSafe}.\n\n${daysLeft === 1 ? "C'est votre dernière chance ! Pensez à régler votre cotisation dès aujourd'hui." : "Vous pouvez régler en ligne via HelloAsso ou par virement bancaire. Si vous n'avez plus le RIB de l'association, merci de nous le demander via la page contact (https://saccb.fr/contact) et nous vous l'enverrons."}\n\nFinaliser mon adhésion : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
           await sendBrevo(brevoKey, {
               from: "SACCB <contact@saccb.fr>",
               headers: {
@@ -2644,7 +2646,7 @@ Deno.serve(async (req) => {
                   <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
                   <div>
                     <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                    <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
                   </div>
                 </div>
                 <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -2673,7 +2675,7 @@ Deno.serve(async (req) => {
                         <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                         <td style="vertical-align: middle;">
                           <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                          <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                          <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                           <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                         </td>
                       </tr></table>
@@ -2773,7 +2775,7 @@ Deno.serve(async (req) => {
         const tSubject = recipient.prenom
           ? `${recipient.prenom}, inscription au tournoi ${t.name} (${tDaysLeft === 1 ? "demain" : `dans ${tDaysLeft} jours`})`
           : `Inscription au tournoi ${t.name} (${tDaysLeft === 1 ? "demain" : `dans ${tDaysLeft} jours`})`;
-        const plainTextT = `${greetingTextT}\n\nLa date limite d'inscription pour le tournoi "${t.name}" approche !\nDate limite : ${dateFormatted}\n${tDaysLeft === 1 ? "C'est votre dernière chance pour vous inscrire !" : `Plus que ${tDaysLeft} jours.`}\n\nVoir les tournois : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+        const plainTextT = `${greetingTextT}\n\nLa date limite d'inscription pour le tournoi "${t.name}" approche !\nDate limite : ${dateFormatted}\n${tDaysLeft === 1 ? "C'est votre dernière chance pour vous inscrire !" : `Plus que ${tDaysLeft} jours.`}\n\nVoir les tournois : https://saccb.fr/#tournois\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
         await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
             headers: {
@@ -2789,7 +2791,7 @@ Deno.serve(async (req) => {
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
                 <div>
                   <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
                 </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -2814,7 +2816,7 @@ Deno.serve(async (req) => {
                       <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                       <td style="vertical-align: middle;">
                         <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                         <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                       </td>
                     </tr></table>
@@ -2909,7 +2911,7 @@ Deno.serve(async (req) => {
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
                 <div>
                   <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
                 </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -2934,7 +2936,7 @@ Deno.serve(async (req) => {
                       <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                       <td style="vertical-align: middle;">
                         <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                        <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                         <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                       </td>
                     </tr></table>
@@ -3031,14 +3033,14 @@ Deno.serve(async (req) => {
       subject: prenom
         ? `💳 ${prenom}, le RIB pour votre adhésion SACCB`
         : `💳 Le RIB pour votre adhésion SACCB`,
-      text: `${greetingText}\n\nVous avez choisi de régler votre adhésion au SACCB par virement bancaire. Voici les informations nécessaires :\n\nMontant à régler : ${prix} €\nSaison : ${yearLabel}\n${hasRib ? "\nVous trouverez notre RIB en pièce jointe à ce mail.\n" : ""}${inscCloseDate ? `\nMerci d'effectuer votre virement avant le ${closeFormatted}.\n` : ""}\nDès réception du virement, votre adhésion sera marquée comme payée et vous pourrez accéder à votre espace membre sur saccb.fr avec le mot de passe que vous avez choisi lors de l'inscription.\n\nSi vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.\n\nÀ très vite sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+      text: `${greetingText}\n\nVous avez choisi de régler votre adhésion au SACCB par virement bancaire. Voici les informations nécessaires :\n\nMontant à régler : ${prix} €\nSaison : ${yearLabel}\n${hasRib ? "\nVous trouverez notre RIB en pièce jointe à ce mail.\n" : ""}${inscCloseDate ? `\nMerci d'effectuer votre virement avant le ${closeFormatted}.\n` : ""}\nDès réception du virement, votre adhésion sera marquée comme payée et vous pourrez accéder à votre espace membre sur saccb.fr avec le mot de passe que vous avez choisi lors de l'inscription.\n\nSi vous avez la moindre question, n'hésitez pas à nous écrire en répondant à ce mail.\n\nÀ très vite sur les terrains 🏸\nLe bureau du SACCB\n\n--\nSACCB · Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #1e3a5f 0%, #2d5a8e 100%); padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
             <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
             <div>
               <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+              <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
             </div>
           </div>
           <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -3070,7 +3072,7 @@ Deno.serve(async (req) => {
                 </td>
                 <td style="vertical-align: middle;">
                   <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                   <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                 </td>
               </tr>
@@ -3262,12 +3264,12 @@ Deno.serve(async (req) => {
       },
       to: [email],
       subject: "🔑 Votre code SACCB a été réinitialisé",
-      text: `Bonjour ${membre.nom},\n\nVotre code personnel SACCB vient d'être réinitialisé par un membre du bureau.\n\nNouveau code : ${newPlainCode}\n\nUtilisez ce code avec votre email pour vous connecter à votre espace membre sur saccb.fr. Une fois connecté, il vous sera proposé de personnaliser ce code.\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton`,
+      text: `Bonjour ${membre.nom},\n\nVotre code personnel SACCB vient d'être réinitialisé par un membre du bureau.\n\nNouveau code : ${newPlainCode}\n\nUtilisez ce code avec votre email pour vous connecter à votre espace membre sur saccb.fr. Une fois connecté, il vous sera proposé de personnaliser ce code.\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton`,
       html: `
         <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
           <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0;">
             <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+            <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
           </div>
           <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
             <h2 style="color: #1e3a5f; margin-top: 0;">Code réinitialisé</h2>
@@ -3400,7 +3402,7 @@ Deno.serve(async (req) => {
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -3489,7 +3491,7 @@ Deno.serve(async (req) => {
                     <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                     <td style="vertical-align: middle;">
                       <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                       <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                     </td>
                   </tr></table>
@@ -3726,7 +3728,7 @@ Deno.serve(async (req) => {
               <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
               <div>
                 <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
               </div>
             </div>
             <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -3788,7 +3790,7 @@ Deno.serve(async (req) => {
                     <td style="vertical-align: middle; padding-right: 12px;"><img src="https://saccb.fr/logo.png" alt="SACCB" width="44" height="44" style="display: block; border-radius: 8px;" /></td>
                     <td style="vertical-align: middle;">
                       <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                       <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> &middot; <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                     </td>
                   </tr></table>
@@ -3913,7 +3915,8 @@ Deno.serve(async (req) => {
 
     // Vérifier si c'est un admin credential (pas un adhérent normal)
     const isAdminCred = adminCredentials.some((c) => String(c.email || "").toLowerCase() === email);
-    if (isAdminCred) return json({ ok: true });
+    const whatsappLink = typeof d.whatsappLink === "string" && d.whatsappLink ? d.whatsappLink : undefined;
+    if (isAdminCred) return json({ ok: true, whatsappLink });
 
     // Vérifier si le membre existe encore par email + id
     const membre = membres.find(
@@ -3921,7 +3924,8 @@ Deno.serve(async (req) => {
     );
 
     if (!membre) return json({ ok: false, reason: "Session expirée ou compte supprimé." });
-    return json({ ok: true, paid: membre.ok === true });
+    // 💬 Lien WhatsApp uniquement pour les adhérents à jour de paiement
+    return json({ ok: true, paid: membre.ok === true, whatsappLink: membre.ok === true ? whatsappLink : undefined });
   }
 
   // ─── ACTION: Upload image via admin (contourne RLS via service_role) ───
@@ -4361,11 +4365,11 @@ Deno.serve(async (req) => {
             },
             to: [email],
             subject: finalSubject,
-            text: `${draftBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`,
+            text: `${draftBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`,
             html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: ${vc.headerBg}; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
-                <div><h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p></div>
+                <div><h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1><p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p></div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 ${vc.badge || ""}
@@ -4377,7 +4381,7 @@ Deno.serve(async (req) => {
                     </td>
                     <td style="vertical-align: middle;">
                       <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                       <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                     </td>
                   </tr>
@@ -4699,7 +4703,7 @@ Deno.serve(async (req) => {
       // pour éviter les doublons quand l'admin met déjà Bonjour / Bureau du SACCB.
       void prenomAdmin; // (variable conservée pour usage futur éventuel)
       // Plain text = juste le corps écrit par l'admin + footer minimal (mention asso)
-      const plainTextA = `${htmlBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainTextA = `${htmlBody.replace(/<[^>]+>/g, "")}\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
       const sendRes = await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -4715,7 +4719,7 @@ Deno.serve(async (req) => {
                 <img src="https://saccb.fr/logo.png" alt="SACCB" width="56" height="56" style="background: white; border-radius: 12px; padding: 4px; display: block;" />
                 <div>
                   <h1 style="color: white; margin: 0; font-size: 24px;">SACCB</h1>
-                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="color: rgba(255,255,255,0.7); margin: 4px 0 0;">Sainte-Adresse Club Compétition Badminton</p>
                 </div>
               </div>
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
@@ -4730,7 +4734,7 @@ Deno.serve(async (req) => {
                     </td>
                     <td style="vertical-align: middle;">
                       <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                      <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                       <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                     </td>
                   </tr>
@@ -4873,7 +4877,7 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, votre avis sur "${pollQuestion}"`
         : `Votre avis sur "${pollQuestion}"`;
-      const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site de l'association :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nUn nouveau sondage est disponible sur le site de l'association :\n\n"${pollQuestion}"\n\n${optionsList}\n\nDonnez votre avis : https://saccb.fr/?member=1\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
 
       // 📨 Design "mail perso" sobre pour éviter le classement en Promotions
       const optionsHtml = ((poll.options as string[]) || []).slice(0, 5).map((o) => `<p style="margin: 2px 0; padding-left: 18px;">— ${escapeHtml(o)}</p>`).join("");
@@ -4896,7 +4900,7 @@ Deno.serve(async (req) => {
                 </td>
                 <td style="vertical-align: middle;">
                   <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                   <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                 </td>
               </tr>
@@ -5010,7 +5014,7 @@ Deno.serve(async (req) => {
         ? "Bonne lecture !"
         : "C'est l'occasion de faire entendre votre voix et de contribuer à la vie de l'association.";
 
-      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site de l'association !\n\nVous pouvez maintenant ${topicEmail}.\n\n${callToActionText}\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nUne nouvelle section est disponible sur le site de l'association !\n\nVous pouvez maintenant ${topicEmail}.\n\n${callToActionText}\n\nAccéder à l'espace : https://saccb.fr/?member=1${procurationBlockText}\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
 
       // 📨 Design "mail perso" sobre + logo SACCB en signature
       const sendRes = await sendBrevo(brevoKey, {
@@ -5031,7 +5035,7 @@ Deno.serve(async (req) => {
                 </td>
                 <td style="vertical-align: middle;">
                   <p style="margin: 0; color: #1e3a5f; font-weight: 700; font-size: 13px;">SACCB</p>
-                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club de Compétition de Badminton</p>
+                  <p style="margin: 0; color: #64748b; font-size: 11px;">Sainte-Adresse Club Compétition Badminton</p>
                   <p style="margin: 4px 0 0; color: #94a3b8; font-size: 11px;"><a href="mailto:contact@saccb.fr" style="color: #1e3a5f; text-decoration: none;">contact@saccb.fr</a> · <a href="https://saccb.fr" style="color: #1e3a5f; text-decoration: none;">saccb.fr</a></p>
                 </td>
               </tr>
@@ -5118,7 +5122,7 @@ Deno.serve(async (req) => {
       const subject = recipient.prenom
         ? `${recipient.prenom}, compte-rendu : ${reportTitle}`
         : `Compte-rendu : ${reportTitle}`;
-      const plainText = `${greetingText}\n\nLe bureau de l'association met à votre disposition le compte-rendu suivant :\n\n${reportTitle}${reportDateFormatted ? ` — ${reportDateFormatted}` : ""}\n\n${contentPreview || "(voir PDF joint)"}${reportPdfUrl ? `\n\nPDF complet : ${reportPdfUrl}` : ""}\n\nVous pouvez aussi retrouver ce compte-rendu et les précédents dans la section Comptes-rendus du site : https://saccb.fr/#engagement\n\n--\nSACCB - Sainte-Adresse Club de Compétition de Badminton\ncontact@saccb.fr · saccb.fr`;
+      const plainText = `${greetingText}\n\nLe bureau de l'association met à votre disposition le compte-rendu suivant :\n\n${reportTitle}${reportDateFormatted ? ` — ${reportDateFormatted}` : ""}\n\n${contentPreview || "(voir PDF joint)"}${reportPdfUrl ? `\n\nPDF complet : ${reportPdfUrl}` : ""}\n\nVous pouvez aussi retrouver ce compte-rendu et les précédents dans la section Comptes-rendus du site : https://saccb.fr/#engagement\n\n--\nSACCB - Sainte-Adresse Club Compétition Badminton\ncontact@saccb.fr · saccb.fr`;
 
       const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB <contact@saccb.fr>",

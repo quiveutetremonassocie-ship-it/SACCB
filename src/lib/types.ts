@@ -230,7 +230,8 @@ export type DB = {
   y2: number;
   insc_open: boolean;
   quota?: number;
-  whatsappLink?: string; // lien d'invitation groupe WhatsApp
+  whatsappLink?: string; // lien d'invitation groupe WhatsApp (admin uniquement — jamais public)
+  whatsappEnabled?: boolean; // public : un groupe WhatsApp existe (le lien est réservé aux adhérents payés)
   insc_close_date?: string; // date de fermeture des inscriptions (YYYY-MM-DD) pour les rappels
   archives?: SeasonArchive[]; // historique des saisons précédentes
   adminEmails?: { email: string; readOnly?: boolean; permissions?: string[] }[]; // emails ayant accès au panneau admin via l'espace membre

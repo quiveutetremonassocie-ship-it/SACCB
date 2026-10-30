@@ -29,7 +29,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     inscrits_tournoi: d.inscrits_tournoi ?? [],
     actualites: d.actualites ?? [],
     archives: d.archives ?? [],
-    whatsappLink: d.whatsappLink,
+    whatsappEnabled: d.whatsappEnabled === true,
     membresCount: d.membresCount ?? 0,
     polls: d.polls ?? [],
     agItems: d.agItems ?? [],
@@ -395,7 +395,7 @@ export async function verifyMembre(
 }
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean }> {
+export async function checkMemberSession(email: string, membreId: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -403,7 +403,7 @@ export async function checkMemberSession(email: string, membreId: string): Promi
       body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId }),
     });
     const data = await res.json();
-    return { valid: data.ok === true, paid: data.paid };
+    return { valid: data.ok === true, paid: data.paid, whatsappLink: typeof data.whatsappLink === "string" ? data.whatsappLink : undefined };
   } catch {
     return { valid: true }; // En cas d'erreur réseau, on laisse passer pour ne pas bloquer l'accès
   }

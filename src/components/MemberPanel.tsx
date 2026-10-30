@@ -842,7 +842,7 @@ export default function MemberPanel({
             <MessageCircle className="w-5 h-5" />
             Rejoindre le groupe WhatsApp
           </a>
-        ) : whatsappLink && session.paid !== true ? (
+        ) : session.paid !== true ? (
           <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500 text-center">
             🔒 Le lien du groupe WhatsApp vous sera transmis une fois votre paiement validé.
           </div>

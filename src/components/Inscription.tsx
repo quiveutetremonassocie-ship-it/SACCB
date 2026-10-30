@@ -80,7 +80,7 @@ export default function Inscription({
   // ⚠️ Modale d'avertissement "parler au bureau" — affichée 1 fois avant 1ère validation
   const [bureauWarningOpen, setBureauWarningOpen] = useState(false);
   const [bureauWarningAccepted, setBureauWarningAccepted] = useState(false);
-  const whatsappLink = db.whatsappLink || null;
+  const whatsappEnabled = db.whatsappEnabled === true || !!db.whatsappLink;
 
   const remaining = quota - membresCount;
   const progress = Math.min((membresCount / quota) * 100, 100);
@@ -362,12 +362,11 @@ export default function Inscription({
                 <p className="text-xs text-slate-500 mt-4 mb-4">
                   Pensez à faire une capture d&apos;écran de votre badge.
                 </p>
-                {whatsappLink && (
-                  <a href={whatsappLink} target="_blank" rel="noopener noreferrer"
-                    className="inline-flex items-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold px-5 py-3 rounded-xl transition">
-                    <MessageCircle className="w-5 h-5" />
-                    Rejoindre le groupe WhatsApp
-                  </a>
+                {whatsappEnabled && (
+                  <div className="inline-flex items-center gap-2 bg-[#25D366]/10 border border-[#25D366]/40 text-slate-700 text-sm px-4 py-3 rounded-xl">
+                    <MessageCircle className="w-5 h-5 text-[#25D366]" />
+                    Le lien du groupe WhatsApp est dans votre espace membre.
+                  </div>
                 )}
               </div>
             ) : (
@@ -395,7 +394,7 @@ export default function Inscription({
                 <p className="text-xs text-slate-500 mt-4 mb-4">
                   Pensez à faire une capture d&apos;écran de votre badge.
                 </p>
-                {whatsappLink && (
+                {whatsappEnabled && (
                   <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500">
                     🔒 Le lien du groupe WhatsApp vous sera transmis une fois votre paiement validé par le bureau.
                   </div>
