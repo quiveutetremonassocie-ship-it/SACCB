@@ -145,7 +145,7 @@ export default function MemberLoginModal({
     setForgotLoading(false);
     setForgotMsg({
       ok: true,
-      text: "Si cet email correspond à un compte actif, vous allez recevoir votre code par email dans quelques instants.",
+      text: "Si cet email correspond à un compte, vous allez recevoir dans quelques instants un email avec un lien pour choisir votre nouveau code (pensez à regarder dans les spams).",
     });
   }
 

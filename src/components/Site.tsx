@@ -5,6 +5,7 @@ import Link from "next/link";
 import { DB, QUOTA_DEFAULT, getEffectiveConfig } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
+import ResetCodeLinkModal from "./modals/ResetCodeLinkModal";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
 import Hero from "./Hero";
@@ -44,6 +45,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [autoOpenProcuration, setAutoOpenProcuration] = useState(false);
   const [demoPanelOpen, setDemoPanelOpen] = useState(false);
   const [memberSession, setMemberSession] = useState<MemberSession | null>(null);
+  const [codeResetLink, setCodeResetLink] = useState<{ token: string; email: string } | null>(null);
   // 💬 Lien WhatsApp : plus public, récupéré uniquement pour une session adhérent payé (ou admin)
   const [memberWhatsapp, setMemberWhatsapp] = useState<string | undefined>(undefined);
   useEffect(() => {
@@ -145,6 +147,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       // Auto-ouverture de l'espace membre depuis un lien email (?member=1)
       // + auto-ouverture de la procuration AG via ?member=1&procuration=1
       const params = new URLSearchParams(window.location.search);
+      // 🔑 Lien « Code oublié ? » (?reset=<jeton>&email=<email>) → choix direct du nouveau code
+      const resetToken = params.get("reset");
+      const resetEmail = params.get("email");
+      if (resetToken && resetEmail) {
+        setCodeResetLink({ token: resetToken, email: resetEmail });
+        window.history.replaceState({}, "", window.location.pathname);
+        return;
+      }
       if (params.get("member") === "1" || params.get("member") === "true") {
         const sess = getMemberSession();
         if (params.get("procuration") === "1") {
@@ -566,6 +576,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
       <ResetPasswordModal open={resetOpen} onClose={() => setResetOpen(false)} />
+      {codeResetLink && (
+        <ResetCodeLinkModal
+          email={codeResetLink.email}
+          token={codeResetLink.token}
+          onClose={() => setCodeResetLink(null)}
+          onLoginRequest={() => { setCodeResetLink(null); setMemberLoginOpen(true); }}
+        />
+      )}
       <MemberLoginModal
         open={memberLoginOpen}
         onClose={() => setMemberLoginOpen(false)}

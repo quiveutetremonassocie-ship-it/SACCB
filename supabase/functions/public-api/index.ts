@@ -2888,15 +2888,20 @@ Deno.serve(async (req) => {
 
     // On répond toujours ok:true pour ne pas révéler si l'email existe
     if (membre) {
-      // 🔒 SÉCURITÉ : on génère un NOUVEAU code aléatoire, on le hash en base, on l'envoie en clair
-      // Plus jamais de récupération de l'ancien code (impossible car hashé)
-      const newPlainCode = String(Math.floor(100000 + Math.random() * 900000)); // 6 chiffres
-      // 🔔 codeJustReset: flag pour proposer à l'adhérent de personnaliser le code dès sa prochaine connexion
-      membres[membreIdx] = { ...membre, code: await hashCode(newPlainCode), codeJustReset: true };
+      // 🔒 Lien de réinitialisation à usage unique (valable 1 h). L'ancien code reste valable
+      // tant que le lien n'est pas utilisé : taper l'email de quelqu'un ne casse plus son accès.
+      // Le jeton est posé sur toutes les fiches de cet email (comptes groupés = même code).
+      const resetToken = (crypto.randomUUID() + crypto.randomUUID()).replace(/-/g, "");
+      const resetTokenHash = await sha256Hex(resetToken);
+      const resetTokenExpires = Date.now() + 60 * 60 * 1000;
+      for (let i = 0; i < membres.length; i++) {
+        if (String(membres[i].email || "").toLowerCase() === email) {
+          membres[i] = { ...membres[i], resetTokenHash, resetTokenExpires };
+        }
+      }
       currentData.membres = membres;
       await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
-      // Remplacement pour le template HTML ci-dessous
-      (membre as Record<string, unknown>).code = newPlainCode;
+      const resetUrl = `https://saccb.fr/?reset=${resetToken}&email=${encodeURIComponent(email)}`;
       await sendBrevo(brevoKey, {
           from: "SACCB <contact@saccb.fr>",
           headers: {
@@ -2904,7 +2909,8 @@ Deno.serve(async (req) => {
             "List-Unsubscribe-Post": "List-Unsubscribe=One-Click",
           },
           to: [email],
-          subject: "🔑 Votre code personnel SACCB",
+          subject: "🔑 Réinitialiser votre code personnel SACCB",
+          text: `Bonjour ${membre.nom},\n\nVous avez demandé à réinitialiser votre code personnel SACCB.\n\nCliquez sur ce lien pour choisir votre nouveau code (valable 1 heure) :\n${resetUrl}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez simplement cet email : votre code actuel reste valable.\n\nLe bureau du SACCB`,
           html: `
             <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
               <div style="background: #1e3a5f; padding: 24px; border-radius: 12px 12px 0 0; display: flex; align-items: center; gap: 16px;">
@@ -2917,15 +2923,11 @@ Deno.serve(async (req) => {
               <div style="background: #f8fafc; padding: 24px; border-radius: 0 0 12px 12px; border: 1px solid #e2e8f0;">
                 <h2 style="color: #1e3a5f; margin-top: 0;">Réinitialisation de code</h2>
                 <p style="color: #475569;">Bonjour <strong>${membre.nom}</strong>,</p>
-                <p style="color: #475569;">Vous avez demandé à réinitialiser votre code personnel. Voici votre <strong>nouveau code</strong> :</p>
-                <div style="background: #fef3c7; border: 1px solid #fde68a; border-radius: 8px; padding: 20px; margin: 16px 0; text-align: center;">
-                  <p style="margin: 0 0 8px; color: #92400e; font-size: 13px; font-weight: bold;">🔑 Votre nouveau code personnel</p>
-                  <p style="margin: 0; font-size: 36px; font-weight: bold; letter-spacing: 8px; color: #1e3a5f;">${membre.code}</p>
-                </div>
-                <p style="color: #64748b; font-size: 13px;">Utilisez ce nouveau code avec votre email pour vous connecter à votre espace membre sur saccb.fr. Vous pourrez le modifier ensuite depuis votre espace.</p>
-                <a href="https://saccb.fr" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
-                  Se connecter →
+                <p style="color: #475569;">Vous avez demandé à réinitialiser votre code personnel. Cliquez sur le bouton ci-dessous pour <strong>choisir directement votre nouveau code</strong> (lettres et/ou chiffres, 4 caractères minimum).</p>
+                <a href="${resetUrl}" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: bold; margin-top: 8px;">
+                  Choisir mon nouveau code →
                 </a>
+                <p style="color: #64748b; font-size: 13px; margin-top: 16px;">Ce lien est valable 1 heure et ne fonctionne qu'une fois. Votre code actuel reste valable tant que vous ne l'avez pas changé.</p>
                 <table cellpadding="0" cellspacing="0" border="0" style="margin-top: 28px; border-top: 1px solid #e2e8f0; padding-top: 18px; width: 100%;">
                   <tr><td>
                     <p style="margin: 0; color: #1e3a5f; font-size: 14px; font-weight: 600;">À très bientôt sur les terrains !</p>
@@ -3297,6 +3299,43 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: Changer le code personnel d'un membre ───
+  // ─── ACTION: Choisir un nouveau code via le lien reçu par email (« Code oublié ? ») ───
+  if (action === "reset_code_token") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const token = String(body.token || "").trim();
+    const newCode = sanitize(String(body.newCode || ""));
+    if (!email || !token) return json({ ok: false, reason: "Lien invalide." }, 400);
+    if (newCode.length < 4) return json({ ok: false, reason: "Le code doit contenir au moins 4 caractères." }, 400);
+
+    const { data, error } = await supabaseAdmin.from("saccb_db").select("data").eq("id", 1).single();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const currentData = data.data as Record<string, unknown>;
+    const membres = (currentData.membres || []) as Record<string, unknown>[];
+
+    const tokenHash = await sha256Hex(token);
+    const now = Date.now();
+    const targets = membres.filter((m) =>
+      String(m.email || "").toLowerCase() === email &&
+      m.resetTokenHash === tokenHash &&
+      typeof m.resetTokenExpires === "number" && (m.resetTokenExpires as number) > now
+    );
+    if (targets.length === 0) {
+      return json({ ok: false, reason: "Ce lien a expiré ou a déjà été utilisé. Refaites une demande « Code oublié ? »." });
+    }
+    const hashedNew = await hashCode(newCode);
+    for (const m of targets) {
+      m.code = hashedNew;
+      delete m.resetTokenHash;
+      delete m.resetTokenExpires;
+      delete m.codeJustReset;
+    }
+    currentData.membres = membres;
+    const { error: saveErr } = await supabaseAdmin.from("saccb_db").update({ data: currentData }).eq("id", 1);
+    if (saveErr) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    clearLoginFailures(email);
+    return json({ ok: true });
+  }
+
   if (action === "change_code") {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const oldCode = sanitize(String(body.oldCode || ""));

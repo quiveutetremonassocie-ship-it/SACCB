@@ -607,7 +607,6 @@ export default function MemberPanel({
                 <input
                   className="input pr-10"
                   type={showOld ? "text" : "password"}
-                  inputMode="numeric"
                   placeholder="Code actuel"
                   value={oldCode}
                   onChange={(e) => setOldCode(e.target.value)}
@@ -621,9 +620,8 @@ export default function MemberPanel({
                 <input
                   className="input pr-10"
                   type={showNew ? "text" : "password"}
-                  inputMode="numeric"
-                  placeholder="Nouveau code (min. 4 chiffres)"
-                  pattern="\d{4,}"
+                  placeholder="Nouveau code (min. 4 caractères, lettres et/ou chiffres)"
+                  minLength={4}
                   value={newCode}
                   onChange={(e) => setNewCode(e.target.value)}
                   required
@@ -635,7 +633,6 @@ export default function MemberPanel({
               <input
                 className="input"
                 type="password"
-                inputMode="numeric"
                 placeholder="Confirmer le nouveau code"
                 value={confirmCode}
                 onChange={(e) => setConfirmCode(e.target.value)}

@@ -488,6 +488,20 @@ export async function publicForgotCode(email: string): Promise<{ ok: boolean; re
   return res.json();
 }
 
+// ─── Choisir un nouveau code via le lien « Code oublié ? » reçu par email ───
+export async function publicResetCodeWithToken(email: string, token: string, newCode: string): Promise<{ ok: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "reset_code_token", email: email.toLowerCase().trim(), token, newCode }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau." };
+  }
+}
+
 // ─── Changer le code personnel d'un membre ───
 export async function memberChangeCode(
   email: string,
