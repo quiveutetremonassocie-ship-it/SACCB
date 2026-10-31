@@ -106,6 +106,8 @@ export default function MemberPanel({
   const [classementOpen, setClassementOpen] = useState(false);
   const [openTournois, setOpenTournois] = useState<Set<string>>(new Set());
   const [recuOpen, setRecuOpen] = useState(false);
+  // 🗂 Onglet affiché dans l'espace membre
+  const [onglet, setOnglet] = useState<"accueil" | "tournois" | "compte">("accueil");
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [officialDocsModalOpen, setOfficialDocsModalOpen] = useState(false);
   // 🚪 État : ce membre a-t-il dit "je ne renouvelle pas pour cette saison" ?
@@ -367,7 +369,7 @@ export default function MemberPanel({
       {/* 🔧 UN SEUL conteneur scrollable : la carte intérieure. Le wrapper externe ne scrolle
           plus pour éviter le conflit qui obligeait à swiper 2 fois pour naviguer. */}
       <div
-        className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm max-h-[92vh] overflow-y-auto"
+        className="bg-white border border-slate-200 rounded-3xl shadow-2xl p-5 sm:p-7 w-full max-w-2xl max-h-[94vh] overflow-y-auto"
         style={{
           WebkitOverflowScrolling: "touch",
           overscrollBehavior: "contain",
@@ -379,7 +381,7 @@ export default function MemberPanel({
               <UserCircle2 className="w-5 h-5 text-white" />
             </div>
             <div>
-              <h3 className="font-display text-xl tracking-wider text-slate-800">Espace membre</h3>
+              <h3 className="font-display text-xl tracking-wider text-slate-800">Espace adhérent</h3>
               <p className="text-xs text-slate-400">Saison {y1}–{y2}</p>
             </div>
           </div>
@@ -404,6 +406,34 @@ export default function MemberPanel({
           </div>
         </div>
 
+        {/* 🗂 Onglets de l'espace membre */}
+        <div className="flex gap-1 p-1 mb-6 bg-slate-100 rounded-2xl sticky top-0 z-10">
+          {([
+            ["accueil", "Accueil", UserCircle2],
+            ["tournois", "Mes tournois", Trophy],
+            ["compte", "Mon compte", KeyRound],
+          ] as const).map(([id, label, Icone]) => (
+            <button
+              key={id}
+              onClick={() => setOnglet(id)}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${onglet === id ? "bg-white text-[#1e3a5f] shadow" : "text-slate-500 hover:text-slate-700"}`}
+            >
+              <Icone className="w-4 h-4" /> {label}
+            </button>
+          ))}
+        </div>
+
+        {onglet === "accueil" && (
+          <>
+            <div className="mb-5 flex items-center justify-between gap-3 flex-wrap">
+              <div>
+                <p className="text-2xl font-bold text-slate-800">Bonjour {(session.nom || "").trim().split(/\s+/)[0]} 👋</p>
+                <p className="text-sm text-slate-500">Bienvenue dans ton espace adhérent.</p>
+              </div>
+              <span className={`text-xs font-bold px-3 py-1.5 rounded-full ${session.paid === false ? "bg-amber-100 text-amber-800" : "bg-emerald-100 text-emerald-700"}`}>
+                {session.paid === false ? "⏳ Adhésion à régler" : `✓ Adhérent ${y1}–${y2}`}
+              </span>
+            </div>
         {/* 👑 Bouton d'accès admin (uniquement si le compte a les droits) */}
         {session.isAdmin && (
           <Link
@@ -507,66 +537,6 @@ export default function MemberPanel({
           </div>
         )}
 
-        {/* Badge membre */}
-        <div className="mb-6">
-          <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
-            <Trophy className="w-3.5 h-3.5" /> Votre carte membre
-          </p>
-          <Badge nom={session.nom} type={session.type} y1={y1} y2={y2} onCelebrate={celebrateBadge} />
-          <p className="text-xs text-slate-400 text-center mt-2">
-            Faites une capture d&apos;écran pour la conserver.
-          </p>
-        </div>
-
-        {/* 📄 Justificatif d'adhésion (uniquement pour les membres payés) */}
-        {session.paid !== false && (
-          <button
-            onClick={() => setRecuOpen(true)}
-            className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
-          >
-            <FileSignature className="w-4 h-4" />
-            Mon justificatif d&apos;adhésion
-          </button>
-        )}
-
-        {/* ❓ Lien vers la FAQ — visible pour tous les membres */}
-        <a
-          href="/faq"
-          className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-700 hover:text-indigo-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-indigo-50"
-        >
-          <HelpCircle className="w-4 h-4" />
-          Questions fréquentes
-        </a>
-
-        {/* 🏆 Mini-tournoi entre nous — lien Smash partagé pour créer un tournoi
-            à la volée pendant l'entraînement. Visible uniquement si l'admin a
-            renseigné l'URL Smash dans Paramètres saison. */}
-        {smashUrl && (
-          <a
-            href={smashUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="w-full mb-3 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 hover:border-amber-500 text-amber-800 hover:text-amber-900 font-semibold rounded-xl py-2.5 text-sm transition"
-          >
-            <Trophy className="w-4 h-4" />
-            Mini-tournoi entre nous
-            <ArrowRight className="w-3.5 h-3.5" />
-          </a>
-        )}
-
-        {/* 📑 Documents officiels (comptes-rendus + rapport financier + charte + rapport moral)
-            Visible si au moins un document existe — peu importe le toggle officialDocsOpen
-            (legacy : on garde reunionReports comme source unique). */}
-        {reunionReports.length > 0 && (
-          <button
-            onClick={() => setReportsModalOpen(true)}
-            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
-          >
-            <FileSignature className="w-4 h-4" />
-            📑 Documents officiels ({reunionReports.length})
-          </button>
-        )}
-
         {/* 🎓 Justificatif de scolarité manquant (tarif étudiant) */}
         {(justificatifManquant || justificatifInfo || justifMsg?.ok) && (
           <div className={`mb-4 rounded-2xl p-4 border ${justificatifInfo?.fourni && !justificatifManquant ? "bg-emerald-50 border-emerald-300" : "bg-amber-50 border-amber-300"}`}>
@@ -606,6 +576,99 @@ export default function MemberPanel({
           </div>
         )}
 
+
+            <div className="grid sm:grid-cols-2 gap-5 mb-2">
+              <div>
+        {/* Badge membre */}
+        <div className="mb-6">
+          <p className="text-xs uppercase tracking-widest text-slate-400 mb-3 flex items-center gap-1">
+            <Trophy className="w-3.5 h-3.5" /> Votre carte membre
+          </p>
+          <Badge nom={session.nom} type={session.type} y1={y1} y2={y2} onCelebrate={celebrateBadge} />
+          <p className="text-xs text-slate-400 text-center mt-2">
+            Faites une capture d&apos;écran pour la conserver.
+          </p>
+        </div>
+
+              </div>
+              <div className="flex flex-col">
+                <p className="text-xs uppercase tracking-widest text-slate-400 mb-3">Raccourcis</p>
+        {/* WhatsApp — uniquement pour les membres ayant payé */}
+        {whatsappLink && session.paid === true ? (
+          <a
+            href={whatsappLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold px-5 py-3 rounded-xl transition w-full"
+          >
+            <MessageCircle className="w-5 h-5" />
+            Rejoindre le groupe WhatsApp
+          </a>
+        ) : session.paid !== true ? (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500 text-center">
+            🔒 Le lien du groupe WhatsApp vous sera transmis une fois votre paiement validé.
+          </div>
+        ) : (
+          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
+            <MessageCircle className="w-6 h-6 text-slate-300 mx-auto mb-1" />
+            <p className="text-xs text-slate-400">
+              Le lien WhatsApp sera disponible prochainement.
+            </p>
+          </div>
+        )}
+
+                <div className="h-3" />
+        {/* 📄 Justificatif d'adhésion (uniquement pour les membres payés) */}
+        {session.paid !== false && (
+          <button
+            onClick={() => setRecuOpen(true)}
+            className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+          >
+            <FileSignature className="w-4 h-4" />
+            Mon justificatif d&apos;adhésion
+          </button>
+        )}
+
+        {/* 📑 Documents officiels (comptes-rendus + rapport financier + charte + rapport moral)
+            Visible si au moins un document existe — peu importe le toggle officialDocsOpen
+            (legacy : on garde reunionReports comme source unique). */}
+        {reunionReports.length > 0 && (
+          <button
+            onClick={() => setReportsModalOpen(true)}
+            className="w-full mb-4 flex items-center justify-center gap-2 bg-white border-2 border-blue-300 hover:border-blue-500 text-blue-700 hover:text-blue-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-blue-50"
+          >
+            <FileSignature className="w-4 h-4" />
+            📑 Documents officiels ({reunionReports.length})
+          </button>
+        )}
+
+        {/* 🏆 Mini-tournoi entre nous — lien Smash partagé pour créer un tournoi
+            à la volée pendant l'entraînement. Visible uniquement si l'admin a
+            renseigné l'URL Smash dans Paramètres saison. */}
+        {smashUrl && (
+          <a
+            href={smashUrl}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="w-full mb-3 flex items-center justify-center gap-2 bg-gradient-to-r from-amber-50 to-orange-50 border-2 border-amber-300 hover:border-amber-500 text-amber-800 hover:text-amber-900 font-semibold rounded-xl py-2.5 text-sm transition"
+          >
+            <Trophy className="w-4 h-4" />
+            Mini-tournoi entre nous
+            <ArrowRight className="w-3.5 h-3.5" />
+          </a>
+        )}
+
+        {/* ❓ Lien vers la FAQ — visible pour tous les membres */}
+        <a
+          href="/faq"
+          className="w-full mb-3 flex items-center justify-center gap-2 bg-white border-2 border-indigo-300 hover:border-indigo-500 text-indigo-700 hover:text-indigo-900 font-semibold rounded-xl py-2.5 text-sm transition hover:bg-indigo-50"
+        >
+          <HelpCircle className="w-4 h-4" />
+          Questions fréquentes
+        </a>
+
+              </div>
+            </div>
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
         {(() => {
           // Code vide (ex : session admin) → le formulaire le redemande lui-même
@@ -626,6 +689,11 @@ export default function MemberPanel({
           );
         })()}
 
+          </>
+        )}
+
+        {onglet === "tournois" && (
+          <>
         {/* 📊 Stats perso (uniquement si au moins une participation) */}
         {personalStats.totalAllTime > 0 && (
           <div className="mb-6 bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-2xl p-4">
@@ -656,106 +724,6 @@ export default function MemberPanel({
                 </p>
               </div>
             </div>
-          </div>
-        )}
-
-        {/* Changer le code */}
-        <div className="mb-4">
-          <button
-            onClick={() => { setShowCodeForm(!showCodeForm); setCodeMsg(null); }}
-            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
-          >
-            <KeyRound className="w-4 h-4" />
-            Changer mon code personnel
-          </button>
-          {showCodeForm && (
-            <form onSubmit={handleChangeCode} className="mt-3 space-y-2">
-              <div className="relative">
-                <input
-                  className="input pr-10"
-                  type={showOld ? "text" : "password"}
-                  placeholder="Code actuel"
-                  value={oldCode}
-                  onChange={(e) => setOldCode(e.target.value)}
-                  required
-                />
-                <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <div className="relative">
-                <input
-                  className="input pr-10"
-                  type={showNew ? "text" : "password"}
-                  placeholder="Nouveau code (min. 4 caractères, lettres et/ou chiffres)"
-                  minLength={4}
-                  value={newCode}
-                  onChange={(e) => setNewCode(e.target.value)}
-                  required
-                />
-                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
-                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              <input
-                className="input"
-                type="password"
-                placeholder="Confirmer le nouveau code"
-                value={confirmCode}
-                onChange={(e) => setConfirmCode(e.target.value)}
-                required
-              />
-              {codeMsg && (
-                <p className={`text-xs text-center font-semibold ${codeMsg.ok ? "text-emerald-600" : "text-red-500"}`}>
-                  {codeMsg.text}
-                </p>
-              )}
-              <button type="submit" className="btn-primary w-full !text-sm" disabled={codeLoading}>
-                {codeLoading ? "Enregistrement..." : "Enregistrer le nouveau code"}
-              </button>
-            </form>
-          )}
-        </div>
-
-        {/* Préférences news */}
-        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-4">
-          <div className="flex items-center justify-between gap-3">
-            <div className="flex items-center gap-2 min-w-0">
-              {newsOptIn
-                ? <Bell className="w-4 h-4 text-emerald-500 shrink-0" />
-                : <BellOff className="w-4 h-4 text-slate-400 shrink-0" />}
-              <div className="min-w-0">
-                <p className="text-sm font-medium text-slate-700">News de l’association</p>
-                <p className="text-xs text-slate-400 truncate">
-                  {newsOptIn ? "Activées — tournois, rappels, infos" : "Désactivées"}
-                </p>
-              </div>
-            </div>
-            <button
-              onClick={toggleNews}
-              disabled={newsLoading}
-              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${newsOptIn ? "bg-emerald-500" : "bg-slate-300"}`}
-              title={newsOptIn ? "Désactiver les news" : "Activer les news"}
-            >
-              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${newsOptIn ? "translate-x-5" : "translate-x-0"}`} />
-            </button>
-          </div>
-          {newsMsg && (
-            <p className="text-xs text-slate-500 mt-2 text-center">{newsMsg}</p>
-          )}
-        </div>
-
-        {/* Procuration AG — uniquement pour les membres payés */}
-        {session.paid === true && (
-          <div className="mb-4">
-            <button
-              onClick={() => setShowProcuration(true)}
-              className="flex items-center justify-center gap-2 w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
-              title="Génère une procuration si tu ne peux pas être présent(e) à l'Assemblée Générale"
-            >
-              <FileSignature className="w-4 h-4 text-[#1e3a5f]" />
-              Procuration Assemblée Générale
-            </button>
           </div>
         )}
 
@@ -895,28 +863,134 @@ export default function MemberPanel({
           </div>
         )}
 
-        {/* WhatsApp — uniquement pour les membres ayant payé */}
-        {whatsappLink && session.paid === true ? (
-          <a
-            href={whatsappLink}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20ba59] text-white font-semibold px-5 py-3 rounded-xl transition w-full"
+            {personalStats.totalAllTime === 0 && !classement && totalPast === 0 && (
+              <div className="text-center py-10">
+                <Trophy className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                <p className="font-semibold text-slate-700">Pas encore de tournoi</p>
+                <p className="text-sm text-slate-500 mb-4">Tes résultats et tes statistiques apparaîtront ici.</p>
+                <a href="/tournois" className="btn-primary !text-xs inline-flex">Voir les prochains tournois</a>
+              </div>
+            )}
+            <a href="/tournois" className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-[#1e3a5f] border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50">
+              <Trophy className="w-4 h-4 text-amber-500" /> S&apos;inscrire à un tournoi <ArrowRight className="w-4 h-4" />
+            </a>
+          </>
+        )}
+
+        {onglet === "compte" && (
+          <>
+            <div className="mb-4 rounded-xl border border-slate-200 p-4 text-sm">
+              <p className="font-semibold text-slate-800">{session.nom}</p>
+              <p className="text-slate-500">{session.email}</p>
+              <p className="text-slate-500">Tarif {session.type === "Etudiant" ? "étudiant" : "adulte"} · saison {y1}–{y2}</p>
+            </div>
+        {/* Préférences news */}
+        <div className="mb-4 bg-slate-50 border border-slate-200 rounded-xl p-4">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-2 min-w-0">
+              {newsOptIn
+                ? <Bell className="w-4 h-4 text-emerald-500 shrink-0" />
+                : <BellOff className="w-4 h-4 text-slate-400 shrink-0" />}
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-slate-700">News de l’association</p>
+                <p className="text-xs text-slate-400 truncate">
+                  {newsOptIn ? "Activées — tournois, rappels, infos" : "Désactivées"}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={toggleNews}
+              disabled={newsLoading}
+              className={`relative shrink-0 w-11 h-6 rounded-full transition-colors ${newsOptIn ? "bg-emerald-500" : "bg-slate-300"}`}
+              title={newsOptIn ? "Désactiver les news" : "Activer les news"}
+            >
+              <span className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${newsOptIn ? "translate-x-5" : "translate-x-0"}`} />
+            </button>
+          </div>
+          {newsMsg && (
+            <p className="text-xs text-slate-500 mt-2 text-center">{newsMsg}</p>
+          )}
+        </div>
+
+        {/* Changer le code */}
+        <div className="mb-4">
+          <button
+            onClick={() => { setShowCodeForm(!showCodeForm); setCodeMsg(null); }}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
           >
-            <MessageCircle className="w-5 h-5" />
-            Rejoindre le groupe WhatsApp
-          </a>
-        ) : session.paid !== true ? (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm text-slate-500 text-center">
-            🔒 Le lien du groupe WhatsApp vous sera transmis une fois votre paiement validé.
+            <KeyRound className="w-4 h-4" />
+            Changer mon code personnel
+          </button>
+          {showCodeForm && (
+            <form onSubmit={handleChangeCode} className="mt-3 space-y-2">
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type={showOld ? "text" : "password"}
+                  placeholder="Code actuel"
+                  value={oldCode}
+                  onChange={(e) => setOldCode(e.target.value)}
+                  required
+                />
+                <button type="button" onClick={() => setShowOld(!showOld)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showOld ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <div className="relative">
+                <input
+                  className="input pr-10"
+                  type={showNew ? "text" : "password"}
+                  placeholder="Nouveau code (min. 4 caractères, lettres et/ou chiffres)"
+                  minLength={4}
+                  value={newCode}
+                  onChange={(e) => setNewCode(e.target.value)}
+                  required
+                />
+                <button type="button" onClick={() => setShowNew(!showNew)} className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
+                  {showNew ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              <input
+                className="input"
+                type="password"
+                placeholder="Confirmer le nouveau code"
+                value={confirmCode}
+                onChange={(e) => setConfirmCode(e.target.value)}
+                required
+              />
+              {codeMsg && (
+                <p className={`text-xs text-center font-semibold ${codeMsg.ok ? "text-emerald-600" : "text-red-500"}`}>
+                  {codeMsg.text}
+                </p>
+              )}
+              <button type="submit" className="btn-primary w-full !text-sm" disabled={codeLoading}>
+                {codeLoading ? "Enregistrement..." : "Enregistrer le nouveau code"}
+              </button>
+            </form>
+          )}
+        </div>
+
+        {/* Procuration AG — uniquement pour les membres payés */}
+        {session.paid === true && (
+          <div className="mb-4">
+            <button
+              onClick={() => setShowProcuration(true)}
+              className="flex items-center justify-center gap-2 w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
+              title="Génère une procuration si tu ne peux pas être présent(e) à l'Assemblée Générale"
+            >
+              <FileSignature className="w-4 h-4 text-[#1e3a5f]" />
+              Procuration Assemblée Générale
+            </button>
           </div>
-        ) : (
-          <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 text-center">
-            <MessageCircle className="w-6 h-6 text-slate-300 mx-auto mb-1" />
-            <p className="text-xs text-slate-400">
-              Le lien WhatsApp sera disponible prochainement.
-            </p>
-          </div>
+        )}
+
+            <button
+              onClick={logout}
+              className="mt-2 w-full flex items-center justify-center gap-2 text-sm font-semibold text-red-600 border border-red-200 rounded-xl py-2.5 hover:bg-red-50"
+            >
+              <LogOut className="w-4 h-4" /> Se déconnecter
+            </button>
+          </>
         )}
       </div>
 
