@@ -387,6 +387,7 @@ export type DB = {
   tshirtPaymentUrl?: string; // 💳 lien HelloAsso pour payer le t-shirt en ligne (facultatif)
   tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
   agendaEvents?: AgendaEvent[]; // 📅 événements ajoutés à la main dans l'agenda
+  agendaMasques?: string[]; // 📅 tournois retirés de l'agenda (ids « t-… » / « ic-… »), le tournoi lui-même reste
   tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)

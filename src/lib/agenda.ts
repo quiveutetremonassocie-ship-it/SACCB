@@ -11,6 +11,7 @@ export type EvenementAgenda = {
   description?: string;
   genre: "tournoi" | "interclub" | "interne" | "club";
   modifiable: boolean; // seuls les événements ajouté(s) à la main se modifient depuis l'agenda
+  masque?: boolean; // tournoi retiré de l'agenda (visible seulement dans l'admin, grisé)
 };
 
 const MOIS: Record<string, string> = {
@@ -32,7 +33,7 @@ export function dateISO(s: string | null | undefined): string {
 /** Tous les événements de l'agenda, triés par date (la DATE DU TOURNOI, jamais la date limite d'inscription) */
 type TournoiAgenda = { id: string; name: string; date: string; interne?: boolean; visible?: boolean; salleNom?: string; salleAdresse?: string };
 
-export function evenementsAgenda(db: Partial<DB> & { agendaTournois?: TournoiAgenda[] }): EvenementAgenda[] {
+export function evenementsAgenda(db: Partial<DB> & { agendaTournois?: TournoiAgenda[] }, avecMasques = false): EvenementAgenda[] {
   const out: EvenementAgenda[] = [];
   for (const t of db.config_tournois || []) {
     const date = dateISO(t.date);
@@ -56,7 +57,12 @@ export function evenementsAgenda(db: Partial<DB> & { agendaTournois?: TournoiAge
   for (const e of db.agendaEvents || []) {
     if (e.date) out.push({ ...e, genre: "club", modifiable: true });
   }
-  return out.sort((a, b) => (a.date + (a.heureDebut || "")).localeCompare(b.date + (b.heureDebut || "")));
+  // 🙈 Tournois retirés de l'agenda par le bureau : cachés (ou grisés dans l'admin)
+  const masques = new Set(db.agendaMasques || []);
+  const visibles = out
+    .map((e) => (masques.has(e.id) ? { ...e, masque: true } : e))
+    .filter((e) => avecMasques || !e.masque);
+  return visibles.sort((a, b) => (a.date + (a.heureDebut || "")).localeCompare(b.date + (b.heureDebut || "")));
 }
 
 // ─── Ajout à l'agenda du téléphone / de l'ordinateur ───

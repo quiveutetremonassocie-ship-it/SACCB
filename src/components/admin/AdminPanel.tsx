@@ -342,9 +342,14 @@ export default function AdminPanel({
         <p className="text-sm text-slate-600">Les tournois et tournois inter-clubs s&apos;ajoutent tout seuls (à la date du tournoi). Clique sur un jour pour ajouter un autre événement : soirée, AG, stage, fermeture de la salle…</p>
         <Agenda
           sansTitre
-          evenements={evenementsAgenda(db)}
+          evenements={evenementsAgenda(db, true)}
           clubEvents={db.agendaEvents || []}
           onChange={canEdit("actualites") ? (next) => safePersist({ ...db, agendaEvents: next }) : undefined}
+          onMasquer={canEdit("actualites") ? (id, masquer) => {
+            const set = new Set(db.agendaMasques || []);
+            if (masquer) set.add(id); else set.delete(id);
+            return safePersist({ ...db, agendaMasques: [...set] });
+          } : undefined}
         />
       </div>
     ) },

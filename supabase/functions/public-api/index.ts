@@ -263,6 +263,7 @@ const REGLAGES_JOURNAL: Record<string, string> = {
   tshirtPrice: "prix du t-shirt", maintenanceMode: "mode maintenance", presentationMode: "mode présentation", whatsappLink: "lien WhatsApp",
   pollsOpen: "sondages ouverts", agOpen: "questions AG ouvertes", require2FA: "double authentification", clubConfig: "paramètres du club (tarifs, horaires…)",
   clubRules: "règlement intérieur", bureauMembers: "membres du bureau", presidentName: "nom du président", emailSignature: "signature des mails",
+  agendaEvents: "événements de l'agenda", agendaMasques: "tournois retirés de l'agenda",
 };
 const ABSENT = "__absent__";
 const JOURNAL_ANNULABLES = 150; // seules les 150 dernières actions gardent de quoi être annulées (taille de la base)
@@ -4830,6 +4831,7 @@ Deno.serve(async (req) => {
     // 📅 Agenda réservé aux adhérents : événements du bureau + dates des tournois inter-clubs / internes
     const agenda = {
       events: Array.isArray(d.agendaEvents) ? d.agendaEvents : [],
+      masques: Array.isArray(d.agendaMasques) ? d.agendaMasques : [],
       tournois: ((d.interclubs || []) as Record<string, unknown>[])
         .filter((t) => t.interne !== true || t.visible === true)
         .map((t) => ({ id: t.id, name: t.name, date: t.date, interne: t.interne === true, salleNom: t.salleNom, salleAdresse: t.salleAdresse })),

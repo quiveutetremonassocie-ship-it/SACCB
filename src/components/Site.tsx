@@ -525,7 +525,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {mode === "full" && rubriques.agenda && memberAgenda && (
           <FadeInSection>
             <Agenda
-              evenements={evenementsAgenda({ config_tournois: db.config_tournois, agendaEvents: memberAgenda.events, agendaTournois: memberAgenda.tournois })}
+              evenements={evenementsAgenda({ config_tournois: db.config_tournois, agendaEvents: memberAgenda.events, agendaTournois: memberAgenda.tournois, agendaMasques: memberAgenda.masques })}
               onAdmin={isMemberAdmin ? () => { try { localStorage.setItem("saccb_admin_section", "admin-agenda"); } catch { /* ignore */ } onReopenAdmin?.(); } : undefined}
             />
           </FadeInSection>

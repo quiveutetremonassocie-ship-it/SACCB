@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { ChevronLeft, ChevronRight, CalendarPlus, MapPin, Clock, Plus, Pencil, Trash2, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, CalendarPlus, MapPin, Clock, Plus, Pencil, Trash2, X, EyeOff, Eye } from "lucide-react";
 import type { AgendaEvent } from "@/lib/types";
 import { EvenementAgenda, lienGoogle, telechargerIcs } from "@/lib/agenda";
 
@@ -25,12 +25,14 @@ export default function Agenda({
   evenements,
   clubEvents,
   onChange,
+  onMasquer,
   onAdmin,
   sansTitre,
 }: {
   evenements: EvenementAgenda[];
   clubEvents?: AgendaEvent[];
   onChange?: (next: AgendaEvent[]) => void | Promise<void>;
+  onMasquer?: (id: string, masquer: boolean) => void | Promise<void>; // admin : retirer / remettre un tournoi dans l'agenda
   onAdmin?: () => void; // admin connecté sur le site : lien vers la gestion de l'agenda
   sansTitre?: boolean;
 }) {
@@ -162,10 +164,11 @@ export default function Agenda({
             ) : (
               <ul className="space-y-3">
                 {liste.map((e) => (
-                  <li key={e.id} className="rounded-xl border border-slate-200 p-3">
+                  <li key={e.id} className={`rounded-xl border p-3 ${e.masque ? "border-dashed border-slate-300 bg-slate-50 opacity-60" : "border-slate-200"}`}>
                     <div className="flex items-start justify-between gap-2">
                       <div className="min-w-0">
                         <span className={`inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border ${COULEUR[e.genre].badge}`}>{COULEUR[e.genre].nom}</span>
+                        {e.masque && <span className="ml-1.5 inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-300">Retiré de l&apos;agenda</span>}
                         <p className="font-semibold text-slate-800 mt-1 break-words">{e.titre}</p>
                         <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
                           {!jour && <span className="first-letter:uppercase">{joliJour(e.date)}</span>}
@@ -189,7 +192,16 @@ export default function Agenda({
                         <CalendarPlus className="w-3.5 h-3.5" /> iPhone / Outlook
                       </button>
                     </div>
-                    {admin && !e.modifiable && <p className="text-[11px] text-slate-400 mt-1.5">Ajouté automatiquement : se modifie dans la rubrique du tournoi.</p>}
+                    {admin && !e.modifiable && (
+                      <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+                        <p className="text-[11px] text-slate-400">{e.masque ? "Les adhérents ne le voient plus dans l'agenda (le tournoi existe toujours)." : "Ajouté automatiquement : se modifie dans la rubrique du tournoi."}</p>
+                        {onMasquer && (
+                          <button onClick={() => onMasquer(e.id, !e.masque)} className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">
+                            {e.masque ? <><Eye className="w-3.5 h-3.5" /> Remettre dans l&apos;agenda</> : <><EyeOff className="w-3.5 h-3.5" /> Retirer de l&apos;agenda</>}
+                          </button>
+                        )}
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>

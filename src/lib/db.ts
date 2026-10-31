@@ -492,6 +492,7 @@ export async function verifyMembre(
 /** 📅 Agenda réservé aux adhérents (renvoyé avec la session) */
 export type AgendaAdherent = {
   events: import("./types").AgendaEvent[];
+  masques?: string[];
   tournois: { id: string; name: string; date: string; interne?: boolean; salleNom?: string; salleAdresse?: string }[];
 };
 
