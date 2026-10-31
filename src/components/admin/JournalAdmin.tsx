@@ -23,13 +23,14 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
   }
   const [qui, setQui] = useState("");
   const [voir, setVoir] = useState(100);
+  const [avecConnexions, setAvecConnexions] = useState(false);
 
   // Actions + connexions admin, du plus récent au plus ancien
   const lignes = useMemo(() => {
     const actions = (db.adminJournal || []).map((e) => ({ at: e.at, email: e.email, actions: e.actions, annulable: !!e.annulation && !e.annulee, annulee: e.annulee }));
     const connexions = (db.adminLoginLog || []).map((c) => ({ at: c.date, email: c.email, actions: ["🔑 Connexion à l'administration"], annulable: false, annulee: undefined }));
-    return [...actions, ...connexions].sort((a, b) => (a.at < b.at ? 1 : -1));
-  }, [db.adminJournal, db.adminLoginLog]);
+    return [...actions, ...(avecConnexions ? connexions : [])].sort((a, b) => (a.at < b.at ? 1 : -1));
+  }, [db.adminJournal, db.adminLoginLog, avecConnexions]);
   const admins = useMemo(() => [...new Set(lignes.map((l) => l.email))].sort(), [lignes]);
   const norm = (s: string) => s.normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
   const filtres = lignes.filter((l) => (!qui || l.email === qui) && (!q || norm(l.actions.join(" ")).includes(norm(q))));
@@ -55,6 +56,10 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
           <option value="">Tous les admins</option>
           {admins.map((a) => <option key={a} value={a}>{a}</option>)}
         </select>
+        <label className="flex items-center gap-2 text-xs text-slate-600 px-2 cursor-pointer select-none">
+          <input type="checkbox" checked={avecConnexions} onChange={(e) => setAvecConnexions(e.target.checked)} />
+          Afficher les connexions 🔑
+        </label>
       </div>
 
       {filtres.length === 0 ? (
