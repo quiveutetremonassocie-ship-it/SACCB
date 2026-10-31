@@ -190,6 +190,7 @@ export type TshirtOrder = {
   prenom: string;
   taille: string; // une des TSHIRT_SIZES_ALL
   nomFloque?: string;      // nom/surnom à floquer sur le t-shirt (optionnel)
+  couleur?: string;        // 🎨 couleur choisie (parmi tshirtColors)
   createdAt: string;       // ISO timestamp
   status?: "pending" | "ordered" | "delivered"; // pour suivi admin
   paid?: boolean;          // 💳 payé (coché par le bureau)
@@ -318,6 +319,7 @@ export type LivePoule = {
   equipes: string[];
   matchs: LiveMatch[];
   retirees?: string[]; // équipes qui ont arrêté : leurs résultats ne comptent plus (RGC FFBaD 3.4.4)
+  ordreManuel?: string[]; // ✋ classement ajusté à la main par la table de marque (remplace le calcul)
 };
 
 export type LivePhase = {
@@ -373,6 +375,7 @@ export type DB = {
   tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
   tshirtPaymentUrl?: string; // 💳 lien HelloAsso pour payer le t-shirt en ligne (facultatif)
   tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
+  tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)
   // ❓ FAQ adhérents : visible sur la home + page /faq

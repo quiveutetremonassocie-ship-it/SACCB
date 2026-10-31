@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet, FileDown } from "lucide-react";
+import { Plus, Trash2, Upload, FileText, Download, Eye, Wallet, FileDown, Pencil } from "lucide-react";
 import { DB, Facture, FactureFile, getEffectivePrix, getMontantMembre } from "@/lib/types";
 import { supabaseClient, FACTURE_BUCKET } from "@/lib/supabase";
 import { adminUploadFile, adminFactureFile } from "@/lib/db";
@@ -93,6 +93,20 @@ export default function Accounting({
     setPendingFiles([]);
     if (fileInput.current) fileInput.current.value = "";
     setBusy(false);
+  }
+
+  // ✏️ Modifier une dépense (description, montant, date)
+  const [editFacture, setEditFacture] = useState<{ id: string; desc: string; montant: string; date: string } | null>(null);
+  async function enregistrerFacture() {
+    if (!editFacture) return;
+    const montant = Number(editFacture.montant.replace(",", "."));
+    if (!editFacture.desc.trim()) { alert("La description ne peut pas être vide."); return; }
+    if (!Number.isFinite(montant) || montant < 0) { alert("Montant invalide."); return; }
+    await onPersist({
+      ...db,
+      factures: db.factures.map((x) => (x.id === editFacture.id ? { ...x, desc: editFacture.desc.trim(), montant: Math.round(montant * 100) / 100, date: editFacture.date.trim() || x.date } : x)),
+    });
+    setEditFacture(null);
   }
 
   async function delFacture(id: string) {
@@ -307,10 +321,10 @@ ${reduitsSection}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-2 md:gap-3 mb-5">
-        <Stat label="Adhésions" value={`${totals.totalRecolte}€`} accent="text-emerald-600" />
-        <Stat label="Report N-1" value={`${db.reportPrecedent ?? 0}€`} accent="text-violet-600" />
-        <Stat label="Dépenses" value={`${totals.totalDepenses}€`} accent="text-red-500" />
-        <Stat label="Solde" value={`${totals.solde}€`} accent={totals.solde >= 0 ? "text-blue-600" : "text-red-600"} />
+        <Stat label="Adhésions" value={euros(totals.totalRecolte)} accent="text-emerald-600" />
+        <Stat label="Report N-1" value={euros(db.reportPrecedent ?? 0)} accent="text-violet-600" />
+        <Stat label="Dépenses" value={euros(totals.totalDepenses)} accent="text-red-500" />
+        <Stat label="Solde" value={euros(totals.solde)} accent={totals.solde >= 0 ? "text-blue-600" : "text-red-600"} />
       </div>
 
       {/* Report saison précédente */}
@@ -401,7 +415,12 @@ ${reduitsSection}
                 <p className="text-xs text-slate-400">{f.date}</p>
               </div>
               <div className="flex items-center gap-2 shrink-0">
-                <span className="font-semibold text-red-500 text-sm">{f.montant}€</span>
+                <span className="font-semibold text-red-500 text-sm">{euros(f.montant)}</span>
+                {!readOnly && (
+                  <button onClick={() => setEditFacture({ id: f.id, desc: f.desc, montant: String(f.montant), date: f.date })} className="btn-ghost !px-2 !py-1 !text-xs" title="Modifier cette dépense">
+                    <Pencil className="w-3.5 h-3.5" />
+                  </button>
+                )}
                 {!readOnly && (
                   <button onClick={() => delFacture(f.id)} className="btn-danger !px-2 !py-1 !text-xs">
                     <Trash2 className="w-3.5 h-3.5" />
@@ -409,6 +428,17 @@ ${reduitsSection}
                 )}
               </div>
             </div>
+            {editFacture?.id === f.id && (
+              <div className="mt-2 mb-2 grid sm:grid-cols-[1fr_110px_150px_auto] gap-2 items-center bg-white border border-blue-200 rounded-xl p-2">
+                <input className="input !py-1.5 !text-sm" value={editFacture.desc} onChange={(e) => setEditFacture({ ...editFacture, desc: e.target.value })} placeholder="Description" />
+                <input className="input !py-1.5 !text-sm" inputMode="decimal" value={editFacture.montant} onChange={(e) => setEditFacture({ ...editFacture, montant: e.target.value })} placeholder="Montant" />
+                <input className="input !py-1.5 !text-sm" value={editFacture.date} onChange={(e) => setEditFacture({ ...editFacture, date: e.target.value })} placeholder="Date" />
+                <div className="flex gap-1">
+                  <button onClick={enregistrerFacture} className="btn-primary !px-3 !py-1.5 !text-xs">OK</button>
+                  <button onClick={() => setEditFacture(null)} className="btn-ghost !px-3 !py-1.5 !text-xs">Annuler</button>
+                </div>
+              </div>
+            )}
             {(f.files || []).length > 0 && (
               <div className="space-y-1 mt-2">
                 {(f.files || []).map((file) => (
@@ -445,6 +475,11 @@ ${reduitsSection}
       </div>
     </div>
   );
+}
+
+// 💶 Montant en euros, toujours avec 2 décimales (ex. 290,50 €)
+function euros(n: number): string {
+  return `${(Math.round((Number(n) || 0) * 100) / 100).toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`;
 }
 
 function Stat({ label, value, accent }: { label: string; value: string; accent: string }) {

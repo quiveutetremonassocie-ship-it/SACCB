@@ -57,6 +57,22 @@ export default function TshirtAdmin({
     setSavingSizes(false);
   }
 
+  // 🎨 Couleurs proposées aux adhérents
+  const couleurs = db.tshirtColors || [];
+  const [nouvelleCouleur, setNouvelleCouleur] = useState("");
+  async function majCouleurs(next: string[]) {
+    if (readOnly) return;
+    await onPersist({ ...db, tshirtColors: next });
+  }
+  function ajouterCouleur() {
+    const c = nouvelleCouleur.trim();
+    if (!c) return;
+    if (couleurs.some((x) => x.toLowerCase() === c.toLowerCase())) { alert("Cette couleur est déjà dans la liste."); return; }
+    setNouvelleCouleur("");
+    majCouleurs([...couleurs, c.slice(0, 40)]);
+  }
+  const avecCouleur = couleurs.length > 0 || orders.some((o) => o.couleur);
+
   const totalRecette = price !== null ? orders.length * price : null;
 
   async function toggleOpen() {
@@ -152,9 +168,9 @@ export default function TshirtAdmin({
   }
 
   function exportCSV() {
-    const rows: string[][] = [["Prenom", "Nom", "Taille", "Floque", "Date"]];
+    const rows: string[][] = [["Prenom", "Nom", "Taille", "Couleur", "Floque", "Date"]];
     orders.forEach((o) => {
-      rows.push([o.prenom, o.nom, o.taille, o.nomFloque || "", new Date(o.createdAt).toLocaleString("fr-FR")]);
+      rows.push([o.prenom, o.nom, o.taille, o.couleur || "", o.nomFloque || "", new Date(o.createdAt).toLocaleString("fr-FR")]);
     });
     const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -165,8 +181,11 @@ export default function TshirtAdmin({
   }
 
   // 🏭 Bon de commande fabricant : récap par taille + détail trié par taille (floquage compris)
-  const ordersBySize = TAILLES.flatMap((t) =>
-    orders.filter((o) => o.taille === t).sort((a, b) => `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, "fr"))
+  // Tri : couleur, puis taille, puis nom
+  const ordersBySize = [...orders].sort((a, b) =>
+    (a.couleur || "").localeCompare(b.couleur || "", "fr") ||
+    TAILLES.indexOf(a.taille as (typeof TAILLES)[number]) - TAILLES.indexOf(b.taille as (typeof TAILLES)[number]) ||
+    `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, "fr")
   );
 
   // 📄 PDF pour le fabricant : uniquement Taille, Floquage et Nom, trié par taille
@@ -178,10 +197,29 @@ export default function TshirtAdmin({
     doc.text(`Commande T-shirts SACCB — saison ${db.y1}-${db.y2}`, 14, 18);
     doc.setFontSize(10);
     doc.text(`${orders.length} t-shirt${orders.length > 1 ? "s" : ""} · ${shownSizes.map((t) => `${t} : ${totals[t]}`).join("  ·  ")}`, 14, 25);
+    let y = 31;
+    if (avecCouleur) {
+      // Récapitulatif couleur × taille pour le fabricant
+      const cols = [...new Set(orders.map((o) => o.couleur || "Sans couleur"))];
+      autoTable(doc, {
+        startY: y,
+        head: [["Couleur", ...shownSizes, "Total"]],
+        body: cols.map((c) => {
+          const de = orders.filter((o) => (o.couleur || "Sans couleur") === c);
+          return [c, ...shownSizes.map((t) => String(de.filter((o) => o.taille === t).length || "")), String(de.length)];
+        }),
+        styles: { fontSize: 10, halign: "center" },
+        columnStyles: { 0: { halign: "left", fontStyle: "bold" } },
+        headStyles: { fillColor: [16, 185, 129] },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 8;
+    }
     autoTable(doc, {
-      startY: 31,
-      head: [["Taille", "Floquage", "Nom"]],
-      body: ordersBySize.map((o) => [o.taille, o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]),
+      startY: y,
+      head: [avecCouleur ? ["Taille", "Couleur", "Floquage", "Nom"] : ["Taille", "Floquage", "Nom"]],
+      body: ordersBySize.map((o) => avecCouleur
+        ? [o.taille, o.couleur || "", o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]
+        : [o.taille, o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]),
       styles: { fontSize: 11 },
       headStyles: { fillColor: [30, 58, 95] },
     });
@@ -298,6 +336,36 @@ export default function TshirtAdmin({
         <p className="text-[11px] text-slate-500 mt-1.5">Cliquez sur une taille pour la proposer ou la retirer. Seules les tailles en vert sont proposées aux adhérents.</p>
       </div>
 
+      {/* 🎨 Couleurs proposées aux adhérents */}
+      <div className="mb-4 bg-white border border-slate-200 rounded-xl p-3">
+        <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-2">🎨 Couleurs disponibles</p>
+        <div className="flex flex-wrap gap-2 mb-2">
+          {couleurs.length === 0 && <span className="text-xs text-slate-400">Aucune : les adhérents ne choisissent pas de couleur.</span>}
+          {couleurs.map((c) => (
+            <span key={c} className="inline-flex items-center gap-1.5 text-sm font-semibold px-3 py-1 rounded-lg bg-emerald-500 text-white">
+              {c}
+              {!readOnly && (
+                <button onClick={() => { if (confirm(`Retirer la couleur « ${c} » ? (les commandes déjà passées la gardent)`)) majCouleurs(couleurs.filter((x) => x !== c)); }} className="text-white/80 hover:text-white" title="Retirer">×</button>
+              )}
+            </span>
+          ))}
+        </div>
+        {!readOnly && (
+          <div className="flex gap-2">
+            <input
+              value={nouvelleCouleur}
+              onChange={(e) => setNouvelleCouleur(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); ajouterCouleur(); } }}
+              placeholder="Ex. Bleu marine, Blanc, Noir…"
+              className="flex-1 min-w-0 text-sm border border-slate-300 rounded-lg px-3 py-1.5 bg-white"
+              maxLength={40}
+            />
+            <button onClick={ajouterCouleur} disabled={!nouvelleCouleur.trim()} className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg disabled:opacity-50">Ajouter</button>
+          </div>
+        )}
+        <p className="text-[11px] text-slate-500 mt-1.5">Si au moins une couleur est proposée, l&apos;adhérent doit en choisir une dans un menu déroulant au moment de commander.</p>
+      </div>
+
       {/* Totaux par taille */}
       {orders.length > 0 && (
         <div className="flex flex-wrap gap-2 mb-4">
@@ -314,7 +382,7 @@ export default function TshirtAdmin({
       {orders.length > 0 && (
         <div className="mb-4 bg-blue-50 border border-blue-200 rounded-xl p-3">
           <p className="text-xs uppercase tracking-widest text-blue-700 font-semibold mb-1">🏭 Bon de commande fabricant</p>
-          <p className="text-[11px] text-slate-600 mb-2">PDF avec la taille, le floquage et le nom de chaque t-shirt, à envoyer au fabricant.</p>
+          <p className="text-[11px] text-slate-600 mb-2">PDF avec le récapitulatif par couleur et par taille, puis la taille, la couleur, le floquage et le nom de chaque t-shirt, à envoyer au fabricant.</p>
           <button onClick={exportFabricantPdf} className="text-xs font-semibold bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg flex items-center gap-1">
             <Download className="w-3.5 h-3.5" /> Télécharger le PDF
           </button>
@@ -380,6 +448,7 @@ export default function TshirtAdmin({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">
                   {o.prenom} {o.nom}
+                  {o.couleur && <span className="ml-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">🎨 {o.couleur}</span>}
                 </p>
                 <p className="text-xs text-slate-500 truncate">
                   {o.nomFloque ? <>Floqué : <strong>&quot;{o.nomFloque}&quot;</strong> · </> : null}

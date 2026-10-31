@@ -49,9 +49,9 @@ export default function AccueilHero({
         <div className="min-w-0 text-center lg:text-left">
           <motion.span
             initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-5 ${inscOpen ? "bg-emerald-100 text-emerald-800" : "bg-slate-100 text-slate-600"}`}
+            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-5 ${inscOpen ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-700 border border-red-300"}`}
           >
-            <span className={`w-2 h-2 rounded-full ${inscOpen ? "bg-emerald-500 animate-pulse" : "bg-slate-400"}`} />
+            <span className={`w-2 h-2 rounded-full ${inscOpen ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
             Saison {seasonY1}–{seasonY2} · {inscOpen ? "inscriptions ouvertes" : "inscriptions fermées"}
           </motion.span>
 

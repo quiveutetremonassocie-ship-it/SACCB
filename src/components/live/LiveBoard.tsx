@@ -124,7 +124,7 @@ export function PouleCard({
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
       <div className="px-4 py-2.5 bg-gradient-to-r from-[#1e3a5f] to-[#2a5285] text-white flex items-center justify-between">
-        <p className={`font-bold tracking-wide ${grand ? "text-xl" : ""}`}>{poule.nom}</p>
+        <p className={`font-bold tracking-wide ${grand ? "text-xl" : ""}`}>{poule.nom}{poule.ordreManuel?.length ? <span className="ml-2 text-[10px] font-semibold bg-amber-400 text-[#1e3a5f] px-1.5 py-0.5 rounded" title="Classement ajusté par la table de marque">✋ ajusté</span> : null}</p>
         <p className="text-[11px] text-white/70">{poule.matchs.filter(matchJoue).length}/{poule.matchs.length} matchs</p>
       </div>
       <table className="w-full text-sm table-fixed">

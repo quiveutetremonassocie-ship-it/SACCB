@@ -73,7 +73,7 @@ export default function AdminAccueil({
         )}
         {peutVoir("comptabilite") && (
           <Carte icone={<Wallet className="w-5 h-5" />} couleur="from-emerald-500 to-green-600" titre="Trésorerie" onClick={() => aller("admin-comptabilite")}
-            valeur={`${totals.solde.toLocaleString("fr-FR")} €`} sous={`${totals.totalRecolte} € reçus · ${totals.totalDepenses} € dépensés`} />
+            valeur={`${totals.solde.toLocaleString("fr-FR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })} €`} sous={`${totals.totalRecolte.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € reçus · ${totals.totalDepenses.toLocaleString("fr-FR", { maximumFractionDigits: 2 })} € dépensés`} />
         )}
         {peutVoir("emailing") && (
           <Carte icone={<Inbox className="w-5 h-5" />} couleur="from-indigo-500 to-blue-500" titre="Messages" onClick={() => aller("admin-messages")}

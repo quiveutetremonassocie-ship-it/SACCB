@@ -4890,6 +4890,11 @@ Deno.serve(async (req) => {
     // Tailles proposées par l'admin ; on accepte aussi la taille déjà commandée (modif d'une ancienne commande)
     const existingTaille = ((d.tshirtOrders || []) as Record<string, unknown>[]).find((o) => o.membreId === membreId)?.taille;
     if (!tshirtSizesOf(d).includes(taille) && taille !== existingTaille) return json({ ok: false, reason: "Cette taille n'est pas disponible." }, 400);
+    // 🎨 Couleur : obligatoire si le bureau a proposé des couleurs (l'ancienne couleur reste acceptée)
+    const couleurs = Array.isArray(d.tshirtColors) ? (d.tshirtColors as unknown[]).map(String).filter(Boolean) : [];
+    const couleur = sanitize(String(body.couleur || "")).slice(0, 40);
+    const existingCouleur = ((d.tshirtOrders || []) as Record<string, unknown>[]).find((o) => o.membreId === membreId)?.couleur;
+    if (couleurs.length > 0 && !couleurs.includes(couleur) && couleur !== existingCouleur) return json({ ok: false, reason: "Choisissez une couleur disponible." }, 400);
     const membres = (d.membres || []) as Record<string, unknown>[];
 
     const membre = await resolveTshirtMembre(d, email, code, membreId);
@@ -4915,6 +4920,7 @@ Deno.serve(async (req) => {
       nom,
       prenom,
       taille,
+      couleur: couleurs.length > 0 ? couleur : undefined,
       nomFloque: nomFloque || undefined,
       createdAt: existingIdx !== -1 ? orders[existingIdx].createdAt : new Date().toISOString(),
       status: existingIdx !== -1 ? orders[existingIdx].status : "pending",
@@ -4948,6 +4954,7 @@ Deno.serve(async (req) => {
       open: d.tshirtOpen === true,
       price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
       sizes: tshirtSizesOf(d),
+      colors: Array.isArray(d.tshirtColors) ? d.tshirtColors : [],
       paymentUrl: typeof d.tshirtPaymentUrl === "string" && d.tshirtPaymentUrl ? d.tshirtPaymentUrl : null,
     });
   }

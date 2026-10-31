@@ -62,6 +62,18 @@ export default function MembresAdmin({
     if (r.ok && r.url) window.open(r.url, "_blank");
     else alert("Impossible d'ouvrir le justificatif : " + (r.reason || "erreur"));
   }
+  // 🗑 Supprimer un justificatif (mauvais document, envoyé par erreur…) : fichier + mention sur la fiche
+  async function supprimerJustificatif(m: Membre) {
+    if (!m.justificatif) return;
+    if (!confirm(`Supprimer le justificatif de scolarité de ${m.nom} ?
+
+Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`)) return;
+    if (adminEmail && adminCode) {
+      const r = await adminFactureFile(adminEmail, adminCode, "delete", m.justificatif.path, "justificatifs");
+      if (!r.ok && !confirm(`Le fichier n'a pas pu être effacé (${r.reason || "erreur"}). Retirer quand même le justificatif de la fiche ?`)) return;
+    }
+    await onPersist({ ...db, membres: db.membres.map((x) => (x.id === m.id ? { ...x, justificatif: undefined } : x)) });
+  }
   function JustifBadge({ m }: { m: Membre }) {
     if (m.type !== "Etudiant") return null;
     if (m.justificatif && m.justificatif.saison === saisonKey) {
@@ -69,6 +81,14 @@ export default function MembresAdmin({
         <button onClick={() => viewJustificatif(m)} className="text-[10px] text-emerald-700 bg-emerald-50 hover:bg-emerald-100 px-1.5 py-0.5 rounded" title="Justificatif fourni — cliquer pour l'ouvrir">
           ✅ Justif. fourni le {new Date(m.justificatif.uploadedAt).toLocaleDateString("fr-FR")} · voir
         </button>
+      );
+    }
+    if (m.justificatif) {
+      // Justificatif d'une ancienne saison : on peut quand même le voir ou le supprimer
+      return (
+        <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded">
+          ⚠️ Justif. d'une ancienne saison · <button onClick={() => viewJustificatif(m)} className="underline">voir</button>
+        </span>
       );
     }
     return <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded" title="Pas de justificatif de scolarité pour cette saison">⚠️ Justif. manquant</span>;
@@ -551,7 +571,7 @@ export default function MembresAdmin({
                 {typeof m.montantPaye === "number" && (
                   <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                 )}
-                <SexeBadge m={m} /><JustifBadge m={m} />
+                <SexeBadge m={m} /><JustifBadge m={m} />{m.justificatif && !readOnly && <button onClick={() => supprimerJustificatif(m)} title="Supprimer le justificatif de scolarité" className="text-[10px] text-red-600 bg-red-50 hover:bg-red-100 px-1.5 py-0.5 rounded ml-1">🗑 suppr.</button>}
                 {m.paymentMethod === "online" ? (
                   <span className="text-[10px] text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">En ligne</span>
                 ) : m.paymentMethod === "virement" ? (
@@ -688,7 +708,7 @@ export default function MembresAdmin({
                   {typeof m.montantPaye === "number" && (
                     <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                   )}
-                  <span className="block mt-0.5"><SexeBadge m={m} /><JustifBadge m={m} /></span>
+                  <span className="block mt-0.5"><SexeBadge m={m} /><JustifBadge m={m} />{m.justificatif && !readOnly && <button onClick={() => supprimerJustificatif(m)} title="Supprimer le justificatif de scolarité" className="text-[10px] text-red-600 bg-red-50 hover:bg-red-100 px-1.5 py-0.5 rounded ml-1">🗑 suppr.</button>}</span>
                 </td>
                 <td className="p-3">
                   <div className="flex flex-col gap-1">

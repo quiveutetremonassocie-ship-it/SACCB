@@ -8,6 +8,7 @@ import {
   jetonAleatoire, classementFinal, nomEquipe, lettre,
 } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, EquipesMap, NomEquipe } from "../live/LiveBoard";
+import ReglageManuel from "./ReglageManuel";
 import { exporterResultatsPdf } from "@/lib/interclubPdf";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 
@@ -411,6 +412,14 @@ export default function InterclubLiveAdmin({
 
             <LiveBoard phases={live.phases} equipes={equipes} termine={live.termine} clubs={clubs} renderAction={renderAction} />
 
+            {!readOnly && !live.termine && courante && (
+              <ReglageManuel
+                phase={courante}
+                equipes={equipes}
+                busy={busy}
+                onSave={(ph) => enregistrer({ ...live, phases: live.phases.map((p) => (p.id === ph.id ? ph : p)) })}
+              />
+            )}
             {!readOnly && !live.termine && courante && (
               <div className="bg-white rounded-3xl shadow-2xl p-5 space-y-4">
                 {(() => {

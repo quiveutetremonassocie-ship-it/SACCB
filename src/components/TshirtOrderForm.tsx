@@ -25,6 +25,9 @@ export default function TshirtOrderForm({
   // Tailles proposées par l'admin (renvoyées par le serveur)
   const [sizes, setSizes] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
+  // 🎨 Couleurs proposées par le bureau (vide = pas de choix)
+  const [colors, setColors] = useState<string[]>([]);
+  const [couleur, setCouleur] = useState("");
   const [order, setOrder] = useState<TshirtOrder | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -65,11 +68,15 @@ export default function TshirtOrderForm({
         const avail = Array.isArray(r.sizes) && r.sizes.length > 0 ? r.sizes : TSHIRT_SIZES_DEFAULT;
         setSizes(avail);
         setPaymentUrl(typeof r.paymentUrl === "string" && r.paymentUrl ? r.paymentUrl : null);
+        const cols = Array.isArray(r.colors) ? r.colors : [];
+        setColors(cols);
+        if (!r.order && cols.length === 1) setCouleur(cols[0]);
         if (!r.order) setTaille(avail.includes("M") ? "M" : avail[0]);
         if (r.order) {
           setOrder(r.order);
           setTaille(r.order.taille as Taille);
           setNomFloque(r.order.nomFloque || "");
+          setCouleur(r.order.couleur || "");
         }
       }
     });
@@ -78,6 +85,7 @@ export default function TshirtOrderForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    if (colors.length > 0 && !couleur) { setMsg({ ok: false, text: "Choisis une couleur." }); return; }
     setSaving(true);
     setMsg(null);
     // Le serveur ignore nom/prenom du body et utilise ceux du compte membre, on les envoie quand même pour le typage
@@ -86,6 +94,7 @@ export default function TshirtOrderForm({
       nom: defaultNom,
       prenom: defaultPrenom,
       taille,
+      couleur: colors.length > 0 ? couleur : undefined,
       nomFloque: nomFloque.trim() || undefined,
     });
     setSaving(false);
@@ -98,6 +107,7 @@ export default function TshirtOrderForm({
         nom: defaultNom,
         prenom: defaultPrenom,
         taille,
+        couleur: colors.length > 0 ? couleur : undefined,
         nomFloque: nomFloque.trim() || undefined,
         createdAt: order?.createdAt || new Date().toISOString(),
       });
@@ -153,6 +163,7 @@ export default function TshirtOrderForm({
         <div className="bg-white border border-amber-200 rounded-xl p-3 text-sm space-y-1">
           <p><strong>Nom :</strong> {order.prenom} {order.nom}</p>
           <p><strong>Taille :</strong> <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">{order.taille}</span></p>
+          {order.couleur && <p><strong>Couleur :</strong> {order.couleur}</p>}
           {order.nomFloque && <p><strong>Floqué :</strong> &quot;{order.nomFloque}&quot;</p>}
         </div>
         {/* 💳 Paiement */}
@@ -221,6 +232,21 @@ export default function TshirtOrderForm({
             ))}
           </select>
         </div>
+        {colors.length > 0 && (
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Couleur</label>
+            <select
+              value={couleur}
+              onChange={(e) => setCouleur(e.target.value)}
+              className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500 bg-white"
+            >
+              <option value="">— Choisis une couleur —</option>
+              {(couleur && !colors.includes(couleur) ? [...colors, couleur] : colors).map((c) => (
+                <option key={c} value={c}>{c}</option>
+              ))}
+            </select>
+          </div>
+        )}
         <div>
           <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">
             Nom / surnom à floquer <span className="text-slate-400 normal-case">(facultatif, max 30 car.)</span>

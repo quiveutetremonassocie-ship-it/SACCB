@@ -129,6 +129,12 @@ export function classementPoule(p: LivePoule): Ligne[] {
     res.push(...departage(parVictoires.slice(i, j), 0));
     i = j;
   }
+  // ✋ Classement ajusté à la main par la table de marque : il passe avant le calcul
+  if (p.ordreManuel && p.ordreManuel.length > 0) {
+    const parId = new Map(res.map((l) => [l.id, l]));
+    const manuel = p.ordreManuel.filter((id) => parId.has(id)).map((id) => parId.get(id)!);
+    return [...manuel, ...res.filter((l) => !p.ordreManuel!.includes(l.id))];
+  }
   return res;
 }
 
