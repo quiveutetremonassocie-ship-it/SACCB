@@ -103,7 +103,8 @@ export default function GlobalSearch({ db }: { db: DB }) {
   function jumpTo(h: Hit) {
     setOpen(false);
     setTimeout(() => {
-      document.getElementById(h.anchor)?.scrollIntoView({ behavior: "smooth", block: "start" });
+      // L'admin affiche une page à la fois : on demande d'abord d'ouvrir la bonne page
+      window.dispatchEvent(new CustomEvent("admin-goto", { detail: h.anchor }));
     }, 50);
   }
 

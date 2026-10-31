@@ -103,8 +103,7 @@ export default function MessagesAdmin({
     } catch {}
     // Défile vers la section emailing (ancre #admin-emailing existante dans AdminPanel)
     setTimeout(() => {
-      const target = document.getElementById("admin-emailing");
-      if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+      window.dispatchEvent(new CustomEvent("admin-goto", { detail: "admin-emailing" }));
     }, 50);
   }
 

@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, ChevronDown, Send, HelpCircle, Shirt, BarChart3 } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, ChevronDown, Send, HelpCircle, Shirt, BarChart3, LayoutDashboard, Menu, ClipboardList, Swords, LifeBuoy } from "lucide-react";
+import AdminAccueil from "./AdminAccueil";
 // FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
 import { DB, Membre, getMontantMembre } from "@/lib/types";
 import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
@@ -261,120 +262,131 @@ export default function AdminPanel({
     scrollContainerRef.current?.scrollTo({ top: 0, behavior: "smooth" });
   }
 
-  return (
-    <div
-      ref={scrollContainerRef}
-      className="admin-shell fixed inset-0 z-[2000] bg-[#f8fafc] overflow-y-auto overflow-x-hidden"
-      style={{
-        WebkitOverflowScrolling: "touch", // scroll fluide iOS
-        overscrollBehavior: "contain",    // évite le bounce + le scroll qui "remonte" derrière
-      }}
-    >
-      <div className="max-w-6xl mx-auto p-4 md:p-6 lg:p-10 pb-24 md:pb-10">
-        <div className="flex items-center justify-between mb-6 sticky top-0 z-10 -mx-4 md:-mx-6 lg:-mx-10 px-4 md:px-6 lg:px-10 py-3 bg-[#f8fafc]/95 backdrop-blur-xl border-b border-slate-200">
-          <div>
-            <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold">Panel</p>
-            <h2 className="font-display text-2xl md:text-4xl tracking-wider text-slate-800">Gestion SACCB</h2>
-          </div>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={manualRefresh}
-              disabled={refreshing}
-              className="btn-ghost !px-3 !py-2 !text-xs flex items-center gap-1.5"
-              title={`Dernière mise à jour : ${new Date(lastRefresh).toLocaleTimeString("fr-FR")}`}
-            >
-              <RefreshCw className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} />
-              <span className="hidden sm:inline">{refreshing ? "..." : "Rafraîchir"}</span>
-            </button>
-            <button onClick={onClose} className="btn-danger !px-3 !py-2">
-              <X className="w-4 h-4" />
-              <span className="hidden sm:inline ml-1">Fermer</span>
-            </button>
-          </div>
-        </div>
+  // 🧭 Page affichée (mémorisée sur l'appareil) + menu tiroir sur téléphone
+  const [section, setSection] = useState<string>("admin-accueil");
+  const [menuOuvert, setMenuOuvert] = useState(false);
+  useEffect(() => {
+    try { const s = localStorage.getItem("saccb_admin_section"); if (s) setSection(s); } catch { /* ignore */ }
+  }, []);
+  function aller(id: string) {
+    setSection(id);
+    setMenuOuvert(false);
+    try { localStorage.setItem("saccb_admin_section", id); } catch { /* ignore */ }
+    scrollContainerRef.current?.scrollTo({ top: 0 });
+  }
+  // Les autres écrans (recherche, « répondre » à un message…) demandent un changement de page
+  useEffect(() => {
+    const surDemande = (e: Event) => { const id = (e as CustomEvent<string>).detail; if (id) aller(id); };
+    window.addEventListener("admin-goto", surDemande);
+    return () => window.removeEventListener("admin-goto", surDemande);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  // Prénom pour l'accueil : 1er mot du nom de la fiche adhérent de l'admin
+  const prenomAdmin = (() => {
+    const m = db.membres.find((x) => x.email?.toLowerCase() === (adminEmail || "").toLowerCase());
+    return m?.nom?.trim().split(/\s+/)[0];
+  })();
 
-        {readOnly && (
-          <div className="mb-4 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
-            <Eye className="w-4 h-4 text-amber-600 shrink-0" />
-            <p className="text-sm text-amber-700 font-medium">Mode lecture seule — les modifications ne sont pas autorisées.</p>
-          </div>
-        )}
-
-        {/* 🔧 Bandeau mode maintenance */}
-        {db.maintenanceMode && (
-          <div className="mb-4 bg-red-50 border-2 border-red-400 rounded-xl px-4 py-3 flex items-center justify-between gap-3 animate-pulse-slow">
-            <div className="flex items-center gap-2">
-              <span className="text-2xl">🔧</span>
-              <div>
-                <p className="text-sm text-red-700 font-bold uppercase tracking-wide">Site en maintenance</p>
-                <p className="text-xs text-red-600">Les visiteurs ne peuvent pas acceder au site. Pensez a desactiver le mode maintenance quand vous avez termine.</p>
-              </div>
-            </div>
-            {!readOnly && (
-              <button
-                onClick={async () => {
-                  if (!confirm("Désactiver le mode maintenance et rendre le site accessible ?")) return;
-                  await safePersist({ ...db, maintenanceMode: false });
-                }}
-                className="shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
-              >
-                Desactiver
-              </button>
-            )}
-          </div>
-        )}
-
-        {/* 🕐 Indicateur d'expiration de session */}
-        <SessionExpiry />
-
-
-        {/* 🔍 Recherche globale (Ctrl+K) */}
-        <div className="flex justify-end mb-2">
-          <GlobalSearch db={db} />
-        </div>
-
-        {/* 🚀 Accès rapide aux sections (smooth scroll) — filtré selon permissions */}
-        <QuickNav
-          unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
-          canSee={canSee}
-          journalVisible={!!db.adminJournal}
-        />
-
-        {/* Avertissement si aucune section visible (permissions explicitement vides) */}
-        {permissions !== undefined && permissions.length === 0 && (
-          <div className="glass p-6 text-center my-4">
-            <p className="text-slate-700 font-semibold mb-2">🔒 Aucun accès configuré</p>
-            <p className="text-sm text-slate-500">
-              Votre compte admin n&apos;a accès à aucune section. Contactez le bureau de l’association pour
-              obtenir des permissions.
-            </p>
-          </div>
-        )}
-
-        <div className="grid lg:grid-cols-2 gap-3 md:gap-4">
-          {/* ── Ordre d'origine, avec chaque section repliable ── */}
-          {canSee("comptabilite") && (
-            <CollapsibleAdminSection id="admin-comptabilite" label="Comptabilité" icon={<Receipt className="w-5 h-5" />} color="from-green-500 to-emerald-500">
-              <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} adminEmail={adminEmail} adminCode={adminCode} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("saison") && (
-            <CollapsibleAdminSection id="admin-saison" label="Paramètres saison" icon={<CalendarCog className="w-5 h-5" />} color="from-indigo-500 to-violet-500">
-              <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("saison") && (
-            <CollapsibleAdminSection id="admin-analytics" label="Statistiques" icon={<BarChart3 className="w-5 h-5" />} color="from-purple-500 to-pink-500">
-              <div className="space-y-4">
+  // 🧭 Navigation de l'admin : une page à la fois, rangée par thème
+  const messagesNonLus = (db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length;
+  const SECTIONS: { id: string; label: string; icon: typeof Users; groupe: string; visible: boolean; badge?: number; render: () => React.ReactNode }[] = [
+    { id: "admin-accueil", label: "Tableau de bord", icon: LayoutDashboard, groupe: "", visible: true, render: () => (
+      <AdminAccueil db={db} totals={totals} aller={aller} prenom={prenomAdmin} peutVoir={canSee} />
+    ) },
+    { id: "admin-membres", label: "Adhérents", icon: Users, groupe: "Adhérents", visible: canSee("membres"), render: () => (
+      <>
+        <MembresAdmin
+                db={db}
+                onPersist={safePersist}
+                onEdit={setEditMembre}
+                onRecu={setRecuMembre}
+                adminEmail={adminEmail}
+                adminCode={adminCode}
+                readOnly={!canEdit("membres")}
+              />
+      </>
+    ) },
+    { id: "admin-bureau", label: "Bureau", icon: Users, groupe: "Adhérents", visible: canSee("bureau"), render: () => (
+      <>
+        <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
+      </>
+    ) },
+    { id: "admin-tournois", label: "Tournois", icon: Trophy, groupe: "Tournois", visible: canSee("tournois"), render: () => (
+      <>
+        <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
+      </>
+    ) },
+    { id: "admin-inscriptions", label: "Inscriptions aux tournois", icon: ClipboardList, groupe: "Tournois", visible: canSee("inscriptions"), render: () => (
+      <>
+        <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
+      </>
+    ) },
+    { id: "admin-interclubs", label: "Tournois inter-clubs", icon: Swords, groupe: "Tournois", visible: canSee("tournois"), render: () => (
+      <>
+        <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} onRefresh={onRefresh} />
+      </>
+    ) },
+    { id: "admin-messages", label: "Messages reçus", icon: Inbox, groupe: "Communication", visible: canSee("emailing"), badge: messagesNonLus, render: () => (
+      <>
+        <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
+      </>
+    ) },
+    { id: "admin-emailing", label: "Envoyer un mail", icon: Mail, groupe: "Communication", visible: canSee("emailing"), render: () => (
+      <>
+        <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
+      </>
+    ) },
+    { id: "admin-actualites", label: "Actualités", icon: Newspaper, groupe: "Communication", visible: canSee("actualites"), render: () => (
+      <>
+        <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
+      </>
+    ) },
+    { id: "admin-engagement", label: "Sondages & AG", icon: MessageSquare, groupe: "Communication", visible: canSee("engagement"), render: () => (
+      <>
+        <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
+      </>
+    ) },
+    { id: "admin-faq", label: "FAQ adhérents", icon: HelpCircle, groupe: "Communication", visible: canSee("engagement"), render: () => (
+      <>
+        <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
+      </>
+    ) },
+    { id: "admin-comptabilite", label: "Comptabilité", icon: Receipt, groupe: "Trésorerie", visible: canSee("comptabilite"), render: () => (
+      <>
+        <Accounting db={db} totals={totals} onPersist={safePersist} readOnly={!canEdit("comptabilite")} adminEmail={adminEmail} adminCode={adminCode} />
+      </>
+    ) },
+    { id: "admin-tshirts", label: "T-shirts", icon: Shirt, groupe: "Trésorerie", visible: canSee("engagement"), render: () => (
+      <>
+        <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
+      </>
+    ) },
+    { id: "admin-helloasso", label: "HelloAsso · QR code", icon: QrCode, groupe: "Trésorerie", visible: true, render: () => (
+      <>
+        <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
+      </>
+    ) },
+    { id: "admin-saison", label: "Paramètres saison", icon: CalendarCog, groupe: "Réglages", visible: canSee("saison"), render: () => (
+      <>
+        <SeasonSettings db={db} onPersist={safePersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />
+      </>
+    ) },
+    { id: "admin-rules", label: "Règlement intérieur", icon: BookOpen, groupe: "Réglages", visible: canSee("rules"), render: () => (
+      <>
+        <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
+      </>
+    ) },
+    { id: "admin-analytics", label: "Statistiques", icon: BarChart3, groupe: "Réglages", visible: canSee("saison"), render: () => (
+      <>
+        <div className="space-y-4">
                 <StatsAdhesions totals={totals} />
                 <StatsVisites analyticsDaily={db.analyticsDaily} />
                 {adminEmail && adminCode && <LockedAccounts adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />}
               </div>
-            </CollapsibleAdminSection>
-          )}
-
-          <CollapsibleAdminSection id="admin-sauvegarde" label="Sauvegarde & export" icon={<DatabaseBackup className="w-5 h-5" />} color="from-sky-500 to-blue-600">
-          <div className="glass p-4 md:p-6">
+      </>
+    ) },
+    { id: "admin-sauvegarde", label: "Sauvegarde & export", icon: DatabaseBackup, groupe: "Réglages", visible: true, render: () => (
+      <>
+        <div className="glass p-4 md:p-6">
             <h3 className="font-display text-lg md:text-xl tracking-wider text-slate-800 mb-3">💾 Sauvegarde &amp; export</h3>
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
               <button onClick={exportCSV} className="btn-primary !bg-gradient-to-r !from-purple-500 !to-fuchsia-500 !text-xs md:!text-sm">
@@ -446,104 +458,168 @@ export default function AdminPanel({
               </div>
             )}
           </div>
-          </CollapsibleAdminSection>
+      </>
+    ) },
+    { id: "admin-notes", label: "Bloc-notes partagé", icon: FileText, groupe: "Réglages", visible: true, render: () => (
+      <>
+        <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
+      </>
+    ) },
+    { id: "admin-journal", label: "Journal (privé)", icon: Eye, groupe: "Réglages", visible: !!db.adminJournal, render: () => (
+      <>
+        <JournalAdmin db={db} />
+      </>
+    ) },
+    { id: "admin-guide", label: "Guide admin", icon: LifeBuoy, groupe: "Réglages", visible: true, render: () => (
+      <>
+        <GuideAdmin />
+      </>
+    ) },
+  ].filter((x) => x.visible);
+  const courante = SECTIONS.find((x) => x.id === section) || SECTIONS[0];
+  const GROUPES = ["", "Adhérents", "Tournois", "Communication", "Trésorerie", "Réglages"];
 
-          <CollapsibleAdminSection id="admin-helloasso" label="HelloAsso · QR code" icon={<QrCode className="w-5 h-5" />} color="from-green-500 to-emerald-500">
-            <HelloAssoQR helloassoPageUrl={db.clubConfig?.helloassoUrls?.page} />
-          </CollapsibleAdminSection>
+  const navigation = (
+    <nav className="flex-1 overflow-y-auto py-3 px-3 space-y-4">
+      {GROUPES.map((g) => {
+        const items = SECTIONS.filter((x) => x.groupe === g);
+        if (items.length === 0) return null;
+        return (
+          <div key={g || "accueil"}>
+            {g && <p className="px-3 mb-1 text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">{g}</p>}
+            <ul className="space-y-0.5">
+              {items.map((it) => {
+                const Icone = it.icon;
+                const actif = it.id === courante.id;
+                return (
+                  <li key={it.id}>
+                    <button
+                      onClick={() => aller(it.id)}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-left transition ${actif ? "bg-white text-[#1e3a5f] font-semibold shadow" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                    >
+                      <Icone className="w-4 h-4 shrink-0" />
+                      <span className="flex-1 truncate">{it.label}</span>
+                      {!!it.badge && <span className="min-w-[20px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center">{it.badge > 99 ? "99+" : it.badge}</span>}
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+          </div>
+        );
+      })}
+    </nav>
+  );
 
-          <CollapsibleAdminSection id="admin-notes" label="Bloc-notes partagé" icon={<FileText className="w-5 h-5" />} color="from-yellow-500 to-amber-500">
-            <AdminNotes db={db} onPersist={safePersist} adminEmail={adminEmail} readOnly={readOnly} />
-          </CollapsibleAdminSection>
+  const enteteMenu = (
+    <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10">
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img src="/logo.png" alt="" className="w-10 h-10 rounded-xl bg-white/10 p-1" />
+      <div className="min-w-0">
+        <p className="font-bold tracking-wider">SACCB</p>
+        <p className="text-[11px] text-white/50 truncate">{adminEmail || "Administration"}</p>
+      </div>
+    </div>
+  );
 
-          {canSee("actualites") && (
-            <CollapsibleAdminSection id="admin-actualites" label="Actualités" icon={<Newspaper className="w-5 h-5" />} color="from-rose-500 to-red-500">
-              <ActualitesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("actualites")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("engagement") && (
-            <CollapsibleAdminSection id="admin-engagement" label="Sondages & AG" icon={<MessageSquare className="w-5 h-5" />} color="from-violet-500 to-purple-500">
-              <EngagementAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("engagement")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("engagement") && (
-            <CollapsibleAdminSection id="admin-tshirts" label="T-shirts" icon={<Shirt className="w-5 h-5" />} color="from-amber-500 to-orange-500">
-              <TshirtAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onPersist={safePersist} onRefresh={onRefresh} readOnly={!canEdit("engagement")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("engagement") && (
-            <CollapsibleAdminSection id="admin-faq" label="FAQ adhérents" icon={<HelpCircle className="w-5 h-5" />} color="from-blue-500 to-indigo-500">
-              <FaqAdmin db={db} onPersist={safePersist} readOnly={!canEdit("engagement")} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
-            </CollapsibleAdminSection>
-          )}
-
-          {/* 📖 Guide admin — toujours accessible */}
-          {/* 🕵️ Journal des actions : le serveur ne l'envoie qu'au propriétaire du site */}
-          {db.adminJournal && (
-            <CollapsibleAdminSection id="admin-journal" label="Journal des actions (privé)" icon={<Eye className="w-5 h-5" />} color="from-slate-600 to-slate-800">
-              <JournalAdmin db={db} />
-            </CollapsibleAdminSection>
-          )}
-
-          <CollapsibleAdminSection id="admin-guide" label="Guide admin" icon={<BookOpen className="w-5 h-5" />} color="from-indigo-500 to-purple-500">
-            <GuideAdmin />
-          </CollapsibleAdminSection>
-
-          {canSee("rules") && (
-            <CollapsibleAdminSection id="admin-rules" label="Règlement intérieur" icon={<BookOpen className="w-5 h-5" />} color="from-slate-500 to-slate-700">
-              <RulesAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("rules")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("emailing") && (
-            <CollapsibleAdminSection
-              id="admin-messages"
-              label="Messages reçus"
-              icon={<Inbox className="w-5 h-5" />}
-              color="from-blue-500 to-indigo-500"
-              badge={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
-            >
-              <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("emailing") && (
-            <CollapsibleAdminSection id="admin-emailing" label="Envoyer un mail" icon={<Mail className="w-5 h-5" />} color="from-emerald-500 to-teal-500">
-              <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("bureau") && (
-            <CollapsibleAdminSection id="admin-bureau" label="Bureau" icon={<Users className="w-5 h-5" />} color="from-indigo-500 to-purple-500">
-              <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("tournois") && (
-            <CollapsibleAdminSection id="admin-tournois" label="Tournois" icon={<Trophy className="w-5 h-5" />} color="from-amber-500 to-orange-500">
-              <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("tournois") && (
-            <CollapsibleAdminSection id="admin-interclubs" label="Tournois inter-clubs" icon={<Trophy className="w-5 h-5" />} color="from-emerald-500 to-teal-600">
-              <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} onRefresh={onRefresh} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("inscriptions") && (
-            <CollapsibleAdminSection id="admin-inscriptions" label="Inscriptions" icon={<Users className="w-5 h-5" />} color="from-purple-500 to-pink-500">
-              <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
-            </CollapsibleAdminSection>
-          )}
-          {canSee("membres") && (
-            <CollapsibleAdminSection id="admin-membres" label="Adhérents" icon={<Users className="w-5 h-5" />} color="from-cyan-500 to-blue-500">
-              <MembresAdmin
-                db={db}
-                onPersist={safePersist}
-                onEdit={setEditMembre}
-                onRecu={setRecuMembre}
-                adminEmail={adminEmail}
-                adminCode={adminCode}
-                readOnly={!canEdit("membres")}
-              />
-            </CollapsibleAdminSection>
-          )}
+  return (
+    <div className="admin-shell fixed inset-0 z-[2000] bg-[#f1f5f9] flex">
+      {/* ── Menu latéral (ordinateur) ── */}
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-gradient-to-b from-[#0f2440] to-[#1e3a5f] text-white">
+        {enteteMenu}
+        {navigation}
+        <div className="p-3 border-t border-white/10">
+          <button onClick={onClose} className="w-full flex items-center gap-2 px-3 py-2 rounded-xl text-sm text-white/80 hover:bg-white/10"><X className="w-4 h-4" /> Quitter l&apos;admin</button>
         </div>
+      </aside>
+
+      {/* ── Menu tiroir (téléphone) ── */}
+      {menuOuvert && (
+        <div className="lg:hidden fixed inset-0 z-[2050] bg-black/50" onClick={() => setMenuOuvert(false)}>
+          <aside className="w-72 max-w-[85vw] h-full flex flex-col bg-gradient-to-b from-[#0f2440] to-[#1e3a5f] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            {enteteMenu}
+            {navigation}
+          </aside>
+        </div>
+      )}
+
+      <div className="flex-1 min-w-0 flex flex-col">
+        {/* ── Barre du haut ── */}
+        <header className="shrink-0 bg-white border-b border-slate-200 px-3 md:px-6 py-3 flex items-center gap-2">
+          <button onClick={() => setMenuOuvert(true)} className="lg:hidden p-2 rounded-xl hover:bg-slate-100 text-slate-700" aria-label="Menu">
+            <Menu className="w-5 h-5" />
+          </button>
+          <div className="flex-1 min-w-0">
+            {courante.groupe && <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold">{courante.groupe}</p>}
+            <h2 className="text-lg md:text-xl font-bold text-slate-800 truncate">{courante.label}</h2>
+          </div>
+          <GlobalSearch db={db} />
+          <button
+            onClick={manualRefresh}
+            disabled={refreshing}
+            className="p-2 rounded-xl hover:bg-slate-100 text-slate-600"
+            title={`Actualiser (dernière mise à jour : ${new Date(lastRefresh).toLocaleTimeString("fr-FR")})`}
+          >
+            <RefreshCw className={`w-5 h-5 ${refreshing ? "animate-spin" : ""}`} />
+          </button>
+          <button onClick={onClose} className="lg:hidden p-2 rounded-xl hover:bg-red-50 text-red-600" title="Quitter l'admin">
+            <X className="w-5 h-5" />
+          </button>
+        </header>
+
+        {/* ── Contenu de la page ── */}
+        <main
+          ref={scrollContainerRef}
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+          style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}
+        >
+          <div className="max-w-5xl mx-auto p-3 md:p-6 pb-24 md:pb-10 space-y-4">
+            {readOnly && (
+              <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-center gap-2">
+                <Eye className="w-4 h-4 text-amber-600 shrink-0" />
+                <p className="text-sm text-amber-700 font-medium">Mode lecture seule — les modifications ne sont pas autorisées.</p>
+              </div>
+            )}
+
+            {/* 🔧 Bandeau mode maintenance */}
+            {db.maintenanceMode && (
+              <div className="bg-red-50 border-2 border-red-400 rounded-xl px-4 py-3 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <span className="text-2xl">🔧</span>
+                  <div>
+                    <p className="text-sm text-red-700 font-bold uppercase tracking-wide">Site en maintenance</p>
+                    <p className="text-xs text-red-600">Les visiteurs ne peuvent pas accéder au site. Pense à désactiver le mode maintenance quand tu as terminé.</p>
+                  </div>
+                </div>
+                {!readOnly && (
+                  <button
+                    onClick={async () => {
+                      if (!confirm("Désactiver le mode maintenance et rendre le site accessible ?")) return;
+                      await safePersist({ ...db, maintenanceMode: false });
+                    }}
+                    className="shrink-0 bg-red-600 hover:bg-red-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition"
+                  >
+                    Désactiver
+                  </button>
+                )}
+              </div>
+            )}
+
+            {/* 🕐 Indicateur d'expiration de session */}
+            <SessionExpiry />
+
+            {permissions !== undefined && permissions.length === 0 && (
+              <div className="glass p-6 text-center">
+                <p className="text-slate-700 font-semibold mb-2">🔒 Aucun accès configuré</p>
+                <p className="text-sm text-slate-500">
+                  Votre compte admin n&apos;a accès à aucune section. Contactez le bureau de l’association pour obtenir des permissions.
+                </p>
+              </div>
+            )}
+
+            <div key={courante.id}>{courante.render()}</div>
+          </div>
+        </main>
       </div>
 
       {recuMembre && <RecuModal membre={recuMembre} db={db} onClose={() => setRecuMembre(null)} />}
@@ -587,145 +663,6 @@ export default function AdminPanel({
           <ChevronUp className="w-6 h-6" />
         </button>
       )}
-    </div>
-  );
-}
-
-// 🚀 Barre de navigation rapide en haut de l'admin (smooth scroll vers les sections)
-function QuickNav({
-  unreadMessages = 0,
-  canSee,
-  journalVisible,
-}: {
-  unreadMessages?: number;
-  canSee: (section: string) => boolean;
-  journalVisible?: boolean;
-}) {
-  function scrollTo(id: string) {
-    const el = document.getElementById(id);
-    if (!el) return;
-    // 📂 Demande à la section repliable de s'ouvrir avant le scroll, pour que
-    // l'utilisateur arrive sur du contenu visible et pas sur un en-tête fermé.
-    el.dispatchEvent(new CustomEvent("admin-open"));
-    setTimeout(() => el.scrollIntoView({ behavior: "smooth", block: "start" }), 50);
-  }
-  // permission = key dans ADMIN_SECTIONS (cf types.ts). undefined = toujours visible.
-  const allItems: { id: string; label: string; icon: React.ReactNode; color: string; badge?: number; permission?: string }[] = [
-    { id: "admin-membres", label: "Adhérents", icon: <Users className="w-4 h-4" />, color: "from-cyan-500 to-blue-500", permission: "membres" },
-    { id: "admin-messages", label: "Messages", icon: <Inbox className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", badge: unreadMessages || undefined, permission: "emailing" },
-    { id: "admin-emailing", label: "Envoyer un mail", icon: <Mail className="w-4 h-4" />, color: "from-emerald-500 to-teal-500", permission: "emailing" },
-    { id: "admin-tournois", label: "Tournois", icon: <Trophy className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "tournois" },
-    { id: "admin-interclubs", label: "Inter-clubs", icon: <Trophy className="w-4 h-4" />, color: "from-emerald-500 to-teal-600", permission: "tournois" },
-    { id: "admin-inscriptions", label: "Inscriptions", icon: <Users className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "inscriptions" },
-    { id: "admin-comptabilite", label: "Comptabilité", icon: <Receipt className="w-4 h-4" />, color: "from-green-500 to-emerald-500", permission: "comptabilite" },
-    { id: "admin-actualites", label: "Actualités", icon: <Newspaper className="w-4 h-4" />, color: "from-rose-500 to-red-500", permission: "actualites" },
-    { id: "admin-engagement", label: "Sondages & AG", icon: <MessageSquare className="w-4 h-4" />, color: "from-violet-500 to-purple-500", permission: "engagement" },
-    { id: "admin-tshirts", label: "T-shirts", icon: <Shirt className="w-4 h-4" />, color: "from-amber-500 to-orange-500", permission: "engagement" },
-    { id: "admin-bureau", label: "Bureau", icon: <Users className="w-4 h-4" />, color: "from-indigo-500 to-purple-500", permission: "bureau" },
-    { id: "admin-rules", label: "Règlement", icon: <BookOpen className="w-4 h-4" />, color: "from-slate-500 to-slate-700", permission: "rules" },
-    { id: "admin-saison", label: "Saison", icon: <CalendarCog className="w-4 h-4" />, color: "from-indigo-500 to-violet-500", permission: "saison" },
-    { id: "admin-analytics", label: "Statistiques", icon: <BarChart3 className="w-4 h-4" />, color: "from-purple-500 to-pink-500", permission: "saison" },
-    { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
-    { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
-    { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
-    ...(journalVisible ? [{ id: "admin-journal", label: "Journal (privé)", icon: <Eye className="w-4 h-4" />, color: "from-slate-600 to-slate-800" }] : []),
-  ];
-  const items = allItems.filter((it) => !it.permission || canSee(it.permission));
-  return (
-    <div className="glass p-3 md:p-4 mb-4">
-      <p className="text-xs uppercase tracking-widest text-slate-500 font-semibold mb-3 px-1">
-        🚀 Accès rapide
-      </p>
-      <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 lg:grid-cols-7 gap-2">
-        {items.map((it) => (
-          <button
-            key={it.id}
-            onClick={() => scrollTo(it.id)}
-            className={`relative flex flex-col items-center justify-center gap-1.5 p-2.5 rounded-xl bg-gradient-to-br ${it.color} text-white shadow-sm hover:shadow-md hover:-translate-y-0.5 transition`}
-            title={it.label}
-          >
-            {it.icon}
-            <span className="text-[10px] font-semibold leading-tight text-center line-clamp-2">
-              {it.label}
-            </span>
-            {it.badge !== undefined && it.badge > 0 && (
-              <span className="absolute -top-1.5 -right-1.5 min-w-[20px] h-5 px-1 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center shadow border border-white">
-                {it.badge > 99 ? "99+" : it.badge}
-              </span>
-            )}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-// 📂 Section repliable utilisée pour chaque grosse section de l'admin.
-// Par défaut fermée. Cliquer sur l'en-tête déplie/replie. Écoute aussi un
-// custom event `admin-open` dispatché par l'accès rapide pour s'ouvrir
-// automatiquement quand l'utilisateur clique sur un carré du menu en haut.
-function CollapsibleAdminSection({
-  id,
-  label,
-  icon,
-  color,
-  badge,
-  children,
-}: {
-  id: string;
-  label: string;
-  icon: React.ReactNode;
-  color: string;
-  badge?: number;
-  children: React.ReactNode;
-}) {
-  const [open, setOpen] = useState(false);
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    const handler = () => setOpen(true);
-    el.addEventListener("admin-open", handler);
-    return () => el.removeEventListener("admin-open", handler);
-  }, []);
-  return (
-    <div id={id} ref={ref} className="lg:col-span-2 scroll-mt-24">
-      <button
-        onClick={() => setOpen((v) => !v)}
-        className={`w-full glass p-3 md:p-4 flex items-center justify-between gap-3 hover:shadow-md transition ${open ? "rounded-b-none" : ""}`}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${color} flex items-center justify-center text-white shadow-sm shrink-0`}>
-            {icon}
-          </div>
-          <span className="text-base md:text-lg font-display tracking-wider text-slate-800 truncate">{label}</span>
-          {badge !== undefined && badge > 0 && (
-            <span className="ml-2 min-w-[22px] h-5 px-1.5 rounded-full bg-red-500 text-white text-[11px] font-bold flex items-center justify-center shadow-sm shrink-0">
-              {badge > 99 ? "99+" : badge}
-            </span>
-          )}
-        </div>
-        {open ? <ChevronUp className="w-5 h-5 text-slate-500 shrink-0" /> : <ChevronDown className="w-5 h-5 text-slate-500 shrink-0" />}
-      </button>
-      {open && <div className="mt-3">{children}</div>}
-    </div>
-  );
-}
-
-// 🏷️ Séparateur de groupe affiché entre les sections de l'admin.
-// Rendu en pleine largeur (col-span-2) avec un fond dégradé léger pour
-// matérialiser le passage d'un thème à un autre quand on scrolle.
-function SectionDivider({ emoji, title }: { emoji: string; title: string }) {
-  return (
-    <div className="lg:col-span-2 mt-2 mb-1">
-      <div className="flex items-center gap-3">
-        <div className="flex-1 h-px bg-gradient-to-r from-transparent via-slate-300 to-slate-300" />
-        <div className="flex items-center gap-2 px-4 py-1.5 rounded-full bg-gradient-to-r from-slate-100 to-slate-50 border border-slate-200 shadow-sm">
-          <span className="text-lg leading-none">{emoji}</span>
-          <span className="text-xs uppercase tracking-widest font-bold text-slate-700">{title}</span>
-        </div>
-        <div className="flex-1 h-px bg-gradient-to-l from-transparent via-slate-300 to-slate-300" />
-      </div>
     </div>
   );
 }
