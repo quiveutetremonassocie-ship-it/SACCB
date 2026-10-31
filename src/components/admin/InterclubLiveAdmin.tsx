@@ -519,9 +519,13 @@ export default function InterclubLiveAdmin({
             )}
 
             {!readOnly && (
-              <div className="text-center pb-6">
-                <button onClick={reinitialiser} className="text-xs text-red-300 hover:text-red-200 inline-flex items-center gap-1">
-                  <Trash2 className="w-3 h-3" /> Réinitialiser le jour J
+              <div className="bg-white/10 border border-white/20 rounded-2xl p-4 text-white flex flex-wrap items-center gap-3">
+                <div className="flex-1 min-w-[220px]">
+                  <p className="font-bold text-sm">⏹ Arrêter le jour J (fausse manip, tout recommencer)</p>
+                  <p className="text-xs text-white/70">Efface les poules et tous les scores. Les binômes inscrits sont conservés et les inscriptions se rouvrent : tu pourras relancer quand tu veux.</p>
+                </div>
+                <button onClick={reinitialiser} className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 inline-flex items-center gap-1.5">
+                  <Trash2 className="w-4 h-4" /> Arrêter et réinitialiser
                 </button>
               </div>
             )}
