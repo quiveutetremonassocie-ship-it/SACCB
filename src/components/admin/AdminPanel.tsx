@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, ChevronDown, Send, HelpCircle, Shirt, BarChart3, LayoutDashboard, Menu, ClipboardList, Swords, LifeBuoy } from "lucide-react";
+import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, RefreshCw, DatabaseBackup, Upload, Users, Inbox, Mail, Trophy, Receipt, Newspaper, MessageSquare, BookOpen, CalendarCog, ChevronUp, ChevronDown, Send, HelpCircle, Shirt, BarChart3, LayoutDashboard, Menu, ClipboardList, Swords, LifeBuoy, CalendarDays } from "lucide-react";
 import AdminAccueil from "./AdminAccueil";
 // FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
 import { DB, Membre, getMontantMembre } from "@/lib/types";
@@ -28,6 +28,8 @@ import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
 import MessagesAdmin from "./MessagesAdmin";
 import JournalAdmin from "./JournalAdmin";
+import Agenda from "../Agenda";
+import { evenementsAgenda } from "@/lib/agenda";
 import RecuModal from "./RecuModal";
 import EmargementModal from "./EmargementModal";
 import EditMembreModal from "./EditMembreModal";
@@ -334,6 +336,17 @@ export default function AdminPanel({
       <>
         <EmailingAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} readOnly={!canEdit("emailing")} />
       </>
+    ) },
+    { id: "admin-agenda", label: "Agenda", icon: CalendarDays, groupe: "Communication", visible: canSee("actualites"), render: () => (
+      <div className="space-y-3">
+        <p className="text-sm text-slate-600">Les tournois et tournois inter-clubs s&apos;ajoutent tout seuls (à la date du tournoi). Clique sur un jour pour ajouter un autre événement : soirée, AG, stage, fermeture de la salle…</p>
+        <Agenda
+          sansTitre
+          evenements={evenementsAgenda(db)}
+          clubEvents={db.agendaEvents || []}
+          onChange={canEdit("actualites") ? (next) => safePersist({ ...db, agendaEvents: next }) : undefined}
+        />
+      </div>
     ) },
     { id: "admin-actualites", label: "Actualités", icon: Newspaper, groupe: "Communication", visible: canSee("actualites"), render: () => (
       <>

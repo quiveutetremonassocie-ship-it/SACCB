@@ -19,7 +19,7 @@ export default function Navbar({
   onAdmin?: () => void;
   onAdminLogin?: () => void;
   // Rubriques désactivées dans l'admin (false) : leur lien disparaît du menu
-  rubriques?: Partial<Record<"presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription", boolean>>;
+  rubriques?: Partial<Record<"presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription" | "agenda", boolean>>;
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -35,6 +35,7 @@ export default function Navbar({
   const allLinks: { href: string; label: string; hideIfMember?: boolean; rubrique?: keyof typeof rubriques }[] = [
     { href: "/#presentation", label: "L'Asso", rubrique: "presentation" },
     { href: "/actualites", label: "Actus", rubrique: "actualites" },
+    { href: "/#agenda", label: "Agenda", rubrique: "agenda" },
     { href: "/#horaires", label: "Horaires", rubrique: "horaires" },
     { href: "/tournois", label: "Tournois", rubrique: "tournois" },
     { href: "/#palmares", label: "Palmarès", rubrique: "palmares" },

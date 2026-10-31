@@ -1545,6 +1545,11 @@ Deno.serve(async (req) => {
       quota: d.quota ?? 65,
       config_tournois: d.config_tournois ?? [],
       inscrits_tournoi: d.inscrits_tournoi ?? [],
+      // 📅 Agenda : événements du bureau + dates des tournois inter-clubs / internes (juste nom, date, salle)
+      agendaEvents: Array.isArray(d.agendaEvents) ? d.agendaEvents : [],
+      agendaTournois: ((d.interclubs || []) as Record<string, unknown>[])
+        .filter((t) => t.interne !== true || t.visible === true)
+        .map((t) => ({ id: t.id, name: t.name, date: t.date, interne: t.interne === true, salleNom: t.salleNom, salleAdresse: t.salleAdresse })),
       actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private).map(actuSansPersonnes),
       archives: d.archives ?? [],
       // 🔒 Le lien WhatsApp n'est plus public : seulement un indicateur. Le lien est

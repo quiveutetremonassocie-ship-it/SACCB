@@ -9,6 +9,8 @@ import ResetCodeLinkModal from "./modals/ResetCodeLinkModal";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
 import AccueilHero from "./AccueilHero";
+import Agenda from "./Agenda";
+import { evenementsAgenda } from "@/lib/agenda";
 import Presentation from "./Presentation";
 import Actualites from "./Actualites";
 import Horaires from "./Horaires";
@@ -52,11 +54,12 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
   // 📄 Fiche adhérent réelle (nom, type, montant payé) pour le reçu d'adhésion
   // 👁 Rubriques activées/désactivées dans l'admin : une rubrique cachée n'a plus de lien nulle part
-  const visibleRubrique = (k: "presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription") =>
+  const visibleRubrique = (k: "presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription" | "agenda") =>
     db.presentationMode === true || db.sectionsVisible?.[k] !== false;
   const rubriques = {
     presentation: visibleRubrique("presentation"), actualites: visibleRubrique("actualites"), horaires: visibleRubrique("horaires"),
     tournois: visibleRubrique("tournois"), palmares: visibleRubrique("palmares"), inscription: visibleRubrique("inscription"),
+    agenda: visibleRubrique("agenda"),
   };
 
   // 🏸 Tournoi du club (interne) à signaler à l'adhérent connecté : en cours où il joue, ou ouvert aux inscriptions
@@ -513,6 +516,16 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {/* Mode présentation : toutes les sections visibles. Sinon on respecte les toggles. */}
         {mode === "full" && (db.presentationMode || db.sectionsVisible?.presentation !== false) && (
           <FadeInSection><Presentation /></FadeInSection>
+        )}
+
+        {/* 📅 Agenda du club : tournois (automatique) + événements ajoutés par le bureau */}
+        {mode === "full" && rubriques.agenda && (
+          <FadeInSection>
+            <Agenda
+              evenements={evenementsAgenda(db)}
+              onAdmin={isMemberAdmin ? () => { try { localStorage.setItem("saccb_admin_section", "admin-agenda"); } catch { /* ignore */ } onReopenAdmin?.(); } : undefined}
+            />
+          </FadeInSection>
         )}
 
         {(mode === "actualites" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.actualites !== false))) && (

@@ -338,6 +338,17 @@ export type InterClubLive = {
   startedAt: string;
 };
 
+/** 📅 Événement ajouté à la main dans l'agenda du club (soirée, AG, stage…) */
+export type AgendaEvent = {
+  id: string;
+  titre: string;
+  date: string; // YYYY-MM-DD
+  heureDebut?: string; // HH:MM
+  heureFin?: string;
+  lieu?: string;
+  description?: string;
+};
+
 export type DB = {
   membres: Membre[];
   factures: Facture[];
@@ -375,6 +386,7 @@ export type DB = {
   tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
   tshirtPaymentUrl?: string; // 💳 lien HelloAsso pour payer le t-shirt en ligne (facultatif)
   tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
+  agendaEvents?: AgendaEvent[]; // 📅 événements ajoutés à la main dans l'agenda
   tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)
@@ -426,6 +438,7 @@ export type DB = {
     rules?: boolean;
     presentation?: boolean;
     inscription?: boolean;
+    agenda?: boolean;
   };
   // 📊 Analytics : compteurs journaliers (limite 90 jours, plus anciens auto-supprimés)
   analyticsDaily?: AnalyticsDay[];
