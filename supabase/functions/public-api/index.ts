@@ -312,6 +312,8 @@ function vueInterne(t: Record<string, unknown>, membreId: string) {
     deroulement: t.deroulement || "", salleNom: t.salleNom || "", salleAdresse: t.salleAdresse || "",
     programme: Array.isArray(t.programme) ? t.programme : [],
     ouvert: interneOuvert(t), quota, nbBinomes: binomes.length,
+    // Liste des binômes inscrits (noms seulement), visible des adhérents connectés
+    inscrits: binomes.map((b) => ({ joueur1: b.joueur1, joueur2: b.joueur2, niveau: b.niveau || "" })),
     monBinome: mien ? { id: mien.id, joueur1: mien.joueur1, joueur2: mien.joueur2, niveau: mien.niveau || "" } : null,
     live,
   };

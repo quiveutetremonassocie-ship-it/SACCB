@@ -184,6 +184,7 @@ function CarteTournoi({
 }) {
   const [partenaire, setPartenaire] = useState("");
   const [niveau, setNiveau] = useState(t.niveaux.length === 1 ? t.niveaux[0] : "");
+  const [voirInscrits, setVoirInscrits] = useState(false);
   const live = t.live;
   const complet = t.nbBinomes >= t.quota;
   const statut = live
@@ -203,8 +204,30 @@ function CarteTournoi({
         <p className="text-xs text-white/75 mt-1 flex flex-wrap gap-x-3">
           {t.date && <span className="flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> {dateFr(t.date)}</span>}
           {t.type && <span>{TYPE_LABEL[t.type] || t.type}</span>}
-          <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {t.nbBinomes}/{t.quota} binômes</span>
+          <button onClick={() => setVoirInscrits(!voirInscrits)} className="flex items-center gap-1 underline decoration-dotted underline-offset-2 hover:text-white" title="Voir les binômes inscrits">
+            <Users className="w-3.5 h-3.5" /> {t.nbBinomes}/{t.quota} binômes {voirInscrits ? "▲" : "▼"}
+          </button>
         </p>
+        {voirInscrits && (
+          <div className="mt-3 rounded-xl bg-white/10 border border-white/15 p-2 max-h-64 overflow-y-auto">
+            {(t.inscrits || []).length === 0 ? (
+              <p className="text-xs text-white/70 px-2 py-1">Aucun binôme inscrit pour l&apos;instant.</p>
+            ) : (
+              <ol className="space-y-1">
+                {(t.inscrits || []).map((b, i) => {
+                  const moi = t.monBinome && b.joueur1 === t.monBinome.joueur1 && b.joueur2 === t.monBinome.joueur2;
+                  return (
+                    <li key={i} className={`flex items-center gap-2 text-sm px-2 py-1 rounded-lg ${moi ? "bg-emerald-400/25" : ""}`}>
+                      <span className="w-5 text-[11px] text-white/50">{i + 1}.</span>
+                      <span className="flex-1 min-w-0 truncate">{b.joueur1} / {b.joueur2}{moi ? " (toi)" : ""}</span>
+                      {b.niveau && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/15">{b.niveau}</span>}
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </div>
+        )}
       </div>
 
       <div className="p-4 space-y-4">

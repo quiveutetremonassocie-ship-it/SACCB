@@ -1109,6 +1109,7 @@ export type TournoiInterneVue = {
   deroulement: string; salleNom: string; salleAdresse: string;
   programme: import("./types").PhaseProgramme[];
   ouvert: boolean; quota: number; nbBinomes: number;
+  inscrits?: { joueur1: string; joueur2: string; niveau: string }[];
   monBinome: { id: string; joueur1: string; joueur2: string; niveau: string } | null;
   live?: LiveVue;
 };
