@@ -9,7 +9,7 @@ import InterclubLiveAdmin from "./InterclubLiveAdmin";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 import ProgrammeEditor from "./ProgrammeEditor";
 import BinomesInternes from "./BinomesInternes";
-import { PROGRAMME_DEFAUT } from "@/lib/interclubLive";
+import { PROGRAMME_DEFAUT, classementFinal, equipesDuTournoi } from "@/lib/interclubLive";
 
 const SITE = "https://saccb.fr";
 
@@ -199,6 +199,43 @@ export default function InterclubsAdmin({
     } finally {
       setBusy(false);
     }
+  }
+
+  // 🏆 Jour J enregistré ; à la fin du tournoi, le classement part au palmarès du club.
+  // Tournoi interne : tout le monde. Inter-clubs : seulement les binômes du SACCB.
+  async function enregistrerJourJ(t: InterClub, live: InterClub["live"]) {
+    const idPalmares = "ic-" + t.id;
+    const avant = t.live?.termine === true;
+    const apres = live?.termine === true;
+    let config = db.config_tournois || [];
+    let inscrits = db.inscrits_tournoi || [];
+    if (avant || apres) {
+      // On repart propre : l'ancienne version de ce tournoi est retirée du palmarès
+      config = config.filter((c) => c.id !== idPalmares);
+      inscrits = inscrits.filter((i) => i.tournoiId !== idPalmares);
+    }
+    if (apres && live) {
+      const derniere = live.phases[live.phases.length - 1];
+      const ordre = derniere ? classementFinal(derniere) : [];
+      const eq = equipesDuTournoi(t);
+      const duClub = (club: string) => t.interne === true || /saccb|sainte[\s-]?adresse/i.test(club);
+      const dateFr = /^\d{4}-\d{2}-\d{2}$/.test(t.date) ? t.date.split("-").reverse().join("/") : t.date;
+      config = [...config, {
+        id: idPalmares, name: t.name, date: dateFr, type: t.type || null, saison: `${db.y1}-${db.y2}`, closed: true,
+        description: t.interne ? "Tournoi interne du club" : "Tournoi inter-clubs organisé par le SACCB",
+      }];
+      inscrits = [...inscrits, ...ordre.flatMap((id, i) => {
+        const e = eq[id];
+        if (!e || !duClub(e.club)) return [];
+        return [{ id: `${idPalmares}-${id}`, tournoiId: idPalmares, joueurs: `${e.joueur1} / ${e.joueur2}`, resultat: `${i + 1}/${ordre.length}` }];
+      })];
+    }
+    await onPersist({
+      ...db,
+      interclubs: list.map((x) => (x.id === t.id ? { ...x, live } : x)),
+      config_tournois: config,
+      inscrits_tournoi: inscrits,
+    });
   }
 
   async function creer() {
@@ -739,9 +776,7 @@ export default function InterclubsAdmin({
           readOnly={readOnly}
           onRefresh={onRefresh}
           onClose={() => setJourJ(null)}
-          onSave={async (live) => {
-            await persist(list.map((x) => (x.id === tJourJ.id ? { ...x, live } : x)));
-          }}
+          onSave={(live) => enregistrerJourJ(tJourJ, live)}
         />
       )}
     </div>
