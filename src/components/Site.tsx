@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { DB, QUOTA_DEFAULT, getEffectiveConfig, getEffectiveHoraires, getEffectivePrix } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView, membreInterne } from "@/lib/db";
+import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView, membreInterne, type AgendaAdherent } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import ResetCodeLinkModal from "./modals/ResetCodeLinkModal";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
@@ -49,6 +49,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [codeResetLink, setCodeResetLink] = useState<{ token: string; email: string } | null>(null);
   // 💬 Lien WhatsApp : plus public, récupéré uniquement pour une session adhérent payé (ou admin)
   const [memberWhatsapp, setMemberWhatsapp] = useState<string | undefined>(undefined);
+  // 📅 Agenda : réservé aux adhérents connectés (envoyé par le serveur avec la session)
+  const [memberAgenda, setMemberAgenda] = useState<AgendaAdherent | undefined>(undefined);
   // 🎓 Étudiant sans justificatif pour la saison en cours
   const [justificatifManquant, setJustificatifManquant] = useState(false);
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
@@ -59,7 +61,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const rubriques = {
     presentation: visibleRubrique("presentation"), actualites: visibleRubrique("actualites"), horaires: visibleRubrique("horaires"),
     tournois: visibleRubrique("tournois"), palmares: visibleRubrique("palmares"), inscription: visibleRubrique("inscription"),
-    agenda: visibleRubrique("agenda"),
+    agenda: visibleRubrique("agenda") && !!memberSession,
   };
 
   // 🏸 Tournoi du club (interne) à signaler à l'adhérent connecté : en cours où il joue, ou ouvert aux inscriptions
@@ -90,6 +92,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     checkMemberSession(memberSession.email, memberSession.membreId, adminSessionCode).then((res) => {
       if (cancelled) return;
       setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
+      setMemberAgenda(res.valid ? res.agenda : undefined);
       setJustificatifManquant(res.valid && res.justificatifManquant === true);
       setJustificatifInfo(res.valid ? res.justificatif : undefined);
       setMemberAdherent(res.valid ? res.adherent : undefined);
@@ -519,10 +522,10 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         )}
 
         {/* 📅 Agenda du club : tournois (automatique) + événements ajoutés par le bureau */}
-        {mode === "full" && rubriques.agenda && (
+        {mode === "full" && rubriques.agenda && memberAgenda && (
           <FadeInSection>
             <Agenda
-              evenements={evenementsAgenda(db)}
+              evenements={evenementsAgenda({ config_tournois: db.config_tournois, agendaEvents: memberAgenda.events, agendaTournois: memberAgenda.tournois })}
               onAdmin={isMemberAdmin ? () => { try { localStorage.setItem("saccb_admin_section", "admin-agenda"); } catch { /* ignore */ } onReopenAdmin?.(); } : undefined}
             />
           </FadeInSection>

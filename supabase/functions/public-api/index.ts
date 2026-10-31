@@ -1545,11 +1545,6 @@ Deno.serve(async (req) => {
       quota: d.quota ?? 65,
       config_tournois: d.config_tournois ?? [],
       inscrits_tournoi: d.inscrits_tournoi ?? [],
-      // 📅 Agenda : événements du bureau + dates des tournois inter-clubs / internes (juste nom, date, salle)
-      agendaEvents: Array.isArray(d.agendaEvents) ? d.agendaEvents : [],
-      agendaTournois: ((d.interclubs || []) as Record<string, unknown>[])
-        .filter((t) => t.interne !== true || t.visible === true)
-        .map((t) => ({ id: t.id, name: t.name, date: t.date, interne: t.interne === true, salleNom: t.salleNom, salleAdresse: t.salleAdresse })),
       actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private).map(actuSansPersonnes),
       archives: d.archives ?? [],
       // 🔒 Le lien WhatsApp n'est plus public : seulement un indicateur. Le lien est
@@ -4832,6 +4827,13 @@ Deno.serve(async (req) => {
     // Vérifier si c'est un admin credential (pas un adhérent normal)
     const isAdminCred = adminCredentials.some((c) => String(c.email || "").toLowerCase() === email);
     const whatsappLink = typeof d.whatsappLink === "string" && d.whatsappLink ? d.whatsappLink : undefined;
+    // 📅 Agenda réservé aux adhérents : événements du bureau + dates des tournois inter-clubs / internes
+    const agenda = {
+      events: Array.isArray(d.agendaEvents) ? d.agendaEvents : [],
+      tournois: ((d.interclubs || []) as Record<string, unknown>[])
+        .filter((t) => t.interne !== true || t.visible === true)
+        .map((t) => ({ id: t.id, name: t.name, date: t.date, interne: t.interne === true, salleNom: t.salleNom, salleAdresse: t.salleAdresse })),
+    };
     // 📄 Fiche adhérent (nom, type, montant payé) pour le reçu d'adhésion de l'espace membre
     const adherentInfo = (m: Record<string, unknown> | undefined) =>
       m ? { id: String(m.id || ""), nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : undefined, ok: m.ok === true } : undefined;
@@ -4855,7 +4857,7 @@ Deno.serve(async (req) => {
       }
       if (!fiche) return json({ ok: true });
       const jf = justifInfo(fiche);
-      return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info });
+      return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info, agenda });
     }
 
     // Vérifier si le membre existe encore par email + id
@@ -4875,6 +4877,7 @@ Deno.serve(async (req) => {
       whatsappLink: membre.ok === true ? whatsappLink : undefined,
       justificatifManquant,
       adherent: adherentInfo(membre),
+      agenda,
       // 🎓 État du justificatif pour l'espace membre d'un étudiant (fourni le…)
       justificatif: membre.type === "Etudiant" ? { fourni: justifOk, date: justifOk ? justif?.uploadedAt : undefined, nom: justifOk ? justif?.name : undefined } : undefined,
     });

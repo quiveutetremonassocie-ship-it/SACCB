@@ -13,7 +13,7 @@ export const emptyDB = (): DB => ({
 });
 
 // ─── Données publiques (via Edge Function sécurisée) ───
-export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: number; membreNoms?: string[]; agendaTournois?: { id: string; name: string; date: string; interne?: boolean; salleNom?: string; salleAdresse?: string }[] }> {
+export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: number; membreNoms?: string[] }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
@@ -27,8 +27,6 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     quota: d.quota ?? 65,
     config_tournois: d.config_tournois ?? [],
     inscrits_tournoi: d.inscrits_tournoi ?? [],
-    agendaEvents: d.agendaEvents ?? [],
-    agendaTournois: d.agendaTournois ?? [],
     actualites: d.actualites ?? [],
     archives: d.archives ?? [],
     whatsappEnabled: d.whatsappEnabled === true,
@@ -491,8 +489,14 @@ export async function verifyMembre(
   return result;
 }
 
+/** 📅 Agenda réservé aux adhérents (renvoyé avec la session) */
+export type AgendaAdherent = {
+  events: import("./types").AgendaEvent[];
+  tournois: { id: string; name: string; date: string; interne?: boolean; salleNom?: string; salleAdresse?: string }[];
+};
+
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } }> {
+export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean }; agenda?: AgendaAdherent }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -500,7 +504,7 @@ export async function checkMemberSession(email: string, membreId: string, code?:
       body: JSON.stringify({ action: "check_session", email: email.toLowerCase().trim(), membreId, code: code || undefined }),
     });
     const data = await res.json();
-    return { valid: data.ok === true, paid: data.paid, whatsappLink: typeof data.whatsappLink === "string" ? data.whatsappLink : undefined, justificatifManquant: data.justificatifManquant === true, justificatif: data.justificatif, adherent: data.adherent };
+    return { valid: data.ok === true, paid: data.paid, whatsappLink: typeof data.whatsappLink === "string" ? data.whatsappLink : undefined, justificatifManquant: data.justificatifManquant === true, justificatif: data.justificatif, adherent: data.adherent, agenda: data.agenda };
   } catch {
     return { valid: true }; // En cas d'erreur réseau, on laisse passer pour ne pas bloquer l'accès
   }
