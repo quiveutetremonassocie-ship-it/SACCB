@@ -45,7 +45,11 @@ export default function InterclubLiveAdmin({
   const live = t.live;
   const eqs = useMemo(() => equipesDuTournoi(t), [t]);
   const equipes: EquipesMap = eqs;
-  const clubs = useMemo(() => Object.fromEntries(t.clubs.map((c) => [c.id, c.nom])), [t]);
+  // « Saisi par » : un club (inter-clubs) ou un binôme (tournoi interne)
+  const clubs = useMemo(() => Object.fromEntries([
+    ...t.clubs.map((c) => [c.id, c.nom]),
+    ...t.clubs.flatMap((c) => c.binomes.map((b) => [b.id, `${b.joueur1} / ${b.joueur2}`])),
+  ]), [t]);
   const nbEquipes = Object.keys(eqs).length;
   const [busy, setBusy] = useState(false);
   const [copie, setCopie] = useState<string | null>(null);

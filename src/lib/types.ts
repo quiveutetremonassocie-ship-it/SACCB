@@ -248,6 +248,7 @@ export type InterClubBinome = {
   joueur2: string;
   niveau: string;
   createdAt: string;
+  membres?: string[]; // 🏠 tournoi interne : ids des 2 adhérents du binôme
 };
 
 export type InterClubClub = {
@@ -277,6 +278,7 @@ export type InterClub = {
   clubs: InterClubClub[];
   createdAt: string;
   live?: InterClubLive; // 🏁 Gestion du jour J (poules, scores, classements)
+  interne?: boolean; // 🏠 tournoi entre adhérents du SACCB (pas de clubs invités)
   programme?: PhaseProgramme[]; // 📋 Phases prévues à l'avance (brassage, 2ᵉ tour, finale…) : servent au jour J et au règlement
 };
 

@@ -14,6 +14,8 @@ import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMe
 import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
+import TournoisInternes from "./TournoisInternes";
+import { membreInterne } from "@/lib/db";
 
 export default function MemberPanel({
   session,
@@ -108,6 +110,20 @@ export default function MemberPanel({
   const [recuOpen, setRecuOpen] = useState(false);
   // 🗂 Onglet affiché dans l'espace membre
   const [onglet, setOnglet] = useState<"accueil" | "tournois" | "compte">("accueil");
+  // Code personnel connu (session, onglet ou admin) pour les tournois du club
+  const codePerso = (() => {
+    try { return session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || ""; } catch { return session.memberCode || ""; }
+  })();
+  // 🔴 Un tournoi du club est en cours et j'y joue : on ouvre directement l'onglet « Mes tournois »
+  const [tournoiEnDirect, setTournoiEnDirect] = useState(false);
+  useEffect(() => {
+    if (!codePerso) return;
+    membreInterne("membre_interne", session.email, codePerso).then((r) => {
+      const direct = !!r.tournois?.some((t) => t.monBinome && t.live && !t.live.termine);
+      setTournoiEnDirect(direct);
+      if (direct) setOnglet("tournois");
+    });
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
   const [officialDocsModalOpen, setOfficialDocsModalOpen] = useState(false);
   // 🚪 État : ce membre a-t-il dit "je ne renouvelle pas pour cette saison" ?
@@ -419,6 +435,7 @@ export default function MemberPanel({
               className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${onglet === id ? "bg-white text-[#1e3a5f] shadow" : "text-slate-500 hover:text-slate-700"}`}
             >
               <Icone className="w-4 h-4" /> {label}
+              {id === "tournois" && tournoiEnDirect && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
             </button>
           ))}
         </div>
@@ -694,6 +711,8 @@ export default function MemberPanel({
 
         {onglet === "tournois" && (
           <>
+            {/* 🏠 Tournois du club (entre adhérents) : inscription, direct, saisie de ses scores */}
+            <TournoisInternes email={session.email} codeInitial={codePerso} />
         {/* 📊 Stats perso (uniquement si au moins une participation) */}
         {personalStats.totalAllTime > 0 && (
           <div className="mb-6 bg-gradient-to-br from-blue-50 to-emerald-50 border border-blue-200 rounded-2xl p-4">

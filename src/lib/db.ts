@@ -1102,3 +1102,37 @@ export async function interclubEffacerScore(token: string, code: string, matchId
     return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
   }
 }
+
+// ─── 🏠 Tournois internes (entre adhérents) : vue, inscription, retrait, scores ───
+export type TournoiInterneVue = {
+  id: string; name: string; date: string; type: string; niveaux: string[]; dateLimit: string;
+  deroulement: string; salleNom: string; salleAdresse: string;
+  programme: import("./types").PhaseProgramme[];
+  ouvert: boolean; quota: number; nbBinomes: number;
+  monBinome: { id: string; joueur1: string; joueur2: string; niveau: string } | null;
+  live?: LiveVue;
+};
+export type MembreInterneReponse = {
+  ok: boolean; reason?: string; needCode?: boolean;
+  membreId?: string;
+  adherents?: { id: string; nom: string }[];
+  tournois?: TournoiInterneVue[];
+};
+
+export async function membreInterne(
+  action: "membre_interne" | "membre_interne_inscription" | "membre_interne_retrait" | "membre_interne_score",
+  email: string,
+  code: string,
+  extra: Record<string, unknown> = {}
+): Promise<MembreInterneReponse> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action, email: email.toLowerCase().trim(), code, ...extra }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
+  }
+}

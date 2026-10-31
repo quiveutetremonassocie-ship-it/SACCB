@@ -7,6 +7,7 @@ import { EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import InterclubLiveAdmin from "./InterclubLiveAdmin";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 import ProgrammeEditor from "./ProgrammeEditor";
+import BinomesInternes from "./BinomesInternes";
 import { PROGRAMME_DEFAUT } from "@/lib/interclubLive";
 
 const SITE = "https://saccb.fr";
@@ -144,6 +145,36 @@ export default function InterclubsAdmin({
     setDraft(JSON.parse(JSON.stringify(t)));
   }
 
+  // 🏠 Tournoi interne : entre adhérents du SACCB, sans clubs invités
+  async function creerInterne() {
+    const precedent = list.find((x) => x.sallePhotoUrl) || list[0];
+    const t: InterClub = {
+      id: uid(),
+      name: "Tournoi interne SACCB",
+      date: "",
+      type: "",
+      niveaux: [...INTERCLUB_NIVEAUX],
+      dateLimit: "",
+      deroulement: MODELE_DEROULEMENT,
+      salleNom: precedent?.salleNom || cfg.salleName,
+      salleAdresse: precedent?.salleAdresse || cfg.salleAdresse,
+      sallePhotoUrl: precedent?.sallePhotoUrl,
+      sallePhotoPath: precedent?.sallePhotoPath,
+      programme: PROGRAMME_DEFAUT.map((p) => ({ ...p, format: { ...p.format } })),
+      interne: true,
+      clubs: [{ id: uid(), nom: "SACCB", token: nouveauJeton(), quota: 16, binomes: [] }],
+      createdAt: new Date().toISOString(),
+    };
+    await persist([t, ...list]);
+    setOuvert(t.id);
+    setDraft(JSON.parse(JSON.stringify(t)));
+  }
+
+  // Binômes d'un tournoi interne : enregistrés tout de suite (sans passer par « Enregistrer »)
+  async function enregistrerBinomesInternes(tId: string, binomes: InterClub["clubs"][number]["binomes"]) {
+    await persist(list.map((x) => (x.id !== tId ? x : { ...x, clubs: x.clubs.map((c, i) => (i === 0 ? { ...c, binomes, updatedAt: new Date().toISOString() } : c)) })));
+  }
+
   async function creer() {
     // 🏟 Reprend la salle et la photo du dernier tournoi (modifiables ensuite)
     const precedent = list.find((x) => x.sallePhotoUrl) || list[0];
@@ -279,12 +310,17 @@ export default function InterclubsAdmin({
     <div className="glass p-6 border border-amber-200">
       <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
         <p className="text-sm text-slate-600 max-w-xl">
-          Crée un tournoi, ajoute les clubs invités : chacun reçoit <strong>un lien unique</strong> vers une page où il inscrit
-          ses binômes, dans la limite que tu fixes, jusqu&apos;à la date limite.
+          <strong>Inter-clubs</strong> : ajoute les clubs invités, chacun reçoit <strong>un lien unique</strong> vers une page où il inscrit
+          ses binômes. <strong>Interne</strong> : un tournoi entre adhérents, binômes choisis dans la liste des adhérents, chacun suit et saisit ses scores dans son espace.
         </p>
         {!readOnly && (
           <button onClick={creer} className="btn-primary !px-4 !py-2 !text-xs">
             <Plus className="w-4 h-4" /> Nouveau tournoi inter-clubs
+          </button>
+        )}
+        {!readOnly && (
+          <button onClick={creerInterne} className="btn-primary !px-4 !py-2 !text-xs !bg-gradient-to-r !from-emerald-600 !to-teal-600" title="Tournoi entre adhérents du club : binômes choisis parmi les adhérents, scores saisis depuis l'espace adhérent">
+            <Plus className="w-4 h-4" /> Nouveau tournoi interne
           </button>
         )}
         {!readOnly && (
@@ -308,8 +344,9 @@ export default function InterclubsAdmin({
                   <p className="font-semibold text-slate-800 truncate">{t.name}</p>
                   <p className="text-[11px] text-slate-500 flex flex-wrap gap-x-3">
                     {t.date && <span>📅 {t.date}</span>}
-                    <span>🏟 {t.clubs.length} club{t.clubs.length > 1 ? "s" : ""}</span>
+                    {!t.interne && <span>🏟 {t.clubs.length} club{t.clubs.length > 1 ? "s" : ""}</span>}
                     <span>👥 {nbEquipes}/{nbPlaces} binômes</span>
+                    {t.interne && <span className="text-emerald-700 font-bold">🏠 Interne</span>}
                     {t.closed && <span className="text-red-600 font-semibold">🔒 Fermé</span>}
                     {t.live && !t.live.termine && <span className="text-red-600 font-bold">🔴 En cours</span>}
                     {t.live?.termine && <span className="text-amber-600 font-bold">🏆 Terminé</span>}
@@ -425,6 +462,16 @@ export default function InterclubsAdmin({
                     </div>
                   </div>
 
+                  {d.interne ? (
+                    <BinomesInternes
+                      t={t}
+                      membres={db.membres || []}
+                      quota={d.clubs[0]?.quota ?? 16}
+                      setQuota={(n) => d.clubs[0] && majClub(d.clubs[0].id, { quota: n })}
+                      onSave={(b) => enregistrerBinomesInternes(t.id, b)}
+                      readOnly={readOnly}
+                    />
+                  ) : (<>
                   {/* ── Clubs invités ── */}
                   <div className="border-t border-slate-200 pt-4">
                     <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
@@ -586,6 +633,8 @@ export default function InterclubsAdmin({
                     </div>
                   </div>
 
+                  </>)}
+
                   {/* ── Actions ── */}
                   <div className="flex flex-wrap gap-2 border-t border-slate-200 pt-4">
                     <button
@@ -609,7 +658,7 @@ export default function InterclubsAdmin({
                     <button onClick={() => copier(texteBinomes(t), "liste-" + t.id)} disabled={nbEquipes === 0} className="btn-ghost !px-4 !py-2 !text-xs">
                       {copie === "liste-" + t.id ? <Check className="w-4 h-4" /> : <ClipboardList className="w-4 h-4" />} Copier tous les binômes
                     </button>
-                    <button
+                    {!t.interne && <button
                       onClick={() => {
                         if (modifie(t) && !confirm("Des modifications ne sont pas enregistrées : les QR codes utiliseront les liens et codes déjà enregistrés. Continuer ?")) return;
                         imprimerQrCodes(t);
@@ -619,7 +668,7 @@ export default function InterclubsAdmin({
                       title="Une fiche par club avec QR code + code d'accès (et l'écran géant), à imprimer"
                     >
                       🖨 QR codes à imprimer
-                    </button>
+                    </button>}
                     {!readOnly && (
                       <button onClick={() => basculerFerme(t)} className="btn-ghost !px-4 !py-2 !text-xs">
                         {t.closed ? <Unlock className="w-4 h-4" /> : <Lock className="w-4 h-4" />} {t.closed ? "Rouvrir les inscriptions" : "Fermer les inscriptions"}

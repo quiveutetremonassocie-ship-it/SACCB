@@ -471,7 +471,7 @@ export default function InterclubPage() {
 }
 
 /** 🏸 Les matchs des équipes du club dans la phase en cours, rangés par binôme (menus déroulants) */
-function MesMatchs({
+export function MesMatchs({
   phases, live, clubId, edition, setEdition, envoyer, effacer, contester,
 }: {
   phases: LivePhase[];

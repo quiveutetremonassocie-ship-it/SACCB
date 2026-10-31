@@ -277,6 +277,46 @@ function noteHisto(match: Record<string, unknown>, par: string, action: string) 
   match.historique = h.slice(-30);
 }
 
+// 🏠 Tournoi interne (entre adhérents) : inscriptions ouvertes ?
+function interneOuvert(t: Record<string, unknown>): boolean {
+  const limite = typeof t.dateLimit === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.dateLimit)
+    ? new Date(t.dateLimit + "T23:59:59+02:00").getTime() : Infinity;
+  return t.closed !== true && !t.live && Date.now() <= limite;
+}
+
+/** Binômes d'un tournoi interne (tous rangés dans l'unique « club » SACCB) */
+function binomesInterne(t: Record<string, unknown>): Record<string, unknown>[] {
+  return ((t.clubs || []) as Record<string, unknown>[]).flatMap((c) => (c.binomes || []) as Record<string, unknown>[]);
+}
+
+/** Vue d'un tournoi interne pour un adhérent : infos, son binôme, et le direct (ses équipes en « mine ») */
+function vueInterne(t: Record<string, unknown>, membreId: string) {
+  const binomes = binomesInterne(t);
+  const mien = binomes.find((b) => Array.isArray(b.membres) && (b.membres as unknown[]).map(String).includes(membreId));
+  const quota = ((t.clubs || []) as Record<string, unknown>[]).reduce((s, c) => s + (Number(c.quota) || 0), 0);
+  let live: unknown = undefined;
+  const l = t.live as Record<string, unknown> | undefined;
+  if (l && Array.isArray(l.phases)) {
+    const equipes: Record<string, unknown> = {};
+    const noms: Record<string, string> = {};
+    for (const b of binomes) {
+      const mine = Array.isArray(b.membres) && (b.membres as unknown[]).map(String).includes(membreId);
+      equipes[String(b.id)] = { joueur1: b.joueur1, joueur2: b.joueur2, niveau: b.niveau || "", club: "SACCB", mine };
+      noms[String(b.id)] = `${b.joueur1} / ${b.joueur2}`;
+    }
+    // « saisi par » : pour un tournoi interne, c'est un binôme (son id) et non un club
+    live = { phases: l.phases, termine: l.termine === true, equipes, clubs: noms };
+  }
+  return {
+    id: t.id, name: t.name, date: t.date, type: t.type || "", niveaux: t.niveaux || [], dateLimit: t.dateLimit || "",
+    deroulement: t.deroulement || "", salleNom: t.salleNom || "", salleAdresse: t.salleAdresse || "",
+    programme: Array.isArray(t.programme) ? t.programme : [],
+    ouvert: interneOuvert(t), quota, nbBinomes: binomes.length,
+    monBinome: mien ? { id: mien.id, joueur1: mien.joueur1, joueur2: mien.joueur2, niveau: mien.niveau || "" } : null,
+    live,
+  };
+}
+
 function liveVue(tournoi: Record<string, unknown>, clubId?: string) {
   const live = tournoi.live as Record<string, unknown> | undefined;
   if (!live || !Array.isArray(live.phases)) return undefined;
@@ -4473,6 +4513,132 @@ Deno.serve(async (req) => {
       autres,
       live: liveVue(tournoi, String(club.id)),
     });
+  }
+
+  // ─── ACTIONS: Tournois internes (entre adhérents) — vue, inscription, retrait, scores ───
+  if (action === "membre_interne" || action === "membre_interne_inscription" || action === "membre_interne_retrait" || action === "membre_interne_score") {
+    const email = sanitize(String(body.email || "")).toLowerCase();
+    const code = sanitize(String(body.code || ""));
+    if (!email || !code) return json({ ok: false, needCode: true, reason: "Code personnel requis." }, 400);
+    if (isInterclubRateLimited(ip)) return json({ ok: false, reason: "Trop de requêtes. Réessayez dans quelques minutes." }, 429);
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const moi = await findMembreOuAdmin(membres, email, code);
+    if (!moi) return json({ ok: false, needCode: true, reason: "Email ou code incorrect." }, 403);
+    const membreId = String(moi.id);
+    const internes = ((d.interclubs || []) as Record<string, unknown>[]).filter((t) => t.interne === true);
+    const tournoi = body.tournoiId ? internes.find((t) => String(t.id) === String(body.tournoiId)) : undefined;
+    if (action !== "membre_interne" && !tournoi) return json({ ok: false, reason: "Tournoi introuvable." }, 404);
+
+    if (action === "membre_interne_inscription") {
+      if (!interneOuvert(tournoi!)) return json({ ok: false, reason: "Les inscriptions sont fermées pour ce tournoi." }, 403);
+      const partenaireId = String(body.partenaireId || "");
+      const partenaire = membres.find((m) => String(m.id) === partenaireId);
+      if (!partenaire || partenaireId === membreId) return json({ ok: false, reason: "Choisissez votre partenaire dans la liste." }, 400);
+      const binomes = binomesInterne(tournoi!);
+      const pris = new Set(binomes.flatMap((b) => ((b.membres || []) as unknown[]).map(String)));
+      if (pris.has(membreId)) return json({ ok: false, reason: "Vous êtes déjà inscrit(e) à ce tournoi." }, 400);
+      if (pris.has(partenaireId)) return json({ ok: false, reason: `${partenaire.nom} est déjà inscrit(e) avec quelqu'un d'autre.` }, 400);
+      const club = ((tournoi!.clubs || []) as Record<string, unknown>[])[0];
+      if (!club) return json({ ok: false, reason: "Tournoi mal configuré." }, 500);
+      if (binomes.length >= (Number(club.quota) || 0)) return json({ ok: false, reason: "Le tournoi est complet." }, 400);
+      const niveaux = ((tournoi!.niveaux || []) as unknown[]).map(String);
+      const niveau = String(body.niveau || "");
+      if (niveaux.length > 0 && !niveaux.includes(niveau)) return json({ ok: false, reason: "Choisissez un niveau." }, 400);
+      club.binomes = [...((club.binomes || []) as unknown[]), {
+        id: crypto.randomUUID(), joueur1: String(moi.nom || ""), joueur2: String(partenaire.nom || ""),
+        niveau: niveaux.length ? niveau : "", membres: [membreId, partenaireId], createdAt: new Date().toISOString(),
+      }];
+      club.updatedAt = new Date().toISOString();
+      const { error: e } = await saveDB(d);
+      if (e) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+    }
+
+    if (action === "membre_interne_retrait") {
+      if (!interneOuvert(tournoi!)) return json({ ok: false, reason: "Les inscriptions sont fermées : contactez le bureau." }, 403);
+      for (const c of (tournoi!.clubs || []) as Record<string, unknown>[]) {
+        c.binomes = ((c.binomes || []) as Record<string, unknown>[]).filter((b) => !((b.membres || []) as unknown[]).map(String).includes(membreId));
+      }
+      const { error: e } = await saveDB(d);
+      if (e) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+    }
+
+    if (action === "membre_interne_score") {
+      const live = tournoi!.live as Record<string, unknown> | undefined;
+      if (!live) return json({ ok: false, reason: "Le tournoi n'a pas commencé." }, 400);
+      if (live.termine === true) return json({ ok: false, reason: "Le tournoi est terminé." }, 403);
+      const mesEquipes = new Set(binomesInterne(tournoi!).filter((b) => ((b.membres || []) as unknown[]).map(String).includes(membreId)).map((b) => String(b.id)));
+      const matchId = String(body.matchId || "");
+      let match: Record<string, unknown> | undefined, format: Record<string, unknown> | undefined, phaseFinie = false;
+      for (const ph of (live.phases || []) as Record<string, unknown>[]) {
+        for (const po of (ph.poules || []) as Record<string, unknown>[]) {
+          const m = ((po.matchs || []) as Record<string, unknown>[]).find((x) => String(x.id) === matchId);
+          if (m) { match = m; format = ph.format as Record<string, unknown>; phaseFinie = ph.terminee === true; }
+        }
+      }
+      if (!match || !format) return json({ ok: false, reason: "Match introuvable." }, 404);
+      // L'« acteur » est l'équipe du joueur dans ce match (son partenaire saisit pour la même équipe)
+      const acteur = mesEquipes.has(String(match.a)) ? String(match.a) : mesEquipes.has(String(match.b)) ? String(match.b) : "";
+      if (!acteur) return json({ ok: false, reason: "Vous ne pouvez saisir que les scores de vos matchs." }, 403);
+      if (phaseFinie) return json({ ok: false, reason: "Cette phase est terminée." }, 403);
+      if (match.etat === "valide") return json({ ok: false, reason: "Ce score a déjà été validé. Pour une correction, voyez la table de marque." }, 403);
+      if (match.conteste === true) return json({ ok: false, reason: "Score contesté : la table de marque vient régler le match." }, 403);
+      if (body.contester === true) {
+        if (match.etat !== "saisi" || match.par === acteur) return json({ ok: false, reason: "Rien à contester sur ce match." }, 400);
+        match.conteste = true;
+        noteHisto(match, acteur, "score contesté");
+      } else if (body.effacer === true) {
+        if (match.par !== acteur) return json({ ok: false, reason: "Seule l'équipe qui a saisi ce score peut l'effacer." }, 403);
+        if (match.corrige === true && match.ancien) {
+          const a = match.ancien as Record<string, unknown>;
+          match.sa = a.sa; match.sb = a.sb; match.par = a.par; match.etat = "saisi";
+          delete match.corrige; delete match.ancien;
+          noteHisto(match, acteur, "correction annulée");
+        } else {
+          delete match.sa; delete match.sb; delete match.etat; delete match.par;
+          noteHisto(match, acteur, "score effacé");
+        }
+      } else {
+        const toNums = (v: unknown) => (Array.isArray(v) ? v.slice(0, 3).map((x) => Math.round(Number(x))) : []);
+        const sa = toNums(body.sa), sb = toNums(body.sb);
+        const err = erreurScoreLive(sa, sb, format);
+        if (err) return json({ ok: false, reason: err }, 400);
+        const memeScore = JSON.stringify(match.sa) === JSON.stringify(sa) && JSON.stringify(match.sb) === JSON.stringify(sb);
+        const avaitScore = Array.isArray(match.sa) && (match.sa as unknown[]).length > 0;
+        if (match.etat === "saisi" && match.par !== acteur && memeScore) {
+          match.etat = "valide";
+          delete match.corrige; delete match.ancien;
+          noteHisto(match, acteur, "score confirmé");
+        } else if (match.etat === "saisi" && match.par && match.par !== acteur) {
+          if (match.corrige === true) return json({ ok: false, reason: "L'autre équipe a corrigé votre score : vous pouvez le confirmer ou le contester." }, 403);
+          match.ancien = { sa: match.sa, sb: match.sb, par: match.par };
+          match.corrige = true;
+          match.sa = sa; match.sb = sb; match.par = acteur;
+          noteHisto(match, acteur, "score corrigé");
+        } else {
+          match.sa = sa; match.sb = sb; match.etat = "saisi"; match.par = acteur;
+          noteHisto(match, acteur, avaitScore ? "score modifié" : "score saisi");
+        }
+      }
+      match.at = new Date().toISOString();
+      const { error: e } = await saveDB(d);
+      if (e) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+    }
+
+    // Réponse commune : tournois internes en cours ou à venir (et ceux terminés depuis moins de 15 jours)
+    const recent = (t: Record<string, unknown>) => {
+      const l = t.live as Record<string, unknown> | undefined;
+      if (!l?.termine) return true;
+      const dt = typeof t.date === "string" ? new Date(t.date + "T23:59:59").getTime() : 0;
+      return Date.now() - dt < 15 * 86_400_000;
+    };
+    const adherents = membres
+      .filter((m) => String(m.id) !== membreId && m.enAttente !== true)
+      .map((m) => ({ id: String(m.id), nom: String(m.nom || "") }))
+      .sort((a, b) => a.nom.localeCompare(b.nom, "fr"));
+    return json({ ok: true, membreId, adherents, tournois: internes.filter(recent).map((t) => vueInterne(t, membreId)) });
   }
 
   if (action === "check_session") {
