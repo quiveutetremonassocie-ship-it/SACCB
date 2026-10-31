@@ -41,6 +41,12 @@ export default function ProgrammeEditor({
           </span>
         )}
       </div>
+      {!readOnly && (verrouille ?? 0) > 0 && (
+        <p className="px-4 py-2 text-[11px] text-amber-800 bg-amber-50 border-b border-amber-200">
+          🔒 Les tours déjà lancés le jour J ne peuvent plus être modifiés (les poules et les matchs sont créés). Les tours suivants restent modifiables.
+          Pour tout recommencer : bouton « 🏁 Jour J » → « Réinitialiser le jour J » en bas de la table de marque.
+        </p>
+      )}
       <div className="divide-y divide-slate-100">
         {programme.map((p, i) => {
           const bloque = readOnly || (verrouille ?? 0) > i;
@@ -70,7 +76,7 @@ export default function ProgrammeEditor({
                 cassants
               </label>
               {nbEquipes > 1 && <span className="text-[11px] text-slate-500">≈ {fourchette(mn, mx)} match{mx > 1 ? "s" : ""}/équipe</span>}
-              {bloque && !readOnly && <span className="text-[11px] text-slate-400">(déjà joué)</span>}
+              {bloque && !readOnly && <span className="text-[11px] font-semibold text-amber-700 bg-amber-50 border border-amber-200 rounded-full px-2 py-0.5">🔒 déjà lancé le jour J</span>}
               {!bloque && (
                 <span className="ml-auto flex items-center gap-1">
                   <button onClick={() => deplacer(i, -1)} disabled={i === 0 || (verrouille ?? 0) > i - 1} className="p-1 text-slate-400 hover:text-slate-600 disabled:opacity-30" title="Monter"><ArrowUp className="w-3.5 h-3.5" /></button>
