@@ -160,6 +160,8 @@ export default function AdminPage() {
     memberAdminCode.current = null;
     setAdminReady(false);
     setCode("");
+    // Retour direct à l'accueil du site (on reste connecté comme adhérent)
+    window.location.href = "/";
   }
 
   function handleFullLogout() {
@@ -197,7 +199,7 @@ export default function AdminPage() {
     return (
       <AdminPanel
         db={db}
-        onClose={() => { setVisitorMode(false); setDb(emptyDB()); }}
+        onClose={() => { window.location.href = "/"; }}
         onPersist={async () => {}}
         onRefresh={async () => {}}
         readOnly={true}
