@@ -976,6 +976,7 @@ function SectionVisibilityToggles({
     { key: "presentation", label: "Présentation", emoji: "🏸", description: "« Qui sommes-nous »" },
     { key: "actualites", label: "Actualités", emoji: "📰", description: "Carrousel d'actus" },
     { key: "tournois", label: "Tournois", emoji: "🏆", description: "À venir + passés" },
+    { key: "agenda", label: "Agenda", emoji: "📅", description: "Calendrier des dates du club" },
     { key: "horaires", label: "Horaires", emoji: "🕐", description: "Créneaux & tarifs" },
     { key: "palmares", label: "Palmarès", emoji: "🥇", description: "Résultats tournois extérieurs" },
     { key: "rules", label: "Règlement", emoji: "📜", description: "Texte + PDF" },
