@@ -1140,6 +1140,20 @@ export async function membreInterne(
 }
 
 /** 📣 Prévenir les adhérents par mail qu'un tournoi interne est ouvert (admin) */
+/** ↩️ Annule une action du journal admin (propriétaire du site uniquement) */
+export async function adminJournalAnnuler(email: string, code: string, at: string): Promise<{ ok: boolean; gardes?: number; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_journal_annuler", email, code, at }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}
+
 export async function adminInterneNotifier(email: string, code: string, tournoiId: string): Promise<{ ok: boolean; sent?: number; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {

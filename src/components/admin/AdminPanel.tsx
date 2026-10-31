@@ -467,7 +467,7 @@ export default function AdminPanel({
     ) },
     { id: "admin-journal", label: "Journal (privé)", icon: Eye, groupe: "Réglages", visible: !!db.adminJournal, render: () => (
       <>
-        <JournalAdmin db={db} />
+        <JournalAdmin db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
       </>
     ) },
     { id: "admin-guide", label: "Guide admin", icon: LifeBuoy, groupe: "Réglages", visible: true, render: () => (

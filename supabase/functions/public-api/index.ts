@@ -244,12 +244,7 @@ function resumeChangements(avant: Record<string, unknown>, apres: Record<string,
     }
   }
   // Réglages simples de l'association
-  const REGLAGES: Record<string, string> = {
-    y1: "saison", insc_open: "inscriptions ouvertes", quota: "quota d'adhérents", tshirtOpen: "commandes t-shirt ouvertes",
-    tshirtPrice: "prix du t-shirt", maintenanceMode: "mode maintenance", presentationMode: "mode présentation", whatsappLink: "lien WhatsApp",
-    pollsOpen: "sondages ouverts", agOpen: "questions AG ouvertes", require2FA: "double authentification", clubConfig: "paramètres du club (tarifs, horaires…)",
-    clubRules: "règlement intérieur", bureauMembers: "membres du bureau", presidentName: "nom du président", emailSignature: "signature des mails",
-  };
+  const REGLAGES = REGLAGES_JOURNAL;
   for (const [k, n] of Object.entries(REGLAGES)) {
     if (same(avant[k], apres[k])) continue;
     const v = apres[k];
@@ -263,11 +258,56 @@ function resumeChangements(avant: Record<string, unknown>, apres: Record<string,
   return out;
 }
 
+const REGLAGES_JOURNAL: Record<string, string> = {
+  y1: "saison", insc_open: "inscriptions ouvertes", quota: "quota d'adhérents", tshirtOpen: "commandes t-shirt ouvertes",
+  tshirtPrice: "prix du t-shirt", maintenanceMode: "mode maintenance", presentationMode: "mode présentation", whatsappLink: "lien WhatsApp",
+  pollsOpen: "sondages ouverts", agOpen: "questions AG ouvertes", require2FA: "double authentification", clubConfig: "paramètres du club (tarifs, horaires…)",
+  clubRules: "règlement intérieur", bureauMembers: "membres du bureau", presidentName: "nom du président", emailSignature: "signature des mails",
+};
+const ABSENT = "__absent__";
+const JOURNAL_ANNULABLES = 150; // seules les 150 dernières actions gardent de quoi être annulées (taille de la base)
+
+/** ↩️ De quoi annuler un enregistrement admin : l'état AVANT de chaque élément / réglage modifié */
+function donneesAnnulation(avant: Record<string, unknown>, apres: Record<string, unknown>) {
+  const same = (a: unknown, b: unknown) => stableStringify(a) === stableStringify(b);
+  const items: Record<string, Record<string, unknown>> = {};
+  for (const { cle } of COLLECTIONS_JOURNAL) {
+    const A = Array.isArray(avant[cle]) ? (avant[cle] as Record<string, unknown>[]) : [];
+    const B = Array.isArray(apres[cle]) ? (apres[cle] as Record<string, unknown>[]) : [];
+    const mapA = new Map(A.map((x) => [String(x.id), x]));
+    const mapB = new Map(B.map((x) => [String(x.id), x]));
+    const sansLive = (x: Record<string, unknown>) => { const { live: _l, ...r } = x; return r; };
+    for (const id of new Set([...mapA.keys(), ...mapB.keys()])) {
+      const a = mapA.get(id), b = mapB.get(id);
+      if (a && b && same(sansLive(a), sansLive(b))) continue;
+      let trace: unknown;
+      if (!a) trace = { t: "ajout" };
+      else if (!b) trace = { t: "suppr", avant: sansLive(a) };
+      else {
+        const champs: Record<string, [unknown, unknown]> = {};
+        for (const k of new Set([...Object.keys(a), ...Object.keys(b)])) {
+          if (k === "live" || same(a[k], b[k])) continue;
+          champs[k] = [a[k] === undefined ? ABSENT : a[k], b[k] === undefined ? ABSENT : b[k]];
+        }
+        trace = { t: "modif", champs };
+      }
+      (items[cle] ||= {})[id] = trace;
+    }
+  }
+  const reglages: Record<string, [unknown, unknown]> = {};
+  for (const k of [...Object.keys(REGLAGES_JOURNAL), "adminEmails", "adminCredentials"]) {
+    if (!same(avant[k], apres[k])) reglages[k] = [avant[k] === undefined ? ABSENT : avant[k], apres[k] === undefined ? ABSENT : apres[k]];
+  }
+  return Object.keys(items).length || Object.keys(reglages).length ? { items, reglages } : undefined;
+}
+
 /** Ajoute une entrée au journal (en tête, 1000 max) */
-function noterJournal(journal: unknown, email: string, ip: string, actions: string[]): unknown[] {
+function noterJournal(journal: unknown, email: string, ip: string, actions: string[], annulation?: unknown): unknown[] {
   const j = Array.isArray(journal) ? journal : [];
   if (actions.length === 0) return j;
-  return [{ at: new Date().toISOString(), email, ip, actions: actions.slice(0, 50) }, ...j].slice(0, JOURNAL_MAX);
+  const nouveau = [{ at: new Date().toISOString(), email, ip, actions: actions.slice(0, 50), ...(annulation ? { annulation } : {}) }, ...j].slice(0, JOURNAL_MAX);
+  // Les vieilles entrées perdent leurs données d'annulation (la base reste légère)
+  return nouveau.map((e, i) => (i >= JOURNAL_ANNULABLES && (e as Record<string, unknown>).annulation ? { ...(e as Record<string, unknown>), annulation: undefined } : e));
 }
 
 // 🕘 Historique d'un match (qui a saisi, corrigé, confirmé, contesté… et quand), 30 entrées max
@@ -2321,7 +2361,7 @@ Deno.serve(async (req) => {
     }
 
     // 🕵️ Journal : ce que cet admin vient de changer (le journal lui-même n'est jamais modifiable par le client)
-    newData.adminJournal = noterJournal(d.adminJournal, email, ip, resumeChangements(d, newData));
+    newData.adminJournal = noterJournal(d.adminJournal, email, ip, resumeChangements(d, newData), donneesAnnulation(d, newData));
 
     const { error: saveError } = await saveDB(newData);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
@@ -4515,6 +4555,57 @@ Deno.serve(async (req) => {
       autres,
       live: liveVue(tournoi, String(club.id)),
     });
+  }
+
+  // ─── ACTION: ↩️ Annuler une action du journal (propriétaire du site uniquement) ───
+  if (action === "admin_journal_annuler") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const qui = sanitize(String(body.email || "")).toLowerCase();
+    if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
+    const journal = (Array.isArray(d.adminJournal) ? d.adminJournal : []) as Record<string, unknown>[];
+    const entree = journal.find((e) => e.at === String(body.at || ""));
+    if (!entree) return json({ ok: false, reason: "Action introuvable dans le journal." }, 404);
+    if (entree.annulee) return json({ ok: false, reason: "Cette action a déjà été annulée." }, 400);
+    type Trace = { t: "ajout" } | { t: "suppr"; avant: Record<string, unknown> } | { t: "modif"; champs: Record<string, [unknown, unknown]> };
+    const ann = entree.annulation as { items?: Record<string, Record<string, Trace>>; reglages?: Record<string, [unknown, unknown]> } | undefined;
+    const pareil = (a: unknown, b: unknown) => stableStringify(a === ABSENT ? undefined : a) === stableStringify(b === ABSENT ? undefined : b);
+    let gardes = 0; // changements faits APRÈS sur le même champ : on les garde
+    if (!ann) return json({ ok: false, reason: "Cette action est trop ancienne pour être annulée automatiquement (utilise une sauvegarde)." }, 400);
+
+    for (const [cle, parId] of Object.entries(ann.items || {})) {
+      let liste = (Array.isArray(d[cle]) ? d[cle] : []) as Record<string, unknown>[];
+      for (const [id, tr] of Object.entries(parId)) {
+        const idx = liste.findIndex((x) => String(x.id) === id);
+        if (tr.t === "ajout") {
+          if (idx >= 0) liste = liste.filter((_, i) => i !== idx); // ajouté par l'action → retiré
+        } else if (tr.t === "suppr") {
+          if (idx < 0) liste.push(tr.avant); // supprimé par l'action → remis
+        } else if (idx >= 0) {
+          // Modifié : on ne remet que les champs encore tels que l'action les a laissés
+          const el = { ...liste[idx] };
+          for (const [k, [av, ap]] of Object.entries(tr.champs)) {
+            if (!pareil(el[k], ap)) { gardes++; continue; }
+            if (av === ABSENT) delete el[k]; else el[k] = av;
+          }
+          liste[idx] = el;
+        }
+      }
+      d[cle] = liste;
+    }
+    for (const [k, [av, ap]] of Object.entries(ann.reglages || {})) {
+      if (!pareil(d[k], ap)) { gardes++; continue; }
+      if (av === ABSENT) delete d[k]; else d[k] = av;
+    }
+    entree.annulee = { at: new Date().toISOString(), par: qui };
+    const resume = (entree.actions as string[] | undefined)?.[0] || "action";
+    d.adminJournal = noterJournal(journal, qui, ip, [`↩️ Annulation de : « ${resume} »${((entree.actions as string[]) || []).length > 1 ? " (et le reste de cet enregistrement)" : ""} — faite par ${entree.email} le ${new Date(String(entree.at)).toLocaleString("fr-FR", { timeZone: "Europe/Paris" })}`]);
+    const { error: e } = await saveDB(d);
+    if (e) return json({ ok: false, reason: "Erreur lors de l'enregistrement." }, 500);
+    return json({ ok: true, gardes });
   }
 
   // ─── ACTION: Prévenir les adhérents qu'un tournoi interne est ouvert (admin, sur demande) ───

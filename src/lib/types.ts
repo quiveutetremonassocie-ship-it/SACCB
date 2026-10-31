@@ -432,7 +432,7 @@ export type DB = {
   // 🔐 Log des connexions admin réussies (50 dernières max)
   adminLoginLog?: { email: string; date: string; ip?: string }[];
   // 🕵️ Journal des actions admin (envoyé par le serveur au seul propriétaire du site)
-  adminJournal?: { at: string; email: string; ip?: string; actions: string[] }[];
+  adminJournal?: { at: string; email: string; ip?: string; actions: string[]; annulation?: unknown; annulee?: { at: string; par: string } }[];
   lastBackupExport?: string; // dernière sauvegarde complète téléchargée
   // 👔 Membres du bureau (visibles par les adhérents connectés)
   bureauMembers?: BureauMember[];

@@ -3,17 +3,31 @@
 import { useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { DB } from "@/lib/types";
+import { adminJournalAnnuler } from "@/lib/db";
 
 /** 🕵️ Journal des actions admin — visible uniquement par le propriétaire du site (filtré côté serveur) */
-export default function JournalAdmin({ db }: { db: DB }) {
+export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: { db: DB; adminEmail?: string; adminCode?: string; onRefresh?: () => void | Promise<void> }) {
   const [q, setQ] = useState("");
+  const [enCours, setEnCours] = useState<string | null>(null);
+
+  async function annuler(at: string, email: string, actions: string[]) {
+    if (!adminEmail || !adminCode) { alert("Reconnecte-toi pour annuler une action."); return; }
+    const quand = new Date(at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+    if (!confirm(`Annuler ce que ${email} a fait le ${quand} ?\n\n• ${actions.slice(0, 8).join("\n• ")}${actions.length > 8 ? "\n…" : ""}\n\nSeul ce changement est remis comme avant. Tout ce qui a été fait ensuite est gardé.`)) return;
+    setEnCours(at);
+    const r = await adminJournalAnnuler(adminEmail, adminCode, at);
+    setEnCours(null);
+    if (!r.ok) { alert(r.reason || "Annulation impossible."); return; }
+    alert(r.gardes ? `✅ Action annulée. ${r.gardes} élément(s) modifié(s) depuis ont été laissés tels quels pour ne rien écraser.` : "✅ Action annulée : tout est revenu comme avant ce changement.");
+    await onRefresh?.();
+  }
   const [qui, setQui] = useState("");
   const [voir, setVoir] = useState(100);
 
   // Actions + connexions admin, du plus récent au plus ancien
   const lignes = useMemo(() => {
-    const actions = (db.adminJournal || []).map((e) => ({ at: e.at, email: e.email, actions: e.actions }));
-    const connexions = (db.adminLoginLog || []).map((c) => ({ at: c.date, email: c.email, actions: ["🔑 Connexion à l'administration"] }));
+    const actions = (db.adminJournal || []).map((e) => ({ at: e.at, email: e.email, actions: e.actions, annulable: !!e.annulation && !e.annulee, annulee: e.annulee }));
+    const connexions = (db.adminLoginLog || []).map((c) => ({ at: c.date, email: c.email, actions: ["🔑 Connexion à l'administration"], annulable: false, annulee: undefined }));
     return [...actions, ...connexions].sort((a, b) => (a.at < b.at ? 1 : -1));
   }, [db.adminJournal, db.adminLoginLog]);
   const admins = useMemo(() => [...new Set(lignes.map((l) => l.email))].sort(), [lignes]);
@@ -57,12 +71,23 @@ export default function JournalAdmin({ db }: { db: DB }) {
                 {titre && <p className="px-4 py-1.5 bg-slate-50 text-[11px] uppercase tracking-wider font-semibold text-slate-500">{titre}</p>}
                 <div className="px-4 py-2 flex gap-3 text-sm">
                   <span className="font-mono text-xs text-slate-400 shrink-0 pt-0.5">{d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
-                  <div className="min-w-0">
+                  <div className="min-w-0 flex-1">
                     <p className="text-xs font-semibold text-[#1e3a5f] truncate">{l.email}</p>
-                    <ul className="text-slate-700 text-[13px] space-y-0.5">
+                    <ul className={`text-[13px] space-y-0.5 ${l.annulee ? "text-slate-400 line-through" : "text-slate-700"}`}>
                       {l.actions.map((a, k) => <li key={k} className="break-words">{a}</li>)}
                     </ul>
+                    {l.annulee && <p className="text-[11px] text-amber-700 mt-0.5">↩️ Annulé le {new Date(l.annulee.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}</p>}
                   </div>
+                  {l.annulable && (
+                    <button
+                      onClick={() => annuler(l.at, l.email, l.actions)}
+                      disabled={enCours !== null}
+                      className="self-start shrink-0 text-xs font-semibold px-2.5 py-1 rounded-lg border border-amber-300 text-amber-800 bg-amber-50 hover:bg-amber-100 disabled:opacity-50"
+                      title="Remettre uniquement ce changement comme avant"
+                    >
+                      {enCours === l.at ? "…" : "↩️ Annuler"}
+                    </button>
+                  )}
                 </div>
               </div>
             );
@@ -72,7 +97,7 @@ export default function JournalAdmin({ db }: { db: DB }) {
       {filtres.length > voir && (
         <button onClick={() => setVoir(voir + 200)} className="btn-ghost w-full !text-xs">Voir plus ({filtres.length - voir} restantes)</button>
       )}
-      <p className="text-[11px] text-slate-400">Visible uniquement par toi. Les 1000 dernières actions sont conservées.</p>
+      <p className="text-[11px] text-slate-400">Visible uniquement par toi. Les 1000 dernières actions sont conservées ; les 150 plus récentes peuvent être annulées avec ↩️ (seul ce changement revient en arrière, le reste est gardé). Pour un gros souci : Réglages → Sauvegarde &amp; export → Restaurer.</p>
     </div>
   );
 }
