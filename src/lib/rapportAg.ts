@@ -42,9 +42,16 @@ export function chiffresSaison(db: DB) {
   const depenses = (db.factures || []).reduce((s, f) => s + f.montant, 0);
   const tshirts = (db.tshirtOrders || []).length;
 
+  // 📦 Tournois de la saison : ceux en cours + ceux déjà archivés pour CETTE saison
+  const archiveSaison = (db.archives || []).find((a) => a.y1 === db.y1 && a.y2 === db.y2);
+  const tousTournois = [...(db.config_tournois || []), ...(archiveSaison?.config_tournois || [])]
+    .filter((t, i, arr) => arr.findIndex((x) => x.id === t.id) === i);
+  const tousInscrits = [...(db.inscrits_tournoi || []), ...(archiveSaison?.inscrits_tournoi || [])]
+    .filter((x, i, arr) => arr.findIndex((y) => y.id === x.id) === i);
+
   // Tournois extérieurs (fiches « Tournois » + leurs inscriptions SACCB)
-  const tournois = (db.config_tournois || []).filter((t) => !t.id.startsWith("ic-")).map((t) => {
-    const insc = (db.inscrits_tournoi || []).filter((i) => i.tournoiId === t.id);
+  const tournois = tousTournois.filter((t) => !t.id.startsWith("ic-")).map((t) => {
+    const insc = tousInscrits.filter((i) => i.tournoiId === t.id);
     const meilleur = insc.map((i) => rang(i.resultat)).filter(Boolean).sort((a, b) => a!.rank - b!.rank)[0] || null;
     return { nom: propre(t.name), date: dateISO(t.date), dateTexte: t.date, equipes: insc.length, meilleur };
   }).sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
@@ -61,15 +68,15 @@ export function chiffresSaison(db: DB) {
   })).sort((a, b) => a.date.localeCompare(b.date));
 
   // Palmarès : podiums de la saison
-  const podiums = (db.inscrits_tournoi || []).map((i) => {
+  const podiums = tousInscrits.map((i) => {
     const r = rang(i.resultat);
-    const t = (db.config_tournois || []).find((x) => x.id === i.tournoiId);
+    const t = tousTournois.find((x) => x.id === i.tournoiId);
     return r && r.rank <= 3 && t ? { joueurs: propre(i.joueurs), tournoi: propre(t.name), date: dateISO(t.date), ...r } : null;
   }).filter(Boolean) as { joueurs: string; tournoi: string; date: string; rank: number; total: number }[];
   podiums.sort((a, b) => a.rank - b.rank || a.date.localeCompare(b.date));
 
   // Évolution du nombre d'adhérents (saisons archivées + saison en cours)
-  const evolution = [...(db.archives || []).map((a) => ({ saison: `${a.y1}-${a.y2}`, n: a.membresCount })), { saison: `${db.y1}-${db.y2}`, n: payes.length }]
+  const evolution = [...(db.archives || []).filter((a) => a !== archiveSaison).map((a) => ({ saison: `${a.y1}-${a.y2}`, n: a.membresCount })), { saison: `${db.y1}-${db.y2}`, n: payes.length }]
     .filter((x, i, arr) => arr.findIndex((y) => y.saison === x.saison) === i)
     .sort((a, b) => a.saison.localeCompare(b.saison))
     .slice(-6);
