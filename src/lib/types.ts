@@ -424,6 +424,9 @@ export type DB = {
   analyticsDaily?: AnalyticsDay[];
   // 🔐 Log des connexions admin réussies (50 dernières max)
   adminLoginLog?: { email: string; date: string; ip?: string }[];
+  // 🕵️ Journal des actions admin (envoyé par le serveur au seul propriétaire du site)
+  adminJournal?: { at: string; email: string; ip?: string; actions: string[] }[];
+  lastBackupExport?: string; // dernière sauvegarde complète téléchargée
   // 👔 Membres du bureau (visibles par les adhérents connectés)
   bureauMembers?: BureauMember[];
   // 🔑 Activer la double authentification par email pour les admins

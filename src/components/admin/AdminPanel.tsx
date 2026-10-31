@@ -26,6 +26,7 @@ import RulesAdmin from "./RulesAdmin";
 import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
 import MessagesAdmin from "./MessagesAdmin";
+import JournalAdmin from "./JournalAdmin";
 import RecuModal from "./RecuModal";
 import EmargementModal from "./EmargementModal";
 import EditMembreModal from "./EditMembreModal";
@@ -336,6 +337,7 @@ export default function AdminPanel({
         <QuickNav
           unreadMessages={(db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length}
           canSee={canSee}
+          journalVisible={!!db.adminJournal}
         />
 
         {/* Avertissement si aucune section visible (permissions explicitement vides) */}
@@ -476,6 +478,13 @@ export default function AdminPanel({
           )}
 
           {/* 📖 Guide admin — toujours accessible */}
+          {/* 🕵️ Journal des actions : le serveur ne l'envoie qu'au propriétaire du site */}
+          {db.adminJournal && (
+            <CollapsibleAdminSection id="admin-journal" label="Journal des actions (privé)" icon={<Eye className="w-5 h-5" />} color="from-slate-600 to-slate-800">
+              <JournalAdmin db={db} />
+            </CollapsibleAdminSection>
+          )}
+
           <CollapsibleAdminSection id="admin-guide" label="Guide admin" icon={<BookOpen className="w-5 h-5" />} color="from-indigo-500 to-purple-500">
             <GuideAdmin />
           </CollapsibleAdminSection>
@@ -586,9 +595,11 @@ export default function AdminPanel({
 function QuickNav({
   unreadMessages = 0,
   canSee,
+  journalVisible,
 }: {
   unreadMessages?: number;
   canSee: (section: string) => boolean;
+  journalVisible?: boolean;
 }) {
   function scrollTo(id: string) {
     const el = document.getElementById(id);
@@ -617,6 +628,7 @@ function QuickNav({
     { id: "admin-sauvegarde", label: "Sauvegarde", icon: <DatabaseBackup className="w-4 h-4" />, color: "from-sky-500 to-blue-600" /* toujours visible */ },
     { id: "admin-faq", label: "FAQ adhérents", icon: <HelpCircle className="w-4 h-4" />, color: "from-blue-500 to-indigo-500", permission: "engagement" },
     { id: "admin-guide", label: "Guide admin", icon: <BookOpen className="w-4 h-4" />, color: "from-indigo-500 to-purple-500" /* toujours visible */ },
+    ...(journalVisible ? [{ id: "admin-journal", label: "Journal (privé)", icon: <Eye className="w-4 h-4" />, color: "from-slate-600 to-slate-800" }] : []),
   ];
   const items = allItems.filter((it) => !it.permission || canSee(it.permission));
   return (

@@ -190,6 +190,86 @@ function erreurScoreLive(sa: number[], sb: number[], f: { sets?: number; points?
 }
 
 // 🏁 Vue « en direct » d'un tournoi inter-clubs : phases + noms des équipes (sans jetons ni codes)
+// 🕵️ Journal des actions admin : visible uniquement par le propriétaire du site
+const JOURNAL_PROPRIETAIRE = "gabin.binay@gmail.com";
+const JOURNAL_MAX = 1000;
+
+// Collections suivies : clé dans la base → libellé + façon de nommer un élément
+const COLLECTIONS_JOURNAL: { cle: string; libelle: string; nom: (x: Record<string, unknown>) => string }[] = [
+  { cle: "membres", libelle: "Adhérent", nom: (x) => String(x.nom || x.email || x.id) },
+  { cle: "factures", libelle: "Facture", nom: (x) => `${x.desc || "?"} (${x.montant ?? "?"} €)` },
+  { cle: "config_tournois", libelle: "Tournoi", nom: (x) => String(x.name || x.id) },
+  { cle: "inscrits_tournoi", libelle: "Inscription tournoi", nom: (x) => String(x.joueurs || x.id) },
+  { cle: "actualites", libelle: "Actualité", nom: (x) => String(x.title || x.id) },
+  { cle: "interclubs", libelle: "Tournoi inter-clubs", nom: (x) => String(x.name || x.id) },
+  { cle: "tshirtOrders", libelle: "Commande t-shirt", nom: (x) => `${x.prenom || ""} ${x.nom || ""}`.trim() || String(x.id) },
+  { cle: "polls", libelle: "Sondage", nom: (x) => String(x.question || x.id) },
+  { cle: "officialDocs", libelle: "Document officiel", nom: (x) => String(x.title || x.name || x.id) },
+  { cle: "faqItems", libelle: "Question FAQ", nom: (x) => String(x.question || x.id) },
+  { cle: "reunionReports", libelle: "Compte-rendu", nom: (x) => String(x.title || x.id) },
+];
+// Champs trop bavards ou techniques : ignorés dans le détail des modifications
+const CHAMPS_IGNORES = new Set(["_rev", "at", "updatedAt", "live", "historique", "virementRemindersSent", "paymentRemindersSent", "resetTokenHash", "resetTokenExpires", "codeJustReset", "votes"]);
+const NOMS_CHAMPS: Record<string, string> = {
+  ok: "statut payé", montantPaye: "montant payé", code: "mot de passe", nom: "nom", email: "email", tel: "téléphone",
+  type: "tarif", sexe: "fille/garçon", enAttente: "mise en attente", photoConsent: "droit à l'image", newsOptIn: "newsletter",
+  justificatif: "justificatif", paymentMethod: "mode de paiement", clubs: "clubs", programme: "programme", closed: "ouverture",
+};
+
+/** Résumé lisible de ce qu'un enregistrement admin a changé */
+function resumeChangements(avant: Record<string, unknown>, apres: Record<string, unknown>): string[] {
+  const out: string[] = [];
+  const same = (a: unknown, b: unknown) => stableStringify(a) === stableStringify(b);
+  for (const { cle, libelle, nom } of COLLECTIONS_JOURNAL) {
+    const A = Array.isArray(avant[cle]) ? (avant[cle] as Record<string, unknown>[]) : [];
+    const B = Array.isArray(apres[cle]) ? (apres[cle] as Record<string, unknown>[]) : [];
+    const mapA = new Map(A.map((x) => [String(x.id), x]));
+    const mapB = new Map(B.map((x) => [String(x.id), x]));
+    for (const [id, x] of mapB) if (!mapA.has(id)) out.push(`➕ ${libelle} ajouté(e) : ${nom(x)}`);
+    for (const [id, x] of mapA) if (!mapB.has(id)) out.push(`🗑 ${libelle} supprimé(e) : ${nom(x)}`);
+    for (const [id, b] of mapB) {
+      const a = mapA.get(id);
+      if (!a || same(a, b)) continue;
+      const champs = [...new Set([...Object.keys(a), ...Object.keys(b)])].filter((k) => !CHAMPS_IGNORES.has(k) && !k.startsWith("_") && !same(a[k], b[k]));
+      if (champs.length === 0) continue;
+      const detail = champs.slice(0, 6).map((k) => {
+        const n = NOMS_CHAMPS[k] || k;
+        const v = b[k];
+        if (k === "code") return "mot de passe changé";
+        if (typeof v === "boolean") return `${n} : ${v ? "oui" : "non"}`;
+        if ((typeof v === "string" || typeof v === "number") && String(v).length <= 40) return `${n} → ${v}`;
+        return n;
+      }).join(", ");
+      out.push(`✏️ ${libelle} modifié(e) : ${nom(b)} (${detail}${champs.length > 6 ? "…" : ""})`);
+    }
+  }
+  // Réglages simples de l'association
+  const REGLAGES: Record<string, string> = {
+    y1: "saison", insc_open: "inscriptions ouvertes", quota: "quota d'adhérents", tshirtOpen: "commandes t-shirt ouvertes",
+    tshirtPrice: "prix du t-shirt", maintenanceMode: "mode maintenance", presentationMode: "mode présentation", whatsappLink: "lien WhatsApp",
+    pollsOpen: "sondages ouverts", agOpen: "questions AG ouvertes", require2FA: "double authentification", clubConfig: "paramètres du club (tarifs, horaires…)",
+    clubRules: "règlement intérieur", bureauMembers: "membres du bureau", presidentName: "nom du président", emailSignature: "signature des mails",
+  };
+  for (const [k, n] of Object.entries(REGLAGES)) {
+    if (same(avant[k], apres[k])) continue;
+    const v = apres[k];
+    out.push(`⚙️ ${n}${typeof v === "boolean" ? ` : ${v ? "oui" : "non"}` : (typeof v === "string" || typeof v === "number") && String(v).length <= 60 ? ` → ${v}` : " modifié"}`);
+  }
+  // Droits d'administration
+  const emailsAdmin = (x: unknown) => parseAdminEmails((x as unknown[]) || []).map((e) => e.email).sort();
+  if (!same(emailsAdmin(avant.adminEmails), emailsAdmin(apres.adminEmails))) out.push(`🔐 Liste des admins modifiée : ${emailsAdmin(apres.adminEmails).join(", ") || "aucun"}`);
+  const credAdmin = (x: unknown) => ((x as { email?: string }[]) || []).map((c) => String(c.email || "")).sort();
+  if (!same(credAdmin(avant.adminCredentials), credAdmin(apres.adminCredentials))) out.push(`🔐 Comptes admin modifiés : ${credAdmin(apres.adminCredentials).join(", ") || "aucun"}`);
+  return out;
+}
+
+/** Ajoute une entrée au journal (en tête, 1000 max) */
+function noterJournal(journal: unknown, email: string, ip: string, actions: string[]): unknown[] {
+  const j = Array.isArray(journal) ? journal : [];
+  if (actions.length === 0) return j;
+  return [{ at: new Date().toISOString(), email, ip, actions: actions.slice(0, 50) }, ...j].slice(0, JOURNAL_MAX);
+}
+
 // 🕘 Historique d'un match (qui a saisi, corrigé, confirmé, contesté… et quand), 30 entrées max
 function noteHisto(match: Record<string, unknown>, par: string, action: string) {
   const h = Array.isArray(match.historique) ? (match.historique as unknown[]) : [];
@@ -2045,8 +2125,11 @@ Deno.serve(async (req) => {
     }));
 
     // Normalise adminEmails en format objet (compat ancien format string[])
+    const { adminJournal: _journal, ...dSansJournal } = d;
     const normalizedData = {
-      ...d,
+      ...dSansJournal,
+      // 🕵️ Le journal des actions admin n'est envoyé qu'au propriétaire du site
+      ...(email === JOURNAL_PROPRIETAIRE ? { adminJournal: d.adminJournal ?? [] } : {}),
       adminEmails: adminEmailEntries,
       membres: maskedMembres,
       adminCredentials: maskedAdminCreds,
@@ -2063,10 +2146,20 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
     if (authError) return authError;
+    const qui = sanitize(String(body.email || "")).toLowerCase();
+    // 🕵️ Le journal ne sort que pour le propriétaire du site
+    const { adminJournal: _j, ...sansJournal } = currentData;
+    const exporte = qui === JOURNAL_PROPRIETAIRE ? currentData : sansJournal;
+    // 💾 Chaque sauvegarde téléchargée est notée au journal (permet de vérifier la sauvegarde de nuit)
+    try {
+      currentData.adminJournal = noterJournal(currentData.adminJournal, qui, ip, ["💾 Sauvegarde complète téléchargée"]);
+      currentData.lastBackupExport = new Date().toISOString();
+      await saveDB(currentData);
+    } catch { /* la sauvegarde passe avant tout */ }
     return json({
       ok: true,
       exportedAt: new Date().toISOString(),
-      data: currentData,
+      data: exporte,
     });
   }
 
@@ -2096,6 +2189,8 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Flag de confirmation manquant." }, 400);
     }
 
+    // 🕵️ Une restauration ne doit pas effacer le journal : on garde l'actuel et on la note
+    newData.adminJournal = noterJournal(currentData.adminJournal, sanitize(String(body.email || "")).toLowerCase(), ip, ["♻️ Base restaurée depuis une sauvegarde"]);
     const { error: updateError } = await saveDB(newData);
     if (updateError) return json({ ok: false, reason: "Erreur lors de la restauration : " + updateError.message }, 500);
 
@@ -2183,6 +2278,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // 🕵️ Journal : ce que cet admin vient de changer (le journal lui-même n'est jamais modifiable par le client)
+    newData.adminJournal = noterJournal(d.adminJournal, email, ip, resumeChangements(d, newData));
+
     const { error: saveError } = await saveDB(newData);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
 
@@ -2191,7 +2289,7 @@ Deno.serve(async (req) => {
     if (sheetsWebhookSync) {
       fetch(sheetsWebhookSync, {
         method: "POST",
-        body: JSON.stringify(newData),
+        body: JSON.stringify({ ...newData, adminJournal: undefined }),
       }).catch((e) => console.warn("[admin_save] Sheets sync failed:", e));
     }
 
