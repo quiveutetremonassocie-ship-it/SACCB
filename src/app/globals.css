@@ -2,7 +2,6 @@
 @tailwind components;
 @tailwind utilities;
 
-@import url("https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&family=Oswald:wght@500;700&display=swap");
 
 :root {
   --bg-light: #f8fafc;
@@ -113,7 +112,7 @@ body {
     @apply bg-white border border-slate-200 rounded-2xl shadow-xl;
   }
   .glass-sport {
-    @apply relative bg-white border border-slate-200 rounded-3xl shadow-lg overflow-hidden;
+    @apply relative bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden;
   }
   .glass-sport::before {
     content: "";
@@ -156,21 +155,21 @@ body {
     @apply text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1 block;
   }
   .h-display {
-    @apply font-display tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-[#1e3a5f] via-[#2d5a8e] to-emerald-600;
+    @apply font-display tracking-wide text-[#1e3a5f];
   }
   .h-display-sport {
     @apply font-display tracking-wider text-transparent bg-clip-text bg-gradient-to-br from-amber-500 via-[#1e3a5f] to-emerald-600;
   }
   .section-pad {
-    @apply max-w-6xl mx-auto px-6 py-24;
+    @apply max-w-6xl mx-auto px-5 py-16 md:py-20;
   }
 
   /* Étiquette de section type "sport" */
   .sport-label {
-    @apply inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-slate-100 border border-slate-200;
+    @apply inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200;
   }
   .sport-label-dot {
-    @apply w-1.5 h-1.5 rounded-full bg-amber-500 animate-pulse;
+    @apply w-1.5 h-1.5 rounded-full bg-emerald-500;
   }
   .sport-label-text {
     @apply text-[10px] uppercase tracking-[0.25em] font-bold;
@@ -179,7 +178,7 @@ body {
 
   /* Badge stat */
   .stat-box {
-    @apply relative bg-white border border-slate-200 rounded-2xl p-5 shadow-md overflow-hidden;
+    @apply relative bg-white border border-slate-200 rounded-2xl p-5 shadow-sm overflow-hidden;
   }
   .stat-box::after {
     content: "";
@@ -195,7 +194,10 @@ body {
   position: relative;
 }
 .bg-section-wrap:nth-child(even) {
-  background: #f1f5f9;
+  background: #f5f8fc;
+}
+.bg-section-wrap + .bg-section-wrap {
+  border-top: 1px solid #e8eef5;
 }
 
 /* ============ ANIMATIONS ============ */

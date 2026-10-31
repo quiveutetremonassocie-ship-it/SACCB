@@ -36,7 +36,7 @@ export default function Rules({
             <span className="sport-label-dot" />
             <span className="sport-label-text text-slate-700">Vie de l’association</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Règles de l'association</h2>
+          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">Règles de l'association</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
             Le règlement intérieur du SACCB. Bonne lecture !
           </p>

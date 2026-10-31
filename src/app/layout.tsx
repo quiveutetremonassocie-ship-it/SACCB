@@ -179,6 +179,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           }}
         />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
+        {/* 🔤 Polices du site : chargées ici (un @import placé après @tailwind dans le CSS est ignoré par les navigateurs) */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* eslint-disable-next-line @next/next/no-page-custom-font */}
+        <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Outfit:wght@300;400;500;600;700;800&family=Oswald:wght@500;700&display=swap" />
         <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
         {/* Content-Security-Policy : limite les sources autorisées pour scripts/images/fetch */}
         <meta

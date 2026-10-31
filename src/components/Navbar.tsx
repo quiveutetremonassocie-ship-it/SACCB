@@ -11,12 +11,15 @@ export default function Navbar({
   isAdmin,
   onAdmin,
   onAdminLogin,
+  rubriques = {},
 }: {
   onMember: () => void;
   isMember: boolean;
   isAdmin?: boolean;
   onAdmin?: () => void;
   onAdminLogin?: () => void;
+  // Rubriques désactivées dans l'admin (false) : leur lien disparaît du menu
+  rubriques?: Partial<Record<"presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription", boolean>>;
 }) {
   const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
@@ -29,18 +32,18 @@ export default function Navbar({
 
   // Liens : si href commence par "/" ou est une URL absolue → page dédiée (Next Link)
   // Si href commence par "#" → ancre sur la home (scroll). Sur les pages dédiées, on préfixe avec "/" pour revenir à la home.
-  const allLinks = [
-    { href: "/#presentation", label: "L'Asso" },
-    { href: "/actualites", label: "Actus" },
-    { href: "/#horaires", label: "Horaires" },
-    { href: "/tournois", label: "Tournois" },
-    { href: "/#palmares", label: "Palmarès" },
-    { href: "/inscription", label: "Adhésion", hideIfMember: true },
+  const allLinks: { href: string; label: string; hideIfMember?: boolean; rubrique?: keyof typeof rubriques }[] = [
+    { href: "/#presentation", label: "L'Asso", rubrique: "presentation" },
+    { href: "/actualites", label: "Actus", rubrique: "actualites" },
+    { href: "/#horaires", label: "Horaires", rubrique: "horaires" },
+    { href: "/tournois", label: "Tournois", rubrique: "tournois" },
+    { href: "/#palmares", label: "Palmarès", rubrique: "palmares" },
+    { href: "/inscription", label: "Adhésion", hideIfMember: true, rubrique: "inscription" },
     { href: "/faq", label: "Aide" },
     { href: "/contact", label: "Contact" },
   ];
   // Le lien "Adhésion" est caché pour les membres connectés (ils sont déjà adhérents)
-  const links = allLinks.filter((l) => !(l.hideIfMember && isMember));
+  const links = allLinks.filter((l) => !(l.hideIfMember && isMember) && !(l.rubrique && rubriques[l.rubrique] === false));
 
   return (
     <nav

@@ -324,7 +324,7 @@ export default function Inscription({
             <span className="sport-label-dot" />
             <span className="sport-label-text text-emerald-600">Adhésion</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
+          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">
             Saison {db.y1}–{db.y2}
           </h2>
           <p className="text-slate-500 max-w-2xl mx-auto">

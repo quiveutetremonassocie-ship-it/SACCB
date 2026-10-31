@@ -2,13 +2,13 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { DB, QUOTA_DEFAULT, getEffectiveConfig } from "@/lib/types";
+import { DB, QUOTA_DEFAULT, getEffectiveConfig, getEffectiveHoraires, getEffectivePrix } from "@/lib/types";
 import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView, membreInterne } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import ResetCodeLinkModal from "./modals/ResetCodeLinkModal";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
 import Navbar from "./Navbar";
-import Hero from "./Hero";
+import AccueilHero from "./AccueilHero";
 import Presentation from "./Presentation";
 import Actualites from "./Actualites";
 import Horaires from "./Horaires";
@@ -28,7 +28,6 @@ import FAQ from "./FAQ";
 import BureauPublic from "./BureauPublic";
 import ScrollButton from "./ScrollButton";
 import FadeInSection from "./FadeInSection";
-import WaveDivider from "./WaveDivider";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact" | "faq";
 
@@ -52,6 +51,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [justificatifManquant, setJustificatifManquant] = useState(false);
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
   // 📄 Fiche adhérent réelle (nom, type, montant payé) pour le reçu d'adhésion
+  // 👁 Rubriques activées/désactivées dans l'admin : une rubrique cachée n'a plus de lien nulle part
+  const visibleRubrique = (k: "presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription") =>
+    db.presentationMode === true || db.sectionsVisible?.[k] !== false;
+  const rubriques = {
+    presentation: visibleRubrique("presentation"), actualites: visibleRubrique("actualites"), horaires: visibleRubrique("horaires"),
+    tournois: visibleRubrique("tournois"), palmares: visibleRubrique("palmares"), inscription: visibleRubrique("inscription"),
+  };
+
   // 🏸 Tournoi du club (interne) à signaler à l'adhérent connecté : en cours où il joue, ou ouvert aux inscriptions
   const [bandeauTournoi, setBandeauTournoi] = useState<{ direct: boolean; nom: string } | null>(null);
   useEffect(() => {
@@ -361,6 +368,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     return (
       <>
         <Navbar
+          rubriques={rubriques}
           onMember={() => {}}
           isMember={false}
           isAdmin={isMemberAdmin}
@@ -428,6 +436,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         </div>
       )}
       <Navbar
+        rubriques={rubriques}
         onMember={db.presentationMode ? () => setDemoPanelOpen(true) : onMemberButtonClick}
         isMember={db.presentationMode ? true : !!memberSession}
         isAdmin={isMemberAdmin}
@@ -463,15 +472,19 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           </div>
         )}
         {mode === "full" && (
-          <Hero
+          <AccueilHero
             seasonY1={db.y1}
             seasonY2={db.y2}
             inscOpen={db.insc_open}
             isMember={!!memberSession}
-            engagementOpen={db.pollsOpen === true || db.agOpen === true || db.engagementOpen === true}
             membresCount={membresCount}
-            creneauxCount={getEffectiveConfig(db).creneauxCount}
-            foundedYear={getEffectiveConfig(db).foundedYear}
+            horaires={getEffectiveHoraires(db)}
+            prixAdulte={getEffectivePrix(db).Adulte}
+            prixEtudiant={getEffectivePrix(db).Etudiant}
+            salleNom={getEffectiveConfig(db).salleName}
+            salleAdresse={getEffectiveConfig(db).salleAdresse}
+            onMember={db.presentationMode ? undefined : onMemberButtonClick}
+            rubriques={rubriques}
             nextTournoi={(() => {
               const MOIS: Record<string, string> = {
                 janvier:"01",fevrier:"02",mars:"03",avril:"04",mai:"05",juin:"06",
@@ -496,7 +509,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           />
         )}
         {/* Vague de transition Hero → Présentation */}
-        {mode === "full" && <WaveDivider variant="wave1" fillColor="#f8fafc" className="-mt-1" />}
 
         {/* Mode présentation : toutes les sections visibles. Sinon on respecte les toggles. */}
         {mode === "full" && (db.presentationMode || db.sectionsVisible?.presentation !== false) && (
@@ -549,7 +561,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         )}
 
         {/* Vague de transition avant Tournois */}
-        {mode === "full" && <WaveDivider variant="wave2" fillColor="#f0fdf4" />}
 
         {(mode === "tournois" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.tournois !== false))) && (
           <FadeInSection>
@@ -575,7 +586,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         )}
 
         {/* Vague de transition avant Inscription */}
-        {mode === "full" && <WaveDivider variant="wave3" fillColor="#eff6ff" />}
 
         {/* Section inscription : cachée pour les membres connectés ou si toggle false */}
         {(mode === "inscription" || (mode === "full" && (!memberSession || db.presentationMode) && (db.presentationMode || db.sectionsVisible?.inscription !== false))) && (

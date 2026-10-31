@@ -166,7 +166,7 @@ export default function Palmares({ db, memberSession, onLoginRequest }: {
             <span className="sport-label-dot" />
             <span className="sport-label-text text-amber-600">Historique</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Palmarès</h2>
+          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">Palmarès</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
             Les résultats de l’association en tournois extérieurs.
           </p>

@@ -169,7 +169,7 @@ export default function Engagement({
             <span className="sport-label-dot" />
             <span className="sport-label-text text-purple-600">📣 La parole aux adhérents</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">
+          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">
             {(() => {
               // 📋 Les comptes-rendus sont désormais accessibles uniquement via la modale
               // dans Mon espace. On ne les liste plus dans le titre ici.

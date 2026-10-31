@@ -67,7 +67,7 @@ export default function Tournois({
             <span className="sport-label-dot" />
             <span className="sport-label-text text-amber-600">Compétitions</span>
           </div>
-          <h2 className="font-display text-5xl md:text-6xl h-display mb-4">Tournois</h2>
+          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">Tournois</h2>
           <p className="text-slate-500 max-w-2xl mx-auto">
             Inscrivez votre binôme aux prochains tournois de l’association.
           </p>
@@ -223,7 +223,7 @@ function TournoiTermineCard({ t, inscrits, memberSession, onLoginRequest }: {
         <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
           <div>
             <div className="flex items-center gap-2">
-              <h3 className="font-display text-xl text-slate-600 tracking-wider">{t.name}</h3>
+              <h3 className="text-lg font-semibold text-slate-600 leading-snug">{t.name}</h3>
               <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold">
                 <CheckCircle2 className="w-3 h-3" /> Terminé
               </span>
@@ -451,7 +451,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
             {/* Mini calendrier */}
             <MiniCalendarBadge dateStr={t.date} />
             <div>
-              <h3 className="font-display text-3xl text-slate-800 tracking-wider">{t.name}</h3>
+              <h3 className="text-xl md:text-2xl font-bold text-slate-800 leading-snug">{t.name}</h3>
               <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500">
                 <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {t.date}</span>
                 {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-red-50 text-red-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
@@ -657,10 +657,9 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
               </div>
             </div>
           ) : (
-            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 text-center">
-              <Lock className="w-6 h-6 text-blue-400 mx-auto mb-2" />
-              <p className="text-slate-600 text-sm mb-3">Réservé aux adhérents. Connectez-vous à votre espace membre.</p>
-              <button onClick={onLoginRequest} className="btn-primary !px-5 !py-2">Se connecter</button>
+            <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
+              <p className="text-slate-600 text-sm flex items-center gap-2"><Lock className="w-4 h-4 text-slate-400" /> Inscription réservée aux adhérents</p>
+              <button onClick={onLoginRequest} className="text-sm font-semibold text-[#1e3a5f] hover:underline">Se connecter →</button>
             </div>
           )
         )}
