@@ -28,6 +28,7 @@ import BureauAdmin from "./BureauAdmin";
 import EmailingAdmin from "./EmailingAdmin";
 import MessagesAdmin from "./MessagesAdmin";
 import JournalAdmin from "./JournalAdmin";
+import RapportAG from "./RapportAG";
 import Agenda from "../Agenda";
 import { evenementsAgenda } from "@/lib/agenda";
 import RecuModal from "./RecuModal";
@@ -396,6 +397,7 @@ export default function AdminPanel({
     { id: "admin-analytics", label: "Statistiques", icon: BarChart3, groupe: "Réglages", visible: canSee("saison"), render: () => (
       <>
         <div className="space-y-4">
+                <RapportAG db={db} />
                 <StatsAdhesions totals={totals} />
                 <StatsVisites analyticsDaily={db.analyticsDaily} />
                 {adminEmail && adminCode && <LockedAccounts adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("saison")} />}
