@@ -52,7 +52,11 @@ export function chiffresSaison(db: DB) {
   // Tournois extérieurs (fiches « Tournois » + leurs inscriptions SACCB)
   const tournois = tousTournois.filter((t) => !t.id.startsWith("ic-")).map((t) => {
     const insc = tousInscrits.filter((i) => i.tournoiId === t.id);
-    const meilleur = insc.map((i) => rang(i.resultat)).filter(Boolean).sort((a, b) => a!.rank - b!.rank)[0] || null;
+    // Binôme le mieux classé du tournoi
+    const meilleur = insc
+      .map((i) => { const r = rang(i.resultat); return r ? { ...r, joueurs: propre(i.joueurs) } : null; })
+      .filter(Boolean)
+      .sort((a, b) => a!.rank - b!.rank)[0] || null;
     return { nom: propre(t.name), date: dateISO(t.date), dateTexte: t.date, equipes: insc.length, meilleur };
   }).sort((a, b) => (a.date || "9").localeCompare(b.date || "9"));
   const participations = tournois.reduce((s, t) => s + t.equipes, 0);
@@ -182,9 +186,9 @@ export async function telechargerRapportAg(db: DB, opt: OptionsRapport, apercu =
     if (c.tournois.length) {
       doc.setFontSize(10); doc.setTextColor(60);
       doc.text(`${c.tournois.length} tournoi(s) extérieur(s), ${c.participations} équipe(s) SACCB engagée(s).`, 14, y); y += 5;
-      tableau([["Tournoi", "Date", "Équipes SACCB", "Meilleur résultat"]], c.tournois.map((t) => [
-        t.nom, t.date ? joliDate(t.date) : t.dateTexte, t.equipes, t.meilleur ? `${place(t.meilleur.rank)} / ${t.meilleur.total}` : "-",
-      ]), { columnStyles: { 2: { halign: "center" }, 3: { halign: "center" } } });
+      tableau([["Tournoi", "Date", "Équipes SACCB", "Meilleur binôme", "Place"]], c.tournois.map((t) => [
+        t.nom, t.date ? joliDate(t.date) : t.dateTexte, t.equipes, t.meilleur ? t.meilleur.joueurs : "-", t.meilleur ? `${place(t.meilleur.rank)} / ${t.meilleur.total}` : "-",
+      ]), { columnStyles: { 2: { halign: "center", cellWidth: 22 }, 4: { halign: "center", fontStyle: "bold", cellWidth: 20 } } });
     }
     if (c.organises.length) {
       doc.setFontSize(10); doc.setTextColor(60); place_(10);
@@ -242,7 +246,7 @@ export async function telechargerRapportAg(db: DB, opt: OptionsRapport, apercu =
   }
 
   // ── Signature + pieds de page ──
-  place_(20);
+  place_(8);
   doc.setFontSize(10); doc.setTextColor(60);
   doc.text(`Pour le bureau${db.presidentName ? `, ${propre(db.presidentName)}, président(e)` : ""}.`, 14, y + 4);
   const pages = doc.getNumberOfPages();
