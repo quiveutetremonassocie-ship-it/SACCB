@@ -2361,7 +2361,27 @@ Deno.serve(async (req) => {
     }
 
     // 🕵️ Journal : ce que cet admin vient de changer (le journal lui-même n'est jamais modifiable par le client)
-    newData.adminJournal = noterJournal(d.adminJournal, email, ip, resumeChangements(d, newData), donneesAnnulation(d, newData));
+    const changements = resumeChangements(d, newData);
+    newData.adminJournal = noterJournal(d.adminJournal, email, ip, changements, donneesAnnulation(d, newData));
+
+    // 🚨 Alerte au propriétaire quand un AUTRE admin supprime quelque chose
+    const suppressions = changements.filter((c) => c.startsWith("🗑"));
+    const brevoAlerte = Deno.env.get("BREVO_API_KEY");
+    if (suppressions.length > 0 && email !== JOURNAL_PROPRIETAIRE && brevoAlerte) {
+      const liste = suppressions.slice(0, 20);
+      sendBrevo(brevoAlerte, {
+        from: "SACCB <contact@saccb.fr>",
+        to: [JOURNAL_PROPRIETAIRE],
+        subject: `🗑 ${email} a supprimé ${suppressions.length > 1 ? suppressions.length + " éléments" : "un élément"} sur le site`,
+        text: `${email} vient de supprimer :\n\n${liste.map((c) => "• " + c.replace(/^🗑\s*/, "")).join("\n")}\n\nSi c'est une erreur : Admin → Journal (privé) → bouton ↩️ Annuler.\nhttps://saccb.fr/admin/`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+          <p><strong>${escapeHtml(email)}</strong> vient de supprimer :</p>
+          <ul>${liste.map((c) => `<li>${escapeHtml(c.replace(/^🗑\s*/, ""))}</li>`).join("")}</ul>
+          <p>Si c'est une erreur, va dans <strong>Admin → Journal (privé)</strong> et clique sur <strong>↩️ Annuler</strong> à côté de cette action.</p>
+          <p><a href="https://saccb.fr/admin/" style="display:inline-block;background:#1e3a5f;color:#fff;padding:10px 18px;border-radius:8px;text-decoration:none;font-weight:bold">Ouvrir l'admin</a></p>
+        </div>`,
+      }).catch((e) => console.warn("[admin_save] alerte suppression:", e));
+    }
 
     const { error: saveError } = await saveDB(newData);
     if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
