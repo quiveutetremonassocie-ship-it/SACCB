@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { DB, QUOTA_DEFAULT, getEffectiveConfig } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView } from "@/lib/db";
+import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView, membreInterne } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import ResetCodeLinkModal from "./modals/ResetCodeLinkModal";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
@@ -52,6 +52,21 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [justificatifManquant, setJustificatifManquant] = useState(false);
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
   // 📄 Fiche adhérent réelle (nom, type, montant payé) pour le reçu d'adhésion
+  // 🏸 Tournoi du club (interne) à signaler à l'adhérent connecté : en cours où il joue, ou ouvert aux inscriptions
+  const [bandeauTournoi, setBandeauTournoi] = useState<{ direct: boolean; nom: string } | null>(null);
+  useEffect(() => {
+    if (!memberSession) { setBandeauTournoi(null); return; }
+    let code = memberSession.memberCode || "";
+    try { code = code || sessionStorage.getItem("saccb_member_code") || ""; } catch { /* ignore */ }
+    if (!code) return;
+    try { if (sessionStorage.getItem("saccb_bandeau_tournoi_ferme")) return; } catch { /* ignore */ }
+    membreInterne("membre_interne", memberSession.email, code).then((r) => {
+      const ts = r.tournois || [];
+      const direct = ts.find((t) => t.monBinome && t.live && !t.live.termine);
+      const ouvert = ts.find((t) => !t.live && t.ouvert && !t.monBinome && t.nbBinomes < t.quota);
+      setBandeauTournoi(direct ? { direct: true, nom: direct.name } : ouvert ? { direct: false, nom: ouvert.name } : null);
+    });
+  }, [memberSession?.email, memberSession?.membreId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [memberAdherent, setMemberAdherent] = useState<{ id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } | undefined>(undefined);
   useEffect(() => {
     if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); return; }
@@ -604,6 +619,25 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       </main>
       <FadeInSection>
         <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
+        {/* 🏸 Bandeau « tournoi du club » : uniquement pour un adhérent connecté */}
+        {bandeauTournoi && !memberPanelOpen && (
+          <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:max-w-sm z-[60]">
+            <div className={`rounded-2xl shadow-2xl text-white p-4 flex items-center gap-3 ${bandeauTournoi.direct ? "bg-gradient-to-r from-red-500 to-orange-500" : "bg-gradient-to-r from-[#1e3a5f] to-emerald-600"}`}>
+              <span className="text-2xl">{bandeauTournoi.direct ? "🔴" : "🏸"}</span>
+              <button onClick={onMemberButtonClick} className="flex-1 min-w-0 text-left">
+                <span className="block text-sm font-bold truncate">{bandeauTournoi.direct ? "Ton tournoi est en cours" : "Nouveau tournoi du club"}</span>
+                <span className="block text-xs text-white/85 truncate">{bandeauTournoi.nom} · {bandeauTournoi.direct ? "voir mes matchs" : "je m'inscris"} →</span>
+              </button>
+              <button
+                onClick={() => { setBandeauTournoi(null); try { sessionStorage.setItem("saccb_bandeau_tournoi_ferme", "1"); } catch { /* ignore */ } }}
+                className="text-white/70 hover:text-white text-lg leading-none px-1"
+                aria-label="Fermer"
+              >
+                ×
+              </button>
+            </div>
+          </div>
+        )}
       </FadeInSection>
 
       <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />

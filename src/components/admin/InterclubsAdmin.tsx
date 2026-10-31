@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Plus, Trash2, Copy, Check, RefreshCw, ExternalLink, Upload, ChevronDown, ChevronUp, Lock, Unlock, ClipboardList } from "lucide-react";
 import { DB, InterClub, InterClubClub, INTERCLUB_NIVEAUX, getEffectiveConfig } from "@/lib/types";
 import { EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
+import { adminInterneNotifier } from "@/lib/db";
 import InterclubLiveAdmin from "./InterclubLiveAdmin";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 import ProgrammeEditor from "./ProgrammeEditor";
@@ -162,6 +163,7 @@ export default function InterclubsAdmin({
       sallePhotoPath: precedent?.sallePhotoPath,
       programme: PROGRAMME_DEFAUT.map((p) => ({ ...p, format: { ...p.format } })),
       interne: true,
+      visible: false, // en préparation : les adhérents ne le voient qu'une fois rendu visible
       clubs: [{ id: uid(), nom: "SACCB", token: nouveauJeton(), quota: 16, binomes: [] }],
       createdAt: new Date().toISOString(),
     };
@@ -173,6 +175,30 @@ export default function InterclubsAdmin({
   // Binômes d'un tournoi interne : enregistrés tout de suite (sans passer par « Enregistrer »)
   async function enregistrerBinomesInternes(tId: string, binomes: InterClub["clubs"][number]["binomes"]) {
     await persist(list.map((x) => (x.id !== tId ? x : { ...x, clubs: x.clubs.map((c, i) => (i === 0 ? { ...c, binomes, updatedAt: new Date().toISOString() } : c)) })));
+  }
+
+  // 👁 Montrer / cacher un tournoi interne aux adhérents (enregistré tout de suite)
+  async function basculerVisible(t: InterClub) {
+    if (!t.visible) {
+      if (!t.type) { alert("Choisis d'abord le type du tournoi et enregistre la fiche."); return; }
+      if (!confirm(`Rendre « ${t.name} » visible par tous les adhérents ?\n\nIls pourront s'inscrire depuis leur espace adhérent.`)) return;
+    } else if (!confirm("Cacher ce tournoi aux adhérents ? Les inscriptions déjà faites sont conservées.")) return;
+    await persist(list.map((x) => (x.id === t.id ? { ...x, visible: !t.visible } : x)));
+    if (draft?.id === t.id) setDraft({ ...draft, visible: !t.visible });
+  }
+
+  // 📣 Prévenir les adhérents par mail (toujours sur demande et après confirmation)
+  async function prevenirAdherents(t: InterClub) {
+    if (!adminEmail || !adminCode) { alert("Identifiants admin manquants."); return; }
+    const deja = t.notifieLe ? `\n\n⚠️ Un mail a déjà été envoyé le ${new Date(t.notifieLe).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}.` : "";
+    if (!confirm(`Envoyer un mail aux adhérents (à jour de cotisation, news activées${t.type === "Femmes" ? ", filles uniquement" : t.type === "Hommes" ? ", garçons uniquement" : ""}) pour leur annoncer « ${t.name} » ?${deja}`)) return;
+    setBusy(true);
+    try {
+      const r = await adminInterneNotifier(adminEmail, adminCode, t.id);
+      alert(r.ok ? `✅ Mail envoyé à ${r.sent} adhérent${(r.sent || 0) > 1 ? "s" : ""}.` : `❌ ${r.reason || "Erreur lors de l'envoi."}`);
+    } finally {
+      setBusy(false);
+    }
   }
 
   async function creer() {
@@ -212,7 +238,7 @@ export default function InterclubsAdmin({
       Array.isArray(v) ? v.map(tri)
       : v && typeof v === "object" ? Object.fromEntries(Object.keys(v as object).sort().filter((k) => (v as Record<string, unknown>)[k] !== undefined).map((k) => [k, tri((v as Record<string, unknown>)[k])]))
       : v;
-    const { live: _l, closed: _c, ...reste } = x;
+    const { live: _l, closed: _c, visible: _v, notifieLe: _n, ...reste } = x;
     return JSON.stringify(tri({ ...reste, clubs: x.clubs.map(({ binomes: _b, updatedAt: _u, ...c }) => c) }));
   };
   const modifie = (t: InterClub) => !!draft && draft.id === t.id && empreinte(draft) !== empreinte(t);
@@ -232,7 +258,7 @@ export default function InterclubsAdmin({
         return live ? { ...c, binomes: live.binomes, updatedAt: live.updatedAt } : c;
       });
       // Le jour J et l'ouverture/fermeture sont gérés à part : on garde la version actuelle
-      await persist(list.map((x) => (x.id === draft.id ? { ...draft, clubs, live: actuel?.live, closed: actuel?.closed } : x)));
+      await persist(list.map((x) => (x.id === draft.id ? { ...draft, clubs, live: actuel?.live, closed: actuel?.closed, visible: actuel?.visible, notifieLe: actuel?.notifieLe } : x)));
       return true;
     } catch {
       return false;
@@ -346,7 +372,7 @@ export default function InterclubsAdmin({
                     {t.date && <span>📅 {t.date}</span>}
                     {!t.interne && <span>🏟 {t.clubs.length} club{t.clubs.length > 1 ? "s" : ""}</span>}
                     <span>👥 {nbEquipes}/{nbPlaces} binômes</span>
-                    {t.interne && <span className="text-emerald-700 font-bold">🏠 Interne</span>}
+                    {t.interne && <span className="text-emerald-700 font-bold">🏠 Interne{t.visible ? "" : " · caché"}</span>}
                     {t.closed && <span className="text-red-600 font-semibold">🔒 Fermé</span>}
                     {t.live && !t.live.termine && <span className="text-red-600 font-bold">🔴 En cours</span>}
                     {t.live?.termine && <span className="text-amber-600 font-bold">🏆 Terminé</span>}
@@ -462,6 +488,26 @@ export default function InterclubsAdmin({
                     </div>
                   </div>
 
+                  {d.interne && !readOnly && (
+                    <div className={`rounded-2xl border p-4 flex flex-wrap items-center gap-3 ${t.visible ? "bg-emerald-50 border-emerald-200" : "bg-amber-50 border-amber-200"}`}>
+                      <div className="flex-1 min-w-[200px]">
+                        <p className="text-sm font-bold text-slate-800">{t.visible ? "👁 Visible par les adhérents" : "🛠 En préparation (caché aux adhérents)"}</p>
+                        <p className="text-xs text-slate-600">
+                          {t.visible
+                            ? "Les adhérents le voient dans leur espace (bandeau sur l'accueil + onglet « Mes tournois ») et peuvent s'inscrire."
+                            : "Prépare tranquillement le tournoi, puis rends-le visible quand tout est prêt."}
+                        </p>
+                      </div>
+                      <button onClick={() => basculerVisible(t)} className={`!px-4 !py-2 !text-xs ${t.visible ? "btn-ghost" : "btn-primary"}`}>
+                        {t.visible ? "Cacher" : "Rendre visible"}
+                      </button>
+                      {t.visible && (
+                        <button onClick={() => prevenirAdherents(t)} disabled={busy} className="btn-ghost !px-4 !py-2 !text-xs" title="Un mail aux adhérents à jour avec les news activées, après confirmation">
+                          📣 Prévenir par mail{t.notifieLe ? " (déjà fait)" : ""}
+                        </button>
+                      )}
+                    </div>
+                  )}
                   {d.interne ? (
                     <BinomesInternes
                       t={t}

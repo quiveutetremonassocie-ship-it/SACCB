@@ -121,7 +121,6 @@ export default function MemberPanel({
     membreInterne("membre_interne", session.email, codePerso).then((r) => {
       const direct = !!r.tournois?.some((t) => t.monBinome && t.live && !t.live.termine);
       setTournoiEnDirect(direct);
-      if (direct) setOnglet("tournois");
     });
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
   const [reportsModalOpen, setReportsModalOpen] = useState(false);
@@ -451,6 +450,8 @@ export default function MemberPanel({
                 {session.paid === false ? "⏳ Adhésion à régler" : `✓ Adhérent ${y1}–${y2}`}
               </span>
             </div>
+            {/* 🏸 Tournois du club : bandeau d'inscription, et le direct quand je joue */}
+            <TournoisInternes email={session.email} codeInitial={codePerso} mode="accueil" onVoirTout={() => setOnglet("tournois")} />
         {/* 👑 Bouton d'accès admin (uniquement si le compte a les droits) */}
         {session.isAdmin && (
           <Link

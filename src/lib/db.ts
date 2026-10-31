@@ -1136,3 +1136,17 @@ export async function membreInterne(
     return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
   }
 }
+
+/** 📣 Prévenir les adhérents par mail qu'un tournoi interne est ouvert (admin) */
+export async function adminInterneNotifier(email: string, code: string, tournoiId: string): Promise<{ ok: boolean; sent?: number; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_interne_notifier", email, code, tournoiId }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}

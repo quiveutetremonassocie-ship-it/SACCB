@@ -12,7 +12,14 @@ const TYPE_LABEL: Record<string, string> = { Mixte: "Double mixte", Hommes: "Dou
 const dateFr = (iso: string) => (/^\d{4}-\d{2}-\d{2}$/.test(iso) ? new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) : iso);
 
 /** 🏠 Tournois internes (entre adhérents) dans l'espace adhérent : inscription, direct, scores */
-export default function TournoisInternes({ email, codeInitial }: { email: string; codeInitial: string }) {
+export default function TournoisInternes({
+  email, codeInitial, mode = "complet", onVoirTout,
+}: {
+  email: string;
+  codeInitial: string;
+  mode?: "complet" | "accueil"; // accueil : bandeaux + tournoi en cours seulement
+  onVoirTout?: () => void;
+}) {
   const [code, setCode] = useState(codeInitial);
   const [saisieCode, setSaisieCode] = useState("");
   const [rep, setRep] = useState<MembreInterneReponse | null>(null);
@@ -45,6 +52,7 @@ export default function TournoisInternes({ email, codeInitial }: { email: string
   if (!rep) return <div className="flex justify-center py-6 text-slate-400"><Loader2 className="w-5 h-5 animate-spin" /></div>;
 
   if (rep.needCode) {
+    if (mode === "accueil") return null; // l'onglet « Mes tournois » demandera le code
     return (
       <form
         onSubmit={async (e) => {
@@ -69,11 +77,51 @@ export default function TournoisInternes({ email, codeInitial }: { email: string
     );
   }
 
-  const tournois = rep.tournois || [];
-  if (tournois.length === 0) return null;
+  const tous = rep.tournois || [];
+  if (tous.length === 0) return null;
+
+  // 🏠 Accueil : le tournoi où je joue en direct (ou ses résultats) en grand, le reste en bandeaux
+  const enGrand = (t: TournoiInterneVue) => mode === "complet" || (!!t.live && !!t.monBinome);
+  const bandeaux = mode === "accueil" ? tous.filter((t) => !enGrand(t)) : [];
+  const tournois = tous.filter(enGrand);
 
   return (
     <div className="space-y-5 mb-6">
+      {bandeaux.map((t) => {
+        const complet = t.nbBinomes >= t.quota;
+        if (t.live) {
+          return (
+            <button key={t.id} onClick={onVoirTout} className="w-full text-left rounded-2xl p-4 bg-gradient-to-r from-red-500 to-orange-500 text-white shadow flex items-center gap-3">
+              <Radio className="w-5 h-5 animate-pulse shrink-0" />
+              <span className="flex-1 min-w-0"><span className="block font-bold truncate">{t.name}</span><span className="block text-xs text-white/85">{t.live.termine ? "Voir les résultats" : "Tournoi du club en cours — voir le direct"}</span></span>
+            </button>
+          );
+        }
+        if (t.monBinome) {
+          return (
+            <div key={t.id} className="rounded-2xl p-4 bg-emerald-50 border border-emerald-200 flex items-center gap-3">
+              <Check className="w-5 h-5 text-emerald-600 shrink-0" />
+              <span className="flex-1 min-w-0 text-sm text-emerald-800">
+                Inscrit(e) à <strong>{t.name}</strong>{t.date ? ` le ${dateFr(t.date)}` : ""} : <strong>{t.monBinome.joueur1} / {t.monBinome.joueur2}</strong>
+              </span>
+              <button onClick={onVoirTout} className="text-xs font-semibold text-emerald-700 hover:underline shrink-0">Voir</button>
+            </div>
+          );
+        }
+        if (!t.ouvert || complet) return null;
+        return (
+          <div key={t.id} className="rounded-2xl p-4 bg-gradient-to-r from-[#1e3a5f] to-emerald-600 text-white shadow-lg">
+            <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-200 font-semibold">🏸 Nouveau tournoi du club</p>
+            <p className="font-bold text-lg leading-tight">{t.name}</p>
+            <p className="text-xs text-white/80 mb-3">
+              {t.date ? dateFr(t.date) : ""}{t.type ? ` · ${TYPE_LABEL[t.type] || t.type}` : ""}{t.dateLimit ? ` · inscriptions jusqu'au ${dateFr(t.dateLimit)}` : ""}
+            </p>
+            <button onClick={onVoirTout} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-[#1e3a5f] font-bold text-sm hover:bg-emerald-50">
+              Je m&apos;inscris avec un partenaire →
+            </button>
+          </div>
+        );
+      })}
       {tournois.map((t) => (
         <CarteTournoi
           key={t.id}

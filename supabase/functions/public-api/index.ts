@@ -4515,6 +4515,63 @@ Deno.serve(async (req) => {
     });
   }
 
+  // ─── ACTION: Prévenir les adhérents qu'un tournoi interne est ouvert (admin, sur demande) ───
+  if (action === "admin_interne_notifier") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const t = ((d.interclubs || []) as Record<string, unknown>[]).find((x) => x.interne === true && String(x.id) === String(body.tournoiId || ""));
+    if (!t) return json({ ok: false, reason: "Tournoi introuvable." }, 404);
+    if (t.visible !== true) return json({ ok: false, reason: "Rends d'abord le tournoi visible par les adhérents." }, 400);
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Envoi de mails non configuré." }, 500);
+    const destinataires = ((d.membres || []) as Record<string, unknown>[])
+      .filter((m) => m.ok === true && m.newsOptIn !== false && m.enAttente !== true && tournoiConcerne(t, m))
+      .map((m) => ({ email: String(m.email || ""), prenom: extractFirstName(String(m.nom || "")) }))
+      .filter((m) => m.email);
+    const dateTxt = typeof t.date === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.date)
+      ? new Date(t.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) : "";
+    const limiteTxt = typeof t.dateLimit === "string" && /^\d{4}-\d{2}-\d{2}$/.test(t.dateLimit)
+      ? new Date(t.dateLimit + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" }) : "";
+    const TYPES: Record<string, string> = { Mixte: "en double mixte", Hommes: "en double hommes", Femmes: "en double dames", Libre: "en double libre" };
+    const typeTxt = TYPES[String(t.type || "")] || "en double";
+    const nom = String(t.name || "Tournoi du club");
+    let envoyes = 0;
+    for (const r of destinataires) {
+      const salut = r.prenom ? `Bonjour ${r.prenom},` : "Bonjour,";
+      const lignes = [
+        `Le club organise un tournoi entre adhérents : « ${nom} »${dateTxt ? `, le ${dateTxt}` : ""}, ${typeTxt}.`,
+        "Pour t'inscrire, choisis ton partenaire dans ton espace adhérent sur saccb.fr (onglet « Mes tournois »)." + (limiteTxt ? ` Inscriptions jusqu'au ${limiteTxt}.` : ""),
+        "Le jour du tournoi, tu suivras tes matchs en direct et tu entreras tes scores depuis ce même espace.",
+      ];
+      const res = await sendBrevo(brevoKey, {
+        from: "SACCB <contact@saccb.fr>",
+        to: [r.email],
+        subject: `${r.prenom ? r.prenom + ", " : ""}un tournoi du club t'attend`,
+        text: `${salut}\n\n${lignes.join("\n\n")}\n\nÀ bientôt à la salle,\nLe bureau du SACCB`,
+        html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+          <p>${escapeHtml(salut)}</p>
+          ${lignes.map((l) => `<p>${escapeHtml(l).replace("saccb.fr", '<a href="https://saccb.fr/?member=1" style="color:#1e3a5f;">saccb.fr</a>')}</p>`).join("")}
+          <p>À bientôt à la salle,<br/>Le bureau du SACCB</p>
+        </div>`,
+      }).catch(() => null);
+      if (res && res.ok) envoyes++;
+      await sleep(EMAIL_THROTTLE_MS);
+    }
+    await logEmailToHistory(supabaseAdmin, {
+      type: "tournoi_interne_notification",
+      subject: `Tournoi du club : ${nom}`,
+      recipients: destinataires.map((m) => m.email),
+      sentCount: envoyes,
+      status: "sent",
+    });
+    t.notifieLe = new Date().toISOString();
+    await saveDB(d);
+    return json({ ok: true, sent: envoyes });
+  }
+
   // ─── ACTIONS: Tournois internes (entre adhérents) — vue, inscription, retrait, scores ───
   if (action === "membre_interne" || action === "membre_interne_inscription" || action === "membre_interne_retrait" || action === "membre_interne_score") {
     const email = sanitize(String(body.email || "")).toLowerCase();
@@ -4528,7 +4585,7 @@ Deno.serve(async (req) => {
     const moi = await findMembreOuAdmin(membres, email, code);
     if (!moi) return json({ ok: false, needCode: true, reason: "Email ou code incorrect." }, 403);
     const membreId = String(moi.id);
-    const internes = ((d.interclubs || []) as Record<string, unknown>[]).filter((t) => t.interne === true);
+    const internes = ((d.interclubs || []) as Record<string, unknown>[]).filter((t) => t.interne === true && t.visible === true);
     const tournoi = body.tournoiId ? internes.find((t) => String(t.id) === String(body.tournoiId)) : undefined;
     if (action !== "membre_interne" && !tournoi) return json({ ok: false, reason: "Tournoi introuvable." }, 404);
 
