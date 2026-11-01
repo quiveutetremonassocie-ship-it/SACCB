@@ -10,7 +10,7 @@ import {
 } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, EquipesMap, NomEquipe } from "../live/LiveBoard";
 import ReglageManuel from "./ReglageManuel";
-import { exporterResultatsPdf, exporterScoresPdf, lireSauvegardePdf } from "@/lib/interclubPdf";
+import { exporterResultatsPdf, exporterScoresPdf, lireSauvegardePdf, SauvegardeTournoi } from "@/lib/interclubPdf";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 
 const SITE = "https://saccb.fr";
@@ -36,13 +36,14 @@ function FormatChoix({ f, set }: { f: LiveFormat; set: (f: LiveFormat) => void }
 }
 
 export default function InterclubLiveAdmin({
-  t, onSave, onRefresh, onClose, readOnly, adminEmail, adminCode, onAjouterBinome,
+  t, onSave, onRefresh, onClose, readOnly, adminEmail, adminCode, onAjouterBinome, onRestaurer,
 }: {
   t: InterClub;
   onSave: (live: InterClubLive | undefined) => Promise<void>;
   adminEmail?: string;
   adminCode?: string;
   onAjouterBinome?: (clubId: string, b: InterClubBinome, live: InterClubLive) => Promise<void>; // ➕ binôme arrivé en retard
+  onRestaurer?: (live: InterClubLive, manquants: { clubId: string; clubNom: string; b: InterClubBinome }[]) => Promise<void>; // ♻️ garde la version actuelle pour pouvoir annuler
   onRefresh?: () => Promise<void>;
   onClose: () => void;
   readOnly?: boolean;
@@ -233,18 +234,39 @@ export default function InterclubLiveAdmin({
 
   // ♻️ Remettre un jour J sauvegardé (PDF « Tous les scores » ou version d'avant la réinitialisation)
   const fichierPdf = useRef<HTMLInputElement>(null);
-  async function restaurer(l: InterClubLive, origine: string, autreTournoi?: string) {
-    const ids = new Set(l.phases.flatMap((ph) => ph.poules.flatMap((p) => p.equipes)));
-    const inconnues = [...ids].filter((id) => !eqs[id]).length;
+  async function restaurer(l: InterClubLive, origine: string, autreTournoi?: string, sauvClubs?: SauvegardeTournoi["clubs"]) {
+    // Un PDF d'un autre tournoi mélangerait deux tournois : refusé
+    if (autreTournoi) {
+      alert(`❌ Ce PDF appartient à un autre tournoi : « ${autreTournoi} ».
+
+Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouvre la table de marque de « ${autreTournoi} » et restaure-le là-bas.`);
+      return;
+    }
+    const ids = [...new Set(l.phases.flatMap((ph) => ph.poules.flatMap((p) => p.equipes)))];
+    // 👥 Binômes du PDF absents de ce tournoi : on les remet dans leur club (rien n'est retiré)
+    const manquants = (sauvClubs || []).flatMap((c) => c.binomes.filter((b) => ids.includes(b.id) && !eqs[b.id]).map((b) => ({ clubId: c.id, clubNom: c.nom, b })));
+    const retrouves = new Set(manquants.map((m) => m.b.id));
+    const inconnues = ids.filter((id) => !eqs[id] && !retrouves.has(id)).length;
+    // Aucun binôme ne correspond (PDF d'un autre tournoi, sans les noms) : on refuse plutôt que de tout afficher « Équipe retirée »
+    if (ids.length && inconnues === ids.length) {
+      alert(`❌ Restauration refusée : aucun binôme de ce ${autreTournoi ? `PDF (tournoi « ${autreTournoi} »)` : "fichier"} n'existe dans ce tournoi.\n\nTous les binômes apparaîtraient « Équipe retirée ». Vérifie que tu as choisi le PDF de CE tournoi.`);
+      return;
+    }
     const joues = l.phases.reduce((s, ph) => s + ph.poules.reduce((n, p) => n + p.matchs.filter(matchJoue).length, 0), 0);
     if (!confirm(
       `Remettre le tournoi ${origine} ?\n\n• ${l.phases.length} tour(s) : ${l.phases.map((p) => p.nom).join(", ")}\n• ${joues} match(s) avec un score\n• chaque binôme dans sa poule${l.termine ? "\n• tournoi terminé (podium)" : ""}` +
-      (autreTournoi ? `\n\n⚠️ Ce PDF vient d'un autre tournoi : « ${autreTournoi} ».` : "") +
+      (autreTournoi ? `\n\n⚠️ Ce PDF vient d'un AUTRE tournoi : « ${autreTournoi} ».` : "") +
+      (manquants.length ? `\n\n➕ ${manquants.length} binôme(s) du PDF absents d'ici seront rajoutés à leur club.` : "") +
       (inconnues ? `\n\n⚠️ ${inconnues} binôme(s) du PDF n'existent plus dans ce tournoi (affichés « Équipe retirée »).` : "") +
-      (live ? "\n\n⚠️ Le jour J actuel sera remplacé." : "")
+      (live ? "\n\n↩️ Le jour J actuel est gardé : tu pourras annuler cette restauration." : "")
     )) return;
     // Le lien de l'écran géant actuel reste valable
-    await enregistrer({ ...l, liveToken: live?.liveToken || l.liveToken });
+    const nouveau = { ...l, liveToken: live?.liveToken || l.liveToken };
+    setBusy(true);
+    try {
+      if (onRestaurer) await onRestaurer(nouveau, manquants);
+      else await onSave(nouveau);
+    } finally { setBusy(false); }
     alert("✅ Tournoi remis en place.");
   }
   async function restaurerDepuisPdf(f: File | undefined) {
@@ -252,7 +274,7 @@ export default function InterclubLiveAdmin({
     const s = await lireSauvegardePdf(f);
     if (fichierPdf.current) fichierPdf.current.value = "";
     if (!s) { alert("Ce fichier ne contient pas de sauvegarde de tournoi.\n\nUtilise un PDF téléchargé avec le bouton « 📋 Tous les scores en PDF »."); return; }
-    await restaurer(s.live, `tel qu'il était le ${new Date(s.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })} (PDF)`, s.tournoiId !== t.id ? s.nom : undefined);
+    await restaurer(s.live, `tel qu'il était le ${new Date(s.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })} (PDF)`, s.tournoiId !== t.id ? s.nom : undefined, s.clubs);
   }
 
   async function reinitialiser() {
@@ -386,7 +408,7 @@ export default function InterclubLiveAdmin({
             <p className="font-bold text-amber-900">♻️ Reprendre un tournoi déjà commencé</p>
             {t.liveAvantReset && (
               <button onClick={() => restaurer(t.liveAvantReset!.live, `tel qu'il était avant la réinitialisation du ${new Date(t.liveAvantReset!.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`)} disabled={busy} className="btn-primary !text-sm w-full sm:w-auto">
-                ↩️ Remettre le tournoi tel qu&apos;il était avant la réinitialisation ({new Date(t.liveAvantReset.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })})
+                ↩️ Remettre le tournoi tel qu&apos;il était avant la {t.liveAvantReset.origine === "restauration" ? "restauration" : "réinitialisation"} ({new Date(t.liveAvantReset.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })})
               </button>
             )}
             <div className="flex flex-wrap items-center gap-2">
@@ -691,6 +713,15 @@ export default function InterclubLiveAdmin({
                   <p className="font-bold text-sm">⏹ Arrêter le jour J (fausse manip, tout recommencer)</p>
                   <p className="text-xs text-white/70">Efface les poules et tous les scores. Les binômes inscrits sont conservés et les inscriptions se rouvrent : tu pourras relancer quand tu veux. Le site garde la version effacée et propose de la remettre.</p>
                 </div>
+                {t.liveAvantReset?.origine === "restauration" && (
+                  <button
+                    onClick={() => restaurer(t.liveAvantReset!.live, `tel qu'il était avant la restauration du ${new Date(t.liveAvantReset!.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`)}
+                    disabled={busy}
+                    className="px-4 py-2 rounded-xl text-xs font-bold bg-amber-400 text-amber-950 hover:bg-amber-300 inline-flex items-center gap-1.5"
+                  >
+                    ↩️ Annuler la restauration du {new Date(t.liveAvantReset.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}
+                  </button>
+                )}
                 <button onClick={() => fichierPdf.current?.click()} disabled={busy} className="px-4 py-2 rounded-xl text-xs font-bold bg-white/15 hover:bg-white/25 inline-flex items-center gap-1.5" title="Remettre le tournoi tel qu'il était dans un PDF « Tous les scores »">
                   📥 Restaurer depuis le PDF des scores
                 </button>

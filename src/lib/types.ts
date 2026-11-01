@@ -282,7 +282,7 @@ export type InterClub = {
   interne?: boolean; // 🏠 tournoi entre adhérents du SACCB (pas de clubs invités)
   visible?: boolean; // 🏠 tournoi interne montré aux adhérents (sinon en préparation)
   notifieLe?: string; // date du dernier mail « tournoi ouvert » envoyé aux adhérents
-  liveAvantReset?: { at: string; live: InterClubLive }; // ♻️ jour J tel qu'il était avant « Arrêter et réinitialiser »
+  liveAvantReset?: { at: string; live: InterClubLive; origine?: "reset" | "restauration" }; // ♻️ jour J tel qu'il était avant « Arrêter et réinitialiser » ou avant une restauration
   programme?: PhaseProgramme[]; // 📋 Phases prévues à l'avance (brassage, 2ᵉ tour, finale…) : servent au jour J et au règlement
 };
 

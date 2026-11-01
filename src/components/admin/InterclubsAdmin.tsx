@@ -205,7 +205,7 @@ export default function InterclubsAdmin({
 
   // 🏆 Jour J enregistré ; à la fin du tournoi, le classement part au palmarès du club.
   // Tournoi interne : tout le monde. Inter-clubs : seulement les binômes du SACCB.
-  async function enregistrerJourJ(t0: InterClub, live: InterClub["live"], clubs?: InterClub["clubs"]) {
+  async function enregistrerJourJ(t0: InterClub, live: InterClub["live"], clubs?: InterClub["clubs"], garderAvant = false) {
     const t = clubs ? { ...t0, clubs } : t0; // ➕ binôme ajouté en retard
     const idPalmares = "ic-" + t.id;
     const avant = t.live?.termine === true;
@@ -236,7 +236,12 @@ export default function InterclubsAdmin({
     await onPersist({
       ...db,
       // ♻️ « Arrêter et réinitialiser » : on garde le jour J effacé pour pouvoir le remettre
-      interclubs: list.map((x) => (x.id === t.id ? { ...x, live, ...(clubs ? { clubs } : {}), ...(!live && t.live ? { liveAvantReset: { at: new Date().toISOString(), live: t.live } } : {}) } : x)),
+      interclubs: list.map((x) => (x.id === t.id ? {
+        ...x, live, ...(clubs ? { clubs } : {}),
+        ...(!live && t.live ? { liveAvantReset: { at: new Date().toISOString(), live: t.live, origine: "reset" as const } } : {}),
+        // ♻️ Restauration : la version remplacée est gardée pour pouvoir l'annuler
+        ...(garderAvant && live && t.live ? { liveAvantReset: { at: new Date().toISOString(), live: t.live, origine: "restauration" as const } } : {}),
+      } : x)),
       config_tournois: config,
       inscrits_tournoi: inscrits,
     });
@@ -802,6 +807,18 @@ export default function InterclubsAdmin({
           onSave={(live) => enregistrerJourJ(tJourJ, live)}
           adminEmail={adminEmail}
           adminCode={adminCode}
+          onRestaurer={(live, manquants) => {
+            // Binômes du PDF absents : remis dans leur club (même id, ou même nom), sinon dans un club recréé
+            let clubs = tJourJ.clubs;
+            for (const m of manquants) {
+              const nomNorm = m.clubNom.trim().toLowerCase();
+              const cible = clubs.find((c) => c.id === m.clubId) || clubs.find((c) => c.nom.trim().toLowerCase() === nomNorm);
+              if (cible) clubs = clubs.map((c) => (c.id === cible.id ? { ...c, binomes: [...c.binomes, m.b], updatedAt: new Date().toISOString() } : c));
+              else clubs = [...clubs, { id: m.clubId, nom: m.clubNom, token: nouveauJeton(), code: nouveauCode(), quota: 1, binomes: [m.b], updatedAt: new Date().toISOString() } as InterClubClub];
+            }
+            clubs = clubs.map((c) => (c.binomes.length > (c.quota || 0) ? { ...c, quota: c.binomes.length } : c));
+            return enregistrerJourJ(tJourJ, live, manquants.length ? clubs : undefined, true);
+          }}
           onAjouterBinome={(clubId, b, live) => enregistrerJourJ(tJourJ, live, tJourJ.clubs.map((c) => (c.id === clubId ? { ...c, binomes: [...c.binomes, b], updatedAt: new Date().toISOString() } : c)))}
         />
       )}

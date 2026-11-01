@@ -1,8 +1,11 @@
 // 📄 Résultat final d'un tournoi inter-clubs en PDF (classement de toutes les équipes)
-import { InterClub, InterClubLive } from "./types";
+import { InterClub, InterClubBinome, InterClubLive } from "./types";
 
 // ♻️ Sauvegarde du jour J glissée dans le PDF « Tous les scores »
-export type SauvegardeTournoi = { v: 1; tournoiId: string; nom: string; at: string; live: InterClubLive };
+export type SauvegardeTournoi = {
+  v: 1; tournoiId: string; nom: string; at: string; live: InterClubLive;
+  clubs?: { id: string; nom: string; binomes: InterClubBinome[] }[]; // 👥 binômes de chaque club (pour retrouver les noms)
+};
 const MARQUEUR = "SACCB-TOURNOI:";
 const versBase64 = (s: string) => btoa(unescape(encodeURIComponent(s)));
 const depuisBase64 = (s: string) => decodeURIComponent(escape(atob(s)));
@@ -92,7 +95,10 @@ export async function exporterScoresPdf(t: InterClub, apercu = false): Promise<A
   const finY = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
 
   // ♻️ Copie exacte du jour J cachée dans le PDF : « Restaurer depuis le PDF » remet tout en place
-  const copie: SauvegardeTournoi = { v: 1, tournoiId: t.id, nom: t.name, at: new Date().toISOString(), live };
+  const copie: SauvegardeTournoi = {
+    v: 1, tournoiId: t.id, nom: t.name, at: new Date().toISOString(), live,
+    clubs: t.clubs.map((c) => ({ id: c.id, nom: c.nom, binomes: c.binomes })),
+  };
   doc.setProperties({ title: `${t.name} - scores`, keywords: MARQUEUR + versBase64(JSON.stringify(copie)) });
 
   doc.setFontSize(18);
