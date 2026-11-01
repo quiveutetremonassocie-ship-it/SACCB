@@ -15,6 +15,7 @@ import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip, publi
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 import TournoisInternes from "./TournoisInternes";
+import MonParcours from "./MonParcours";
 import { membreInterne } from "@/lib/db";
 
 export default function MemberPanel({
@@ -746,6 +747,9 @@ export default function MemberPanel({
             </div>
           </div>
         )}
+
+        {/* 🏅 Mon parcours : tous mes tournois, saison par saison */}
+        <MonParcours nom={session.nom} saisons={[...(archives ?? []), { y1, y2, config_tournois: configTournois, inscrits_tournoi: inscritsTournoi }]} />
 
         {/* Classement de la saison */}
         {classement && (
