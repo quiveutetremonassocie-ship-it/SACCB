@@ -371,6 +371,26 @@ export default function InterclubPage() {
         )}
       </header>
 
+      {/* 🏁 Fin du tournoi : remerciement bien visible en haut de la page */}
+      {page.live?.termine && (
+        <div className="max-w-3xl mx-auto px-4 mb-8">
+          <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-300 via-yellow-200 to-amber-400 p-[3px] shadow-2xl">
+            <div className="rounded-[22px] bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] px-6 py-7 text-center text-white">
+              <p className="text-5xl mb-2 animate-float">🏆</p>
+              <p className="text-3xl md:text-4xl mb-3 bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent" style={{ fontFamily: "'Bebas Neue', Oswald, sans-serif", letterSpacing: "0.06em" }}>
+                Tournoi terminé
+              </p>
+              <p className="text-base md:text-lg text-white/90 leading-relaxed">
+                Nous vous remercions pour votre participation.
+                <br />
+                <strong className="text-emerald-300">À bientôt sur les terrains du SACCB ! 🏸</strong>
+              </p>
+              <p className="mt-4 text-xs text-white/50">Retrouvez le classement final et tous les résultats ci-dessous.</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {page.live && (
         <div className="max-w-5xl mx-auto px-4 mb-6 flex justify-center gap-2">
           <button
