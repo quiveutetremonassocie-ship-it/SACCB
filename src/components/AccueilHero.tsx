@@ -47,35 +47,27 @@ export default function AccueilHero({
       <div className="relative max-w-6xl mx-auto px-5 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
         {/* ── Texte ── */}
         <div className="min-w-0 text-center lg:text-left">
-          <motion.span
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.4 }}
+          <span
             className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-5 ${inscOpen ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-700 border border-red-300"}`}
           >
             <span className={`w-2 h-2 rounded-full ${inscOpen ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
             Saison {seasonY1}–{seasonY2} · {inscOpen ? "inscriptions ouvertes" : "inscriptions fermées"}
-          </motion.span>
+          </span>
 
-          <motion.h2
-            initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.05 }}
+          <h2
             className="font-display text-[3.4rem] sm:text-7xl lg:text-8xl leading-[0.9] tracking-wide text-[#1e3a5f] mb-4"
           >
             SACCB
             <span className="block text-[2rem] sm:text-4xl lg:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-emerald-600">
               Badminton · Sainte&#8209;Adresse
             </span>
-          </motion.h2>
+          </h2>
 
-          <motion.p
-            initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.5, delay: 0.12 }}
-            className="text-lg text-slate-600 max-w-lg mx-auto lg:mx-0 mb-7"
-          >
+          <p className="text-lg text-slate-600 max-w-lg mx-auto lg:mx-0 mb-7">
             Une association conviviale pour jouer au badminton à tous les niveaux, se retrouver entre amis et participer à des tournois toute l&apos;année.
-          </motion.p>
+          </p>
 
-          <motion.div
-            initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.5, delay: 0.2 }}
-            className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-7"
-          >
+          <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-7">
             {inscOpen && !isMember && (
               <a href="/inscription" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-white bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8e] shadow-lg shadow-blue-900/20 hover:-translate-y-0.5 transition">
                 <Trophy className="w-5 h-5" /> Adhérer au club
@@ -91,7 +83,7 @@ export default function AccueilHero({
                 Horaires &amp; tarifs <ArrowRight className="w-4 h-4" />
               </a>
             )}
-          </motion.div>
+          </div>
 
           <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-slate-500">
             {membresCount > 0 && <span className="flex items-center gap-1.5"><Users2 className="w-4 h-4 text-emerald-500" /> <strong className="text-slate-700">{membresCount}</strong> adhérents</span>}
@@ -107,7 +99,7 @@ export default function AccueilHero({
         >
           <div className="rounded-[2rem] overflow-hidden shadow-2xl shadow-sky-900/20 rotate-1 border-[6px] border-white">
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/salle.png" alt="Salle Paul Vatine — Sainte-Adresse" className="w-full h-72 sm:h-96 object-cover" />
+            <img src="/salle.jpg" alt="Salle Paul Vatine — Sainte-Adresse" width={974} height={599} className="w-full h-72 sm:h-96 object-cover" />
           </div>
           {nextTournoi && voir("tournois") && <ProchainTournoi name={nextTournoi.name} dateStr={nextTournoi.date} />}
           {(prixAdulte !== undefined || prixEtudiant !== undefined) && (
