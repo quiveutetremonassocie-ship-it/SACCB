@@ -85,6 +85,8 @@ export default function InterclubsAdmin({
   const basculerClub = (id: string) => setClubsOuverts((s) => { const n = new Set(s); if (n.has(id)) n.delete(id); else n.add(id); return n; });
   const tJourJ = list.find((x) => x.id === jourJ);
   const [ouvert, setOuvert] = useState<string | null>(null);
+  // 🏁 Tournois terminés rangés à part (rien n'est supprimé, juste replié)
+  const [voirFinis, setVoirFinis] = useState(false);
   const [draft, setDraft] = useState<InterClub | null>(null);
   const [copie, setCopie] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
@@ -371,33 +373,9 @@ export default function InterclubsAdmin({
     return lignes.join("\n");
   }
 
-  return (
-    <div className="glass p-6 border border-amber-200">
-      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
-        <p className="text-sm text-slate-600 max-w-xl">
-          <strong>Inter-clubs</strong> : ajoute les clubs invités, chacun reçoit <strong>un lien unique</strong> vers une page où il inscrit
-          ses binômes. <strong>Interne</strong> : un tournoi entre adhérents, binômes choisis dans la liste des adhérents, chacun suit et saisit ses scores dans son espace.
-        </p>
-        {!readOnly && (
-          <button onClick={creer} className="btn-primary !px-4 !py-2 !text-xs">
-            <Plus className="w-4 h-4" /> Nouveau tournoi inter-clubs
-          </button>
-        )}
-        {!readOnly && (
-          <button onClick={creerInterne} className="btn-primary !px-4 !py-2 !text-xs !bg-gradient-to-r !from-emerald-600 !to-teal-600" title="Tournoi entre adhérents du club : binômes choisis parmi les adhérents, scores saisis depuis l'espace adhérent">
-            <Plus className="w-4 h-4" /> Nouveau tournoi interne
-          </button>
-        )}
-        {!readOnly && (
-          <button onClick={creerDemo} className="btn-ghost !px-4 !py-2 !text-xs" title="20 équipes fictives réparties dans 4 clubs, pour essayer">
-            🧪 Tournoi de démonstration
-          </button>
-        )}
-      </div>
-
-      <div className="space-y-3 mt-4">
-        {list.length === 0 && <p className="text-center text-slate-400 py-6 text-sm">Aucun tournoi inter-clubs pour le moment</p>}
-        {list.map((t) => {
+  const estFini = (t: InterClub) => t.live?.termine === true;
+  const finis = list.filter(estFini);
+  const carte = (t: InterClub) => {
           const isOpen = ouvert === t.id;
           const d = isOpen && draft?.id === t.id ? draft : t;
           const nbEquipes = t.clubs.reduce((s, c) => s + c.binomes.length, 0);
@@ -769,8 +747,51 @@ export default function InterclubsAdmin({
               )}
             </div>
           );
-        })}
+  };
+
+  return (
+    <div className="glass p-6 border border-amber-200">
+      <div className="flex items-center justify-between gap-3 flex-wrap mb-2">
+        <p className="text-sm text-slate-600 max-w-xl">
+          <strong>Inter-clubs</strong> : ajoute les clubs invités, chacun reçoit <strong>un lien unique</strong> vers une page où il inscrit
+          ses binômes. <strong>Interne</strong> : un tournoi entre adhérents, binômes choisis dans la liste des adhérents, chacun suit et saisit ses scores dans son espace.
+        </p>
+        {!readOnly && (
+          <button onClick={creer} className="btn-primary !px-4 !py-2 !text-xs">
+            <Plus className="w-4 h-4" /> Nouveau tournoi inter-clubs
+          </button>
+        )}
+        {!readOnly && (
+          <button onClick={creerInterne} className="btn-primary !px-4 !py-2 !text-xs !bg-gradient-to-r !from-emerald-600 !to-teal-600" title="Tournoi entre adhérents du club : binômes choisis parmi les adhérents, scores saisis depuis l'espace adhérent">
+            <Plus className="w-4 h-4" /> Nouveau tournoi interne
+          </button>
+        )}
+        {!readOnly && (
+          <button onClick={creerDemo} className="btn-ghost !px-4 !py-2 !text-xs" title="20 équipes fictives réparties dans 4 clubs, pour essayer">
+            🧪 Tournoi de démonstration
+          </button>
+        )}
       </div>
+
+      <div className="space-y-3 mt-4">
+        {list.length === 0 && <p className="text-center text-slate-400 py-6 text-sm">Aucun tournoi inter-clubs pour le moment</p>}
+        {list.length > 0 && finis.length === list.length && <p className="text-center text-slate-400 py-3 text-sm">Aucun tournoi en cours — les tournois terminés sont rangés plus bas.</p>}
+        {list.filter((t) => !estFini(t)).map(carte)}
+        {finis.length > 0 && (
+          <div className="pt-2">
+            <button
+              onClick={() => setVoirFinis((v) => !v)}
+              className="w-full flex items-center gap-2 px-4 py-2.5 rounded-xl bg-amber-50 border border-amber-200 hover:bg-amber-100 transition text-left text-sm font-semibold text-amber-900"
+            >
+              🏁 Tournois finis ({finis.length})
+              <span className="text-xs font-normal text-amber-700">— terminés, gardés ici avec leurs résultats</span>
+              <span className="ml-auto">{voirFinis || finis.some((t) => t.id === ouvert) ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}</span>
+            </button>
+            {(voirFinis || finis.some((t) => t.id === ouvert)) && <div className="space-y-3 mt-3">{finis.map(carte)}</div>}
+          </div>
+        )}
+      </div>
+
 
       {tJourJ && (
         <InterclubLiveAdmin

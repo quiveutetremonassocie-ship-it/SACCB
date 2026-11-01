@@ -1019,6 +1019,7 @@ export type InterclubPage = {
   ok: boolean;
   reason?: string;
   needCode?: boolean; // le club doit saisir son code d'accès
+  reseau?: boolean; // 📴 échec réseau (pas de réponse du serveur)
   ouvert?: boolean;
   tournoi?: {
     name: string; date: string; type: string; niveaux: string[]; dateLimit: string; deroulement: string;
@@ -1065,7 +1066,7 @@ export async function interclubScore(token: string, code: string, matchId: strin
     });
     return await res.json();
   } catch {
-    return { ok: false, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
+    return { ok: false, reseau: true, reason: "Connexion impossible. Vérifiez votre réseau et réessayez." };
   }
 }
 

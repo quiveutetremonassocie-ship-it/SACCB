@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { interclubCall, interclubScore, interclubEffacerScore, interclubContester, InterclubPage as PageData } from "@/lib/db";
 import { LiveMatch, LivePhase } from "@/lib/types";
@@ -10,6 +10,45 @@ import EcranGeant from "./live/EcranGeant";
 import ReglementTournoi from "./live/ReglementTournoi";
 
 type Ligne = { id?: string; joueur1: string; joueur2: string; niveau: string };
+// 📴 Scores saisis sans réseau : gardés sur le téléphone puis envoyés au retour de la connexion
+type Attente = Record<string, { sa: number[]; sb: number[]; at: string }>;
+const cleAttente = (t: string) => "saccb_ic_attente_" + t;
+
+// 🔑 Code du club gardé sur l'appareil pendant 2 jours (chaque téléphone a le sien)
+const cleCode = (t: string) => "saccb_interclub_" + t;
+function lireCode(t: string): string {
+  try {
+    const v = JSON.parse(localStorage.getItem(cleCode(t)) || "null") as { code: string; jusqua: number } | null;
+    if (v && typeof v.jusqua === "number" && v.jusqua > Date.now()) return v.code;
+    localStorage.removeItem(cleCode(t));
+  } catch { /* ignore */ }
+  try { return sessionStorage.getItem(cleCode(t)) || ""; } catch { return ""; }
+}
+function garderCode(t: string, c: string) {
+  try { localStorage.setItem(cleCode(t), JSON.stringify({ code: c, jusqua: Date.now() + 2 * 86_400_000 })); } catch { /* ignore */ }
+}
+function oublierCode(t: string) {
+  try { localStorage.removeItem(cleCode(t)); sessionStorage.removeItem(cleCode(t)); } catch { /* ignore */ }
+}
+
+/** Affiche les scores en attente d'envoi comme s'ils étaient déjà saisis */
+function avecAttente(p: PageData | null, attente: Attente): PageData | null {
+  if (!p?.live || !Object.keys(attente).length) return p;
+  const par = p.club?.id || "";
+  return {
+    ...p,
+    live: {
+      ...p.live,
+      phases: p.live.phases.map((ph) => ({
+        ...ph,
+        poules: ph.poules.map((po) => ({
+          ...po,
+          matchs: po.matchs.map((m) => (attente[m.id] ? { ...m, sa: attente[m.id].sa, sb: attente[m.id].sb, etat: "saisi" as const, par } : m)),
+        })),
+      })),
+    },
+  };
+}
 
 const TYPE_LABEL: Record<string, string> = {
   Mixte: "👫 Double mixte",
@@ -33,7 +72,11 @@ function joursRestants(iso: string): number | null {
 
 export default function InterclubPage() {
   const [token, setToken] = useState<string | null>(null);
-  const [page, setPage] = useState<PageData | null>(null);
+  const [pageServeur, setPage] = useState<PageData | null>(null);
+  const [attente, setAttente] = useState<Attente>({});
+  const attenteRef = useRef<Attente>({});
+  const [horsLigne, setHorsLigne] = useState(false);
+  const page = useMemo(() => avecAttente(pageServeur, attente), [pageServeur, attente]);
   const [lignes, setLignes] = useState<Ligne[]>([]);
   const [busy, setBusy] = useState(false);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
@@ -49,10 +92,10 @@ export default function InterclubPage() {
   async function charger(t: string, c: string) {
     const r = await interclubCall(t, c);
     if (r.needCode) {
-      try { sessionStorage.removeItem("saccb_interclub_" + t); } catch { /* ignore */ }
+      oublierCode(t);
       setCodeErreur(c ? r.reason || "Code incorrect." : "");
     } else if (r.ok) {
-      try { if (c) sessionStorage.setItem("saccb_interclub_" + t, c); } catch { /* ignore */ }
+      if (c) garderCode(t, c);
       setCode(c);
       if (r.club) setLignes(r.club.binomes.map((b) => ({ ...b })));
     }
@@ -67,9 +110,67 @@ export default function InterclubPage() {
     const t = (hash || new URLSearchParams(window.location.search).get("c") || "").trim();
     setToken(t);
     if (!t) return;
-    let memo = "";
-    try { memo = sessionStorage.getItem("saccb_interclub_" + t) || ""; } catch { /* ignore */ }
+    const memo = lireCode(t);
+    try {
+      const a = JSON.parse(localStorage.getItem(cleAttente(t)) || "{}") as Attente;
+      if (a && typeof a === "object") { attenteRef.current = a; setAttente(a); }
+    } catch { /* ignore */ }
     charger(t, memo);
+  }, []);
+
+  function majAttente(a: Attente) {
+    attenteRef.current = a;
+    setAttente(a);
+    if (!token) return;
+    try {
+      if (Object.keys(a).length) localStorage.setItem(cleAttente(token), JSON.stringify(a));
+      else localStorage.removeItem(cleAttente(token));
+    } catch { /* ignore */ }
+  }
+
+  // 📤 Envoi des scores en attente (un par un, dans l'ordre de saisie)
+  const envoiEnCours = useRef(false);
+  const envoyerAttente = useCallback(async () => {
+    if (!token || envoiEnCours.current) return;
+    const ids = Object.keys(attenteRef.current).sort((x, y) => attenteRef.current[x].at.localeCompare(attenteRef.current[y].at));
+    if (!ids.length) return;
+    envoiEnCours.current = true;
+    const refuses: string[] = [];
+    try {
+      for (const id of ids) {
+        const s = attenteRef.current[id];
+        if (!s) continue;
+        const r = await interclubScore(token, code, id, s.sa, s.sb);
+        if (r.reseau) { setHorsLigne(true); return; }
+        setHorsLigne(false);
+        const reste = { ...attenteRef.current };
+        delete reste[id];
+        majAttente(reste);
+        if (r.ok) setPage(r);
+        else refuses.push(`${s.sa.map((x, i) => `${x}-${s.sb[i]}`).join(" / ")} : ${r.reason || "refusé"}`);
+      }
+    } finally {
+      envoiEnCours.current = false;
+    }
+    if (refuses.length) alert("⚠️ Score(s) saisi(s) sans réseau qui n'ont pas pu être enregistrés :\n\n" + refuses.join("\n") + "\n\nVérifiez le match et ressaisissez si besoin.");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [token, code]);
+
+  // Réessaie toutes les 10 s, et dès que le téléphone retrouve le réseau
+  const nbAttente = Object.keys(attente).length;
+  useEffect(() => {
+    if (!nbAttente) return;
+    const iv = setInterval(envoyerAttente, 10_000);
+    const enLigne = () => envoyerAttente();
+    window.addEventListener("online", enLigne);
+    envoyerAttente();
+    return () => { clearInterval(iv); window.removeEventListener("online", enLigne); };
+  }, [nbAttente, envoyerAttente]);
+
+  useEffect(() => {
+    const off = () => setHorsLigne(true);
+    window.addEventListener("offline", off);
+    return () => window.removeEventListener("offline", off);
   }, []);
 
   // 🔄 Pendant le tournoi : actualisation automatique toutes les 5 s (une requête à la fois, en pause si l'onglet est caché)
@@ -80,7 +181,10 @@ export default function InterclubPage() {
     const iv = setInterval(() => {
       if (document.hidden || enCours) return;
       enCours = true;
-      interclubCall(token, code).then((r) => { if (r.ok) setPage(r); }).finally(() => { enCours = false; });
+      interclubCall(token, code).then((r) => {
+        if (r.ok) { setPage(r); if (!Object.keys(attenteRef.current).length) setHorsLigne(false); }
+        else if (/Connexion impossible/.test(r.reason || "")) setHorsLigne(true);
+      }).finally(() => { enCours = false; });
     }, 5000);
     return () => clearInterval(iv);
   }, [enDirect, token, code]);
@@ -105,7 +209,15 @@ export default function InterclubPage() {
   async function envoyerScore(m: LiveMatch, sa: number[], sb: number[]): Promise<string | null> {
     if (!token) return "Lien invalide.";
     const r = await interclubScore(token, code, m.id, sa, sb);
+    if (r.reseau) {
+      // 📴 Pas de réseau : le score est gardé sur le téléphone et partira tout seul
+      majAttente({ ...attenteRef.current, [m.id]: { sa, sb, at: new Date().toISOString() } });
+      setHorsLigne(true);
+      setEdition(null);
+      return null;
+    }
     if (!r.ok) return r.reason || "Erreur lors de l'enregistrement.";
+    if (attenteRef.current[m.id]) { const reste = { ...attenteRef.current }; delete reste[m.id]; majAttente(reste); }
     setPage(r);
     setEdition(null);
     return null;
@@ -278,6 +390,14 @@ export default function InterclubPage() {
 
       {page.live && onglet === "direct" ? (
         <main className="max-w-6xl mx-auto px-4 pb-16 space-y-6">
+          {(horsLigne || nbAttente > 0) && (
+            <div className={`rounded-2xl px-4 py-3 text-sm font-semibold shadow-lg ${horsLigne ? "bg-red-600 text-white" : "bg-amber-400 text-amber-950"}`}>
+              {horsLigne ? "📴 Pas de connexion" : "📤 Envoi en cours…"}
+              {nbAttente > 0
+                ? ` — ${nbAttente} score${nbAttente > 1 ? "s" : ""} gardé${nbAttente > 1 ? "s" : ""} sur ce téléphone, envoi automatique dès le retour du réseau. Ne fermez pas cette page.`
+                : " — vous pouvez continuer à saisir vos scores : ils seront gardés sur ce téléphone et envoyés tout seuls dès le retour du réseau."}
+            </div>
+          )}
           <MesMatchs
             phases={page.live.phases}
             live={page.live}
