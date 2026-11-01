@@ -843,20 +843,42 @@ function json(data: unknown, status = 200) {
 const BUCKETS_SAUVEGARDE = ["actualities", "factures", "reports"];
 const SAUVEGARDE_FICHIERS_MAX = 120_000_000; // au-delà, les fichiers suivants sont listés mais pas copiés
 // deno-lint-ignore no-explicit-any
-async function listerFichiers(supabaseAdmin: any, bucket: string, prefixe = ""): Promise<{ path: string; taille: number; type: string }[]> {
-  const out: { path: string; taille: number; type: string }[] = [];
+async function listerFichiers(supabaseAdmin: any, bucket: string, prefixe = ""): Promise<{ path: string; taille: number; type: string; cree: string }[]> {
+  const out: { path: string; taille: number; type: string; cree: string }[] = [];
   for (let offset = 0; ; offset += 1000) {
     const { data, error } = await supabaseAdmin.storage.from(bucket).list(prefixe, { limit: 1000, offset });
     if (error || !Array.isArray(data)) break;
-    for (const x of data as { name: string; id?: string | null; metadata?: { size?: number; mimetype?: string } }[]) {
+    for (const x of data as { name: string; id?: string | null; created_at?: string; metadata?: { size?: number; mimetype?: string } }[]) {
       const p = prefixe ? `${prefixe}/${x.name}` : x.name;
-      if (x.id) out.push({ path: p, taille: Number(x.metadata?.size) || 0, type: String(x.metadata?.mimetype || "application/octet-stream") });
+      if (x.id) out.push({ path: p, taille: Number(x.metadata?.size) || 0, type: String(x.metadata?.mimetype || "application/octet-stream"), cree: String(x.created_at || "") });
       else if (x.name !== ".emptyFolderPlaceholder") out.push(...(await listerFichiers(supabaseAdmin, bucket, p)));
     }
     if (data.length < 1000) break;
   }
   return out.filter((f) => !f.path.endsWith(".emptyFolderPlaceholder"));
 }
+// 🧹 Un fichier est « utilisé » si son chemin (brut ou encodé) ou son nom apparaît quelque part dans la base
+function fichierUtilise(texteBase: string, path: string): boolean {
+  const nom = path.split("/").pop() || path;
+  const variantes = [path, encodeURI(path), path.split("/").map(encodeURIComponent).join("/"), nom, encodeURIComponent(nom)];
+  return variantes.some((v) => v && texteBase.includes(v));
+}
+async function analyseEspace(supabaseAdmin: unknown, d: Record<string, unknown>) {
+  const texte = JSON.stringify(d);
+  const limite = Date.now() - 24 * 3600_000; // fichiers récents ignorés (actualité en cours de rédaction…)
+  const orphelins: { bucket: string; path: string; taille: number; cree: string }[] = [];
+  const photos: { path: string; taille: number; type: string }[] = [];
+  for (const bucket of BUCKETS_SAUVEGARDE) {
+    for (const f of await listerFichiers(supabaseAdmin, bucket)) {
+      const utilise = fichierUtilise(texte, f.path);
+      const recent = !f.cree || new Date(f.cree).getTime() > limite;
+      if (!utilise && !recent) orphelins.push({ bucket, path: f.path, taille: f.taille, cree: f.cree });
+      if (bucket === "actualities" && /^image\/(jpeg|png|webp)$/.test(f.type) && f.taille > 400_000) photos.push({ path: f.path, taille: f.taille, type: f.type });
+    }
+  }
+  return { orphelins, photos };
+}
+
 function octetsEnBase64(o: Uint8Array): string {
   let bin = "";
   for (let i = 0; i < o.length; i += 0x8000) bin += String.fromCharCode(...o.subarray(i, i + 0x8000));
@@ -4678,6 +4700,58 @@ Deno.serve(async (req) => {
       return json({ ok: false, reason: "Envoi du fichier impossible." }, 500);
     }
     return json({ ok: true });
+  }
+
+  // ─── ACTIONS: 🧹 Libérer de l'espace (propriétaire uniquement) ───
+  if (action === "admin_espace_analyse" || action === "admin_espace_compresser" || action === "admin_espace_supprimer") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
+    if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
+
+    if (action === "admin_espace_analyse") return json({ ok: true, ...(await analyseEspace(supabaseAdmin, d)) });
+
+    if (action === "admin_espace_compresser") {
+      // Même chemin, donc même adresse : les actualités n'ont rien à changer
+      const path = String(body.path || "");
+      const type = String(body.type || "");
+      if (!path || path.includes("..") || !/^image\/(jpeg|webp)$/.test(type)) return json({ ok: false, reason: "Photo invalide." }, 400);
+      const liste = await listerFichiers(supabaseAdmin, "actualities", path.split("/").slice(0, -1).join("/"));
+      const actuel = liste.find((f) => f.path === path);
+      if (!actuel) return json({ ok: false, reason: "Photo introuvable." }, 404);
+      let octets: Uint8Array;
+      try { octets = Uint8Array.from(atob(String(body.base64 || "")), (c) => c.charCodeAt(0)); } catch { return json({ ok: false, reason: "Contenu invalide." }, 400); }
+      if (!octets.length || octets.length >= actuel.taille * 0.9) return json({ ok: true, ignore: true });
+      const { error: upErr } = await supabaseAdmin.storage.from("actualities").update(path, octets, { upsert: true, contentType: type, cacheControl: "3600" });
+      if (upErr) return json({ ok: false, reason: "Envoi impossible." }, 500);
+      return json({ ok: true, avant: actuel.taille, apres: octets.length });
+    }
+
+    // Suppression : uniquement des fichiers encore inutilisés au moment du clic
+    const demandes = (Array.isArray(body.fichiers) ? body.fichiers : []) as { bucket?: string; path?: string }[];
+    const { orphelins } = await analyseEspace(supabaseAdmin, d);
+    const ok = new Set(orphelins.map((o) => o.bucket + "/" + o.path));
+    const parBucket: Record<string, string[]> = {};
+    for (const f of demandes) {
+      const cle = String(f.bucket) + "/" + String(f.path);
+      if (ok.has(cle)) (parBucket[String(f.bucket)] ||= []).push(String(f.path));
+    }
+    let supprimes = 0, octetsLiberes = 0;
+    for (const [bucket, paths] of Object.entries(parBucket)) {
+      const { error: rmErr } = await supabaseAdmin.storage.from(bucket).remove(paths);
+      if (!rmErr) {
+        supprimes += paths.length;
+        octetsLiberes += orphelins.filter((o) => o.bucket === bucket && paths.includes(o.path)).reduce((s, o) => s + o.taille, 0);
+      }
+    }
+    if (supprimes) {
+      d.adminJournal = noterJournal(d.adminJournal, qui, ip, [`🧹 ${supprimes} fichier(s) inutilisé(s) supprimé(s) (${(octetsLiberes / 1e6).toFixed(1)} Mo)`]);
+      await saveDB(d);
+    }
+    return json({ ok: true, supprimes, octets: octetsLiberes, ignores: demandes.length - supprimes });
   }
 
   // ─── ACTION: 📊 Place utilisée sur le serveur (propriétaire uniquement) ───

@@ -1177,6 +1177,27 @@ export async function adminRestaurerFichier(adminEmail: string, adminCode: strin
   }
 }
 
+/** 🧹 Libérer de l'espace : analyse, compression d'une photo, suppression des fichiers inutilisés */
+export type AnalyseEspace = { ok: boolean; reason?: string; orphelins?: { bucket: string; path: string; taille: number; cree: string }[]; photos?: { path: string; taille: number; type: string }[] };
+async function appelEspace<T>(corps: Record<string, unknown>): Promise<T> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify(corps),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." } as T;
+  }
+}
+export const adminEspaceAnalyse = (adminEmail: string, adminCode: string) =>
+  appelEspace<AnalyseEspace>({ action: "admin_espace_analyse", adminEmail, adminCode });
+export const adminEspaceCompresser = (adminEmail: string, adminCode: string, path: string, type: string, base64: string) =>
+  appelEspace<{ ok: boolean; reason?: string; ignore?: boolean; avant?: number; apres?: number }>({ action: "admin_espace_compresser", adminEmail, adminCode, path, type, base64 });
+export const adminEspaceSupprimer = (adminEmail: string, adminCode: string, fichiers: { bucket: string; path: string }[]) =>
+  appelEspace<{ ok: boolean; reason?: string; supprimes?: number; octets?: number; ignores?: number }>({ action: "admin_espace_supprimer", adminEmail, adminCode, fichiers });
+
 /** 📊 Place utilisée sur le serveur (propriétaire uniquement) */
 export type EspaceServeur = { ok: boolean; reason?: string; base?: number; dossiers?: Record<string, { nombre: number; octets: number }>; limites?: { base: number; fichiers: number } };
 export async function adminEspace(adminEmail: string, adminCode: string): Promise<EspaceServeur> {

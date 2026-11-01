@@ -3,7 +3,141 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { DB } from "@/lib/types";
-import { adminEspace, adminJournalAnnuler, EspaceServeur } from "@/lib/db";
+import { adminEspace, adminEspaceAnalyse, adminEspaceCompresser, adminEspaceSupprimer, adminJournalAnnuler, AnalyseEspace, EspaceServeur } from "@/lib/db";
+import { SUPA_URL } from "@/lib/supabase";
+
+/** Recompresse une photo (1600 px max) ; null si le gain est trop faible */
+async function recompresser(url: string, type: string): Promise<{ base64: string; type: string } | null> {
+  const img = new Image();
+  img.crossOrigin = "anonymous";
+  img.src = url + (url.includes("?") ? "&" : "?") + "v=" + Date.now();
+  await img.decode();
+  const k = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight));
+  const c = document.createElement("canvas");
+  c.width = Math.round(img.naturalWidth * k);
+  c.height = Math.round(img.naturalHeight * k);
+  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
+  const sortie = type === "image/jpeg" ? "image/jpeg" : "image/webp"; // PNG → WebP (garde la transparence)
+  const blob = await new Promise<Blob | null>((r) => c.toBlob(r, sortie, 0.82));
+  if (!blob) return null;
+  const o = new Uint8Array(await blob.arrayBuffer());
+  let bin = "";
+  for (let i = 0; i < o.length; i += 0x8000) bin += String.fromCharCode(...o.subarray(i, i + 0x8000));
+  return { base64: btoa(bin), type: sortie };
+}
+
+/** 🧹 Libérer de l'espace : photos recompressées (rien n'est supprimé) + fichiers que plus rien n'utilise */
+function LibererEspace({ adminEmail, adminCode, onFini }: { adminEmail: string; adminCode: string; onFini: () => void }) {
+  const [a, setA] = useState<AnalyseEspace | null>(null);
+  const [enCours, setEnCours] = useState("");
+  const [coches, setCoches] = useState<Set<string>>(new Set());
+  const cle = (f: { bucket: string; path: string }) => f.bucket + "/" + f.path;
+
+  async function analyser() {
+    setEnCours("Analyse…");
+    const r = await adminEspaceAnalyse(adminEmail, adminCode);
+    setEnCours("");
+    setA(r);
+    // Factures (justificatifs) jamais cochées d'office
+    setCoches(new Set((r.orphelins || []).filter((f) => f.bucket !== "factures").map(cle)));
+  }
+
+  async function compresser() {
+    const photos = a?.photos || [];
+    let gagne = 0, faites = 0;
+    const erreurs: string[] = [];
+    for (const [i, p] of photos.entries()) {
+      setEnCours(`Compression ${i + 1}/${photos.length}…`);
+      try {
+        const c = await recompresser(`${SUPA_URL}/storage/v1/object/public/actualities/${p.path.split("/").map(encodeURIComponent).join("/")}`, p.type);
+        if (!c) continue;
+        const r = await adminEspaceCompresser(adminEmail, adminCode, p.path, c.type, c.base64);
+        if (r.ok && !r.ignore && r.avant && r.apres) { gagne += r.avant - r.apres; faites++; }
+        else if (!r.ok) erreurs.push(p.path);
+      } catch { erreurs.push(p.path); }
+    }
+    setEnCours("");
+    alert(`✅ ${faites} photo(s) recompressée(s) : ${mo(gagne)} libérés.${erreurs.length ? `\n⚠️ ${erreurs.length} photo(s) laissée(s) telles quelles.` : ""}`);
+    onFini();
+    analyser();
+  }
+
+  async function supprimer() {
+    const choisis = (a?.orphelins || []).filter((f) => coches.has(cle(f)));
+    if (!choisis.length) return;
+    const total = choisis.reduce((s, f) => s + f.taille, 0);
+    if (!confirm(`Supprimer ${choisis.length} fichier(s) que plus rien n'utilise sur le site (${mo(total)}) ?\n\n• ${choisis.slice(0, 10).map((f) => f.path.split("/").pop()).join("\n• ")}${choisis.length > 10 ? "\n…" : ""}\n\nIls restent dans les sauvegardes complètes déjà téléchargées.`)) return;
+    setEnCours("Suppression…");
+    const r = await adminEspaceSupprimer(adminEmail, adminCode, choisis.map(({ bucket, path }) => ({ bucket, path })));
+    setEnCours("");
+    if (!r.ok) { alert(r.reason || "Suppression impossible."); return; }
+    alert(`✅ ${r.supprimes} fichier(s) supprimé(s) : ${mo(r.octets || 0)} libérés.${r.ignores ? `\n${r.ignores} fichier(s) gardé(s) car ils sont de nouveau utilisés.` : ""}`);
+    onFini();
+    analyser();
+  }
+
+  if (!a) {
+    return (
+      <button onClick={analyser} disabled={!!enCours} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-white border border-slate-300 hover:bg-slate-100">
+        {enCours || "🧹 Libérer de l'espace"}
+      </button>
+    );
+  }
+  if (!a.ok) return <p className="text-xs text-red-600">{a.reason || "Analyse impossible."}</p>;
+  const photos = a.photos || [], orphelins = a.orphelins || [];
+  const DOSS: Record<string, string> = { actualities: "Photos", factures: "Factures", reports: "PDF" };
+  return (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3 space-y-3 text-sm">
+      <div className="flex items-center justify-between gap-2">
+        <p className="font-bold text-slate-700">🧹 Libérer de l&apos;espace</p>
+        <button onClick={() => setA(null)} className="text-xs text-slate-500 hover:text-slate-800">Fermer</button>
+      </div>
+      {enCours && <p className="text-xs text-blue-700 font-semibold">{enCours}</p>}
+
+      <div className="space-y-1">
+        <p className="font-semibold text-slate-700">📷 Photos des actualités trop lourdes</p>
+        {photos.length === 0 ? (
+          <p className="text-xs text-slate-500">Aucune : toutes les photos sont déjà légères.</p>
+        ) : (
+          <>
+            <p className="text-xs text-slate-500">{photos.length} photo(s) · {mo(photos.reduce((s, p) => s + p.taille, 0))}. Elles sont recompressées et restent au même endroit : rien ne change sur le site, rien n&apos;est supprimé.</p>
+            <button onClick={compresser} disabled={!!enCours} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-emerald-600 text-white disabled:opacity-40">Compresser les photos</button>
+          </>
+        )}
+      </div>
+
+      <div className="space-y-1">
+        <p className="font-semibold text-slate-700">🗂 Fichiers que plus rien n&apos;utilise</p>
+        {orphelins.length === 0 ? (
+          <p className="text-xs text-slate-500">Aucun : chaque fichier est utilisé par le site.</p>
+        ) : (
+          <>
+            <p className="text-xs text-slate-500">Fichiers restés sur le serveur alors qu&apos;aucune page ne s&apos;en sert (ex. photo d&apos;une actualité supprimée). Décoche ceux que tu veux garder (les factures ne sont jamais cochées d&apos;office).</p>
+            <ul className="max-h-56 overflow-auto divide-y divide-slate-100 border border-slate-100 rounded-lg">
+              {orphelins.map((f) => (
+                <li key={cle(f)} className="flex items-center gap-2 px-2 py-1.5 text-xs">
+                  <input type="checkbox" checked={coches.has(cle(f))} onChange={() => setCoches((s) => { const n = new Set(s); if (n.has(cle(f))) n.delete(cle(f)); else n.add(cle(f)); return n; })} />
+                  <span className="text-slate-400 w-14 shrink-0">{DOSS[f.bucket] || f.bucket}</span>
+                  {f.bucket === "factures" ? (
+                    <span className="flex-1 truncate text-slate-700">{f.path.split("/").pop()}</span>
+                  ) : (
+                    <a href={`${SUPA_URL}/storage/v1/object/public/${f.bucket}/${f.path.split("/").map(encodeURIComponent).join("/")}`} target="_blank" rel="noopener" className="flex-1 truncate text-blue-700 hover:underline">{f.path.split("/").pop()}</a>
+                  )}
+                  <span className="text-slate-400 shrink-0">{mo(f.taille)}</span>
+                  {f.cree && <span className="text-slate-400 shrink-0 hidden sm:inline">{new Date(f.cree).toLocaleDateString("fr-FR")}</span>}
+                </li>
+              ))}
+            </ul>
+            <button onClick={supprimer} disabled={!!enCours || coches.size === 0} className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-red-600 text-white disabled:opacity-40">
+              Supprimer les {coches.size} fichier(s) coché(s)
+            </button>
+          </>
+        )}
+      </div>
+      <p className="text-[11px] text-slate-400">Les fichiers ajoutés il y a moins de 24 h ne sont jamais proposés (une actualité peut être en cours de rédaction).</p>
+    </div>
+  );
+}
 
 const DOSSIERS: Record<string, string> = { actualities: "Photos des actualités", factures: "Factures (compta)", reports: "PDF (règlements, documents)" };
 const nb = (x: number, d: number) => x.toLocaleString("fr-FR", { maximumFractionDigits: d });
@@ -55,6 +189,7 @@ function PlaceServeur({ adminEmail, adminCode }: { adminEmail?: string; adminCod
             </ul>} />
         </div>
       )}
+      {e?.ok && adminEmail && adminCode && <LibererEspace adminEmail={adminEmail} adminCode={adminCode} onFini={charger} />}
       <p className="text-[11px] text-slate-400">Limites de l&apos;offre gratuite Supabase. Le détail officiel est sur supabase.com → ton projet → Usage.</p>
     </div>
   );
