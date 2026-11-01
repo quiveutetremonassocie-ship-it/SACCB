@@ -266,6 +266,7 @@ const REGLAGES_JOURNAL: Record<string, string> = {
   agendaEvents: "événements de l'agenda", agendaMasques: "tournois retirés de l'agenda",
 };
 const ABSENT = "__absent__";
+const SAUVEGARDES_TOURNOI = new Map<string, number>(); // 💾 dernière sauvegarde par mail de chaque tournoi
 const JOURNAL_ANNULABLES = 150; // seules les 150 dernières actions gardent de quoi être annulées (taille de la base)
 
 /** ↩️ De quoi annuler un enregistrement admin : l'état AVANT de chaque élément / réglage modifié */
@@ -4576,6 +4577,43 @@ Deno.serve(async (req) => {
       autres,
       live: liveVue(tournoi, String(club.id)),
     });
+  }
+
+  // ─── ACTION: 💾 Sauvegarde du jour J par mail (PDF « Tous les scores », restaurable) ───
+  if (action === "admin_interclub_sauvegarde_mail") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const t = ((d.interclubs || []) as Record<string, unknown>[]).find((x) => String(x.id) === String(body.tournoiId || ""));
+    if (!t || !t.live) return json({ ok: false, reason: "Tournoi introuvable ou pas lancé." }, 404);
+    const pdf = String(body.pdf || "");
+    if (!pdf || pdf.length > 6_000_000 || !/^[A-Za-z0-9+/=]+$/.test(pdf)) return json({ ok: false, reason: "Fichier invalide." }, 400);
+    // Plusieurs tables de marque ouvertes : une seule sauvegarde toutes les 4 min par tournoi
+    const dernier = SAUVEGARDES_TOURNOI.get(String(t.id)) || 0;
+    if (Date.now() - dernier < 4 * 60_000) return json({ ok: true, ignore: true });
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    if (!brevoKey) return json({ ok: false, reason: "Envoi de mails non configuré." }, 500);
+    SAUVEGARDES_TOURNOI.set(String(t.id), Date.now());
+    const heure = new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+    const nom = String(t.name || "Tournoi");
+    const fichier = `scores_${nom.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-zA-Z0-9]+/g, "_").replace(/^_|_$/g, "").toLowerCase() || "tournoi"}_${heure.replace(":", "h")}.pdf`;
+    const fini = (t.live as Record<string, unknown>).termine === true;
+    const r = await sendBrevo(brevoKey, {
+      from: "SACCB <contact@saccb.fr>",
+      to: [JOURNAL_PROPRIETAIRE],
+      subject: `💾 ${fini ? "Sauvegarde finale" : "Sauvegarde"} « ${nom} » — ${heure}`,
+      text: `Sauvegarde automatique du tournoi « ${nom} » à ${heure}.\n\nLe PDF joint contient tous les scores. En cas de problème : table de marque → « Restaurer depuis le PDF des scores », puis choisis ce fichier.`,
+      html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+        <p>Sauvegarde automatique du tournoi <strong>« ${escapeHtml(nom)} »</strong> à <strong>${heure}</strong>${fini ? " (tournoi terminé)" : ""}.</p>
+        <p>Le PDF joint contient tous les scores, tour par tour.</p>
+        <p>En cas de problème : <strong>table de marque → « 📥 Restaurer depuis le PDF des scores »</strong>, puis choisis ce fichier. Tout revient comme à ${heure}.</p>
+      </div>`,
+      attachments: [{ filename: fichier, content: pdf }],
+    });
+    if (!r.ok) { SAUVEGARDES_TOURNOI.delete(String(t.id)); return json({ ok: false, reason: "Le mail n'a pas pu partir." }, 502); }
+    return json({ ok: true });
   }
 
   // ─── ACTION: ↩️ Annuler une action du journal (propriétaire du site uniquement) ───

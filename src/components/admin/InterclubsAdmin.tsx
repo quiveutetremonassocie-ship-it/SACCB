@@ -203,7 +203,8 @@ export default function InterclubsAdmin({
 
   // 🏆 Jour J enregistré ; à la fin du tournoi, le classement part au palmarès du club.
   // Tournoi interne : tout le monde. Inter-clubs : seulement les binômes du SACCB.
-  async function enregistrerJourJ(t: InterClub, live: InterClub["live"]) {
+  async function enregistrerJourJ(t0: InterClub, live: InterClub["live"], clubs?: InterClub["clubs"]) {
+    const t = clubs ? { ...t0, clubs } : t0; // ➕ binôme ajouté en retard
     const idPalmares = "ic-" + t.id;
     const avant = t.live?.termine === true;
     const apres = live?.termine === true;
@@ -233,7 +234,7 @@ export default function InterclubsAdmin({
     await onPersist({
       ...db,
       // ♻️ « Arrêter et réinitialiser » : on garde le jour J effacé pour pouvoir le remettre
-      interclubs: list.map((x) => (x.id === t.id ? { ...x, live, ...(!live && t.live ? { liveAvantReset: { at: new Date().toISOString(), live: t.live } } : {}) } : x)),
+      interclubs: list.map((x) => (x.id === t.id ? { ...x, live, ...(clubs ? { clubs } : {}), ...(!live && t.live ? { liveAvantReset: { at: new Date().toISOString(), live: t.live } } : {}) } : x)),
       config_tournois: config,
       inscrits_tournoi: inscrits,
     });
@@ -778,6 +779,9 @@ export default function InterclubsAdmin({
           onRefresh={onRefresh}
           onClose={() => setJourJ(null)}
           onSave={(live) => enregistrerJourJ(tJourJ, live)}
+          adminEmail={adminEmail}
+          adminCode={adminCode}
+          onAjouterBinome={(clubId, b, live) => enregistrerJourJ(tJourJ, live, tJourJ.clubs.map((c) => (c.id === clubId ? { ...c, binomes: [...c.binomes, b], updatedAt: new Date().toISOString() } : c)))}
         />
       )}
     </div>

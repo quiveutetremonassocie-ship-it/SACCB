@@ -67,21 +67,89 @@ export default function AdminPage() {
   // entre-temps ne sont pas écrasées).
   const adminBaseRef = useRef<DB | null>(null);
 
-  const persist = useCallback(async (next: DB) => {
-    setDb(next);
-    if (memberSession && memberAdminCode.current) {
+  // 📴 Hors connexion (wifi du gymnase coupé…) : la dernière version est gardée sur l'appareil
+  // et envoyée dès que le réseau revient. Le serveur fusionne avec ce qui a été saisi entre-temps.
+  const enAttenteRef = useRef<DB | null>(null);
+  const [horsLigne, setHorsLigne] = useState<string | null>(null); // heure de la 1ʳᵉ modification en attente
+  const envoiEnCours = useRef(false);
+  const CLE_ATTENTE = "saccb_admin_en_attente";
+  const garderSurAppareil = (next: DB) => {
+    enAttenteRef.current = next;
+    setHorsLigne((h) => h || new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
+    try { localStorage.setItem(CLE_ATTENTE, JSON.stringify({ email: memberSession?.email, db: next, base: adminBaseRef.current, at: new Date().toISOString() })); } catch { /* stockage plein ou bloqué */ }
+  };
+  const envoyerAttente = useCallback(async (): Promise<boolean> => {
+    const next = enAttenteRef.current;
+    if (!next || envoiEnCours.current || !memberSession || !memberAdminCode.current) return !next;
+    envoiEnCours.current = true;
+    try {
       const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next, adminBaseRef.current ?? undefined);
-      if (r.ok) adminBaseRef.current = next;
-      else alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
+      if (!r.ok) {
+        if (r.reason !== "Erreur réseau") { enAttenteRef.current = null; setHorsLigne(null); try { localStorage.removeItem(CLE_ATTENTE); } catch { /* ignore */ } alert("⚠️ Les modifications faites hors connexion n'ont pas pu être enregistrées : " + (r.reason || "erreur inconnue")); }
+        return false;
+      }
+      adminBaseRef.current = next;
+      if (enAttenteRef.current === next) {
+        enAttenteRef.current = null;
+        setHorsLigne(null);
+        try { localStorage.removeItem(CLE_ATTENTE); } catch { /* ignore */ }
+      }
+      // On recharge la version fusionnée (scores saisis par les clubs pendant la coupure)
+      const data = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current).catch(() => null);
+      if (data && !enAttenteRef.current) { adminBaseRef.current = data.db; setDb(data.db); }
+      return true;
+    } finally {
+      envoiEnCours.current = false;
     }
   }, [memberSession]);
 
+  useEffect(() => {
+    if (!adminReady) return;
+    const essai = () => { if (enAttenteRef.current) envoyerAttente(); };
+    window.addEventListener("online", essai);
+    const iv = setInterval(essai, 10_000);
+    return () => { window.removeEventListener("online", essai); clearInterval(iv); };
+  }, [adminReady, envoyerAttente]);
+
+  // Page fermée pendant une coupure : à la reconnexion, on renvoie ce qui était resté sur l'appareil
+  useEffect(() => {
+    if (!adminReady || !memberSession) return;
+    try {
+      const brut = localStorage.getItem(CLE_ATTENTE);
+      if (!brut) return;
+      const s = JSON.parse(brut) as { email?: string; db: DB; base: DB | null; at: string };
+      if (s.email !== memberSession.email) return;
+      if (!confirm(`Des modifications faites hors connexion le ${new Date(s.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })} n'ont pas été envoyées.\n\nLes envoyer maintenant ? (ce qui a été fait depuis par d'autres est conservé)`)) {
+        localStorage.removeItem(CLE_ATTENTE);
+        return;
+      }
+      if (s.base) adminBaseRef.current = s.base;
+      enAttenteRef.current = s.db;
+      envoyerAttente();
+    } catch { /* ignore */ }
+  }, [adminReady]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const persist = useCallback(async (next: DB) => {
+    setDb(next);
+    if (memberSession && memberAdminCode.current) {
+      // Déjà des modifications en attente : celle-ci part avec elles au retour du réseau
+      if (enAttenteRef.current) { garderSurAppareil(next); envoyerAttente(); return; }
+      const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next, adminBaseRef.current ?? undefined);
+      if (r.ok) adminBaseRef.current = next;
+      else if (r.reason === "Erreur réseau" || (typeof navigator !== "undefined" && !navigator.onLine)) garderSurAppareil(next);
+      else alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
+    }
+  }, [memberSession, envoyerAttente]); // eslint-disable-line react-hooks/exhaustive-deps
+
   const refresh = useCallback(async () => {
+    // Des modifications attendent le réseau : on ne les écrase pas avec la version du serveur
+    if (enAttenteRef.current) { await envoyerAttente(); return; }
     if (memberSession && memberAdminCode.current) {
       const data = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
-      if (data) { adminBaseRef.current = data.db; setDb(data.db); }
+      // (une modification a pu partir en attente pendant le chargement : on ne l'écrase pas)
+      if (data && !enAttenteRef.current) { adminBaseRef.current = data.db; setDb(data.db); }
     }
-  }, [memberSession]);
+  }, [memberSession, envoyerAttente]);
 
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
@@ -183,6 +251,12 @@ export default function AdminPage() {
   // 🟢 Accès admin OK
   if (adminReady && memberSession) {
     return (
+      <>
+      {horsLigne && (
+        <div className="fixed top-0 inset-x-0 z-[100] bg-red-600 text-white text-center text-sm font-semibold px-4 py-2 shadow-lg">
+          📴 Pas de connexion — tes modifications depuis {horsLigne} sont gardées sur cet appareil et partiront toutes seules dès le retour du réseau. Ne ferme pas cette page.
+        </div>
+      )}
       <AdminPanel
         db={db}
         onClose={handleClose}
@@ -191,6 +265,7 @@ export default function AdminPage() {
         adminEmail={memberSession.email}
         adminCode={memberAdminCode.current ?? undefined}
       />
+      </>
     );
   }
 

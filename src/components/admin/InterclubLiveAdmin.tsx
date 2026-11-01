@@ -2,10 +2,11 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Shuffle, Rocket, Copy, Check, ExternalLink, RefreshCw, ChevronRight, Flag, Undo2, Trash2, Pencil, ClipboardList, Monitor } from "lucide-react";
-import { InterClub, InterClubLive, LiveFormat, LiveMatch, LivePhase } from "@/lib/types";
+import { InterClub, InterClubBinome, InterClubLive, LiveFormat, LiveMatch, LivePhase, INTERCLUB_NIVEAUX } from "@/lib/types";
+import { interclubSauvegardeMail } from "@/lib/db";
 import {
   equipesDuTournoi, genererBrassage, genererPhaseSuivante, matchsPoule, matchJoue, phaseTerminee, formatTexte,
-  jetonAleatoire, classementFinal, nomEquipe, lettre,
+  jetonAleatoire, classementFinal, nomEquipe, lettre, uidLive,
 } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, EquipesMap, NomEquipe } from "../live/LiveBoard";
 import ReglageManuel from "./ReglageManuel";
@@ -35,10 +36,13 @@ function FormatChoix({ f, set }: { f: LiveFormat; set: (f: LiveFormat) => void }
 }
 
 export default function InterclubLiveAdmin({
-  t, onSave, onRefresh, onClose, readOnly,
+  t, onSave, onRefresh, onClose, readOnly, adminEmail, adminCode, onAjouterBinome,
 }: {
   t: InterClub;
   onSave: (live: InterClubLive | undefined) => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
+  onAjouterBinome?: (clubId: string, b: InterClubBinome, live: InterClubLive) => Promise<void>; // ➕ binôme arrivé en retard
   onRefresh?: () => Promise<void>;
   onClose: () => void;
   readOnly?: boolean;
@@ -78,7 +82,60 @@ export default function InterclubLiveAdmin({
     setModifierSuite(false);
   }, [phases.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const [edition, setEdition] = useState<string | null>(null);
-  const [tourReglage, setTourReglage] = useState<string | null>(null); // tour choisi dans « Prendre la main » (défaut : en cours)
+  const [tourReglage, setTourReglage] = useState<string | null>(null);
+
+  // ➕ Binôme arrivé en retard (ajouté à son club et à une poule du tour en cours)
+  const [retard, setRetard] = useState({ j1: "", j2: "", club: t.clubs[0]?.id || "", niveau: t.niveaux?.[0] || "Intermédiaire", poule: "" });
+  async function ajouterRetard() {
+    if (!live || !onAjouterBinome) return;
+    const cour = live.phases[live.phases.length - 1];
+    const poule = cour?.poules.find((p) => p.id === retard.poule) || cour?.poules[0];
+    if (!cour || !poule) return;
+    if (!retard.j1.trim() || !retard.j2.trim()) { alert("Indique les deux joueurs."); return; }
+    const b: InterClubBinome = { id: uidLive(), joueur1: retard.j1.trim().slice(0, 60), joueur2: retard.j2.trim().slice(0, 60), niveau: retard.niveau, createdAt: new Date().toISOString() };
+    const club = t.clubs.find((c) => c.id === retard.club) || t.clubs[0];
+    if (!club) return;
+    if (!confirm(`Ajouter « ${b.joueur1} / ${b.joueur2} » (${club.nom}) dans la ${poule.nom} de « ${cour.nom} » ?\n\n${poule.equipes.length} match(s) contre les équipes de la poule seront créés.`)) return;
+    const arrivee = { ...poule, equipes: [...poule.equipes, b.id], matchs: [...poule.matchs, ...poule.equipes.map((autre, k) => (k % 2 ? { id: uidLive(), a: autre, b: b.id } : { id: uidLive(), a: b.id, b: autre }))] };
+    setBusy(true);
+    try {
+      await onAjouterBinome(club.id, b, { ...live, phases: live.phases.map((ph) => (ph.id !== cour.id ? ph : { ...ph, poules: ph.poules.map((p) => (p.id === poule.id ? arrivee : p)) })) });
+      setRetard({ ...retard, j1: "", j2: "" });
+    } finally { setBusy(false); }
+  }
+
+  // 💾 Sauvegarde par mail toutes les 5 min (seulement si quelque chose a changé)
+  const [mailAuto, setMailAuto] = useState(true);
+  const [dernierMail, setDernierMail] = useState<string | null>(null);
+  const tRef = useRef(t);
+  tRef.current = t;
+  const empreinteEnvoyee = useRef("");
+  const sauvegarderParMail = useRef(async () => {});
+  sauvegarderParMail.current = async () => {
+    const tt = tRef.current;
+    if (!tt.live || !adminEmail || !adminCode || readOnly || (typeof navigator !== "undefined" && !navigator.onLine)) return;
+    const empreinte = JSON.stringify(tt.live.phases) + String(tt.live.termine);
+    if (empreinte === empreinteEnvoyee.current) return;
+    const buf = await exporterScoresPdf(tt, true);
+    if (!buf) return;
+    const octets = new Uint8Array(buf);
+    let bin = "";
+    for (let i = 0; i < octets.length; i += 8192) bin += String.fromCharCode(...octets.subarray(i, i + 8192));
+    const r = await interclubSauvegardeMail(adminEmail, adminCode, tt.id, btoa(bin));
+    if (r.ok) {
+      empreinteEnvoyee.current = empreinte;
+      if (!r.ignore) setDernierMail(new Date().toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" }));
+    }
+  };
+  useEffect(() => {
+    if (!live || !mailAuto) return;
+    const iv = setInterval(() => { sauvegarderParMail.current().catch(() => {}); }, 5 * 60_000);
+    return () => clearInterval(iv);
+  }, [!!live, mailAuto]); // eslint-disable-line react-hooks/exhaustive-deps
+  // Fin du tournoi : sauvegarde finale tout de suite
+  useEffect(() => {
+    if (live?.termine && mailAuto) sauvegarderParMail.current().catch(() => {});
+  }, [live?.termine]); // eslint-disable-line react-hooks/exhaustive-deps // tour choisi dans « Prendre la main » (défaut : en cours)
 
   // 🔄 Les scores saisis par les clubs arrivent toutes les 5 s
   useEffect(() => {
@@ -457,6 +514,12 @@ export default function InterclubLiveAdmin({
               <button onClick={() => imprimerQrCodes(t)} className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1" title="QR codes des clubs et de l'écran géant, à imprimer">
                 🖨 QR codes
               </button>
+              {adminEmail && adminCode && !readOnly && (
+                <label className="w-full sm:w-auto order-last sm:order-none text-[11px] text-slate-600 flex items-center gap-1.5 cursor-pointer select-none" title="Le PDF « Tous les scores » (restaurable) est envoyé par mail au propriétaire du site toutes les 5 minutes, s'il y a du nouveau">
+                  <input type="checkbox" checked={mailAuto} onChange={(e) => setMailAuto(e.target.checked)} />
+                  💾 Sauvegarde par mail toutes les 5 min{dernierMail ? ` · dernière à ${dernierMail}` : ""}
+                </label>
+              )}
               {onRefresh && (
                 <button onClick={() => onRefresh()} className="ml-auto text-xs text-slate-500 hover:text-slate-700 flex items-center gap-1">
                   <RefreshCw className="w-3 h-3" /> Actualiser (auto toutes les 5 s)
@@ -577,6 +640,30 @@ export default function InterclubLiveAdmin({
                     </div>
                   )}
                 </div>
+                {onAjouterBinome && (
+                  <div className="rounded-2xl border border-slate-200 p-4 space-y-2">
+                    <p className="text-sm font-semibold text-slate-700">➕ Un binôme arrive en retard</p>
+                    <p className="text-xs text-slate-500">Il est ajouté à son club et placé dans la poule choisie de « {courante.nom} » : ses matchs contre les équipes de la poule sont créés tout seuls.</p>
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <input className="input !py-1.5 !text-sm" placeholder="Joueur 1 (prénom nom)" value={retard.j1} onChange={(e) => setRetard({ ...retard, j1: e.target.value })} />
+                      <input className="input !py-1.5 !text-sm" placeholder="Joueur 2 (prénom nom)" value={retard.j2} onChange={(e) => setRetard({ ...retard, j2: e.target.value })} />
+                    </div>
+                    <div className="flex flex-wrap gap-2 items-center">
+                      {t.clubs.length > 1 && (
+                        <select className="input !py-1.5 !text-sm w-auto" value={retard.club} onChange={(e) => setRetard({ ...retard, club: e.target.value })}>
+                          {t.clubs.map((c) => <option key={c.id} value={c.id}>{c.nom}</option>)}
+                        </select>
+                      )}
+                      <select className="input !py-1.5 !text-sm w-auto" value={retard.niveau} onChange={(e) => setRetard({ ...retard, niveau: e.target.value })}>
+                        {(t.niveaux?.length ? t.niveaux : [...INTERCLUB_NIVEAUX]).map((n) => <option key={n} value={n}>{n}</option>)}
+                      </select>
+                      <select className="input !py-1.5 !text-sm w-auto" value={retard.poule || courante.poules[0]?.id} onChange={(e) => setRetard({ ...retard, poule: e.target.value })}>
+                        {courante.poules.map((p) => <option key={p.id} value={p.id}>{p.nom} ({p.equipes.length} équipes)</option>)}
+                      </select>
+                      <button onClick={ajouterRetard} disabled={busy || !retard.j1.trim() || !retard.j2.trim()} className="btn-primary !text-xs !px-4 !py-2 disabled:opacity-50">Ajouter</button>
+                    </div>
+                  </div>
+                )}
                 <div className="flex flex-wrap gap-2">
                   {programme[phases.length] && (
                     <button onClick={terminer} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Flag className="w-4 h-4" /> Terminer le tournoi maintenant</button>

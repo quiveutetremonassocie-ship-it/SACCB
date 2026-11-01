@@ -1147,6 +1147,20 @@ export async function membreInterne(
 }
 
 /** 📣 Prévenir les adhérents par mail qu'un tournoi interne est ouvert (admin) */
+/** 💾 Envoie au propriétaire du site le PDF « Tous les scores » d'un tournoi en cours */
+export async function interclubSauvegardeMail(email: string, code: string, tournoiId: string, pdf: string): Promise<{ ok: boolean; ignore?: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_interclub_sauvegarde_mail", email, code, tournoiId, pdf }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}
+
 /** ↩️ Annule une action du journal admin (propriétaire du site uniquement) */
 export async function adminJournalAnnuler(email: string, code: string, at: string): Promise<{ ok: boolean; gardes?: number; reason?: string }> {
   try {
