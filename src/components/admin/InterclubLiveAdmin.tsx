@@ -78,6 +78,7 @@ export default function InterclubLiveAdmin({
     setModifierSuite(false);
   }, [phases.length]); // eslint-disable-line react-hooks/exhaustive-deps
   const [edition, setEdition] = useState<string | null>(null);
+  const [tourReglage, setTourReglage] = useState<string | null>(null); // tour choisi dans « Prendre la main » (défaut : en cours)
 
   // 🔄 Les scores saisis par les clubs arrivent toutes les 5 s
   useEffect(() => {
@@ -148,12 +149,23 @@ export default function InterclubLiveAdmin({
     await enregistrer({ ...live, phases: [...live.phases.slice(0, -1), fermee, nouvelle] });
   }
 
+  const scoresTour = (ph: LivePhase) => ph.poules.reduce((s, p) => s + p.matchs.filter(matchJoue).length, 0);
+
   async function annulerPhase() {
     if (!live || phases.length < 2) return;
-    if (courante.poules.some((p) => p.matchs.some(matchJoue))) { alert("Des scores ont déjà été saisis dans cette phase : impossible de l'annuler."); return; }
-    if (!confirm(`Annuler « ${courante.nom} » et revenir à « ${phases[phases.length - 2].nom} » ?`)) return;
+    const n = scoresTour(courante);
+    if (!confirm(`Annuler « ${courante.nom} » et revenir à « ${phases[phases.length - 2].nom} » ?${n > 0 ? `\n\n⚠️ Les ${n} score(s) déjà saisis dans « ${courante.nom} » seront effacés.` : ""}\n\n« ${phases[phases.length - 2].nom} » redevient le tour en cours : tu pourras tout y modifier, puis relancer le tour suivant.`)) return;
     const prec = { ...phases[phases.length - 2], terminee: false };
     await enregistrer({ ...live, phases: [...phases.slice(0, -2), prec] });
+  }
+
+  async function refaireTour() {
+    if (!live || phases.length < 2) return;
+    const prec = phases[phases.length - 2];
+    const n = scoresTour(courante);
+    if (!confirm(`Refaire les poules de « ${courante.nom} » d'après le classement actuel de « ${prec.nom} » ?\n\nMême nombre de poules et même format.${n > 0 ? `\n\n⚠️ Les ${n} score(s) déjà saisis dans « ${courante.nom} » seront effacés.` : ""}`)) return;
+    const nouvelle = genererPhaseSuivante(prec, Math.max(1, courante.poules.length), courante.format, courante.nom);
+    await enregistrer({ ...live, phases: [...phases.slice(0, -1), nouvelle] });
   }
 
   async function terminer() {
@@ -414,11 +426,26 @@ export default function InterclubLiveAdmin({
 
             {!readOnly && !live.termine && courante && (
               <ReglageManuel
-                phase={courante}
+                phase={phases.find((p) => p.id === tourReglage) || courante}
+                tours={phases.map((p) => ({ id: p.id, nom: p.nom }))}
+                onTour={setTourReglage}
                 equipes={equipes}
                 busy={busy}
                 onSave={(ph) => enregistrer({ ...live, phases: live.phases.map((p) => (p.id === ph.id ? ph : p)) })}
               />
+            )}
+            {!readOnly && !live.termine && phases.length > 1 && (
+              <div className="bg-white rounded-2xl shadow-xl p-4 space-y-2">
+                <p className="text-sm font-bold text-[#1e3a5f]">✏️ Modifier un tour déjà joué</p>
+                <p className="text-xs text-slate-600">
+                  Les scores de « {phases.slice(0, -1).map((p) => p.nom).join(" », « ")} » restent modifiables : clique sur l&apos;onglet du tour au-dessus des poules, puis « Corriger ».
+                  Les poules et le classement se règlent dans « ✋ Prendre la main » (choisis le tour). Les poules de « {courante.nom} » ne bougent pas toutes seules : si les changements modifient qui va où, refais-les.
+                </p>
+                <div className="flex flex-wrap gap-2">
+                  <button onClick={refaireTour} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2">🔄 Refaire les poules de « {courante.nom} » avec les nouveaux résultats</button>
+                  <button onClick={annulerPhase} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Undo2 className="w-4 h-4" /> Revenir à « {phases[phases.length - 2].nom} »</button>
+                </div>
+              </div>
             )}
             {!readOnly && !live.termine && courante && (
               <div className="bg-white rounded-3xl shadow-2xl p-5 space-y-4">
@@ -506,9 +533,6 @@ export default function InterclubLiveAdmin({
                 <div className="flex flex-wrap gap-2">
                   {programme[phases.length] && (
                     <button onClick={terminer} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Flag className="w-4 h-4" /> Terminer le tournoi maintenant</button>
-                  )}
-                  {phases.length > 1 && (
-                    <button onClick={annulerPhase} disabled={busy} className="btn-ghost !text-xs !px-4 !py-2"><Undo2 className="w-4 h-4" /> Annuler « {courante.nom} »</button>
                   )}
                 </div>
               </div>

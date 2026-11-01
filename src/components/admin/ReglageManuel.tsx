@@ -8,12 +8,14 @@ import { EquipesMap } from "../live/LiveBoard";
 
 /** ✋ Prendre la main : ajuster un classement à la main, ou déplacer un binôme dans une autre poule */
 export default function ReglageManuel({
-  phase, equipes, onSave, busy,
+  phase, equipes, onSave, busy, tours, onTour,
 }: {
   phase: LivePhase;
   equipes: EquipesMap;
   onSave: (ph: LivePhase) => Promise<void>;
   busy?: boolean;
+  tours?: { id: string; nom: string }[]; // tous les tours lancés (pour corriger un tour précédent)
+  onTour?: (id: string) => void;
 }) {
   const [ouvert, setOuvert] = useState(false);
   const [pouleId, setPouleId] = useState(phase.poules[0]?.id || "");
@@ -62,6 +64,17 @@ export default function ReglageManuel({
 
       {ouvert && (
         <>
+          {tours && tours.length > 1 && onTour && (
+            <div className="flex flex-wrap items-center gap-1.5">
+              <span className="text-xs font-semibold text-slate-600">Tour :</span>
+              {tours.map((t) => (
+                <button key={t.id} onClick={() => onTour(t.id)}
+                  className={`text-xs font-semibold px-3 py-1.5 rounded-full border ${t.id === phase.id ? "bg-amber-600 text-white border-amber-600" : "bg-white text-slate-600 border-slate-300"}`}>
+                  {t.nom}
+                </button>
+              ))}
+            </div>
+          )}
           <div className="flex flex-wrap gap-1.5">
             {phase.poules.map((p) => (
               <button key={p.id} onClick={() => setPouleId(p.id)}
