@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { ArrowUp, ArrowDown, RotateCcw } from "lucide-react";
 import { LivePhase, LivePoule } from "@/lib/types";
 import { classementPoule, uidLive } from "@/lib/interclubLive";
@@ -18,6 +18,15 @@ export default function ReglageManuel({
   onTour?: (id: string) => void;
 }) {
   const [ouvert, setOuvert] = useState(false);
+  // ✏️ Nom et format du tour (modifiables à tout moment)
+  const [nomTour, setNomTour] = useState(phase.nom);
+  const [sets, setSets] = useState<1 | 3>(phase.format.sets);
+  const [points, setPoints] = useState(phase.format.points);
+  const [cassant, setCassant] = useState(phase.format.cassant);
+  useEffect(() => {
+    setNomTour(phase.nom); setSets(phase.format.sets); setPoints(phase.format.points); setCassant(phase.format.cassant);
+  }, [phase.id, phase.nom, phase.format.sets, phase.format.points, phase.format.cassant]);
+  const formatChange = nomTour.trim() !== phase.nom || sets !== phase.format.sets || points !== phase.format.points || cassant !== phase.format.cassant;
   const [pouleId, setPouleId] = useState(phase.poules[0]?.id || "");
   const poule = phase.poules.find((p) => p.id === pouleId) || phase.poules[0];
   if (!poule) return null;
@@ -57,7 +66,7 @@ export default function ReglageManuel({
       <button onClick={() => setOuvert(!ouvert)} className="w-full text-left flex items-center justify-between gap-2">
         <span>
           <span className="block text-sm font-bold text-slate-800">✋ Prendre la main (erreur, cas particulier)</span>
-          <span className="block text-xs text-slate-600">Changer l&apos;ordre d&apos;un classement à la main, ou déplacer un binôme dans une autre poule.</span>
+          <span className="block text-xs text-slate-600">Changer le nom ou le format d&apos;un tour, l&apos;ordre d&apos;un classement, ou déplacer un binôme dans une autre poule — à tout moment, même pour un tour déjà joué.</span>
         </span>
         <span className="text-slate-500 text-sm">{ouvert ? "▲" : "▼"}</span>
       </button>
@@ -75,6 +84,31 @@ export default function ReglageManuel({
               ))}
             </div>
           )}
+          <div className="rounded-xl border border-slate-200 bg-white p-3 space-y-2">
+            <p className="text-xs font-semibold text-slate-600">Nom et format de « {phase.nom} »</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input className="input !py-1.5 !text-sm w-40" value={nomTour} onChange={(e) => setNomTour(e.target.value)} maxLength={40} />
+              <select className="input !py-1.5 !text-sm w-auto" value={sets} onChange={(e) => setSets(Number(e.target.value) === 3 ? 3 : 1)}>
+                <option value={1}>1 set</option>
+                <option value={3}>2 sets gagnants</option>
+              </select>
+              <label className="text-sm text-slate-600 flex items-center gap-1">
+                en <input type="number" min={5} max={30} className="input !py-1.5 !text-sm w-16" value={points} onChange={(e) => setPoints(Math.max(5, Math.min(30, Number(e.target.value) || 0)))} /> points
+              </label>
+              <label className="text-sm text-slate-600 flex items-center gap-1.5">
+                <input type="checkbox" checked={cassant} onChange={(e) => setCassant(e.target.checked)} /> point cassant
+              </label>
+              <button
+                onClick={() => onSave({ ...phase, nom: nomTour.trim() || phase.nom, format: { sets, points, cassant } })}
+                disabled={busy || !formatChange}
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-white disabled:opacity-40"
+              >
+                Enregistrer
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500">Les scores déjà saisis sont gardés ; le nouveau format s&apos;applique aux prochaines saisies.</p>
+          </div>
+
           <div className="flex flex-wrap gap-1.5">
             {phase.poules.map((p) => (
               <button key={p.id} onClick={() => setPouleId(p.id)}

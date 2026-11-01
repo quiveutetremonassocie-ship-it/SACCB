@@ -214,7 +214,7 @@ export default function InterclubLiveAdmin({
   }
 
   const renderAction = (m: LiveMatch, ph: LivePhase) => {
-    if (readOnly || live?.termine) return null;
+    if (readOnly) return null;
     const enEdition = edition === m.id;
     const aValider = matchJoue(m) && m.etat !== "valide" && m.par !== "admin";
     if (m.forfait) {
@@ -424,7 +424,12 @@ export default function InterclubLiveAdmin({
 
             <LiveBoard phases={live.phases} equipes={equipes} termine={live.termine} clubs={clubs} renderAction={renderAction} />
 
-            {!readOnly && !live.termine && courante && (
+            {!readOnly && live.termine && (
+              <p className="rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs px-4 py-2.5">
+                🏁 Tournoi terminé, mais tout reste corrigeable : scores (« Corriger » sous chaque match), classements, poules et format dans « ✋ Prendre la main ». Le podium et le palmarès se mettent à jour tout seuls. Pour relancer un tour : « Rouvrir le tournoi ».
+              </p>
+            )}
+            {!readOnly && courante && (
               <ReglageManuel
                 phase={phases.find((p) => p.id === tourReglage) || courante}
                 tours={phases.map((p) => ({ id: p.id, nom: p.nom }))}
