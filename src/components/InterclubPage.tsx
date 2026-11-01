@@ -4,7 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { CalendarDays, MapPin, Navigation, Users, Trophy, Clock, Plus, Trash2, Check, AlertTriangle, Loader2, Lock, Radio, Info, ChevronDown, ChevronUp } from "lucide-react";
 import { interclubCall, interclubScore, interclubEffacerScore, interclubContester, InterclubPage as PageData } from "@/lib/db";
 import { LiveMatch, LivePhase } from "@/lib/types";
-import { matchJoue, classementGeneral, formatTexte } from "@/lib/interclubLive";
+import { matchJoue, classementGeneral, classementFinal, formatTexte } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, NomEquipe, texteScore, EtatMatch } from "./live/LiveBoard";
 import EcranGeant from "./live/EcranGeant";
 import ReglementTournoi from "./live/ReglementTournoi";
@@ -234,6 +234,13 @@ export default function InterclubPage() {
 
   const t = page?.tournoi;
   const club = page?.club;
+  // 🏅 Binômes du club sur le podium final (dernier tour)
+  const podium = useMemo(() => {
+    const l = page?.live;
+    const der = l?.termine ? l.phases[l.phases.length - 1] : undefined;
+    if (!l || !der) return [];
+    return classementFinal(der).slice(0, 3).map((id, i) => ({ place: i + 1, e: l.equipes[id] })).filter((x) => x.e?.mine);
+  }, [page?.live]);
   const quota = club?.quota ?? 0;
   const enregistre = useMemo(() => JSON.stringify(club?.binomes.map((b) => [b.id, b.joueur1, b.joueur2, b.niveau]) ?? []), [club]);
   const modifie = JSON.stringify(lignes.map((b) => [b.id, b.joueur1, b.joueur2, b.niveau])) !== enregistre;
@@ -380,6 +387,21 @@ export default function InterclubPage() {
               <p className="text-3xl md:text-4xl mb-3 bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent" style={{ fontFamily: "'Bebas Neue', Oswald, sans-serif", letterSpacing: "0.06em" }}>
                 Tournoi terminé
               </p>
+              {podium.length > 0 && (
+                <div className="mb-5 rounded-2xl bg-white/10 border border-amber-300/40 px-4 py-4">
+                  <p className="text-xl md:text-2xl font-bold text-amber-200 mb-2">
+                    🎉 Félicitations pour {podium.length > 1 ? "vos podiums" : "votre podium"} !
+                  </p>
+                  <ul className="space-y-1.5">
+                    {podium.map(({ place, e }) => (
+                      <li key={place} className="text-base md:text-lg">
+                        <span className="text-2xl align-middle mr-1">{["🥇", "🥈", "🥉"][place - 1]}</span>
+                        <strong>{place === 1 ? "1re place" : `${place}e place`}</strong> — {e.joueur1} &amp; {e.joueur2}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
               <p className="text-base md:text-lg text-white/90 leading-relaxed">
                 Nous vous remercions pour votre participation.
                 <br />
