@@ -143,6 +143,34 @@ const DOSSIERS: Record<string, string> = { actualities: "Photos des actualités"
 const nb = (x: number, d: number) => x.toLocaleString("fr-FR", { maximumFractionDigits: d });
 const mo = (o: number) => (o < 1_000_000 ? `${nb(Math.max(0.01, o / 1_000_000), 2)} Mo` : o < 1_000_000_000 ? `${nb(o / 1_000_000, 1)} Mo` : `${nb(o / 1_000_000_000, 2)} Go`);
 
+/** 📘 PDF « Fiche du site pour Claude » : description, état actuel et historique des modifications */
+function FicheSite({ db, adminEmail, adminCode }: { db: DB; adminEmail?: string; adminCode?: string }) {
+  const [enCours, setEnCours] = useState(false);
+  async function telecharger() {
+    setEnCours(true);
+    try {
+      const espace = adminEmail && adminCode ? await adminEspace(adminEmail, adminCode).catch(() => null) : null;
+      const { telechargerFicheSite } = await import("@/lib/pdfFicheSite");
+      await telechargerFicheSite(db, espace);
+    } catch {
+      alert("Impossible de créer la fiche du site.");
+    } finally {
+      setEnCours(false);
+    }
+  }
+  return (
+    <div className="rounded-xl border border-sky-200 bg-sky-50 px-4 py-3 flex flex-wrap items-center justify-between gap-3">
+      <div className="min-w-[220px] flex-1">
+        <p className="text-sm font-bold text-slate-700">📘 Fiche du site pour Claude</p>
+        <p className="text-xs text-slate-500">Un PDF qui explique tout le site (fonctionnement, services utilisés, règles, état actuel, historique des modifications). Donne-le à Claude au début d&apos;une nouvelle conversation. Toujours à jour : il est créé au moment du clic.</p>
+      </div>
+      <button onClick={telecharger} disabled={enCours} className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#1e3a5f] text-white disabled:opacity-50">
+        {enCours ? "Création…" : "📥 Télécharger la fiche (PDF)"}
+      </button>
+    </div>
+  );
+}
+
 /** 🚨 Requêtes bloquées par le serveur (trop de requêtes, essais de codes…) */
 function RequetesBloquees({ blocages }: { blocages: NonNullable<DB["securiteBlocages"]> }) {
   const [ouvert, setOuvert] = useState(false);
@@ -288,6 +316,7 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
         {heures > 26 && <span className="block text-xs mt-0.5">⚠️ Plus de 24 h : vérifie que la sauvegarde de nuit fonctionne toujours.</span>}
       </div>
 
+      <FicheSite db={db} adminEmail={adminEmail} adminCode={adminCode} />
       <PlaceServeur adminEmail={adminEmail} adminCode={adminCode} />
       <RequetesBloquees blocages={db.securiteBlocages || []} />
 
