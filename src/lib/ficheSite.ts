@@ -48,7 +48,7 @@ export const FICHE_SITE: SectionFiche[] = [
       "Nom de domaine saccb.fr : pointe vers GitHub Pages (fichier CNAME). Redirection http → https active.",
       "Supabase (projet jsceiujlopxgsjlxbvyu) : base de données, fichiers (photos, factures, PDF), fonction serveur « public-api », secrets (Edge Functions → Secrets). Offre gratuite : 500 Mo de base, 1 Go de fichiers, ~500 000 appels/mois ; « Usage » pour la consommation, « Edge Functions → Logs » pour le détail (≈ 1 jour).",
       "Brevo (compte saccb) : envoi de tous les mails du site via clé API (BREVO_API_KEY) ; réception des réponses des adhérents (Brevo Inbound → admin « Messages reçus », protégé par BREVO_INBOUND_SECRET, adresse INBOUND_REPLY_ADDRESS). Les clés SMTP Brevo ne servent pas (le mail « clé SMTP inactive » n'a aucun impact).",
-      "Resend : envoi de secours si Brevo échoue (RESEND_API_KEY, optionnel).",
+      "Resend : deuxième service d'envoi, utilisé automatiquement mail par mail quand Brevo refuse (quota/crédits épuisés, clé refusée, compte bloqué, panne : codes 400, 401, 402, 403, 429, 5xx ou réseau). Même expéditeur contact@saccb.fr. Nécessite RESEND_API_KEY dans les secrets Supabase et le domaine saccb.fr vérifié sur Resend. Quotas gratuits indicatifs : Brevo ~300 mails/jour, Resend ~100/jour.",
       "HelloAsso : paiement des adhésions et des t-shirts ; HelloAsso prévient le site par webhook (HELLOASSO_WEBHOOK_SECRET) pour marquer le paiement ; QR code de paiement dans l'admin.",
       "Google Sheets : copie des inscriptions vers un tableur via SHEETS_WEBHOOK (optionnel).",
       "Google Agenda / Google Maps : boutons « Ajouter à mon agenda » et plan d'accès à la salle (liens, pas de compte nécessaire).",
