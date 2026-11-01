@@ -8,7 +8,7 @@ const corsHeaders = {
 
 // Rate limiting général (par IP, reset au redéploiement)
 const rateLimitMap = new Map<string, { count: number; reset: number }>();
-const RATE_LIMIT = 10; // max 10 requêtes
+const RATE_LIMIT = 120; // max 120 requêtes (jour de tournoi : tous les téléphones du gymnase partagent la même IP)
 const RATE_WINDOW = 60_000; // par minute
 
 function isRateLimited(ip: string): boolean {
@@ -94,6 +94,23 @@ function recordLoginFailure(email: string): void {
 
 function clearLoginFailures(email: string): void {
   accountLockMap.delete(email);
+}
+
+// 🔒 Accès admin directs (chargement / enregistrement / actions admin) : mêmes protections que la connexion
+const adminEchecsIp = new Map<string, { n: number; reset: number }>();
+function adminBloque(email: string, ip: string): Response | null {
+  const lock = isAccountLocked(email);
+  if (lock.locked) return json({ ok: false, reason: `Compte temporairement bloqué après plusieurs tentatives. Réessayez dans ${lock.minutesLeft} min.` }, 429);
+  const e = adminEchecsIp.get(ip);
+  if (e && e.reset > Date.now() && e.n >= 20) return json({ ok: false, reason: "Trop de tentatives. Réessayez dans 15 minutes." }, 429);
+  return null;
+}
+function adminEchec(email: string, ip: string): void {
+  if (email) recordLoginFailure(email);
+  const now = Date.now();
+  const e = adminEchecsIp.get(ip);
+  if (!e || e.reset < now) adminEchecsIp.set(ip, { n: 1, reset: now + 900_000 });
+  else e.n++;
 }
 
 // 🔑 2FA admin par email : stocké en DB (les Edge Functions sont stateless,
@@ -892,6 +909,9 @@ async function checkAdminAuth(
   const email = String(body.adminEmail || body.email || "").toLowerCase().trim();
   const code = String(body.adminCode || body.code || "").trim();
   if (!email || !code) return json({ ok: false, reason: "Authentification admin requise." }, 401);
+  const ip = String(body.__ip || "unknown");
+  const bloque = adminBloque(email, ip);
+  if (bloque) return bloque;
 
   const membres = (d.membres || []) as Record<string, unknown>[];
   const adminEmailEntries = parseAdminEmails((d.adminEmails as unknown[]) || []);
@@ -902,6 +922,7 @@ async function checkAdminAuth(
   const validMembre = await findMembreByCredentials(membres, email, code);
 
   if (!validAdminCred && !validMembre) {
+    adminEchec(email, ip);
     return json({ ok: false, reason: "Identifiants invalides." }, 401);
   }
   if (!adminEmails.includes(email) && !validAdminCred) {
@@ -1599,13 +1620,7 @@ Deno.serve(async (req) => {
       // donné aux adhérents payés via check_session.
       whatsappEnabled: !!d.whatsappLink,
       membresCount: ((d.membres as unknown[]) || []).length,
-      // Liste des noms des adhérents PAYÉS (pour autocomplétion inscription tournoi)
-      // On expose juste le nom (pas email ni tél), car c'est déjà visible dans les inscriptions tournois
-      membreNoms: ((d.membres as Record<string, unknown>[]) || [])
-        .filter((m) => m.ok === true)
-        .map((m) => String(m.nom || ""))
-        .filter(Boolean)
-        .sort(),
+      // 🔒 Les noms des adhérents ne sont plus publics : envoyés aux adhérents connectés (check_session)
       polls,
       agItems,
       reunionReports: d.reunionReports ?? [],
@@ -1891,7 +1906,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const pending = (d.faqPending || []) as Array<{ id: string; question: string; membreEmail?: string; membreNom?: string }>;
@@ -1954,7 +1969,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     d.faqPending = ((d.faqPending || []) as { id: string }[]).filter((p) => p.id !== pendingId);
     await saveDB(d);
@@ -1966,7 +1981,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     return json({ ok: true, pending: d.faqPending || [] });
   }
@@ -2234,7 +2249,7 @@ Deno.serve(async (req) => {
     const validAdminCred = await findAdminCredByCredentials(adminCredentials, email, code);
     const validMembre = await findMembreOuAdmin(membres, email, code);
 
-    if (!validAdminCred && !validMembre) return json({ ok: false, reason: "Identifiants incorrects." });
+    if (!validAdminCred && !validMembre) { adminEchec(email, ip); return json({ ok: false, reason: "Identifiants incorrects." }); }
     if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
 
     const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
@@ -2274,7 +2289,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
     const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
     // 🕵️ Le journal ne sort que pour le propriétaire du site
@@ -2317,7 +2332,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
 
     const newData = body.backupData as Record<string, unknown> | undefined;
@@ -2369,7 +2384,7 @@ Deno.serve(async (req) => {
     const validAdminCredSave = await findAdminCredByCredentials(adminCredentialsCheck, email, code);
     const validMembreSave = await findMembreOuAdmin(membres, email, code);
 
-    if (!validAdminCredSave && !validMembreSave) return json({ ok: false, reason: "Identifiants incorrects." });
+    if (!validAdminCredSave && !validMembreSave) { adminEchec(email, ip); return json({ ok: false, reason: "Identifiants incorrects." }); }
     if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
 
     // Seuls les super-admins peuvent modifier la liste adminEmails (ajout/suppression)
@@ -2772,7 +2787,7 @@ Deno.serve(async (req) => {
     const { data: dbDataSync } = await loadDB();
     if (!dbDataSync) return json({ ok: false }, 500);
     const dSync = dbDataSync.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, dSync);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, dSync);
     if (authError) return authError;
 
     const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
@@ -2878,7 +2893,7 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire pour empêcher le spam de masse
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
 
     const membres = (currentData.membres || []) as Record<string, unknown>[];
@@ -3000,7 +3015,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire pour empêcher le spam de masse
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -3510,7 +3525,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
 
     const membres = (currentData.membres || []) as Record<string, unknown>[];
@@ -3648,7 +3663,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -3733,7 +3748,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
     clearLoginFailures(targetEmail);
     return json({ ok: true });
@@ -3744,7 +3759,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const currentData = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
     const now = Date.now();
     const locked: { email: string; minutesLeft: number }[] = [];
@@ -3770,7 +3785,7 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
 
     const membres = (currentData.membres || []) as Record<string, unknown>[];
@@ -3924,7 +3939,7 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
 
     const membres = (currentData.membres || []) as Record<string, unknown>[];
@@ -4180,7 +4195,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const adminEmail = sanitize(String(body.adminEmail || "")).toLowerCase();
@@ -4211,7 +4226,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const messages = (d.contactMessages || []) as Record<string, unknown>[];
@@ -4244,7 +4259,7 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire
-    const authError = await checkAdminAuth(body, currentData);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
 
     const membres = (currentData.membres || []) as Record<string, unknown>[];
@@ -4648,7 +4663,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const t = ((d.interclubs || []) as Record<string, unknown>[]).find((x) => String(x.id) === String(body.tournoiId || ""));
     if (!t || !t.live) return json({ ok: false, reason: "Tournoi introuvable ou pas lancé." }, 404);
@@ -4685,7 +4700,7 @@ Deno.serve(async (req) => {
   if (action === "admin_restaurer_fichier") {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
-    const authError = await checkAdminAuth(body, data.data as Record<string, unknown>);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, data.data as Record<string, unknown>);
     if (authError) return authError;
     const bucket = String(body.bucket || "");
     const path = String(body.path || "");
@@ -4707,7 +4722,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
     if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
@@ -4759,7 +4774,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
     if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
@@ -4776,7 +4791,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const qui = sanitize(String(body.email || "")).toLowerCase();
     if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
@@ -4827,7 +4842,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const t = ((d.interclubs || []) as Record<string, unknown>[]).find((x) => x.interne === true && String(x.id) === String(body.tournoiId || ""));
     if (!t) return json({ ok: false, reason: "Tournoi introuvable." }, 404);
@@ -5022,6 +5037,8 @@ Deno.serve(async (req) => {
     const isAdminCred = adminCredentials.some((c) => String(c.email || "").toLowerCase() === email);
     const whatsappLink = typeof d.whatsappLink === "string" && d.whatsappLink ? d.whatsappLink : undefined;
     // 📅 Agenda réservé aux adhérents : événements du bureau + dates des tournois inter-clubs / internes
+    // 👥 Noms des adhérents à jour (choix du partenaire à l'inscription d'un tournoi) : réservé aux adhérents
+    const membreNoms = membres.filter((m) => m.ok === true).map((m) => String(m.nom || "")).filter(Boolean).sort();
     const agenda = {
       events: Array.isArray(d.agendaEvents) ? d.agendaEvents : [],
       masques: Array.isArray(d.agendaMasques) ? d.agendaMasques : [],
@@ -5052,7 +5069,7 @@ Deno.serve(async (req) => {
       }
       if (!fiche) return json({ ok: true });
       const jf = justifInfo(fiche);
-      return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info, agenda });
+      return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info, agenda, membreNoms });
     }
 
     // Vérifier si le membre existe encore par email + id
@@ -5073,6 +5090,7 @@ Deno.serve(async (req) => {
       justificatifManquant,
       adherent: adherentInfo(membre),
       agenda,
+      membreNoms: membre.ok === true ? membreNoms : [],
       // 🎓 État du justificatif pour l'espace membre d'un étudiant (fourni le…)
       justificatif: membre.type === "Etudiant" ? { fourni: justifOk, date: justifOk ? justif?.uploadedAt : undefined, nom: justifOk ? justif?.name : undefined } : undefined,
     });
@@ -5279,7 +5297,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
     const o = orders.find((x) => x.id === orderId);
@@ -5307,7 +5325,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     const ids = Array.isArray(body.orderIds) ? (body.orderIds as unknown[]).map(String) : null;
     const membres = (d.membres || []) as Record<string, unknown>[];
@@ -5366,7 +5384,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     d.tshirtOrders = ((d.tshirtOrders || []) as Record<string, unknown>[]).filter((o) => o.id !== orderId);
     await saveDB(d);
@@ -5437,7 +5455,7 @@ Deno.serve(async (req) => {
     if (!path || path.includes("..") || path.startsWith("/")) return json({ ok: false, reason: "Chemin invalide." }, 400);
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
-    const authError = await checkAdminAuth(body, data.data as Record<string, unknown>);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, data.data as Record<string, unknown>);
     if (authError) return authError;
     if (op === "url") {
       const { data: s, error } = await supabaseAdmin.storage.from(bucket).createSignedUrl(path, 60 * 10);
@@ -5459,7 +5477,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const tshirtJustOpened = d.tshirtOpen !== true && body.open === true;
@@ -5758,7 +5776,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const docId = String(body.docId || "");
@@ -5802,7 +5820,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const docs = (d.officialDocs || []) as Record<string, unknown>[];
@@ -5828,7 +5846,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const docs = ((d.officialDocs || []) as Record<string, unknown>[]).slice()
@@ -5849,7 +5867,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     return json({ ok: true, drafts: d.emailDrafts || [] });
   }
@@ -5859,7 +5877,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const draftId = String(body.draftId || ""); // vide = création
@@ -5905,7 +5923,7 @@ Deno.serve(async (req) => {
     const { data } = await loadDB();
     if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
     d.emailDrafts = ((d.emailDrafts || []) as { id: string }[]).filter((x) => x.id !== draftId);
     await saveDB(d);
@@ -5921,7 +5939,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const subject = String(body.subject || "").slice(0, 300).replace(/[\r\n]/g, " ");
@@ -6147,7 +6165,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // 🔒 SÉCURITÉ : Auth admin obligatoire
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const emailHistory = (d.emailHistory || []) as Record<string, unknown>[];
@@ -6167,7 +6185,7 @@ Deno.serve(async (req) => {
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
 
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     d.emailHistory = [];
@@ -6189,7 +6207,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // 🔒 Auth admin obligatoire
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     // Trouver le sondage
@@ -6274,7 +6292,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // 🔒 Auth admin obligatoire
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const includePolls = body.includePolls === true;
@@ -6414,7 +6432,7 @@ Deno.serve(async (req) => {
     const d = data.data as Record<string, unknown>;
 
     // 🔒 Auth admin
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     const reports = (d.reunionReports || []) as Record<string, unknown>[];
@@ -6528,7 +6546,7 @@ Deno.serve(async (req) => {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    const authError = await checkAdminAuth(body, d);
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
     if (authError) return authError;
 
     // Determiner l'email de destination

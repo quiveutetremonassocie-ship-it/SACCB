@@ -51,6 +51,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [memberWhatsapp, setMemberWhatsapp] = useState<string | undefined>(undefined);
   // 📅 Agenda : réservé aux adhérents connectés (envoyé par le serveur avec la session)
   const [memberAgenda, setMemberAgenda] = useState<AgendaAdherent | undefined>(undefined);
+  const [membreNoms, setMembreNoms] = useState<string[]>([]); // 🔒 noms des adhérents : seulement une fois connecté
   // 🎓 Étudiant sans justificatif pour la saison en cours
   const [justificatifManquant, setJustificatifManquant] = useState(false);
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
@@ -81,7 +82,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   }, [memberSession?.email, memberSession?.membreId]); // eslint-disable-line react-hooks/exhaustive-deps
   const [memberAdherent, setMemberAdherent] = useState<{ id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } | undefined>(undefined);
   useEffect(() => {
-    if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); return; }
+    if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); setMembreNoms([]); setMemberAgenda(undefined); return; }
     let cancelled = false;
     // Compte admin : le code permet de retrouver sa fiche adhérent même avec une ancienne session
     let adminSessionCode: string | undefined;
@@ -93,6 +94,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       if (cancelled) return;
       setMemberWhatsapp(res.valid ? res.whatsappLink : undefined);
       setMemberAgenda(res.valid ? res.agenda : undefined);
+      setMembreNoms(res.valid && res.membreNoms ? res.membreNoms : []);
       setJustificatifManquant(res.valid && res.justificatifManquant === true);
       setJustificatifInfo(res.valid ? res.justificatif : undefined);
       setMemberAdherent(res.valid ? res.adherent : undefined);
@@ -584,7 +586,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               db={db}
               memberSession={displaySession}
               onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)}
-              membreNoms={(db as unknown as { membreNoms?: string[] }).membreNoms ?? []}
+              membreNoms={membreNoms}
               readOnly={db.presentationMode === true}
             />
           </FadeInSection>
