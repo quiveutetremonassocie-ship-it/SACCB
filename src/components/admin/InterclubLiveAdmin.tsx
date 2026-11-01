@@ -9,7 +9,7 @@ import {
 } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, EquipesMap, NomEquipe } from "../live/LiveBoard";
 import ReglageManuel from "./ReglageManuel";
-import { exporterResultatsPdf } from "@/lib/interclubPdf";
+import { exporterResultatsPdf, exporterScoresPdf } from "@/lib/interclubPdf";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 
 const SITE = "https://saccb.fr";
@@ -411,6 +411,9 @@ export default function InterclubLiveAdmin({
               </a>
               <button onClick={() => exporterResultatsPdf(t)} className="text-xs font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-md px-2 py-1 flex items-center gap-1" title="Classement final de toutes les équipes, prêt à imprimer ou envoyer">
                 📄 Classement en PDF
+              </button>
+              <button onClick={() => exporterScoresPdf(t)} className="text-xs font-semibold text-amber-800 bg-amber-50 border border-amber-300 rounded-md px-2 py-1 flex items-center gap-1" title="Tous les scores de chaque match, tour par tour : à garder pour tout ressaisir si le tournoi doit être relancé">
+                📋 Tous les scores en PDF
               </button>
               <button onClick={() => imprimerQrCodes(t)} className="text-xs font-semibold text-slate-700 bg-slate-50 border border-slate-200 rounded-md px-2 py-1 flex items-center gap-1" title="QR codes des clubs et de l'écran géant, à imprimer">
                 🖨 QR codes
