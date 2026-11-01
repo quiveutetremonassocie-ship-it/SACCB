@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { X, Shuffle, Rocket, Copy, Check, ExternalLink, RefreshCw, ChevronRight, Flag, Undo2, Trash2, Pencil, ClipboardList, Monitor } from "lucide-react";
 import { InterClub, InterClubLive, LiveFormat, LiveMatch, LivePhase } from "@/lib/types";
 import {
@@ -9,7 +9,7 @@ import {
 } from "@/lib/interclubLive";
 import { LiveBoard, ScoreForm, EquipesMap, NomEquipe } from "../live/LiveBoard";
 import ReglageManuel from "./ReglageManuel";
-import { exporterResultatsPdf, exporterScoresPdf } from "@/lib/interclubPdf";
+import { exporterResultatsPdf, exporterScoresPdf, lireSauvegardePdf } from "@/lib/interclubPdf";
 import { imprimerQrCodes } from "@/lib/interclubQr";
 
 const SITE = "https://saccb.fr";
@@ -174,6 +174,30 @@ export default function InterclubLiveAdmin({
     await enregistrer({ ...live, termine: true, phases: [...phases.slice(0, -1), { ...courante, terminee: true }] });
   }
 
+  // ♻️ Remettre un jour J sauvegardé (PDF « Tous les scores » ou version d'avant la réinitialisation)
+  const fichierPdf = useRef<HTMLInputElement>(null);
+  async function restaurer(l: InterClubLive, origine: string, autreTournoi?: string) {
+    const ids = new Set(l.phases.flatMap((ph) => ph.poules.flatMap((p) => p.equipes)));
+    const inconnues = [...ids].filter((id) => !eqs[id]).length;
+    const joues = l.phases.reduce((s, ph) => s + ph.poules.reduce((n, p) => n + p.matchs.filter(matchJoue).length, 0), 0);
+    if (!confirm(
+      `Remettre le tournoi ${origine} ?\n\n• ${l.phases.length} tour(s) : ${l.phases.map((p) => p.nom).join(", ")}\n• ${joues} match(s) avec un score\n• chaque binôme dans sa poule${l.termine ? "\n• tournoi terminé (podium)" : ""}` +
+      (autreTournoi ? `\n\n⚠️ Ce PDF vient d'un autre tournoi : « ${autreTournoi} ».` : "") +
+      (inconnues ? `\n\n⚠️ ${inconnues} binôme(s) du PDF n'existent plus dans ce tournoi (affichés « Équipe retirée »).` : "") +
+      (live ? "\n\n⚠️ Le jour J actuel sera remplacé." : "")
+    )) return;
+    // Le lien de l'écran géant actuel reste valable
+    await enregistrer({ ...l, liveToken: live?.liveToken || l.liveToken });
+    alert("✅ Tournoi remis en place.");
+  }
+  async function restaurerDepuisPdf(f: File | undefined) {
+    if (!f) return;
+    const s = await lireSauvegardePdf(f);
+    if (fichierPdf.current) fichierPdf.current.value = "";
+    if (!s) { alert("Ce fichier ne contient pas de sauvegarde de tournoi.\n\nUtilise un PDF téléchargé avec le bouton « 📋 Tous les scores en PDF »."); return; }
+    await restaurer(s.live, `tel qu'il était le ${new Date(s.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })} (PDF)`, s.tournoiId !== t.id ? s.nom : undefined);
+  }
+
   async function reinitialiser() {
     const mot = prompt("⚠️ Cela efface les poules et TOUS les scores du jour J (les inscriptions des clubs sont conservées).\n\nTape EFFACER pour confirmer :");
     if (mot !== "EFFACER") return;
@@ -299,6 +323,21 @@ export default function InterclubLiveAdmin({
         </div>
 
         {/* ───────── Avant le lancement ───────── */}
+        <input ref={fichierPdf} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => restaurerDepuisPdf(e.target.files?.[0])} />
+        {!live && !readOnly && (
+          <div className="bg-amber-50 border-2 border-amber-300 rounded-3xl p-4 md:p-5 space-y-2">
+            <p className="font-bold text-amber-900">♻️ Reprendre un tournoi déjà commencé</p>
+            {t.liveAvantReset && (
+              <button onClick={() => restaurer(t.liveAvantReset!.live, `tel qu'il était avant la réinitialisation du ${new Date(t.liveAvantReset!.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}`)} disabled={busy} className="btn-primary !text-sm w-full sm:w-auto">
+                ↩️ Remettre le tournoi tel qu&apos;il était avant la réinitialisation ({new Date(t.liveAvantReset.at).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })})
+              </button>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <button onClick={() => fichierPdf.current?.click()} disabled={busy} className="btn-ghost !text-sm">📥 Restaurer depuis le PDF des scores</button>
+              <span className="text-xs text-amber-800">Choisis un PDF « 📋 Tous les scores » : poules, binômes et scores sont remis comme au moment du téléchargement.</span>
+            </div>
+          </div>
+        )}
         {!live && (
           <div className="bg-white rounded-3xl shadow-2xl p-5 md:p-6 space-y-5">
             {nbEquipes < 2 ? (
@@ -563,8 +602,11 @@ export default function InterclubLiveAdmin({
               <div className="bg-white/10 border border-white/20 rounded-2xl p-4 text-white flex flex-wrap items-center gap-3">
                 <div className="flex-1 min-w-[220px]">
                   <p className="font-bold text-sm">⏹ Arrêter le jour J (fausse manip, tout recommencer)</p>
-                  <p className="text-xs text-white/70">Efface les poules et tous les scores. Les binômes inscrits sont conservés et les inscriptions se rouvrent : tu pourras relancer quand tu veux.</p>
+                  <p className="text-xs text-white/70">Efface les poules et tous les scores. Les binômes inscrits sont conservés et les inscriptions se rouvrent : tu pourras relancer quand tu veux. Le site garde la version effacée et propose de la remettre.</p>
                 </div>
+                <button onClick={() => fichierPdf.current?.click()} disabled={busy} className="px-4 py-2 rounded-xl text-xs font-bold bg-white/15 hover:bg-white/25 inline-flex items-center gap-1.5" title="Remettre le tournoi tel qu'il était dans un PDF « Tous les scores »">
+                  📥 Restaurer depuis le PDF des scores
+                </button>
                 <button onClick={reinitialiser} className="px-4 py-2 rounded-xl text-xs font-bold bg-red-600 hover:bg-red-700 inline-flex items-center gap-1.5">
                   <Trash2 className="w-4 h-4" /> Arrêter et réinitialiser
                 </button>

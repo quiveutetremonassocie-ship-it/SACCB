@@ -232,7 +232,8 @@ export default function InterclubsAdmin({
     }
     await onPersist({
       ...db,
-      interclubs: list.map((x) => (x.id === t.id ? { ...x, live } : x)),
+      // ♻️ « Arrêter et réinitialiser » : on garde le jour J effacé pour pouvoir le remettre
+      interclubs: list.map((x) => (x.id === t.id ? { ...x, live, ...(!live && t.live ? { liveAvantReset: { at: new Date().toISOString(), live: t.live } } : {}) } : x)),
       config_tournois: config,
       inscrits_tournoi: inscrits,
     });
@@ -275,7 +276,7 @@ export default function InterclubsAdmin({
       Array.isArray(v) ? v.map(tri)
       : v && typeof v === "object" ? Object.fromEntries(Object.keys(v as object).sort().filter((k) => (v as Record<string, unknown>)[k] !== undefined).map((k) => [k, tri((v as Record<string, unknown>)[k])]))
       : v;
-    const { live: _l, closed: _c, visible: _v, notifieLe: _n, ...reste } = x;
+    const { live: _l, closed: _c, visible: _v, notifieLe: _n, liveAvantReset: _r, ...reste } = x;
     return JSON.stringify(tri({ ...reste, clubs: x.clubs.map(({ binomes: _b, updatedAt: _u, ...c }) => c) }));
   };
   const modifie = (t: InterClub) => !!draft && draft.id === t.id && empreinte(draft) !== empreinte(t);
@@ -295,7 +296,7 @@ export default function InterclubsAdmin({
         return live ? { ...c, binomes: live.binomes, updatedAt: live.updatedAt } : c;
       });
       // Le jour J et l'ouverture/fermeture sont gérés à part : on garde la version actuelle
-      await persist(list.map((x) => (x.id === draft.id ? { ...draft, clubs, live: actuel?.live, closed: actuel?.closed, visible: actuel?.visible, notifieLe: actuel?.notifieLe } : x)));
+      await persist(list.map((x) => (x.id === draft.id ? { ...draft, clubs, live: actuel?.live, closed: actuel?.closed, visible: actuel?.visible, notifieLe: actuel?.notifieLe, liveAvantReset: actuel?.liveAvantReset } : x)));
       return true;
     } catch {
       return false;

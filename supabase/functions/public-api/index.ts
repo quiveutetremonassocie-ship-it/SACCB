@@ -209,7 +209,7 @@ const COLLECTIONS_JOURNAL: { cle: string; libelle: string; nom: (x: Record<strin
   { cle: "reunionReports", libelle: "Compte-rendu", nom: (x) => String(x.title || x.id) },
 ];
 // Champs trop bavards ou techniques : ignorés dans le détail des modifications
-const CHAMPS_IGNORES = new Set(["_rev", "at", "updatedAt", "live", "historique", "virementRemindersSent", "paymentRemindersSent", "resetTokenHash", "resetTokenExpires", "codeJustReset", "votes"]);
+const CHAMPS_IGNORES = new Set(["_rev", "at", "updatedAt", "live", "liveAvantReset", "historique", "virementRemindersSent", "paymentRemindersSent", "resetTokenHash", "resetTokenExpires", "codeJustReset", "votes"]);
 const NOMS_CHAMPS: Record<string, string> = {
   ok: "statut payé", montantPaye: "montant payé", code: "mot de passe", nom: "nom", email: "email", tel: "téléphone",
   type: "tarif", sexe: "fille/garçon", enAttente: "mise en attente", photoConsent: "droit à l'image", newsOptIn: "newsletter",
@@ -277,7 +277,7 @@ function donneesAnnulation(avant: Record<string, unknown>, apres: Record<string,
     const B = Array.isArray(apres[cle]) ? (apres[cle] as Record<string, unknown>[]) : [];
     const mapA = new Map(A.map((x) => [String(x.id), x]));
     const mapB = new Map(B.map((x) => [String(x.id), x]));
-    const sansLive = (x: Record<string, unknown>) => { const { live: _l, ...r } = x; return r; };
+    const sansLive = (x: Record<string, unknown>) => { const { live: _l, liveAvantReset: _r, ...r } = x; return r; };
     for (const id of new Set([...mapA.keys(), ...mapB.keys()])) {
       const a = mapA.get(id), b = mapB.get(id);
       if (a && b && same(sansLive(a), sansLive(b))) continue;

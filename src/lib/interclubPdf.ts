@@ -1,5 +1,24 @@
 // 📄 Résultat final d'un tournoi inter-clubs en PDF (classement de toutes les équipes)
-import { InterClub } from "./types";
+import { InterClub, InterClubLive } from "./types";
+
+// ♻️ Sauvegarde du jour J glissée dans le PDF « Tous les scores »
+export type SauvegardeTournoi = { v: 1; tournoiId: string; nom: string; at: string; live: InterClubLive };
+const MARQUEUR = "SACCB-TOURNOI:";
+const versBase64 = (s: string) => btoa(unescape(encodeURIComponent(s)));
+const depuisBase64 = (s: string) => decodeURIComponent(escape(atob(s)));
+
+/** Relit la sauvegarde cachée dans un PDF « Tous les scores » (null si le fichier n'en contient pas) */
+export async function lireSauvegardePdf(fichier: Blob): Promise<SauvegardeTournoi | null> {
+  const octets = new Uint8Array(await fichier.arrayBuffer());
+  let texte = "";
+  for (let i = 0; i < octets.length; i += 8192) texte += String.fromCharCode(...octets.subarray(i, i + 8192));
+  const m = texte.match(/SACCB-TOURNOI:([A-Za-z0-9+/=]+)/);
+  if (!m) return null;
+  try {
+    const s = JSON.parse(depuisBase64(m[1])) as SauvegardeTournoi;
+    return s && s.v === 1 && s.live && Array.isArray(s.live.phases) ? s : null;
+  } catch { return null; }
+}
 import { classementFinal, equipesDuTournoi, formatTexte } from "./interclubLive";
 
 const BLEU: [number, number, number] = [30, 58, 95];
@@ -71,6 +90,10 @@ export async function exporterScoresPdf(t: InterClub, apercu = false): Promise<A
   const nom = (id: string) => (eq[id] ? `${eq[id].joueur1} / ${eq[id].joueur2}` : "Équipe retirée");
   const club = (id: string) => eq[id]?.club || "";
   const finY = () => (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY;
+
+  // ♻️ Copie exacte du jour J cachée dans le PDF : « Restaurer depuis le PDF » remet tout en place
+  const copie: SauvegardeTournoi = { v: 1, tournoiId: t.id, nom: t.name, at: new Date().toISOString(), live };
+  doc.setProperties({ title: `${t.name} - scores`, keywords: MARQUEUR + versBase64(JSON.stringify(copie)) });
 
   doc.setFontSize(18);
   doc.setTextColor(...BLEU);
