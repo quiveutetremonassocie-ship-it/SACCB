@@ -449,6 +449,7 @@ export type DB = {
   // 🕵️ Journal des actions admin (envoyé par le serveur au seul propriétaire du site)
   adminJournal?: { at: string; email: string; ip?: string; actions: string[]; annulation?: unknown; annulee?: { at: string; par: string } }[];
   lastBackupExport?: string; // dernière sauvegarde complète téléchargée
+  securiteBlocages?: { ip: string; action: string; motif: string; n: number; debut: string; fin: string }[]; // 🚨 requêtes bloquées par le serveur (propriétaire uniquement)
   // 👔 Membres du bureau (visibles par les adhérents connectés)
   bureauMembers?: BureauMember[];
   // 🔑 Activer la double authentification par email pour les admins

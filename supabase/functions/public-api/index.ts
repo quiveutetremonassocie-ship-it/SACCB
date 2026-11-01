@@ -226,7 +226,7 @@ const COLLECTIONS_JOURNAL: { cle: string; libelle: string; nom: (x: Record<strin
   { cle: "reunionReports", libelle: "Compte-rendu", nom: (x) => String(x.title || x.id) },
 ];
 // Champs trop bavards ou techniques : ignorés dans le détail des modifications
-const CHAMPS_IGNORES = new Set(["_rev", "at", "updatedAt", "live", "liveAvantReset", "historique", "virementRemindersSent", "paymentRemindersSent", "resetTokenHash", "resetTokenExpires", "codeJustReset", "votes"]);
+const CHAMPS_IGNORES = new Set(["securiteBlocages", "_rev", "at", "updatedAt", "live", "liveAvantReset", "historique", "virementRemindersSent", "paymentRemindersSent", "resetTokenHash", "resetTokenExpires", "codeJustReset", "votes"]);
 const NOMS_CHAMPS: Record<string, string> = {
   ok: "statut payé", montantPaye: "montant payé", code: "mot de passe", nom: "nom", email: "email", tel: "téléphone",
   type: "tarif", sexe: "fille/garçon", enAttente: "mise en attente", photoConsent: "droit à l'image", newsOptIn: "newsletter",
@@ -1180,7 +1180,76 @@ function createDbAccess(supabaseAdmin: any) {
   return { loadDB, saveDB, snapshot: () => loadedSnapshot };
 }
 
+// ─── 🚨 Requêtes bloquées : regroupées en mémoire, notées dans la base au plus toutes les 10 min ───
+const BLOCAGES_MAX = 300;
+const blocagesEnAttente = new Map<string, { ip: string; action: string; motif: string; n: number; debut: string; fin: string }>();
+let blocagesEcritsA = 0;
+const ipClient = (req: Request) => (req.headers.get("x-forwarded-for") || req.headers.get("cf-connecting-ip") || "unknown").split(",")[0].trim();
+// IP partiellement masquée (RGPD) : assez pour reconnaître une même source
+const ipMasquee = (ip: string) => ip.includes(":") ? ip.split(":").slice(0, 3).join(":") + ":…" : ip.split(".").slice(0, 3).join(".") + ".x";
+function noterBlocage(ip: string, action: string, motif: string) {
+  const cle = ipMasquee(ip) + "|" + action + "|" + motif;
+  const now = new Date().toISOString();
+  const e = blocagesEnAttente.get(cle);
+  if (e) { e.n++; e.fin = now; }
+  else if (blocagesEnAttente.size < 200) blocagesEnAttente.set(cle, { ip: ipMasquee(ip), action, motif, n: 1, debut: now, fin: now });
+}
+async function ecrireBlocages() {
+  if (!blocagesEnAttente.size || Date.now() - blocagesEcritsA < 10 * 60_000) return;
+  blocagesEcritsA = Date.now();
+  const lot = [...blocagesEnAttente.values()];
+  blocagesEnAttente.clear();
+  try {
+    const acces = createDbAccess(createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!));
+    const { data } = await acces.loadDB();
+    if (!data?.data) return;
+    const d = data.data as Record<string, unknown>;
+    d.securiteBlocages = [...lot, ...((Array.isArray(d.securiteBlocages) ? d.securiteBlocages : []) as unknown[])].slice(0, BLOCAGES_MAX);
+    await acces.saveDB(d);
+  } catch (e) { console.error("[blocages]", e); }
+}
+
+// ─── ⚡ Réponse publique mémorisée : servie telle quelle tant que la base n'a pas changé ───
+let cachePublic: { at: number; rev: string; corps: string } | null = null;
+
 Deno.serve(async (req) => {
+  const ip = ipClient(req);
+  let action = "";
+  if (req.method === "POST") {
+    try { action = String((await req.clone().json())?.action || "").slice(0, 40); } catch { /* corps invalide */ }
+  }
+  // ⚡ Site public : même réponse pour tout le monde, recalculée seulement si la base a changé
+  if (action === "fetch_public" && cachePublic) {
+    let frais = Date.now() - cachePublic.at < 5_000;
+    if (!frais) {
+      try {
+        const sb = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+        const { data } = await sb.from("saccb_db").select("rev:data->>_rev").eq("id", 1).single();
+        if (data && String((data as { rev?: unknown }).rev ?? "") === cachePublic.rev) { cachePublic.at = Date.now(); frais = true; }
+      } catch { /* on recalcule */ }
+    }
+    if (frais) return new Response(cachePublic.corps, { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+  }
+  const res = await traiter(req);
+  if (res.status === 429) {
+    let motif = "";
+    try { const j = await res.clone().json(); motif = String(j.reason || j.error || "").slice(0, 120); } catch { /* ignore */ }
+    noterBlocage(ip, action || req.method, motif);
+  }
+  if (action === "fetch_public" && res.status === 200) {
+    try {
+      const corps = await res.clone().text();
+      const rev = String((JSON.parse(corps) as { __rev?: unknown }).__rev ?? "");
+      if (rev) cachePublic = { at: Date.now(), rev, corps };
+    } catch { /* pas de mémoire cette fois */ }
+  }
+  // en tâche de fond, ne ralentit pas la réponse
+  const tache = ecrireBlocages();
+  (globalThis as unknown as { EdgeRuntime?: { waitUntil?: (p: Promise<unknown>) => void } }).EdgeRuntime?.waitUntil?.(tache);
+  return res;
+});
+
+async function traiter(req: Request): Promise<Response> {
   // Pré-vol CORS
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
@@ -1608,6 +1677,7 @@ Deno.serve(async (req) => {
     }));
 
     return json({
+      __rev: String(d._rev ?? ""),
       insc_open: d.insc_open ?? true,
       y1: d.y1 ?? 2024,
       y2: d.y2 ?? 2025,
@@ -2270,11 +2340,11 @@ Deno.serve(async (req) => {
     }));
 
     // Normalise adminEmails en format objet (compat ancien format string[])
-    const { adminJournal: _journal, ...dSansJournal } = d;
+    const { adminJournal: _journal, securiteBlocages: _blocages, ...dSansJournal } = d;
     const normalizedData = {
       ...dSansJournal,
       // 🕵️ Le journal des actions admin n'est envoyé qu'au propriétaire du site
-      ...(email === JOURNAL_PROPRIETAIRE ? { adminJournal: d.adminJournal ?? [] } : {}),
+      ...(email === JOURNAL_PROPRIETAIRE ? { adminJournal: d.adminJournal ?? [], securiteBlocages: d.securiteBlocages ?? [] } : {}),
       adminEmails: adminEmailEntries,
       membres: maskedMembres,
       adminCredentials: maskedAdminCreds,
@@ -2293,7 +2363,7 @@ Deno.serve(async (req) => {
     if (authError) return authError;
     const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
     // 🕵️ Le journal ne sort que pour le propriétaire du site
-    const { adminJournal: _j, ...sansJournal } = currentData;
+    const { adminJournal: _j, securiteBlocages: _sb, ...sansJournal } = currentData;
     const exporte: Record<string, unknown> = { ...(qui === JOURNAL_PROPRIETAIRE ? currentData : sansJournal) };
     // 📁 Copie des fichiers (photos, factures, PDF) dans la même sauvegarde
     if (body.sansFichiers !== true) {
@@ -2444,6 +2514,7 @@ Deno.serve(async (req) => {
     // 🕵️ Journal : ce que cet admin vient de changer (le journal lui-même n'est jamais modifiable par le client)
     const changements = resumeChangements(d, newData);
     newData.adminJournal = noterJournal(d.adminJournal, email, ip, changements, donneesAnnulation(d, newData));
+    newData.securiteBlocages = d.securiteBlocages; // 🚨 tenu par le serveur seul
 
     // 🚨 Alerte au propriétaire quand un AUTRE admin supprime quelque chose
     const suppressions = changements.filter((c) => c.startsWith("🗑"));
@@ -6714,4 +6785,4 @@ Deno.serve(async (req) => {
   }
 
   return json({ error: "Action inconnue" }, 400);
-});
+}

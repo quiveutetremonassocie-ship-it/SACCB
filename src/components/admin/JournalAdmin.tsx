@@ -143,6 +143,57 @@ const DOSSIERS: Record<string, string> = { actualities: "Photos des actualités"
 const nb = (x: number, d: number) => x.toLocaleString("fr-FR", { maximumFractionDigits: d });
 const mo = (o: number) => (o < 1_000_000 ? `${nb(Math.max(0.01, o / 1_000_000), 2)} Mo` : o < 1_000_000_000 ? `${nb(o / 1_000_000, 1)} Mo` : `${nb(o / 1_000_000_000, 2)} Go`);
 
+/** 🚨 Requêtes bloquées par le serveur (trop de requêtes, essais de codes…) */
+function RequetesBloquees({ blocages }: { blocages: NonNullable<DB["securiteBlocages"]> }) {
+  const [ouvert, setOuvert] = useState(false);
+  const [copie, setCopie] = useState(false);
+  const semaine = Date.now() - 7 * 86_400_000;
+  const recents = blocages.filter((b) => new Date(b.fin).getTime() > semaine);
+  const total = recents.reduce((s, b) => s + b.n, 0);
+  const quand = (iso: string) => new Date(iso).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" });
+  async function copier() {
+    const texte = ["Requêtes bloquées sur saccb.fr :", ...blocages.slice(0, 100).map((b) => `${quand(b.debut)} → ${quand(b.fin)} | ${b.ip} | ${b.action} | ${b.n} fois | ${b.motif}`)].join("\n");
+    try { await navigator.clipboard.writeText(texte); setCopie(true); setTimeout(() => setCopie(false), 2000); } catch { alert(texte); }
+  }
+  return (
+    <div className={`rounded-xl border px-4 py-3 space-y-2 ${total > 200 ? "bg-red-50 border-red-300" : "bg-slate-50 border-slate-200"}`}>
+      <div className="flex items-center justify-between gap-2 flex-wrap">
+        <p className="text-sm font-bold text-slate-700">
+          🚨 Requêtes bloquées{" "}
+          <span className="font-normal text-slate-500">
+            · {total ? `${total} sur les 7 derniers jours` : "aucune ces 7 derniers jours"}{total > 200 ? " — activité anormale" : ""}
+          </span>
+        </p>
+        <div className="flex gap-3">
+          {blocages.length > 0 && <button onClick={copier} className="text-xs text-slate-500 hover:text-slate-800">{copie ? "✔ Copié" : "📋 Copier pour Claude"}</button>}
+          {blocages.length > 0 && <button onClick={() => setOuvert((o) => !o)} className="text-xs text-slate-500 hover:text-slate-800">{ouvert ? "Masquer" : `Voir le détail (${blocages.length})`}</button>}
+        </div>
+      </div>
+      {ouvert && (
+        <div className="max-h-72 overflow-auto rounded-lg border border-slate-200 bg-white">
+          <table className="w-full text-xs">
+            <thead className="bg-slate-50 text-slate-500 sticky top-0">
+              <tr><th className="text-left px-2 py-1.5">Quand</th><th className="text-left px-2 py-1.5">Adresse</th><th className="text-left px-2 py-1.5">Demande</th><th className="text-right px-2 py-1.5">Fois</th><th className="text-left px-2 py-1.5">Raison</th></tr>
+            </thead>
+            <tbody className="divide-y divide-slate-100">
+              {blocages.map((b, i) => (
+                <tr key={i}>
+                  <td className="px-2 py-1.5 whitespace-nowrap text-slate-600">{quand(b.debut)}{b.fin !== b.debut ? ` → ${new Date(b.fin).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}` : ""}</td>
+                  <td className="px-2 py-1.5 font-mono text-slate-600">{b.ip}</td>
+                  <td className="px-2 py-1.5 text-slate-700">{b.action}</td>
+                  <td className="px-2 py-1.5 text-right font-semibold">{b.n}</td>
+                  <td className="px-2 py-1.5 text-slate-500">{b.motif}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <p className="text-[11px] text-slate-400">Le serveur bloque une adresse qui envoie trop de requêtes ou essaie trop de codes. Les blocages sont notés par paquets (toutes les 10 min environ). Adresses partiellement masquées.</p>
+    </div>
+  );
+}
+
 /** 📊 Jauge de place utilisée sur le serveur */
 function Jauge({ titre, utilise, limite, details }: { titre: string; utilise: number; limite: number; details?: React.ReactNode }) {
   const pc = Math.min(100, (utilise / limite) * 100);
@@ -238,6 +289,7 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
       </div>
 
       <PlaceServeur adminEmail={adminEmail} adminCode={adminCode} />
+      <RequetesBloquees blocages={db.securiteBlocages || []} />
 
       <div className="flex flex-wrap gap-2">
         <div className="relative flex-1 min-w-[200px]">
