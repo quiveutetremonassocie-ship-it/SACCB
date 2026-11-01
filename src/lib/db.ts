@@ -1163,6 +1163,35 @@ export async function interclubSauvegardeMail(email: string, code: string, tourn
 }
 
 /** ↩️ Annule une action du journal admin (propriétaire du site uniquement) */
+/** 📁 Remet un fichier d'une sauvegarde complète (n'écrase jamais un fichier déjà présent) */
+export async function adminRestaurerFichier(adminEmail: string, adminCode: string, f: { bucket: string; path: string; type: string; base64: string }): Promise<{ ok: boolean; deja?: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_restaurer_fichier", adminEmail, adminCode, ...f }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}
+
+/** 📊 Place utilisée sur le serveur (propriétaire uniquement) */
+export type EspaceServeur = { ok: boolean; reason?: string; base?: number; dossiers?: Record<string, { nombre: number; octets: number }>; limites?: { base: number; fichiers: number } };
+export async function adminEspace(adminEmail: string, adminCode: string): Promise<EspaceServeur> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_espace", adminEmail, adminCode }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}
+
 export async function adminJournalAnnuler(email: string, code: string, at: string): Promise<{ ok: boolean; gardes?: number; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {

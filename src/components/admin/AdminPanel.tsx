@@ -5,7 +5,7 @@ import { X, FileSpreadsheet, FileText, QrCode, Download, ExternalLink, Eye, Refr
 import AdminAccueil from "./AdminAccueil";
 // FileText réutilisé pour Documents officiels (déjà importé ci-dessus)
 import { DB, Membre, getMontantMembre } from "@/lib/types";
-import { adminExportBackup, adminImportBackup, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
+import { adminExportBackup, adminImportBackup, adminRestaurerFichier, adminSendBackupEmail, togglePresentationMode } from "@/lib/db";
 import { getMemberSession } from "@/lib/useMemberSession";
 import Accounting from "./Accounting";
 import SeasonSettings from "./SeasonSettings";
@@ -203,6 +203,9 @@ export default function AdminPanel({
     const nbMembres = Array.isArray(parsed.membres) ? (parsed.membres as unknown[]).length : 0;
     const nbTournois = Array.isArray(parsed.config_tournois) ? (parsed.config_tournois as unknown[]).length : 0;
     const nbActu = Array.isArray(parsed.actualites) ? (parsed.actualites as unknown[]).length : 0;
+    // 📁 Fichiers joints à la sauvegarde (photos, factures, PDF) : remis à part, sans écraser ceux déjà présents
+    const sauvFichiers = (parsed._fichiers as { fichiers?: { bucket: string; path: string; type: string; base64: string }[] } | undefined)?.fichiers || [];
+    delete parsed._fichiers;
 
     // 1ere confirmation : ce qui va etre restaure
     const ok1 = confirm(
@@ -211,7 +214,9 @@ export default function AdminPanel({
       `Contenu :\n` +
       `  \u2022 ${nbMembres} adh\u00e9rents\n` +
       `  \u2022 ${nbTournois} tournois\n` +
-      `  \u2022 ${nbActu} actualit\u00e9s\n\n` +
+      `  \u2022 ${nbActu} actualit\u00e9s\n` +
+      (sauvFichiers.length ? `  \u2022 ${sauvFichiers.length} fichier(s) (photos, factures, PDF) \u2014 seuls les fichiers manquants seront remis\n` : "") +
+      `\n` +
       `\u26a0\ufe0f TOUTES LES DONN\u00c9ES ACTUELLES SERONT \u00c9CRAS\u00c9ES.\n` +
       `Cette action est IRR\u00c9VERSIBLE (sauf si tu as une autre sauvegarde).`
     );
@@ -234,8 +239,17 @@ export default function AdminPanel({
         alert(`\u274c \u00c9chec : ${r.reason || "erreur inconnue"}`);
         return;
       }
+      let remis = 0, deja = 0;
+      const echecs: string[] = [];
+      for (const f of sauvFichiers) {
+        const rf = await adminRestaurerFichier(adminEmail, adminCode, f);
+        if (rf.ok && rf.deja) deja++;
+        else if (rf.ok) remis++;
+        else echecs.push(`${f.bucket}/${f.path}`);
+      }
       alert(
         `\u2705 Restauration r\u00e9ussie !\n\n` +
+        (sauvFichiers.length ? `Fichiers : ${remis} remis, ${deja} d\u00e9j\u00e0 pr\u00e9sents${echecs.length ? `, ${echecs.length} en \u00e9chec (${echecs.slice(0, 5).join(", ")})` : ""}\n` : "") +
         `Adh\u00e9rents : ${r.stats?.membres ?? 0}\n` +
         `Tournois : ${r.stats?.tournois ?? 0}\n` +
         `Actualit\u00e9s : ${r.stats?.actualites ?? 0}\n\n` +

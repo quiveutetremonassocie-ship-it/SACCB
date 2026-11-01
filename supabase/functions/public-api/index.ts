@@ -839,6 +839,30 @@ function json(data: unknown, status = 200) {
 
 // Helper : vérifie que email+code correspond à un admin valide (admin credentials OU membre admin)
 // Retourne null si OK, sinon une Response d'erreur à retourner immédiatement
+// 📁 Fichiers du site (photos des actualités, factures, PDF) : inclus dans la sauvegarde complète
+const BUCKETS_SAUVEGARDE = ["actualities", "factures", "reports"];
+const SAUVEGARDE_FICHIERS_MAX = 120_000_000; // au-delà, les fichiers suivants sont listés mais pas copiés
+// deno-lint-ignore no-explicit-any
+async function listerFichiers(supabaseAdmin: any, bucket: string, prefixe = ""): Promise<{ path: string; taille: number; type: string }[]> {
+  const out: { path: string; taille: number; type: string }[] = [];
+  for (let offset = 0; ; offset += 1000) {
+    const { data, error } = await supabaseAdmin.storage.from(bucket).list(prefixe, { limit: 1000, offset });
+    if (error || !Array.isArray(data)) break;
+    for (const x of data as { name: string; id?: string | null; metadata?: { size?: number; mimetype?: string } }[]) {
+      const p = prefixe ? `${prefixe}/${x.name}` : x.name;
+      if (x.id) out.push({ path: p, taille: Number(x.metadata?.size) || 0, type: String(x.metadata?.mimetype || "application/octet-stream") });
+      else if (x.name !== ".emptyFolderPlaceholder") out.push(...(await listerFichiers(supabaseAdmin, bucket, p)));
+    }
+    if (data.length < 1000) break;
+  }
+  return out.filter((f) => !f.path.endsWith(".emptyFolderPlaceholder"));
+}
+function octetsEnBase64(o: Uint8Array): string {
+  let bin = "";
+  for (let i = 0; i < o.length; i += 0x8000) bin += String.fromCharCode(...o.subarray(i, i + 0x8000));
+  return btoa(bin);
+}
+
 async function checkAdminAuth(
   body: Record<string, unknown>,
   d: Record<string, unknown>
@@ -2230,10 +2254,27 @@ Deno.serve(async (req) => {
     const currentData = data.data as Record<string, unknown>;
     const authError = await checkAdminAuth(body, currentData);
     if (authError) return authError;
-    const qui = sanitize(String(body.email || "")).toLowerCase();
+    const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
     // 🕵️ Le journal ne sort que pour le propriétaire du site
     const { adminJournal: _j, ...sansJournal } = currentData;
-    const exporte = qui === JOURNAL_PROPRIETAIRE ? currentData : sansJournal;
+    const exporte: Record<string, unknown> = { ...(qui === JOURNAL_PROPRIETAIRE ? currentData : sansJournal) };
+    // 📁 Copie des fichiers (photos, factures, PDF) dans la même sauvegarde
+    if (body.sansFichiers !== true) {
+      const fichiers: { bucket: string; path: string; type: string; taille: number; base64: string }[] = [];
+      const nonCopies: string[] = [];
+      let total = 0;
+      for (const bucket of BUCKETS_SAUVEGARDE) {
+        for (const f of await listerFichiers(supabaseAdmin, bucket)) {
+          if (total + f.taille > SAUVEGARDE_FICHIERS_MAX) { nonCopies.push(`${bucket}/${f.path}`); continue; }
+          const { data: blob, error: dlErr } = await supabaseAdmin.storage.from(bucket).download(f.path);
+          if (dlErr || !blob) { nonCopies.push(`${bucket}/${f.path}`); continue; }
+          const o = new Uint8Array(await blob.arrayBuffer());
+          total += o.length;
+          fichiers.push({ bucket, path: f.path, type: f.type, taille: o.length, base64: octetsEnBase64(o) });
+        }
+      }
+      exporte._fichiers = { at: new Date().toISOString(), nombre: fichiers.length, octets: total, nonCopies, fichiers };
+    }
     // 💾 Chaque sauvegarde téléchargée est notée au journal (permet de vérifier la sauvegarde de nuit)
     try {
       currentData.adminJournal = noterJournal(currentData.adminJournal, qui, ip, ["💾 Sauvegarde complète téléchargée"]);
@@ -2261,6 +2302,7 @@ Deno.serve(async (req) => {
     if (!newData || typeof newData !== "object") {
       return json({ ok: false, reason: "backupData manquant ou invalide." }, 400);
     }
+    delete newData._fichiers; // les fichiers sont remis à part (admin_restaurer_fichier)
     // Verifications minimales que ca ressemble bien a une DB SACCB
     const looksLikeSACCB =
       Array.isArray(newData.membres) ||
@@ -4617,6 +4659,45 @@ Deno.serve(async (req) => {
   }
 
   // ─── ACTION: ↩️ Annuler une action du journal (propriétaire du site uniquement) ───
+  // ─── ACTION: 📁 Remettre un fichier depuis une sauvegarde complète (jamais d'écrasement) ───
+  if (action === "admin_restaurer_fichier") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const authError = await checkAdminAuth(body, data.data as Record<string, unknown>);
+    if (authError) return authError;
+    const bucket = String(body.bucket || "");
+    const path = String(body.path || "");
+    const b64 = String(body.base64 || "");
+    if (!BUCKETS_SAUVEGARDE.includes(bucket) || !path || path.includes("..") || path.startsWith("/")) return json({ ok: false, reason: "Fichier invalide." }, 400);
+    let octets: Uint8Array;
+    try { octets = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0)); } catch { return json({ ok: false, reason: "Contenu invalide." }, 400); }
+    const { error: upErr } = await supabaseAdmin.storage.from(bucket).upload(path, octets, { upsert: false, contentType: String(body.type || "application/octet-stream") });
+    if (upErr) {
+      // Déjà présent : on garde celui du serveur
+      if (/exist|duplicate/i.test(String((upErr as { message?: string }).message || ""))) return json({ ok: true, deja: true });
+      return json({ ok: false, reason: "Envoi du fichier impossible." }, 500);
+    }
+    return json({ ok: true });
+  }
+
+  // ─── ACTION: 📊 Place utilisée sur le serveur (propriétaire uniquement) ───
+  if (action === "admin_espace") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth(body, d);
+    if (authError) return authError;
+    const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
+    if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
+    const base = new TextEncoder().encode(JSON.stringify(d)).length;
+    const dossiers: Record<string, { nombre: number; octets: number }> = {};
+    for (const bucket of BUCKETS_SAUVEGARDE) {
+      const l = await listerFichiers(supabaseAdmin, bucket);
+      dossiers[bucket] = { nombre: l.length, octets: l.reduce((s, f) => s + f.taille, 0) };
+    }
+    return json({ ok: true, base, dossiers, limites: { base: 500_000_000, fichiers: 1_000_000_000 } });
+  }
+
   if (action === "admin_journal_annuler") {
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);

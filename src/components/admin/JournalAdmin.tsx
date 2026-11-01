@@ -1,9 +1,64 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { DB } from "@/lib/types";
-import { adminJournalAnnuler } from "@/lib/db";
+import { adminEspace, adminJournalAnnuler, EspaceServeur } from "@/lib/db";
+
+const DOSSIERS: Record<string, string> = { actualities: "Photos des actualités", factures: "Factures (compta)", reports: "PDF (règlements, documents)" };
+const nb = (x: number, d: number) => x.toLocaleString("fr-FR", { maximumFractionDigits: d });
+const mo = (o: number) => (o < 1_000_000 ? `${nb(Math.max(0.01, o / 1_000_000), 2)} Mo` : o < 1_000_000_000 ? `${nb(o / 1_000_000, 1)} Mo` : `${nb(o / 1_000_000_000, 2)} Go`);
+
+/** 📊 Jauge de place utilisée sur le serveur */
+function Jauge({ titre, utilise, limite, details }: { titre: string; utilise: number; limite: number; details?: React.ReactNode }) {
+  const pc = Math.min(100, (utilise / limite) * 100);
+  const couleur = pc >= 85 ? "bg-red-500" : pc >= 60 ? "bg-amber-500" : "bg-emerald-500";
+  return (
+    <div className="flex-1 min-w-[240px] rounded-xl border border-slate-200 bg-white px-4 py-3">
+      <div className="flex items-baseline justify-between gap-2 text-sm">
+        <span className="font-semibold text-slate-700">{titre}</span>
+        <span className="text-slate-500 text-xs">{mo(utilise)} / {mo(limite)}</span>
+      </div>
+      <div className="mt-2 h-3 rounded-full bg-slate-100 overflow-hidden">
+        <div className={`h-full rounded-full ${couleur}`} style={{ width: `${Math.max(pc, 1)}%` }} />
+      </div>
+      <p className="mt-1 text-xs text-slate-500">
+        <strong className="text-slate-700">{pc < 1 ? "moins de 1" : Math.round(pc)} %</strong> utilisé · reste {mo(Math.max(0, limite - utilise))}
+      </p>
+      {details}
+    </div>
+  );
+}
+
+function PlaceServeur({ adminEmail, adminCode }: { adminEmail?: string; adminCode?: string }) {
+  const [e, setE] = useState<EspaceServeur | null>(null);
+  const charger = () => { if (adminEmail && adminCode) { setE(null); adminEspace(adminEmail, adminCode).then(setE); } };
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  useEffect(charger, [adminEmail, adminCode]);
+  if (!adminEmail || !adminCode) return null;
+  const fichiers = e?.dossiers ? Object.values(e.dossiers).reduce((s, d) => s + d.octets, 0) : 0;
+  return (
+    <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 space-y-2">
+      <div className="flex items-center justify-between gap-2">
+        <p className="text-sm font-bold text-slate-700">📊 Place sur le serveur</p>
+        <button onClick={charger} className="text-xs text-slate-500 hover:text-slate-800">↻ Actualiser</button>
+      </div>
+      {!e && <p className="text-xs text-slate-500">Calcul en cours…</p>}
+      {e && !e.ok && <p className="text-xs text-red-600">{e.reason || "Impossible de lire la place utilisée."}</p>}
+      {e?.ok && e.limites && (
+        <div className="flex flex-wrap gap-3">
+          <Jauge titre="🗄 Base de données" utilise={e.base || 0} limite={e.limites.base}
+            details={<p className="text-[11px] text-slate-400 mt-0.5">Adhérents, tournois, scores, réglages, journal… (estimation)</p>} />
+          <Jauge titre="📁 Fichiers" utilise={fichiers} limite={e.limites.fichiers}
+            details={<ul className="text-[11px] text-slate-500 mt-1 space-y-0.5">
+              {Object.entries(e.dossiers || {}).map(([k, d]) => <li key={k}>{DOSSIERS[k] || k} : {d.nombre} fichier{d.nombre > 1 ? "s" : ""} · {mo(d.octets)}</li>)}
+            </ul>} />
+        </div>
+      )}
+      <p className="text-[11px] text-slate-400">Limites de l&apos;offre gratuite Supabase. Le détail officiel est sur supabase.com → ton projet → Usage.</p>
+    </div>
+  );
+}
 
 /** 🕵️ Journal des actions admin — visible uniquement par le propriétaire du site (filtré côté serveur) */
 export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: { db: DB; adminEmail?: string; adminCode?: string; onRefresh?: () => void | Promise<void> }) {
@@ -46,6 +101,8 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
         {derniere ? derniere.toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }) : "aucune depuis la mise en place du journal"}
         {heures > 26 && <span className="block text-xs mt-0.5">⚠️ Plus de 24 h : vérifie que la sauvegarde de nuit fonctionne toujours.</span>}
       </div>
+
+      <PlaceServeur adminEmail={adminEmail} adminCode={adminCode} />
 
       <div className="flex flex-wrap gap-2">
         <div className="relative flex-1 min-w-[200px]">
