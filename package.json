@@ -7,7 +7,8 @@
     "prebuild": "node scripts/genere-historique.mjs",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "node --test tests/tournoi.test.mjs tests/serveur.test.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.45.0",

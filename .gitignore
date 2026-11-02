@@ -7,3 +7,4 @@ out/
 .env
 # Généré à chaque build (scripts/genere-historique.mjs)
 src/lib/historiqueSite.json
+tests/.build/

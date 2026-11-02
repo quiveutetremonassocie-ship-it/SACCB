@@ -30,6 +30,9 @@ jobs:
       - name: Install
         run: npm ci
 
+      - name: Tests automatiques (fausses données, aucun mail envoyé) — bloquent la mise en ligne s'ils échouent
+        run: npm test
+
       - name: Build (Next.js static export)
         env:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
