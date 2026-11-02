@@ -23,6 +23,7 @@ export type Membre = {
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
   // ✏️ Changements d'email / téléphone faits par l'adhérent depuis son espace (10 derniers, le plus récent d'abord)
   coordonneesModifiees?: { at: string; champ: "email" | "tel"; avant: string; apres: string }[];
+  vuLe?: string; // 👀 jour de la dernière visite sur l'espace adhérent (AAAA-MM-JJ) — noté par le serveur, visible par le propriétaire seul
   // 🔕 Ids de tournois pour lesquels le membre a explicitement dit "pas intéressé".
   // Le système n'enverra pas les rappels J-30/J-15/J-5/J-1 pour ces tournois.
   tournoisIgnored?: string[];

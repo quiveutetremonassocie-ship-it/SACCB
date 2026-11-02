@@ -191,3 +191,28 @@ test("changer les coordonnées est refusé avec un faux code, vers l'adresse d'u
   assert.notEqual(invalide.json?.ok, true);
   assert.equal(etat.ecritures, 0, "rien n'a été enregistré");
 });
+
+// ─── 👀 Dernière visite (propriétaire seul) ───
+
+test("la visite d'un adhérent est notée (le jour seulement), visible par le propriétaire seul et impossible à effacer", async () => {
+  const r = await appeler({ action: "check_session", email: "marie.secrete@exemple.fr", membreId: "m-marie" });
+  assert.equal(r.json?.ok, true, r.texte);
+  const jour = etat.base.membres.find((m) => m.id === "m-marie").vuLe;
+  assert.match(jour, /^\d{4}-\d{2}-\d{2}$/, "seulement le jour, sans heure");
+  const ecritures = etat.ecritures;
+  await appeler({ action: "check_session", email: "marie.secrete@exemple.fr", membreId: "m-marie" });
+  assert.equal(etat.ecritures, ecritures, "une seule écriture par jour");
+  // Un admin qui n'est pas le propriétaire ne voit pas les visites
+  const vue = (await appeler({ action: "admin_fetch", email: ADMIN.email, code: ADMIN.code })).json.data;
+  assert.ok(!JSON.stringify(vue).includes('"vuLe"'), "visites cachées aux autres admins");
+  // … et en enregistrant, il ne les efface pas
+  const s = await appeler({ action: "admin_save", email: ADMIN.email, code: ADMIN.code, data: { ...structuredClone(vue), quota: 66 }, base: vue });
+  assert.equal(s.json?.ok, true, s.texte);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-marie").vuLe, jour);
+  // Le propriétaire, lui, les voit
+  etat.base.adminEmails.push("gabin.binay@gmail.com");
+  etat.base.adminCredentials.push({ email: "gabin.binay@gmail.com", code: "CodeProprio" });
+  const proprio = (await appeler({ action: "admin_fetch", email: "gabin.binay@gmail.com", code: "CodeProprio" })).json;
+  assert.equal(proprio?.ok, true);
+  assert.equal(proprio.data.membres.find((m) => m.id === "m-marie").vuLe, jour);
+});

@@ -94,6 +94,22 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
     return <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded" title="Pas de justificatif de scolarité pour cette saison">⚠️ Justif. manquant</span>;
   }
 
+  // 👀 Dernières visites sur l'espace adhérent (le serveur ne les envoie qu'au propriétaire du site)
+  const avecVisites = db.membres.some((m) => m.vuLe);
+  const [filtreVisite, setFiltreVisite] = useState<"" | "jamais">("");
+  const joursDepuis = (j?: string) => (j ? Math.floor((Date.now() - new Date(j + "T12:00:00").getTime()) / 86_400_000) : Infinity);
+  const visites = {
+    semaine: db.membres.filter((m) => joursDepuis(m.vuLe) < 7).length,
+    mois: db.membres.filter((m) => joursDepuis(m.vuLe) < 30).length,
+    jamais: db.membres.filter((m) => !m.vuLe).length,
+  };
+  function VisiteBadge({ m }: { m: Membre }) {
+    if (!avecVisites) return null;
+    const n = joursDepuis(m.vuLe);
+    const texte = !m.vuLe ? "pas venu depuis le 2 nov. 2026 (début du suivi)" : n === 0 ? "vu aujourd'hui" : n === 1 ? "vu hier" : "vu le " + new Date(m.vuLe + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    return <span className={`block text-[10px] ${!m.vuLe ? "text-orange-500" : "text-slate-400"}`} title="Dernière visite sur l'espace adhérent (visible par toi seul)">👀 {texte}</span>;
+  }
+
   // ✏️ Coordonnées changées par les adhérents depuis leur espace
   const vuesLe = db.coordonneesVuesLe || "";
   const changementsRecents = db.membres
@@ -147,10 +163,11 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
           (filterPayment === "all"
             || (filterPayment === "virement" && m.paymentMethod === "virement")
             || (filterPayment === "online" && m.paymentMethod === "online")
-            || (filterPayment === "virement_unpaid" && m.paymentMethod === "virement" && !m.ok))
+            || (filterPayment === "virement_unpaid" && m.paymentMethod === "virement" && !m.ok)) &&
+          (filtreVisite !== "jamais" || !m.vuLe)
       )
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
-  }, [db.membres, search, filterNoPhoto, filterType, filterPayment, showAttente]);
+  }, [db.membres, search, filterNoPhoto, filterType, filterPayment, showAttente, filtreVisite]);
 
   // 📧 Suit l'envoi auto pour notifier l'admin si ça échoue silencieusement
   const [autoSendStatus, setAutoSendStatus] = useState<{ ok: boolean; text: string } | null>(null);
@@ -368,6 +385,17 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
 
   return (
     <div className="glass p-4 md:p-6">
+      {avecVisites && (
+        <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1">
+          <span className="font-semibold text-slate-700">👀 Visites de l&apos;espace adhérent</span>
+          <span><b>{visites.semaine}</b> cette semaine</span>
+          <span><b>{visites.mois}</b> ce mois-ci</span>
+          <button onClick={() => setFiltreVisite(filtreVisite === "jamais" ? "" : "jamais")} className={`underline ${filtreVisite === "jamais" ? "font-bold text-orange-600" : "text-orange-500"}`}>
+            <b>{visites.jamais}</b> pas venus depuis le 2 nov.{filtreVisite === "jamais" ? " (filtre actif ✕)" : ""}
+          </button>
+          <span className="text-slate-400">· visible par toi seul</span>
+        </div>
+      )}
       {changementsRecents.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
           <div className="flex items-start justify-between gap-2">
@@ -584,7 +612,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-slate-800 truncate">{m.nom}</p>
+                  <p className="font-semibold text-slate-800 truncate">{m.nom}<VisiteBadge m={m} /></p>
                   {m.newsOptIn === true ? (
                     <Bell className="w-3 h-3 text-emerald-500 shrink-0" aria-label="Abonné aux news" />
                   ) : (
@@ -735,7 +763,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
           <tbody>
             {filtered.map((m) => (
               <tr key={m.id} className={`border-t border-slate-100 ${!m.ok ? "opacity-70" : ""}`}>
-                <td className="p-3 text-slate-800">{m.nom}</td>
+                <td className="p-3 text-slate-800">{m.nom}<VisiteBadge m={m} /></td>
                 <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">

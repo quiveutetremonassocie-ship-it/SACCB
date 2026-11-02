@@ -33,6 +33,7 @@ export default function Page() {
           <li>Numéro de téléphone</li>
           <li>Catégorie d'adhésion (adulte / étudiant)</li>
           <li>Statut du paiement de la cotisation</li>
+          <li>Date (le jour seulement) de votre dernière visite sur l&apos;espace adhérent, pour savoir si l&apos;espace est utilisé ; elle n&apos;est visible que par le responsable du site</li>
         </ul>
         <p>
           Aucune donnée sensible (santé, origine, opinions) n'est collectée via ce site. Un

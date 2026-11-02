@@ -2328,8 +2328,9 @@ async function traiter(req: Request): Promise<Response> {
 
     // 🔒 SÉCURITÉ : masquer les codes hashés dans la réponse admin (l'admin n'a pas besoin de les voir)
     // Les codes en clair restent visibles (legacy, l'admin doit pouvoir les transmettre aux membres)
-    const maskedMembres = (membres as Record<string, unknown>[]).map((m) => ({
+    const maskedMembres = (membres as Record<string, unknown>[]).map(({ vuLe, ...m }) => ({
       ...m,
+      ...(email === JOURNAL_PROPRIETAIRE && vuLe ? { vuLe } : {}), // 👀 visites : propriétaire seul
       code: isHashedCode(String(m.code || "")) ? "" : m.code,
       _codeHashed: isHashedCode(String(m.code || "")),
     }));
@@ -2495,6 +2496,10 @@ async function traiter(req: Request): Promise<Response> {
         m.code = await hashCode(c);
       }
       // Sinon : code déjà hashé, on garde tel quel
+      // 👀 Date de visite : tenue par le serveur seul (le client ne peut ni l'effacer ni l'inventer)
+      const ancienne = oldMembresMap.get(String(m.id || ""));
+      if (ancienne?.vuLe) m.vuLe = ancienne.vuLe;
+      else delete m.vuLe;
     }
 
     const oldAdminCredsMap = new Map<string, { email: string; code: string }>();
@@ -5168,6 +5173,13 @@ async function traiter(req: Request): Promise<Response> {
 
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
+    // 👀 Dernière visite sur l'espace adhérent : le jour seulement (pas d'heure ni d'historique)
+    const noterVisite = async (m: Record<string, unknown>) => {
+      const jour = new Date().toLocaleDateString("sv-SE", { timeZone: "Europe/Paris" });
+      if (m.vuLe === jour) return;
+      m.vuLe = jour;
+      try { await saveDB(d); } catch (e) { console.error("[visite]", e); }
+    };
     const adminCredentials = ((d.adminCredentials || []) as { email: string; code: string }[]);
 
     // Vérifier si c'est un admin credential (pas un adhérent normal)
@@ -5205,6 +5217,7 @@ async function traiter(req: Request): Promise<Response> {
         fiche = fiches.find((m) => m.ok === true) || fiches[0];
       }
       if (!fiche) return json({ ok: true });
+      await noterVisite(fiche);
       const jf = justifInfo(fiche);
       return json({ ok: true, whatsappLink, adherent: adherentInfo(fiche), justificatifManquant: jf.manquant, justificatif: jf.info, agenda, membreNoms });
     }
@@ -5215,6 +5228,7 @@ async function traiter(req: Request): Promise<Response> {
     );
 
     if (!membre) return json({ ok: false, reason: "Session expirée ou compte supprimé." });
+    await noterVisite(membre);
     // 💬 Lien WhatsApp uniquement pour les adhérents à jour de paiement
     // 🎓 Étudiant sans justificatif pour la saison en cours → l'espace membre le lui demande
     const justif = membre.justificatif as { saison?: string; uploadedAt?: string; name?: string } | undefined;
