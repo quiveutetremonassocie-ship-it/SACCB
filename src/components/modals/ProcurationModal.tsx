@@ -177,9 +177,15 @@ export default function ProcurationModal({
           </p>
           <div className="text-center">
             <p className="text-sm sm:text-base">Signature (mandant)</p>
-            <p className="text-[10px] text-slate-500 italic">
-              précédée de «&nbsp;Bon pour pouvoir&nbsp;»
+            {/* ✍️ Mention et signature écrites automatiquement avec le nom du mandant */}
+            <p className="mt-3 italic text-sm sm:text-base">«&nbsp;Bon pour pouvoir&nbsp;»</p>
+            <p
+              className="mt-1 text-2xl sm:text-3xl text-blue-900 break-words"
+              style={{ fontFamily: "'Segoe Script', 'Brush Script MT', 'Lucida Handwriting', 'Apple Chancery', cursive" }}
+            >
+              {nomComplet}
             </p>
+            <p className="text-[10px] sm:text-xs text-slate-500 border-t border-slate-300 mt-1 pt-1">{nomComplet}</p>
           </div>
         </div>
 
