@@ -128,6 +128,8 @@ export const FICHE_SITE: SectionFiche[] = [
   {
     titre: "Pièges connus (pour Claude)",
     lignes: [
+      "Déploiement de la fonction serveur : le workflow installe la DERNIÈRE version de l'outil Supabase (setup-cli version latest). Le 2026-11-02 une nouvelle version a cassé le déploiement : il a fallu renommer [inbucket] en [local_smtp] dans supabase/config.toml et ajouter --yes à « supabase functions deploy ». Si le déploiement Supabase échoue sans raison dans le code, lire le journal de l'action GitHub (gh run view <id> --log-failed) : c'est souvent un changement de l'outil. Rappel : tant que la fonction n'est pas déployée, le site en ligne peut appeler des actions serveur qui n'existent pas encore.",
+      "Tests (npm test) : une note de requêtes bloquées peut s'écrire en arrière-plan pendant un autre test ; pour vérifier « rien n'a changé », compter etat.ecrituresMembres (écritures qui touchent les adhérents) plutôt que etat.ecritures.",
       "gh CLI : /c/gh-cli/bin/gh.exe. Avant un push : git checkout -- tsconfig.tsbuildinfo puis git pull --rebase (bot keepalive).",
       "Pas de Deno ni de Python sur le PC : vérifier la syntaxe de la fonction serveur avec typescript.transpileModule (node).",
       "Après npm run build, le serveur de dev casse : l'arrêter, supprimer .next, relancer. Supprimer .next/types après avoir retiré une page de test (pages de test : src/app/test-*, marquées TEMP-APERCU).",
