@@ -5358,6 +5358,9 @@ async function traiter(req: Request): Promise<Response> {
       price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
       sizes: tshirtSizesOf(d),
       colors: Array.isArray(d.tshirtColors) ? d.tshirtColors : [],
+      catalogue: d.tshirtCatalogue && typeof (d.tshirtCatalogue as Record<string, unknown>).url === "string"
+        ? { url: (d.tshirtCatalogue as Record<string, unknown>).url, name: (d.tshirtCatalogue as Record<string, unknown>).name || "catalogue.pdf" }
+        : null,
       paymentUrl: typeof d.tshirtPaymentUrl === "string" && d.tshirtPaymentUrl ? d.tshirtPaymentUrl : null,
     });
   }

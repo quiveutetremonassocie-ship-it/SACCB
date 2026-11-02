@@ -2,7 +2,7 @@
 // ⚠️ À METTRE À JOUR à chaque modification importante (nouvelle rubrique, nouvelle fonction, nouvelle règle).
 // L'historique des modifications et l'état du site sont ajoutés automatiquement dans le PDF.
 
-export const FICHE_MAJ_LE = "2026-11-01";
+export const FICHE_MAJ_LE = "2026-11-02";
 
 export type SectionFiche = { titre: string; lignes: string[] };
 
@@ -80,7 +80,7 @@ export const FICHE_SITE: SectionFiche[] = [
       "Adhérents : Adhérents, Bureau.",
       "Tournois : Tournois, Inscriptions aux tournois, Tournois inter-clubs (et internes).",
       "Communication : Messages reçus, Envoyer un mail, Agenda, Actualités, Sondages & AG, FAQ adhérents.",
-      "Trésorerie : Comptabilité (factures), T-shirts, HelloAsso · QR code.",
+      "Trésorerie : Comptabilité (factures), T-shirts (tailles, couleurs, catalogue PDF montré aux adhérents, prix, paiement HelloAsso, export PDF pour le fabricant), HelloAsso · QR code.",
       "Réglages : Paramètres saison, Règlement intérieur, Statistiques (dont rapport d'AG), Sauvegarde & export, Bloc-notes partagé, Journal (privé), Guide admin.",
       "Admins multiples avec droits (lecture seule, permissions par rubrique) ; double vérification par mail à la connexion admin.",
       "Mode hors connexion : si le réseau coupe, les modifications sont gardées sur l'appareil (bandeau rouge) et envoyées au retour du réseau.",

@@ -98,7 +98,7 @@ export async function adminOfficialDocReorder(adminEmail: string, adminCode: str
 }
 
 // 👕 Récupère ma commande t-shirt
-export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; sizes?: string[]; colors?: string[]; paymentUrl?: string | null; reason?: string }> {
+export async function memberGetMyTshirtOrder(email: string, code: string, membreId: string): Promise<{ ok: boolean; order?: import("./types").TshirtOrder | null; open?: boolean; price?: number | null; sizes?: string[]; colors?: string[]; catalogue?: { url: string; name: string } | null; paymentUrl?: string | null; reason?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
     method: "POST",
     headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },

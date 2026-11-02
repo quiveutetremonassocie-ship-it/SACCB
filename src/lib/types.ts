@@ -390,6 +390,7 @@ export type DB = {
   agendaEvents?: AgendaEvent[]; // 📅 événements ajoutés à la main dans l'agenda
   agendaMasques?: string[]; // 📅 tournois retirés de l'agenda (ids « t-… » / « ic-… »), le tournoi lui-même reste
   tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
+  tshirtCatalogue?: { url: string; path: string; name: string }; // 📄 catalogue PDF des couleurs/modèles, visible par les adhérents
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)
   // ❓ FAQ adhérents : visible sur la home + page /faq

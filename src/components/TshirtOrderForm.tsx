@@ -27,6 +27,7 @@ export default function TshirtOrderForm({
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   // 🎨 Couleurs proposées par le bureau (vide = pas de choix)
   const [colors, setColors] = useState<string[]>([]);
+  const [catalogue, setCatalogue] = useState<{ url: string; name: string } | null>(null); // 📄 catalogue PDF
   const [couleur, setCouleur] = useState("");
   const [order, setOrder] = useState<TshirtOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -70,6 +71,7 @@ export default function TshirtOrderForm({
         setPaymentUrl(typeof r.paymentUrl === "string" && r.paymentUrl ? r.paymentUrl : null);
         const cols = Array.isArray(r.colors) ? r.colors : [];
         setColors(cols);
+        setCatalogue(r.catalogue && r.catalogue.url ? r.catalogue : null);
         if (!r.order && cols.length === 1) setCouleur(cols[0]);
         if (!r.order) setTaille(avail.includes("M") ? "M" : avail[0]);
         if (r.order) {
@@ -232,6 +234,11 @@ export default function TshirtOrderForm({
             ))}
           </select>
         </div>
+        {catalogue && (
+          <a href={catalogue.url} target="_blank" rel="noopener" className="flex items-center gap-2 text-sm font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-2">
+            📄 Voir le catalogue (couleurs et modèles)
+          </a>
+        )}
         {colors.length > 0 && (
           <div>
             <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Couleur</label>

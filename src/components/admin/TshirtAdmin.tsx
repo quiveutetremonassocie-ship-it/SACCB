@@ -3,7 +3,8 @@
 import { useMemo, useState } from "react";
 import { Shirt, Trash2, Download } from "lucide-react";
 import { type DB, TSHIRT_SIZES_ALL, getTshirtSizes } from "@/lib/types";
-import { adminDeleteTshirtOrder, adminSetTshirt, adminTshirtPaid, adminTshirtRelance } from "@/lib/db";
+import { adminDeleteTshirtOrder, adminSetTshirt, adminTshirtPaid, adminTshirtRelance, adminUploadFile } from "@/lib/db";
+import { REPORTS_BUCKET, supabaseClient } from "@/lib/supabase";
 
 const TAILLES = TSHIRT_SIZES_ALL;
 
@@ -72,6 +73,33 @@ export default function TshirtAdmin({
     majCouleurs([...couleurs, c.slice(0, 40)]);
   }
   const avecCouleur = couleurs.length > 0 || orders.some((o) => o.couleur);
+
+  // 📄 Catalogue PDF (couleurs / modèles) montré aux adhérents dans le formulaire de commande
+  const catalogue = db.tshirtCatalogue;
+  const [envoiCatalogue, setEnvoiCatalogue] = useState(false);
+  async function envoyerCatalogue(file: File | undefined) {
+    if (!file || readOnly) return;
+    if (file.type !== "application/pdf" && !/\.pdf$/i.test(file.name)) { alert("Choisis un fichier PDF."); return; }
+    if (file.size > 15_000_000) { alert("PDF trop lourd (15 Mo maximum)."); return; }
+    setEnvoiCatalogue(true);
+    try {
+      let url = "", path = "";
+      if (adminEmail && adminCode) {
+        const r = await adminUploadFile({ adminEmail, adminCode, file: new File([file], file.name, { type: "application/pdf" }), bucket: REPORTS_BUCKET, pathPrefix: "tshirt" });
+        if (!r.ok || !r.url || !r.path) { alert("Erreur envoi du PDF : " + (r.reason || "inconnue")); return; }
+        url = r.url; path = r.path;
+      } else {
+        path = `tshirt/catalogue-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+        const { error } = await supabaseClient.storage.from(REPORTS_BUCKET).upload(path, file, { upsert: false, contentType: "application/pdf" });
+        if (error) { alert("Erreur envoi du PDF : " + error.message); return; }
+        url = supabaseClient.storage.from(REPORTS_BUCKET).getPublicUrl(path).data.publicUrl;
+      }
+      // L'ancien PDF n'est pas supprimé : « Libérer de l'espace » (Journal) le proposera s'il ne sert plus
+      await onPersist({ ...db, tshirtCatalogue: { url, path, name: file.name } });
+    } finally {
+      setEnvoiCatalogue(false);
+    }
+  }
 
   const totalRecette = price !== null ? orders.length * price : null;
 
@@ -364,6 +392,33 @@ export default function TshirtAdmin({
           </div>
         )}
         <p className="text-[11px] text-slate-500 mt-1.5">Si au moins une couleur est proposée, l&apos;adhérent doit en choisir une dans un menu déroulant au moment de commander.</p>
+
+        {/* 📄 Catalogue PDF */}
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <p className="text-xs font-semibold text-slate-600 mb-1.5">📄 Catalogue (PDF)</p>
+          {catalogue ? (
+            <div className="flex flex-wrap items-center gap-2 text-sm">
+              <a href={catalogue.url} target="_blank" rel="noopener" className="text-blue-700 hover:underline truncate max-w-[16rem]">{catalogue.name}</a>
+              {!readOnly && (
+                <>
+                  <label className="text-xs bg-white border border-slate-300 hover:bg-slate-50 font-semibold px-3 py-1 rounded-lg cursor-pointer">
+                    {envoiCatalogue ? "Envoi…" : "Remplacer"}
+                    <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={envoiCatalogue} onChange={(e) => { envoyerCatalogue(e.target.files?.[0]); e.target.value = ""; }} />
+                  </label>
+                  <button onClick={() => { if (confirm("Retirer le catalogue ? Les adhérents ne le verront plus.")) onPersist({ ...db, tshirtCatalogue: undefined }); }} className="text-xs text-red-600 hover:text-red-700 font-semibold">Retirer</button>
+                </>
+              )}
+            </div>
+          ) : !readOnly ? (
+            <label className="inline-flex text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg cursor-pointer">
+              {envoiCatalogue ? "Envoi…" : "Ajouter un catalogue PDF"}
+              <input type="file" accept="application/pdf,.pdf" className="hidden" disabled={envoiCatalogue} onChange={(e) => { envoyerCatalogue(e.target.files?.[0]); e.target.value = ""; }} />
+            </label>
+          ) : (
+            <p className="text-xs text-slate-400">Aucun catalogue.</p>
+          )}
+          <p className="text-[11px] text-slate-500 mt-1.5">Les adhérents voient un bouton « Voir le catalogue » dans leur formulaire de commande.</p>
+        </div>
       </div>
 
       {/* Totaux par taille */}
