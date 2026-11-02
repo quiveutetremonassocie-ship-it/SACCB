@@ -498,7 +498,7 @@ export type AgendaAdherent = {
 };
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string }; agenda?: AgendaAdherent; membreNoms?: string[] }> {
+export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string; infosConfirmees?: boolean }; agenda?: AgendaAdherent; membreNoms?: string[] }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -881,8 +881,8 @@ export async function memberContact(
   email: string,
   code: string,
   membreId: string,
-  changes?: { newEmail?: string; newTel?: string }
-): Promise<{ ok: boolean; email?: string; tel?: string; inchange?: boolean; nbFiches?: number; reason?: string }> {
+  changes?: { newEmail?: string; newTel?: string; newNom?: string; confirmer?: boolean }
+): Promise<{ ok: boolean; nom?: string; email?: string; tel?: string; infosConfirmees?: boolean; inchange?: boolean; nbFiches?: number; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",

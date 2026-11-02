@@ -4138,10 +4138,16 @@ async function traiter(req: Request): Promise<Response> {
 
     const newEmail = sanitize(String(body.newEmail || "")).toLowerCase().trim();
     const newTel = sanitize(String(body.newTel || "")).trim();
-    if (!newEmail && !newTel) return json({ ok: true, email: cible.email, tel: cible.tel || "" });
+    const newNom = sanitize(String(body.newNom || "")).replace(/\s+/g, " ").trim().slice(0, 80);
+    const confirmer = body.confirmer === true; // ✅ « mes informations sont toujours correctes » (renouvellement)
+    const infosOk = (cible.infosConfirmees as { saison?: string } | undefined)?.saison === saisonCle(d);
+    const reponse = () => ({ ok: true, nom: cible.nom, email: cible.email, tel: cible.tel || "", infosConfirmees: (cible.infosConfirmees as { saison?: string } | undefined)?.saison === saisonCle(d) });
+    if (!newEmail && !newTel && !newNom && !confirmer) return json(reponse());
 
     const changeEmail = !!newEmail && newEmail !== email;
     const changeTel = !!newTel && newTel !== String(cible.tel || "");
+    const changeNom = !!newNom && newNom !== String(cible.nom || "");
+    if (changeNom && newNom.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
     if (changeEmail) {
       if (!isValidEmail(newEmail)) return json({ ok: false, reason: "Adresse mail invalide." }, 400);
       // L'adresse d'un admin sert aussi à l'administration : on ne la change pas d'ici
@@ -4155,25 +4161,29 @@ async function traiter(req: Request): Promise<Response> {
       }
     }
     if (changeTel && !isValidPhone(newTel)) return json({ ok: false, reason: "Numéro de téléphone invalide." }, 400);
-    if (!changeEmail && !changeTel) return json({ ok: true, email: cible.email, tel: cible.tel || "", inchange: true });
+    if (!changeEmail && !changeTel && !changeNom && (!confirmer || infosOk)) return json({ ...reponse(), inchange: true });
 
     const at = new Date().toISOString();
-    const noter = (p: Record<string, unknown>, champ: "email" | "tel", avant: string, apres: string) => {
+    const noter = (p: Record<string, unknown>, champ: "email" | "tel" | "nom", avant: string, apres: string) => {
       p[champ] = apres;
       p.coordonneesModifiees = [{ at, champ, avant, apres }, ...((p.coordonneesModifiees as unknown[]) || [])].slice(0, 10);
     };
     // L'email sert à se connecter : il change pour toutes les fiches du compte ; le téléphone, pour cette fiche
     if (changeEmail) for (const p of profils) noter(p, "email", String(p.email || ""), newEmail);
     if (changeTel) noter(cible, "tel", String(cible.tel || ""), newTel);
+    if (changeNom) noter(cible, "nom", String(cible.nom || ""), newNom);
+    if (confirmer) cible.infosConfirmees = { saison: saisonCle(d), le: at };
 
     d.membres = membres;
     const { error: saveError } = await saveDB(d);
     if (saveError) return json({ ok: false, reason: "Erreur serveur." }, 500);
 
-    const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
-    if (sheetsWebhook) fetch(sheetsWebhook, { method: "POST", body: JSON.stringify(d) }).catch(() => {});
+    if (changeEmail || changeTel || changeNom) {
+      const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
+      if (sheetsWebhook) fetch(sheetsWebhook, { method: "POST", body: JSON.stringify(d) }).catch(() => {});
+    }
 
-    return json({ ok: true, email: cible.email, tel: cible.tel || "", nbFiches: changeEmail ? profils.length : 1 });
+    return json({ ...reponse(), nbFiches: changeEmail ? profils.length : 1 });
   }
 
   if (action === "change_code") {
@@ -5349,6 +5359,7 @@ async function traiter(req: Request): Promise<Response> {
     // 📄 Fiche adhérent (nom, type, montant payé) pour le reçu d'adhésion de l'espace membre
     const adherentInfo = (m: Record<string, unknown> | undefined) =>
       m ? { id: String(m.id || ""), nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : (remiseSaison(d, m)?.statut === "acceptee" ? prixRemise(d) : undefined), ok: m.ok === true,
+        infosConfirmees: (m.infosConfirmees as { saison?: string } | undefined)?.saison === saisonCle(d),
         remise: (remiseSaison(d, m)?.statut as string | undefined) || undefined, lienRemise: remiseSaison(d, m)?.statut === "acceptee" ? lienRemise(d) : undefined } : undefined;
     // 🎓 État du justificatif d'une fiche étudiante pour la saison en cours
     const justifInfo = (m: Record<string, unknown> | undefined) => {

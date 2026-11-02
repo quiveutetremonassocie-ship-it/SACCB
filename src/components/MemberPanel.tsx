@@ -66,7 +66,7 @@ export default function MemberPanel({
   smashUrl?: string;
   justificatifManquant?: boolean;
   justificatifInfo?: { fourni: boolean; date?: string; nom?: string };
-  adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string };
+  adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string; infosConfirmees?: boolean };
   onJustificatifSent?: () => void;
 }) {
   const [justifReplace, setJustifReplace] = useState(false);
@@ -205,6 +205,41 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
       onSessionChange?.(s);
     }
     setContactMsg({ ok: true, text: "Coordonnées enregistrées ✓" + (changeEmail && (r.nbFiches || 1) > 1 ? ` (adresse changée sur les ${r.nbFiches} fiches de ton compte)` : "") });
+  }
+
+  // ✅ Renouvellement : l'adhérent revoit et confirme ses informations (nom, mail, téléphone) avant de payer
+  const [infosOk, setInfosOk] = useState(adherent?.infosConfirmees === true);
+  useEffect(() => { if (adherent?.infosConfirmees) setInfosOk(true); }, [adherent?.infosConfirmees]);
+  const [renNom, setRenNom] = useState(session.nom);
+  const [renEmail, setRenEmail] = useState(session.email);
+  const [renTel, setRenTel] = useState("");
+  const [renCharge, setRenCharge] = useState(false);
+  const [renLoading, setRenLoading] = useState(false);
+  const [renMsg, setRenMsg] = useState<string | null>(null);
+  async function chargerInfos() {
+    setRenMsg(null);
+    const r = await memberContact(session.email, codeMembre(), session.membreId);
+    if (!r.ok) { setRenMsg(r.reason || "Impossible de lire vos informations."); return; }
+    setRenNom(r.nom || session.nom); setRenEmail(r.email || session.email); setRenTel(r.tel || "");
+    if (r.infosConfirmees) setInfosOk(true);
+    setRenCharge(true);
+  }
+  useEffect(() => {
+    if (session.paid === false && !infosOk && !renCharge) chargerInfos();
+  }, [session.paid]); // eslint-disable-line react-hooks/exhaustive-deps
+  async function confirmerInfos() {
+    const nouvelEmail = renEmail.trim().toLowerCase();
+    const changeEmail = nouvelEmail !== session.email.toLowerCase();
+    if (!renNom.trim() || !nouvelEmail) { setRenMsg("Indiquez votre nom et votre adresse mail."); return; }
+    if (changeEmail && !confirm(`Votre nouvelle adresse sera « ${nouvelEmail} ».\n\nC'est elle que vous utiliserez pour vous connecter et qui recevra les mails du club. Continuer ?`)) return;
+    setRenLoading(true);
+    setRenMsg(null);
+    const r = await memberContact(session.email, codeMembre(), session.membreId, { newNom: renNom.trim(), newEmail: nouvelEmail, newTel: renTel.trim(), confirmer: true });
+    setRenLoading(false);
+    if (!r.ok) { setRenMsg(r.reason || "Erreur, réessayez."); return; }
+    const s = { ...session, email: r.email || session.email, nom: r.nom || session.nom };
+    if (s.email !== session.email || s.nom !== session.nom) { setMemberSession(s); onSessionChange?.(s); }
+    setInfosOk(true);
   }
 
   // 🎓 Renouvellement : adulte ou étudiant cette saison
@@ -547,6 +582,33 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             <p className="text-amber-700 text-xs mb-3">
               Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore réglée.
             </p>
+            {/* ✅ 1. Vérifier ses informations avant de se réinscrire */}
+            {!infosOk ? (
+              <div className="bg-white border border-amber-300 rounded-xl p-3 mb-1">
+                <p className="text-amber-800 text-xs font-semibold mb-2">Vérifiez vos informations :</p>
+                <div className="space-y-2">
+                  <label className="block text-[11px] text-slate-500">Prénom et nom
+                    <input className="input !text-sm" value={renNom} onChange={(e) => setRenNom(e.target.value)} placeholder={renCharge ? "" : "Chargement…"} />
+                  </label>
+                  <label className="block text-[11px] text-slate-500">Adresse mail (sert aussi à vous connecter)
+                    <input className="input !text-sm" type="email" value={renEmail} onChange={(e) => setRenEmail(e.target.value)} />
+                  </label>
+                  <label className="block text-[11px] text-slate-500">Téléphone
+                    <input className="input !text-sm" type="tel" value={renTel} onChange={(e) => setRenTel(e.target.value)} />
+                  </label>
+                </div>
+                {renMsg && <p className="text-xs text-center font-semibold text-red-500 mt-2">{renMsg}</p>}
+                <button onClick={confirmerInfos} disabled={renLoading || !renCharge} className="mt-3 w-full text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-xl py-2.5 disabled:opacity-50">
+                  {renLoading ? "Enregistrement…" : "✅ Mes informations sont correctes"}
+                </button>
+              </div>
+            ) : (
+              <p className="text-xs text-emerald-700 mb-3">
+                ✅ Informations confirmées · <button onClick={() => { setInfosOk(false); chargerInfos(); }} className="underline">modifier</button>
+              </p>
+            )}
+            {infosOk && (
+            <>
             {/* 🎓 La situation a pu changer depuis la saison dernière (fin des études…) */}
             <p className="text-amber-800 text-xs font-semibold mb-1.5">Cette saison, vous êtes :</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
@@ -597,9 +659,11 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             </div>
             </>
             )}
+            </>
+            )}
             <p className="text-xs text-amber-600 mt-3 text-center">
               <RefreshCw className="w-3 h-3 inline mr-1" />
-              Vos infos sont déjà en base, pas besoin de tout refaire
+              Vos infos sont déjà enregistrées : il suffit de les vérifier
             </p>
             {/* 🚪 Case "je ne renouvelle pas" */}
             <div className="mt-3 pt-3 border-t border-amber-200">

@@ -132,20 +132,20 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
     return <span className={`block text-[10px] ${!m.vuLe ? "text-orange-500" : "text-slate-400"}`} title="Dernière visite sur l'espace adhérent (visible par toi seul)">👀 {texte}</span>;
   }
 
-  // ✏️ Coordonnées changées par les adhérents depuis leur espace
-  const vuesLe = db.coordonneesVuesLe || "";
+  // ✏️ Informations changées par les adhérents depuis leur espace : restent affichées toute la saison
+  // (effacées au passage à la saison suivante, quand chacun se réinscrit)
   const changementsRecents = db.membres
-    .filter((m) => m.coordonneesModifiees?.length && m.coordonneesModifiees[0].at > vuesLe && Date.now() - new Date(m.coordonneesModifiees[0].at).getTime() < 90 * 86_400_000)
+    .filter((m) => m.coordonneesModifiees?.length)
     .sort((a, b) => b.coordonneesModifiees![0].at.localeCompare(a.coordonneesModifiees![0].at));
   const jourFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-  function ModifBadge({ m, champ }: { m: Membre; champ: "email" | "tel" | "type" }) {
+  const nomChamp = { email: "mail", tel: "téléphone", type: "catégorie", nom: "nom" } as const;
+  function ModifBadge({ m, champ }: { m: Membre; champ: "email" | "tel" | "type" | "nom" }) {
     const h = (m.coordonneesModifiees || []).filter((c) => c.champ === champ);
     if (!h.length) return null;
-    const nouveau = h[0].at > vuesLe;
     const detail = h.map((c) => `${jourFr(c.at)} : « ${c.avant || "(vide)"} » → « ${c.apres} »`).join("\n");
     return (
       <span title={`Changé par l'adhérent depuis son espace :
-${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cursor-help ${nouveau ? "bg-amber-100 text-amber-800 font-semibold" : "bg-slate-100 text-slate-500"}`}>
+${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cursor-help bg-amber-100 text-amber-800 font-semibold">
         ✏️ modifié le {jourFr(h[0].at)}
       </span>
     );
@@ -438,16 +438,25 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
       )}
       {changementsRecents.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
-          <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-amber-900">✏️ {changementsRecents.length} adhérent{changementsRecents.length > 1 ? "s ont mis à jour leurs" : " a mis à jour ses"} informations</p>
-            {!readOnly && <button onClick={() => onPersist({ ...db, coordonneesVuesLe: new Date().toISOString() })} className="text-xs font-semibold text-amber-800 bg-white border border-amber-300 hover:bg-amber-100 px-2 py-1 rounded-lg shrink-0">✓ Vu</button>}
-          </div>
-          <ul className="mt-1.5 space-y-0.5 text-xs text-amber-900">
-            {changementsRecents.slice(0, 10).map((m) => {
-              const c = m.coordonneesModifiees![0];
-              return <li key={m.id}><b>{m.nom}</b> · {c.champ === "email" ? "mail" : c.champ === "tel" ? "téléphone" : "catégorie"} le {jourFr(c.at)} : <span className="text-amber-700">{c.avant || "(vide)"}</span> → <b>{c.apres}</b></li>;
-            })}
-          </ul>
+          <p className="font-semibold text-amber-900">✏️ {changementsRecents.length} adhérent{changementsRecents.length > 1 ? "s ont mis à jour leurs" : " a mis à jour ses"} informations cette saison</p>
+          {(() => {
+            const ligne = (m: Membre) => (
+              <li key={m.id}><b>{m.nom}</b> · {m.coordonneesModifiees!.map((c, i) => (
+                <span key={i}>{i > 0 ? " · " : ""}{nomChamp[c.champ]} le {jourFr(c.at)} : <span className="text-amber-700">{c.avant || "(vide)"}</span> → <b>{c.apres}</b></span>
+              ))}</li>
+            );
+            return (
+              <>
+                <ul className="mt-1.5 space-y-0.5 text-xs text-amber-900">{changementsRecents.slice(0, 8).map(ligne)}</ul>
+                {changementsRecents.length > 8 && (
+                  <details className="mt-1 text-xs text-amber-900">
+                    <summary className="cursor-pointer font-semibold">Voir les {changementsRecents.length - 8} autres</summary>
+                    <ul className="mt-1 space-y-0.5">{changementsRecents.slice(8).map(ligne)}</ul>
+                  </details>
+                )}
+              </>
+            );
+          })()}
         </div>
       )}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -652,7 +661,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-slate-800 truncate">{m.nom}<VisiteBadge m={m} /></p>
+                  <p className="font-semibold text-slate-800 truncate">{m.nom}<VisiteBadge m={m} /><ModifBadge m={m} champ="nom" /></p>
                   {m.newsOptIn === true ? (
                     <Bell className="w-3 h-3 text-emerald-500 shrink-0" aria-label="Abonné aux news" />
                   ) : (
@@ -803,7 +812,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
           <tbody>
             {filtered.map((m) => (
               <tr key={m.id} className={`border-t border-slate-100 ${!m.ok ? "opacity-70" : ""}`}>
-                <td className="p-3 text-slate-800">{m.nom}<VisiteBadge m={m} /></td>
+                <td className="p-3 text-slate-800">{m.nom}<VisiteBadge m={m} /><ModifBadge m={m} champ="nom" /></td>
                 <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">

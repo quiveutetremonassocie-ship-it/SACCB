@@ -277,3 +277,21 @@ test("refus du tarif remisé : un nouvel inscrit doit refaire son inscription, u
   assert.ok(m2 && m2.includes("refusé") && m2.includes("espace adhérent"), m2);
   assert.equal(etat.base.membres.find((m) => m.id === "m-paul").remise.statut, "refusee");
 });
+
+// ─── ✅ Confirmation des informations au renouvellement ───
+
+test("au renouvellement, l'adhérent revoit ses informations, peut corriger son nom, et sa confirmation est notée pour la saison", async () => {
+  const lu = await appeler({ action: "member_contact", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul" });
+  assert.equal(lu.json?.nom, "Paul Attente");
+  assert.equal(lu.json?.infosConfirmees, false);
+  const r = await appeler({ action: "member_contact", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul", newNom: "Paul Attente-Martin", newEmail: "paul.attente@exemple.fr", newTel: "0622334455", confirmer: true });
+  assert.equal(r.json?.ok, true, r.texte);
+  assert.equal(r.json.infosConfirmees, true);
+  const paul = etat.base.membres.find((m) => m.id === "m-paul");
+  assert.equal(paul.nom, "Paul Attente-Martin");
+  assert.equal(paul.infosConfirmees.saison, "2026-2027");
+  assert.deepEqual(paul.coordonneesModifiees.map((c) => c.champ), ["nom"], "seul le nom a changé (le mail et le téléphone identiques ne sont pas notés)");
+  const s = await appeler({ action: "check_session", email: "paul.attente@exemple.fr", membreId: "m-paul" });
+  assert.equal(s.json.adherent.infosConfirmees, true);
+  assert.deepEqual(mailsIntercepte(), []);
+});

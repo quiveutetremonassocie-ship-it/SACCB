@@ -22,7 +22,8 @@ export type Membre = {
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
   // ✏️ Changements d'email / téléphone faits par l'adhérent depuis son espace (10 derniers, le plus récent d'abord)
-  coordonneesModifiees?: { at: string; champ: "email" | "tel" | "type"; avant: string; apres: string }[]; // type = adulte/étudiant choisi au renouvellement
+  coordonneesModifiees?: { at: string; champ: "email" | "tel" | "type" | "nom"; avant: string; apres: string }[]; // affiché dans l'admin toute la saison (effacé au changement de saison)
+  infosConfirmees?: { saison: string; le: string }; // ✅ l'adhérent a confirmé ses informations au renouvellement
   // 💶 Tarif adulte remisé demandé pour une saison (accordé ou refusé par le bureau, à redemander chaque saison)
   remise?: { statut: "demandee" | "acceptee" | "refusee"; saison: string; origine: "inscription" | "renouvellement"; demandeLe: string; decideLe?: string; par?: string };
   vuLe?: string; // 👀 jour de la dernière visite sur l'espace adhérent (AAAA-MM-JJ) — noté par le serveur, visible par le propriétaire seul
@@ -395,7 +396,6 @@ export type DB = {
   agendaEvents?: AgendaEvent[]; // 📅 événements ajoutés à la main dans l'agenda
   agendaMasques?: string[]; // 📅 tournois retirés de l'agenda (ids « t-… » / « ic-… »), le tournoi lui-même reste
   tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
-  coordonneesVuesLe?: string; // ✏️ admin : date où le bureau a marqué « vu » les changements de coordonnées
   tshirtCatalogue?: { url: string; path: string; name: string }; // 📄 catalogue PDF des couleurs/modèles, visible par les adhérents
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)
