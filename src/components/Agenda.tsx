@@ -59,7 +59,7 @@ export default function Agenda({
     return Array.from({ length: total }, (_, i) => { const d = new Date(debut); d.setDate(debut.getDate() + i); return d; });
   }, [mois]);
 
-  const aVenir = evenements.filter((e) => e.date >= aujourdhui).slice(0, 5);
+  const aVenir = evenements.filter((e) => e.date >= aujourdhui).slice(0, 30);
   const liste = jour ? parJour.get(jour) || [] : aVenir;
 
   function changerMois(n: number) {
@@ -91,6 +91,48 @@ export default function Agenda({
   }
 
   const nouveau = (date: string): AgendaEvent => ({ id: "ev-" + Date.now().toString(36), titre: "", date });
+
+  const carte = (e: EvenementAgenda) => (
+        <li key={e.id} className={`rounded-xl border p-3 ${e.masque ? "border-dashed border-slate-300 bg-slate-50 opacity-60" : "border-slate-200"}`}>
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0">
+              <span className={`inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border ${COULEUR[e.genre].badge}`}>{COULEUR[e.genre].nom}</span>
+              {e.masque && <span className="ml-1.5 inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-300">Retiré de l&apos;agenda</span>}
+              <p className="font-semibold text-slate-800 mt-1 break-words">{e.titre}</p>
+              <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
+                {!jour && <span className="first-letter:uppercase">{joliJour(e.date)}</span>}
+                {e.heureDebut && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{e.heureDebut.replace(":", "h")}{e.heureFin ? ` → ${e.heureFin.replace(":", "h")}` : ""}</span>}
+                {e.lieu && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{e.lieu}</span>}
+              </p>
+              {e.description && <p className="text-xs text-slate-600 mt-1 whitespace-pre-line">{e.description}</p>}
+            </div>
+            {admin && e.modifiable && (
+              <div className="flex gap-1 shrink-0">
+                <button onClick={() => { const c = (clubEvents || []).find((x) => x.id === e.id); if (c) setForm({ ...c }); }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500" title="Modifier"><Pencil className="w-4 h-4" /></button>
+                <button onClick={() => supprimer(e.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
+              </div>
+            )}
+          </div>
+          <div className="flex flex-wrap gap-2 mt-2">
+            <a href={lienGoogle(e)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
+              <CalendarPlus className="w-3.5 h-3.5" /> Google Agenda
+            </a>
+            <button onClick={() => telechargerIcs(e)} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
+              <CalendarPlus className="w-3.5 h-3.5" /> iPhone / Outlook
+            </button>
+          </div>
+          {admin && !e.modifiable && (
+            <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
+              <p className="text-[11px] text-slate-400">{e.masque ? "Les adhérents ne le voient plus dans l'agenda (le tournoi existe toujours)." : "Ajouté automatiquement : se modifie dans la rubrique du tournoi."}</p>
+              {onMasquer && (
+                <button onClick={() => onMasquer(e.id, !e.masque)} className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">
+                  {e.masque ? <><Eye className="w-3.5 h-3.5" /> Remettre dans l&apos;agenda</> : <><EyeOff className="w-3.5 h-3.5" /> Retirer de l&apos;agenda</>}
+                </button>
+              )}
+            </div>
+          )}
+        </li>
+  );
 
   const contenu = (
     <div className="grid lg:grid-cols-[1.15fr_1fr] gap-5 text-left">
@@ -137,7 +179,7 @@ export default function Agenda({
       {/* ── Événements du jour choisi (ou prochains événements) ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col">
         <div className="flex items-center justify-between gap-2 mb-3">
-          <p className="font-semibold text-[#1e3a5f] first-letter:uppercase">{jour ? joliJour(jour) : "Prochains événements"}</p>
+          <p className="font-semibold text-[#1e3a5f] first-letter:uppercase">{jour ? joliJour(jour) : "Prochain événement"}</p>
           {jour && <button onClick={() => { setJour(null); setForm(null); }} className="text-xs text-slate-500 hover:text-slate-800">Tout voir</button>}
         </div>
 
@@ -163,48 +205,19 @@ export default function Agenda({
               <p className="text-sm text-slate-400 py-6 text-center">{jour ? "Rien de prévu ce jour-là." : "Aucun événement à venir pour l'instant."}</p>
             ) : (
               <ul className="space-y-3">
-                {liste.map((e) => (
-                  <li key={e.id} className={`rounded-xl border p-3 ${e.masque ? "border-dashed border-slate-300 bg-slate-50 opacity-60" : "border-slate-200"}`}>
-                    <div className="flex items-start justify-between gap-2">
-                      <div className="min-w-0">
-                        <span className={`inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border ${COULEUR[e.genre].badge}`}>{COULEUR[e.genre].nom}</span>
-                        {e.masque && <span className="ml-1.5 inline-block text-[10px] uppercase tracking-wider font-semibold px-1.5 py-0.5 rounded border bg-slate-100 text-slate-600 border-slate-300">Retiré de l&apos;agenda</span>}
-                        <p className="font-semibold text-slate-800 mt-1 break-words">{e.titre}</p>
-                        <p className="text-xs text-slate-500 mt-0.5 flex flex-wrap gap-x-3 gap-y-0.5">
-                          {!jour && <span className="first-letter:uppercase">{joliJour(e.date)}</span>}
-                          {e.heureDebut && <span className="inline-flex items-center gap-1"><Clock className="w-3 h-3" />{e.heureDebut.replace(":", "h")}{e.heureFin ? ` → ${e.heureFin.replace(":", "h")}` : ""}</span>}
-                          {e.lieu && <span className="inline-flex items-center gap-1"><MapPin className="w-3 h-3" />{e.lieu}</span>}
-                        </p>
-                        {e.description && <p className="text-xs text-slate-600 mt-1 whitespace-pre-line">{e.description}</p>}
-                      </div>
-                      {admin && e.modifiable && (
-                        <div className="flex gap-1 shrink-0">
-                          <button onClick={() => { const c = (clubEvents || []).find((x) => x.id === e.id); if (c) setForm({ ...c }); }} className="p-1.5 rounded-lg hover:bg-slate-100 text-slate-500" title="Modifier"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => supprimer(e.id)} className="p-1.5 rounded-lg hover:bg-red-50 text-red-500" title="Supprimer"><Trash2 className="w-4 h-4" /></button>
-                        </div>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-2 mt-2">
-                      <a href={lienGoogle(e)} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
-                        <CalendarPlus className="w-3.5 h-3.5" /> Google Agenda
-                      </a>
-                      <button onClick={() => telechargerIcs(e)} className="inline-flex items-center gap-1.5 text-xs font-semibold px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700">
-                        <CalendarPlus className="w-3.5 h-3.5" /> iPhone / Outlook
-                      </button>
-                    </div>
-                    {admin && !e.modifiable && (
-                      <div className="flex flex-wrap items-center justify-between gap-2 mt-2">
-                        <p className="text-[11px] text-slate-400">{e.masque ? "Les adhérents ne le voient plus dans l'agenda (le tournoi existe toujours)." : "Ajouté automatiquement : se modifie dans la rubrique du tournoi."}</p>
-                        {onMasquer && (
-                          <button onClick={() => onMasquer(e.id, !e.masque)} className="inline-flex items-center gap-1 text-xs font-semibold px-2 py-1 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100">
-                            {e.masque ? <><Eye className="w-3.5 h-3.5" /> Remettre dans l&apos;agenda</> : <><EyeOff className="w-3.5 h-3.5" /> Retirer de l&apos;agenda</>}
-                          </button>
-                        )}
-                      </div>
-                    )}
-                  </li>
-                ))}
+                {(jour ? liste : liste.slice(0, 1)).map(carte)}
               </ul>
+            )}
+            {/* Les autres événements à venir restent repliés pour ne pas répéter la rubrique Tournois */}
+            {!jour && liste.length > 1 && (
+              <details className="group mt-3">
+                <summary className="list-none cursor-pointer select-none inline-flex items-center gap-1.5 text-sm font-semibold text-[#1e3a5f] px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 [&::-webkit-details-marker]:hidden">
+                  <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
+                  <span className="group-open:hidden">Voir les {liste.length - 1} autres événements à venir</span>
+                  <span className="hidden group-open:inline">Masquer les autres événements</span>
+                </summary>
+                <ul className="space-y-3 mt-3">{liste.slice(1).map(carte)}</ul>
+              </details>
             )}
             {admin && (
               <button onClick={() => setForm(nouveau(jour || aujourdhui))} className="mt-4 inline-flex items-center justify-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-xl border-2 border-dashed border-emerald-300 text-emerald-700 hover:bg-emerald-50">
