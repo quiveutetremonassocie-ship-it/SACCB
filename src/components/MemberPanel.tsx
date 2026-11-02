@@ -66,7 +66,7 @@ export default function MemberPanel({
   smashUrl?: string;
   justificatifManquant?: boolean;
   justificatifInfo?: { fourni: boolean; date?: string; nom?: string };
-  adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean };
+  adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string };
   onJustificatifSent?: () => void;
 }) {
   const [justifReplace, setJustifReplace] = useState(false);
@@ -210,13 +210,20 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
   // 🎓 Renouvellement : adulte ou étudiant cette saison
   const [typeLoading, setTypeLoading] = useState(false);
   const [typeMsg, setTypeMsg] = useState<string | null>(null);
-  async function choisirType(t: "Adulte" | "Etudiant") {
-    if (t === session.type) return;
+  // 💶 Tarif adulte remisé : demandé → le bureau accepte (lien de paiement) ou refuse
+  const [remiseEtat, setRemiseEtat] = useState(adherent?.remise);
+  useEffect(() => { setRemiseEtat(adherent?.remise); }, [adherent?.remise]);
+  const typeChoisi = remiseEtat === "demandee" || remiseEtat === "acceptee" ? "AdulteRemise" : session.type;
+  async function choisirType(t: "Adulte" | "Etudiant" | "AdulteRemise") {
+    if (t === typeChoisi) return;
+    if (t === "AdulteRemise" && !confirm("Demander le tarif réduit ?\n\nLe bureau étudie ta demande et te répond par mail. Tu ne pourras payer qu'après sa réponse.")) return;
     setTypeLoading(true);
     setTypeMsg(null);
     const r = await memberSetType(session.email, codeMembre(), session.membreId, t);
     setTypeLoading(false);
     if (!r.ok) { setTypeMsg(r.reason || "Erreur, réessayez."); return; }
+    setRemiseEtat(r.remise);
+    if (t === "AdulteRemise") { setTypeMsg(null); return; }
     const s = { ...session, type: t };
     setMemberSession(s);
     onSessionChange?.(s);
@@ -543,22 +550,36 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             {/* 🎓 La situation a pu changer depuis la saison dernière (fin des études…) */}
             <p className="text-amber-800 text-xs font-semibold mb-1.5">Cette saison, vous êtes :</p>
             <div className="grid grid-cols-2 gap-2 mb-3">
-              {(["Adulte", "Etudiant"] as const).map((t) => (
+              {(["Adulte", "Etudiant", "AdulteRemise"] as const).map((t) => (
                 <button
                   key={t}
                   onClick={() => choisirType(t)}
-                  disabled={typeLoading}
-                  className={`text-sm font-semibold px-3 py-2 rounded-xl border-2 transition disabled:opacity-50 ${session.type === t ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-amber-200 text-amber-800 hover:bg-amber-100"}`}
+                  disabled={typeLoading || (t === "AdulteRemise" && remiseEtat === "refusee")}
+                  className={`text-sm font-semibold px-3 py-2 rounded-xl border-2 transition disabled:opacity-50 ${t === "AdulteRemise" ? "col-span-2" : ""} ${typeChoisi === t ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-amber-200 text-amber-800 hover:bg-amber-100"}`}
                 >
-                  {t === "Adulte" ? "Adulte" : "Étudiant(e)"} · {t === "Adulte" ? (clubConfig?.prixAdulte ?? PRIX.Adulte) : (clubConfig?.prixEtudiant ?? PRIX.Etudiant)} €
+                  {t === "AdulteRemise"
+                    ? "Adulte — tarif réduit (sur accord du bureau)"
+                    : `${t === "Adulte" ? "Adulte" : "Étudiant(e)"} · ${t === "Adulte" ? (clubConfig?.prixAdulte ?? PRIX.Adulte) : (clubConfig?.prixEtudiant ?? PRIX.Etudiant)} €`}
                 </button>
               ))}
             </div>
             {typeMsg && <p className="text-xs text-center text-amber-800 mb-2">{typeMsg}</p>}
+            {remiseEtat === "refusee" && (
+              <p className="text-xs text-center font-semibold text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 mb-3">❌ Tarif réduit refusé par le bureau : choisis Adulte ou Étudiant(e).</p>
+            )}
+            {remiseEtat === "demandee" ? (
+              <p className="text-sm text-center text-amber-800 bg-white border border-amber-300 rounded-xl px-3 py-3">
+                ⏳ Ta demande de tarif réduit est envoyée au bureau. Tu recevras un mail avec sa réponse et le lien pour payer.
+              </p>
+            ) : (
+            <>
+            {remiseEtat === "acceptee" && (
+              <p className="text-xs text-center font-semibold text-emerald-700 bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2 mb-3">✅ Tarif réduit accepté par le bureau</p>
+            )}
             <p className="text-amber-700 text-xs mb-3">Choisissez votre mode de paiement :</p>
             <div className="space-y-2">
               <a
-                href={session.type === "Etudiant"
+                href={remiseEtat === "acceptee" && adherent?.lienRemise ? adherent.lienRemise : session.type === "Etudiant"
                   ? (helloassoUrls?.etudiant || "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-etudiant")
                   : (helloassoUrls?.adulte || "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-adulte-1")}
                 target="_blank"
@@ -574,6 +595,8 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
                 💵 Régler par virement — Nous contacter
               </a>
             </div>
+            </>
+            )}
             <p className="text-xs text-amber-600 mt-3 text-center">
               <RefreshCw className="w-3 h-3 inline mr-1" />
               Vos infos sont déjà en base, pas besoin de tout refaire

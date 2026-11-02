@@ -2,8 +2,8 @@
 
 import { useMemo, useState } from "react";
 import { Pencil, Trash2, Receipt, Mail, Search, Users, CheckCircle2, Clock, Send, Bell, BellOff, UserPlus, X, Camera, CameraOff, KeyRound, AlarmClock, Landmark } from "lucide-react";
-import { DB, Membre, FormerMember } from "@/lib/types";
-import { adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder, adminSendVirementReminder, adminFactureFile } from "@/lib/db";
+import { DB, Membre, FormerMember, remiseSaison } from "@/lib/types";
+import { adminRemiseDecision, adminSendConfirmation, adminSendWelcome, adminResetMemberCode, adminSendPaymentReminder, adminSendVirementReminder, adminFactureFile } from "@/lib/db";
 
 export default function MembresAdmin({
   db,
@@ -92,6 +92,28 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
       );
     }
     return <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded" title="Pas de justificatif de scolarité pour cette saison">⚠️ Justif. manquant</span>;
+  }
+
+  // 💶 Demandes de tarif adulte remisé (saison en cours) : le bureau accepte ou refuse, un mail part à l'adhérent
+  const demandesRemise = db.membres.filter((m) => remiseSaison(db, m)?.statut === "demandee");
+  const [decisionEnCours, setDecisionEnCours] = useState<string | null>(null);
+  async function deciderRemise(m: Membre, accepter: boolean) {
+    if (!adminEmail || !adminCode) { alert("Reconnecte-toi à l'admin pour répondre à cette demande."); return; }
+    if (!confirm(`${accepter ? "Accepter" : "Refuser"} le tarif adulte remisé pour ${m.nom} ?\n\nUn mail sera envoyé à ${m.email} ${accepter ? "avec le lien pour payer." : "pour lui demander de choisir Adulte ou Étudiant."}`)) return;
+    setDecisionEnCours(m.id);
+    const r = await adminRemiseDecision(adminEmail, adminCode, m.id, accepter);
+    setDecisionEnCours(null);
+    if (!r.ok) { alert("Erreur : " + (r.reason || "inconnue")); return; }
+    const remise = { ...m.remise!, statut: accepter ? ("acceptee" as const) : ("refusee" as const), decideLe: new Date().toISOString(), par: adminEmail };
+    await onPersist({ ...db, membres: db.membres.map((x) => (x.id === m.id ? { ...x, type: "Adulte", remise } : x)) });
+    alert(r.mailEnvoye ? `✅ Réponse envoyée par mail à ${m.email}.` : "Décision enregistrée, mais le mail n'a pas pu partir (vérifie l'historique des mails).");
+  }
+  function RemiseBadge({ m }: { m: Membre }) {
+    const r = remiseSaison(db, m);
+    if (!r) return null;
+    if (r.statut === "acceptee") return <span className="block text-[10px] font-semibold text-emerald-700" title={`Accepté le ${r.decideLe ? new Date(r.decideLe).toLocaleDateString("fr-FR") : "?"}${r.par ? " par " + r.par : ""}`}>💶 Adulte remisé</span>;
+    if (r.statut === "demandee") return <span className="block text-[10px] font-semibold text-amber-700">⏳ remise demandée</span>;
+    return <span className="block text-[10px] text-slate-400">remise refusée</span>;
   }
 
   // 👀 Dernières visites sur l'espace adhérent (le serveur ne les envoie qu'au propriétaire du site)
@@ -385,6 +407,24 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
 
   return (
     <div className="glass p-4 md:p-6">
+      {demandesRemise.length > 0 && (
+        <div className="mb-4 rounded-xl border-2 border-amber-400 bg-amber-50 p-3 text-sm">
+          <p className="font-semibold text-amber-900 mb-2">💶 {demandesRemise.length} demande{demandesRemise.length > 1 ? "s" : ""} de tarif adulte remisé</p>
+          <ul className="space-y-2">
+            {demandesRemise.map((m) => (
+              <li key={m.id} className="flex flex-wrap items-center justify-between gap-2 bg-white rounded-lg border border-amber-200 px-3 py-2">
+                <span className="text-xs text-slate-700"><b>{m.nom}</b> · {m.email} · demandé le {new Date(m.remise!.demandeLe).toLocaleDateString("fr-FR")}{m.remise!.origine === "inscription" ? " (nouvelle inscription)" : " (renouvellement)"}</span>
+                {!readOnly && (
+                  <span className="flex gap-1.5">
+                    <button disabled={decisionEnCours === m.id} onClick={() => deciderRemise(m, true)} className="text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 px-2.5 py-1 rounded-lg disabled:opacity-50">✅ Accepter</button>
+                    <button disabled={decisionEnCours === m.id} onClick={() => deciderRemise(m, false)} className="text-xs font-semibold text-white bg-red-500 hover:bg-red-600 px-2.5 py-1 rounded-lg disabled:opacity-50">❌ Refuser</button>
+                  </span>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
       {avecVisites && (
         <div className="mb-4 rounded-xl border border-slate-200 bg-slate-50 p-3 text-xs text-slate-600 flex flex-wrap items-center gap-x-4 gap-y-1">
           <span className="font-semibold text-slate-700">👀 Visites de l&apos;espace adhérent</span>
@@ -630,7 +670,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
                 <ModifBadge m={m} champ="tel" />
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="text-xs text-slate-400">{m.type}</span><ModifBadge m={m} champ="type" />
+                <span className="text-xs text-slate-400">{m.type}</span><RemiseBadge m={m} /><ModifBadge m={m} champ="type" />
                 {typeof m.montantPaye === "number" && (
                   <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                 )}
@@ -767,7 +807,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
                 <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">
-                  {m.type}<ModifBadge m={m} champ="type" />
+                  {m.type}<RemiseBadge m={m} /><ModifBadge m={m} champ="type" />
                   {typeof m.montantPaye === "number" && (
                     <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                   )}

@@ -23,6 +23,8 @@ export type Membre = {
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
   // ✏️ Changements d'email / téléphone faits par l'adhérent depuis son espace (10 derniers, le plus récent d'abord)
   coordonneesModifiees?: { at: string; champ: "email" | "tel" | "type"; avant: string; apres: string }[]; // type = adulte/étudiant choisi au renouvellement
+  // 💶 Tarif adulte remisé demandé pour une saison (accordé ou refusé par le bureau, à redemander chaque saison)
+  remise?: { statut: "demandee" | "acceptee" | "refusee"; saison: string; origine: "inscription" | "renouvellement"; demandeLe: string; decideLe?: string; par?: string };
   vuLe?: string; // 👀 jour de la dernière visite sur l'espace adhérent (AAAA-MM-JJ) — noté par le serveur, visible par le propriétaire seul
   // 🔕 Ids de tournois pour lesquels le membre a explicitement dit "pas intéressé".
   // Le système n'enverra pas les rappels J-30/J-15/J-5/J-1 pour ces tournois.
@@ -489,6 +491,7 @@ export type ScheduleSlot = {
 export type ClubConfig = {
   prixAdulte?: number;      // default 50
   prixEtudiant?: number;    // default 30
+  prixRemise?: number;      // 💶 tarif adulte remisé (défaut : prix étudiant) — jamais affiché sur le site
   horaires?: ScheduleSlot[];// default: Lundi/Jeudi/Samedi
   salleName?: string;       // default "Salle Paul Vatine"
   salleAdresse?: string;    // default "30bis Rue Georges Boissaye du Bocage, 76310 Sainte-Adresse"
@@ -498,6 +501,7 @@ export type ClubConfig = {
     mixte?: string;
     adulte?: string;
     etudiant?: string;
+    remise?: string;   // 💶 lien de paiement du tarif adulte remisé (défaut : lien étudiant)
   };
 };
 
@@ -603,11 +607,16 @@ export function getEffectivePrix(db: DB): { Adulte: number; Etudiant: number } {
   };
 }
 
+// 💶 Remise de la saison en cours (une remise d'une saison passée ne compte plus)
+export const remiseSaison = (db: DB, m: Membre) => (m.remise && m.remise.saison === `${db.y1}-${db.y2}` ? m.remise : undefined);
+export const remiseAcceptee = (db: DB, m: Membre) => remiseSaison(db, m)?.statut === "acceptee";
+
 // 💶 Montant d'adhésion d'un adhérent : le montant réellement payé s'il a été saisi
 // (réduction…), sinon le tarif normal de son type.
 export function getMontantMembre(db: DB, m: Membre): number {
   if (typeof m.montantPaye === "number" && m.montantPaye >= 0) return m.montantPaye;
   const prix = getEffectivePrix(db);
+  if (remiseAcceptee(db, m)) return db.clubConfig?.prixRemise ?? prix.Etudiant;
   return m.type === "Etudiant" ? prix.Etudiant : prix.Adulte;
 }
 

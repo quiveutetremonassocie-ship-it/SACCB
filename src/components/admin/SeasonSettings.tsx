@@ -251,7 +251,8 @@ export default function SeasonSettings({
       y1: newY1,
       y2: newY2,
       archives: [...filtered, archive],
-      membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined, montantPaye: undefined })),
+      // 💶 Le tarif remisé est à redemander chaque saison
+      membres: db.membres.map((m) => ({ ...m, ok: false, paymentDate: undefined, montantPaye: undefined, remise: undefined })),
       // 💰 La nouvelle saison repart à 0 € de dépenses — les factures de la
       // saison passée sont conservées dans l'archive ci-dessus, consultables
       // via l'historique des saisons.
@@ -1063,6 +1064,8 @@ function ClubConfigSection({
   const [helloassoMixte, setHelloassoMixte] = useState(config.helloassoUrls?.mixte ?? "");
   const [helloassoAdulte, setHelloassoAdulte] = useState(config.helloassoUrls?.adulte ?? "");
   const [helloassoEtudiant, setHelloassoEtudiant] = useState(config.helloassoUrls?.etudiant ?? "");
+  const [helloassoRemise, setHelloassoRemise] = useState(config.helloassoUrls?.remise ?? "");
+  const [prixRemise, setPrixRemise] = useState<number | "">(config.prixRemise ?? "");
   const [expanded, setExpanded] = useState(false);
 
   function updateSlot(idx: number, field: "jour" | "heure", value: string) {
@@ -1081,17 +1084,19 @@ function ClubConfigSection({
     const newConfig: ClubConfig = {
       prixAdulte,
       prixEtudiant,
+      prixRemise: prixRemise === "" ? undefined : prixRemise,
       salleName: salleName.trim() || undefined,
       salleAdresse: salleAdresse.trim() || undefined,
       foundedYear,
       horaires: horaires.filter((s) => s.jour.trim() && s.heure.trim()),
       helloassoUrls:
-        helloassoPage.trim() || helloassoMixte.trim() || helloassoAdulte.trim() || helloassoEtudiant.trim()
+        helloassoPage.trim() || helloassoMixte.trim() || helloassoAdulte.trim() || helloassoEtudiant.trim() || helloassoRemise.trim()
           ? {
               page: helloassoPage.trim() || undefined,
               mixte: helloassoMixte.trim() || undefined,
               adulte: helloassoAdulte.trim() || undefined,
               etudiant: helloassoEtudiant.trim() || undefined,
+              remise: helloassoRemise.trim() || undefined,
             }
           : undefined,
     };
@@ -1140,6 +1145,21 @@ function ClubConfigSection({
                     value={prixEtudiant}
                     min={0}
                     onChange={(e) => setPrixEtudiant(Number(e.target.value))}
+                    disabled={readOnly}
+                  />
+                  <span className="text-slate-400 text-sm">&euro;</span>
+                </div>
+              </div>
+              <div className="col-span-full">
+                <label className="text-xs text-slate-500 mb-1 block">💶 Adulte remisé (sur accord du bureau, jamais affiché sur le site)</label>
+                <div className="flex items-center gap-1">
+                  <input
+                    type="number"
+                    className="input flex-1"
+                    value={prixRemise}
+                    min={0}
+                    placeholder={`Vide = prix étudiant (${prixEtudiant} €)`}
+                    onChange={(e) => setPrixRemise(e.target.value === "" ? "" : Number(e.target.value))}
                     disabled={readOnly}
                   />
                   <span className="text-slate-400 text-sm">&euro;</span>
@@ -1279,6 +1299,17 @@ function ClubConfigSection({
                   placeholder="https://www.helloasso.com/..."
                   value={helloassoEtudiant}
                   onChange={(e) => setHelloassoEtudiant(e.target.value)}
+                  disabled={readOnly}
+                />
+              </div>
+              <div>
+                <label className="text-xs text-slate-500 mb-0.5 block">💶 Adulte remisé (envoyé dans le mail d&apos;accord du bureau)</label>
+                <input
+                  type="url"
+                  className="input w-full !text-xs"
+                  placeholder="Vide = même lien que « Étudiant seul »"
+                  value={helloassoRemise}
+                  onChange={(e) => setHelloassoRemise(e.target.value)}
                   disabled={readOnly}
                 />
               </div>

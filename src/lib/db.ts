@@ -413,6 +413,7 @@ export async function publicAddMembre(membre: {
   photoConsent?: boolean;
   sexe?: "F" | "H";
   grouped?: boolean; // true = inscription groupée, ne pas écraser les autres membres du même email
+  remiseDemandee?: boolean; // 💶 demande de tarif adulte remisé (accord du bureau)
   website?: string; // honeypot anti-bot (doit rester vide)
 }): Promise<{ ok: boolean; reason?: string; membreId?: string }> {
   const res = await fetch(EDGE_FUNCTION_URL, {
@@ -497,7 +498,7 @@ export type AgendaAdherent = {
 };
 
 // ─── Vérification session membre (existe encore en DB ? statut payé à jour ?) ───
-export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean }; agenda?: AgendaAdherent; membreNoms?: string[] }> {
+export async function checkMemberSession(email: string, membreId: string, code?: string): Promise<{ valid: boolean; paid?: boolean; whatsappLink?: string; justificatifManquant?: boolean; justificatif?: { fourni: boolean; date?: string; nom?: string }; adherent?: { id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string }; agenda?: AgendaAdherent; membreNoms?: string[] }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",
@@ -842,13 +843,27 @@ export async function fetchPrivateActualites(
   }
 }
 
+// ─── 💶 Le bureau accepte ou refuse une demande de tarif adulte remisé (mail à l'adhérent) ───
+export async function adminRemiseDecision(adminEmail: string, adminCode: string, membreId: string, accepter: boolean): Promise<{ ok: boolean; mailEnvoye?: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_remise_decision", adminEmail, adminCode, membreId, accepter }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau." };
+  }
+}
+
 // ─── 🎓 Au renouvellement : l'adhérent indique s'il est adulte ou étudiant cette saison ───
 export async function memberSetType(
   email: string,
   code: string,
   membreId: string,
-  type: "Adulte" | "Etudiant"
-): Promise<{ ok: boolean; type?: "Adulte" | "Etudiant"; inchange?: boolean; reason?: string }> {
+  type: "Adulte" | "Etudiant" | "AdulteRemise"
+): Promise<{ ok: boolean; type?: "Adulte" | "Etudiant"; remise?: "demandee" | "acceptee" | "refusee"; inchange?: boolean; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",

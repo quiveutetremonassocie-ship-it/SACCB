@@ -9,7 +9,7 @@ import { ADMIN, SECRETS, baseDeTest } from "./outils/donnees.mjs";
 
 let serveur;
 before(async () => { serveur = await demarrer(); });
-beforeEach(() => { etat.base = baseDeTest(); etat.ecritures = 0; etat.appelsExterieurs = []; });
+beforeEach(() => { etat.base = baseDeTest(); etat.ecritures = 0; etat.ecrituresMembres = 0; etat.appelsExterieurs = []; });
 // Garantie globale : aucun appel n'est jamais parti vers un vrai service
 after(() => { assert.ok(globalThis.fetch.name === "fauxFetch", "le réseau doit rester intercepté"); });
 
@@ -48,7 +48,7 @@ test(`les ${actionsAdmin.length} actions admin refusent quelqu'un qui n'est pas 
     assert.notEqual(r.json?.ok, true, `${action} a répondu ok sans connexion`);
     sansSecret(r.texte, action);
   }
-  assert.equal(etat.ecritures, 0, "aucune action non connectée ne doit modifier la base");
+  assert.equal(etat.ecrituresMembres, 0, "aucune action non connectée ne doit modifier la base");
   assert.deepEqual(mailsIntercepte(), [], "aucun mail ne doit être préparé");
 });
 
@@ -70,7 +70,7 @@ test("les actions réservées (tâches automatiques, envois groupés, paiements)
     const r = await appeler({ action, secret: "mauvais", email: "intrus@exemple.fr", code: "mauvais" });
     sansSecret(r.texte, action);
   }
-  assert.equal(etat.ecritures, 0, "la base n'a pas été modifiée");
+  assert.equal(etat.ecrituresMembres, 0, "la base n'a pas été modifiée");
   assert.deepEqual(mailsIntercepte(), [], "aucun mail n'a été préparé");
 });
 
@@ -189,7 +189,7 @@ test("changer les coordonnées est refusé avec un faux code, vers l'adresse d'u
   assert.notEqual(admin.json?.ok, true);
   const invalide = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", newTel: "abc" });
   assert.notEqual(invalide.json?.ok, true);
-  assert.equal(etat.ecritures, 0, "rien n'a été enregistré");
+  assert.equal(etat.ecrituresMembres, 0, "rien n'a été enregistré");
 });
 
 // ─── 👀 Dernière visite (propriétaire seul) ───
@@ -199,9 +199,9 @@ test("la visite d'un adhérent est notée (le jour seulement), visible par le pr
   assert.equal(r.json?.ok, true, r.texte);
   const jour = etat.base.membres.find((m) => m.id === "m-marie").vuLe;
   assert.match(jour, /^\d{4}-\d{2}-\d{2}$/, "seulement le jour, sans heure");
-  const ecritures = etat.ecritures;
+  const ecritures = etat.ecrituresMembres;
   await appeler({ action: "check_session", email: "marie.secrete@exemple.fr", membreId: "m-marie" });
-  assert.equal(etat.ecritures, ecritures, "une seule écriture par jour");
+  assert.equal(etat.ecrituresMembres, ecritures, "une seule écriture par jour");
   // Un admin qui n'est pas le propriétaire ne voit pas les visites
   const vue = (await appeler({ action: "admin_fetch", email: ADMIN.email, code: ADMIN.code })).json.data;
   assert.ok(!JSON.stringify(vue).includes('"vuLe"'), "visites cachées aux autres admins");
@@ -225,11 +225,55 @@ test("au renouvellement, un adhérent pas encore payé peut passer d'étudiant �
   const paul = etat.base.membres.find((m) => m.id === "m-paul");
   assert.equal(paul.type, "Adulte");
   assert.deepEqual([paul.coordonneesModifiees[0].champ, paul.coordonneesModifiees[0].avant, paul.coordonneesModifiees[0].apres], ["type", "Etudiant", "Adulte"]);
-  const ecritures = etat.ecritures;
+  const ecritures = etat.ecrituresMembres;
   const paye = await appeler({ action: "member_set_type", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", type: "Etudiant" });
   assert.notEqual(paye.json?.ok, true, "déjà payé : on ne change plus de tarif soi-même");
   const faux = await appeler({ action: "member_set_type", email: "paul.attente@exemple.fr", code: "mauvais", membreId: "m-paul", type: "Etudiant" });
   assert.notEqual(faux.json?.ok, true);
-  assert.equal(etat.ecritures, ecritures);
+  assert.equal(etat.ecrituresMembres, ecritures);
   assert.equal(etat.base.membres.find((m) => m.id === "m-marie").type, "Adulte");
+});
+
+// ─── 💶 Tarif adulte remisé (demande → accord ou refus du bureau) ───
+
+const sujets = () => mailsIntercepte().map((m) => `${m.subject} → ${JSON.stringify(m.to)} :: ${m.htmlContent || m.html || ""}`);
+
+test("inscription avec demande de tarif remisé : en attente, le bureau est prévenu, puis l'accord envoie le lien pour payer", async () => {
+  const r = await appeler({ action: "add_membre", nom: "Rémi Remise", email: "remi@exemple.fr", tel: "0644556677", type: "Adulte", paymentMethod: "online", code: "CodeRemi1", remiseDemandee: true });
+  assert.equal(r.json?.ok, true, r.texte);
+  const remi = etat.base.membres.find((m) => m.email === "remi@exemple.fr");
+  assert.equal(remi.type, "Adulte");
+  assert.equal(remi.remise.statut, "demandee");
+  assert.equal(remi.remise.saison, "2026-2027");
+  assert.ok(sujets().some((s) => s.includes("Demande de tarif adulte remisé") && !s.includes("remi@exemple.fr\"]")), "le bureau reçoit la demande");
+  // Le bureau accepte
+  etat.appelsExterieurs = [];
+  const d = await appeler({ action: "admin_remise_decision", adminEmail: ADMIN.email, adminCode: ADMIN.code, membreId: remi.id, accepter: true });
+  assert.equal(d.json?.ok, true, d.texte);
+  assert.equal(etat.base.membres.find((m) => m.id === remi.id).remise.statut, "acceptee");
+  const mail = sujets().find((s) => s.includes("remi@exemple.fr"));
+  assert.ok(mail && mail.includes("accepté par le bureau du SACCB") && mail.includes("tarif-etudiant"), "mail vert avec le lien de paiement");
+  // Son espace affiche le tarif remisé et le bon lien
+  const s = await appeler({ action: "check_session", email: "remi@exemple.fr", membreId: remi.id });
+  assert.equal(s.json.adherent.remise, "acceptee");
+  assert.equal(s.json.adherent.montantPaye, 30);
+  assert.match(s.json.adherent.lienRemise, /tarif-etudiant/);
+});
+
+test("refus du tarif remisé : un nouvel inscrit doit refaire son inscription, un ancien adhérent choisit dans son espace", async () => {
+  await appeler({ action: "add_membre", nom: "Nouveau Refus", email: "nouveau@exemple.fr", tel: "0655667788", type: "Adulte", code: "CodeNouv1", remiseDemandee: true });
+  const nouveau = etat.base.membres.find((m) => m.email === "nouveau@exemple.fr");
+  etat.appelsExterieurs = [];
+  await appeler({ action: "admin_remise_decision", adminEmail: ADMIN.email, adminCode: ADMIN.code, membreId: nouveau.id, accepter: false });
+  const m1 = sujets().find((s) => s.includes("nouveau@exemple.fr"));
+  assert.ok(m1 && m1.includes("refusé par le bureau du SACCB") && m1.includes("refaire ton inscription"), m1);
+  // Ancien adhérent (Paul) au renouvellement
+  const r = await appeler({ action: "member_set_type", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul", type: "AdulteRemise" });
+  assert.equal(r.json?.remise, "demandee", r.texte);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-paul").type, "Adulte");
+  etat.appelsExterieurs = [];
+  await appeler({ action: "admin_remise_decision", adminEmail: ADMIN.email, adminCode: ADMIN.code, membreId: "m-paul", accepter: false });
+  const m2 = sujets().find((s) => s.includes("paul.attente@exemple.fr"));
+  assert.ok(m2 && m2.includes("refusé") && m2.includes("espace adhérent"), m2);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-paul").remise.statut, "refusee");
 });

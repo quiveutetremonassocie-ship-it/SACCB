@@ -36,7 +36,7 @@ function pickHelloAssoUrl(
 }
 
 type PaymentMode = "online" | "virement";
-type PersonType = "Adulte" | "Etudiant";
+type PersonType = "Adulte" | "Etudiant" | "AdulteRemise"; // 💶 AdulteRemise = tarif réduit sur accord du bureau
 type Personne = {
   prenom: string;
   nom: string;
@@ -64,7 +64,7 @@ export default function Inscription({
   prix: { Adulte: number; Etudiant: number };
   onMembreAdded: () => void;
 }) {
-  const [done, setDone] = useState<{ personnes: Personne[]; mode: PaymentMode } | null>(null);
+  const [done, setDone] = useState<{ personnes: Personne[]; mode: PaymentMode | "remise" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
   const [showCode, setShowCode] = useState(false);
@@ -89,7 +89,9 @@ export default function Inscription({
 
   const remaining = quota - membresCount;
   const progress = Math.min((membresCount / quota) * 100, 100);
-  const totalPrice = personnes.reduce((sum, p) => sum + prix[p.type], 0);
+  // 💶 Le tarif remisé n'est jamais affiché : il est donné par le bureau après accord
+  const avecRemise = personnes.some((p) => p.type === "AdulteRemise");
+  const totalPrice = personnes.reduce((sum, p) => sum + (p.type === "AdulteRemise" ? 0 : prix[p.type]), 0);
 
   function updatePersonne(idx: number, field: keyof Personne, value: string) {
     setPersonnes(prev => prev.map((p, i) => i === idx ? { ...p, [field]: value } : p));
@@ -275,7 +277,8 @@ export default function Inscription({
         nom: `${p.prenom.trim()} ${p.nom.trim()}`.trim(),
         email: personEmail,
         tel: personTel,
-        type: p.type,
+        type: p.type === "AdulteRemise" ? "Adulte" : p.type,
+        remiseDemandee: p.type === "AdulteRemise",
         paymentMethod: mode,
         code: personCode,
         newsOptIn,
@@ -302,11 +305,19 @@ export default function Inscription({
       return;
     }
 
+    // 💶 Demande de tarif remisé : pas de paiement tant que le bureau n'a pas répondu (le lien arrive par mail)
+    if (avecRemise) {
+      setLoading(false);
+      setDone({ personnes, mode: "remise" });
+      personnes.forEach(() => onMembreAdded());
+      return;
+    }
+
     if (mode === "online") {
       const ids = results.map(r => r.membreId || "").filter(Boolean);
       localStorage.setItem("saccb_pending_membre_ids", JSON.stringify(ids));
       localStorage.setItem("saccb_pending_personnes", JSON.stringify(personnes));
-      window.location.href = pickHelloAssoUrl(personnes, db.clubConfig?.helloassoUrls);
+      window.location.href = pickHelloAssoUrl(personnes.map((p) => ({ type: p.type === "AdulteRemise" ? "Adulte" as const : p.type })), db.clubConfig?.helloassoUrls);
       return;
     }
 
@@ -379,7 +390,20 @@ export default function Inscription({
               </p>
             </div>
           ) : done ? (
-            done.mode === "online" ? (
+            done.mode === "remise" ? (
+              <div className="text-center py-6">
+                <Clock className="w-14 h-14 text-amber-500 mx-auto mb-3" />
+                <h3 className="text-xl font-bold text-slate-800 mb-2">Demande envoyée au bureau</h3>
+                <div className="bg-amber-50 border border-amber-200 rounded-xl p-4 mb-4 text-left">
+                  <p className="text-amber-700 text-sm font-semibold mb-1">Tarif réduit en attente d&apos;accord</p>
+                  <p className="text-slate-600 text-sm">
+                    {done.personnes.length > 1 ? "Vos inscriptions sont enregistrées." : "Votre inscription est enregistrée."} Le bureau
+                    étudie votre demande de tarif réduit : vous recevrez un mail avec sa réponse et, si elle est acceptée, le lien pour payer.
+                    Rien n&apos;est à régler pour l&apos;instant.
+                  </p>
+                </div>
+              </div>
+            ) : done.mode === "online" ? (
               <div className="text-center py-6">
                 <CheckCircle2 className="w-14 h-14 text-emerald-500 mx-auto mb-3" />
                 <h3 className="text-xl font-bold text-slate-800 mb-2">Paiement confirmé !</h3>
@@ -388,7 +412,7 @@ export default function Inscription({
                 </p>
                 <div className="space-y-3">
                   {done.personnes.map((p, i) => (
-                    <Badge key={i} nom={`${p.prenom} ${p.nom}`} type={p.type} y1={db.y1} y2={db.y2} />
+                    <Badge key={i} nom={`${p.prenom} ${p.nom}`} type={p.type === "AdulteRemise" ? "Adulte" : p.type} y1={db.y1} y2={db.y2} />
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 mt-4 mb-4">
@@ -420,7 +444,7 @@ export default function Inscription({
                 </div>
                 <div className="space-y-3">
                   {done.personnes.map((p, i) => (
-                    <Badge key={i} nom={`${p.prenom} ${p.nom}`} type={p.type} y1={db.y1} y2={db.y2} />
+                    <Badge key={i} nom={`${p.prenom} ${p.nom}`} type={p.type === "AdulteRemise" ? "Adulte" : p.type} y1={db.y1} y2={db.y2} />
                   ))}
                 </div>
                 <p className="text-xs text-slate-500 mt-4 mb-4">
@@ -486,7 +510,13 @@ export default function Inscription({
                       >
                         <option value="Adulte">Adulte ({prix.Adulte}€)</option>
                         <option value="Etudiant">Étudiant ({prix.Etudiant}€)</option>
+                        <option value="AdulteRemise">Adulte — tarif réduit (sur accord du bureau)</option>
                       </select>
+                      {p.type === "AdulteRemise" && (
+                        <p className="mt-1.5 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
+                          💶 Le bureau étudie votre demande et vous répond par mail. Pas de paiement tant qu&apos;il n&apos;a pas répondu.
+                        </p>
+                      )}
 
                       {/* 👫 Fille / Garçon (pour les tournois Femmes / Hommes) */}
                       <div className="mt-2 grid grid-cols-2 gap-2">
@@ -757,6 +787,8 @@ export default function Inscription({
               <button type="submit" className="btn-primary w-full" disabled={loading}>
                 {loading
                   ? "Envoi..."
+                  : avecRemise
+                  ? "Envoyer ma demande au bureau"
                   : mode === "online"
                   ? `Continuer vers le paiement${personnes.length > 1 ? ` (${totalPrice}€)` : ""}`
                   : `Valider ${personnes.length > 1 ? "les inscriptions" : "mon inscription"}`}

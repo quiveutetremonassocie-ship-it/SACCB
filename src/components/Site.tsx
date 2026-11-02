@@ -80,7 +80,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       setBandeauTournoi(direct ? { direct: true, nom: direct.name } : ouvert ? { direct: false, nom: ouvert.name } : null);
     });
   }, [memberSession?.email, memberSession?.membreId]); // eslint-disable-line react-hooks/exhaustive-deps
-  const [memberAdherent, setMemberAdherent] = useState<{ id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean } | undefined>(undefined);
+  const [memberAdherent, setMemberAdherent] = useState<{ id?: string; nom: string; type: "Adulte" | "Etudiant"; montantPaye?: number; ok: boolean; remise?: "demandee" | "acceptee" | "refusee"; lienRemise?: string } | undefined>(undefined);
   useEffect(() => {
     if (!memberSession) { setMemberWhatsapp(undefined); setJustificatifManquant(false); setJustificatifInfo(undefined); setMembreNoms([]); setMemberAgenda(undefined); return; }
     let cancelled = false;

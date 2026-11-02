@@ -19,6 +19,7 @@ export const ENV = {
 export const etat = {
   base: null, // contenu de la fausse base (objet JSON)
   ecritures: 0,
+  ecrituresMembres: 0, // écritures qui ont changé la liste des adhérents
   appelsExterieurs: [], // { url, corps } : tout ce qui aurait quitté le serveur
 };
 
@@ -53,8 +54,10 @@ async function fauxFetch(entree, init = {}) {
       const rev = etat.base._rev;
       const ok = attendu === null || (attendu === "is.null" ? rev == null : attendu === "eq." + String(rev));
       if (!ok) return reponseJson([]);
+      const avant = JSON.stringify(etat.base.membres);
       etat.base = JSON.parse(String(corps)).data;
       etat.ecritures++;
+      if (JSON.stringify(etat.base.membres) !== avant) etat.ecrituresMembres++;
       return reponseJson([{ id: 1 }]);
     }
   }

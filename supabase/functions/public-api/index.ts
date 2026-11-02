@@ -1002,6 +1002,57 @@ function tournoiConcerne(t: Record<string, unknown>, m: { sexe?: unknown }): boo
 
 // 👕 Identifiant HelloAsso (formSlug) de la campagne t-shirts, tiré du lien enregistré dans l'admin
 // ex. https://www.helloasso.com/associations/xxx/boutiques/commande-t-shirt-saccb → "commande-t-shirt-saccb"
+// ─── 💶 Tarif adulte remisé : demandé par l'adhérent, accepté ou refusé par le bureau (à redemander chaque saison) ───
+const URL_HELLOASSO_ETUDIANT = "https://www.helloasso.com/associations/sainte-adresse-club-de-competition-du-badminton-s-a-c-c-b/evenements/tarif-etudiant";
+const saisonCle = (d: Record<string, unknown>) => `${d.y1}-${d.y2}`;
+function lienRemise(d: Record<string, unknown>): string {
+  const u = (((d.clubConfig || {}) as Record<string, unknown>).helloassoUrls || {}) as Record<string, unknown>;
+  return String(u.remise || u.etudiant || URL_HELLOASSO_ETUDIANT);
+}
+function prixRemise(d: Record<string, unknown>): number {
+  const c = (d.clubConfig || {}) as Record<string, unknown>;
+  return typeof c.prixRemise === "number" ? c.prixRemise : typeof c.prixEtudiant === "number" ? c.prixEtudiant : 30;
+}
+/** 💶 Montant de l'adhésion : montant noté, sinon tarif remisé accepté, sinon tarif du type */
+function prixAdhesion(d: Record<string, unknown>, m: Record<string, unknown>): number {
+  if (typeof m.montantPaye === "number" && m.montantPaye >= 0) return m.montantPaye;
+  if (remiseSaison(d, m)?.statut === "acceptee") return prixRemise(d);
+  const c = (d.clubConfig || {}) as Record<string, unknown>;
+  if (m.type === "Etudiant") return typeof c.prixEtudiant === "number" ? c.prixEtudiant : 30;
+  return typeof c.prixAdulte === "number" ? c.prixAdulte : 50;
+}
+/** Remise de la saison en cours (une remise d'une saison passée ne compte plus) */
+function remiseSaison(d: Record<string, unknown>, m: Record<string, unknown>): Record<string, unknown> | null {
+  const r = m.remise as Record<string, unknown> | undefined;
+  return r && r.saison === saisonCle(d) ? r : null;
+}
+function demanderRemise(d: Record<string, unknown>, m: Record<string, unknown>, origine: "inscription" | "renouvellement") {
+  m.type = "Adulte";
+  m.remise = { statut: "demandee", saison: saisonCle(d), origine, demandeLe: new Date().toISOString() };
+}
+async function notifierDemandeRemise(d: Record<string, unknown>, m: Record<string, unknown>) {
+  const brevoKey = Deno.env.get("BREVO_API_KEY");
+  if (!brevoKey) return;
+  const contacts = (d.contactEmails || []) as string[];
+  const to = contacts.length > 0 ? contacts : ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
+  const nom = String(m.nom || "");
+  try {
+    await sendBrevo(brevoKey, {
+      from: "SACCB <contact@saccb.fr>",
+      to,
+      subject: `💶 Demande de tarif adulte remisé : ${nom}`,
+      text: `${nom} (${m.email}) demande le tarif adulte remisé pour la saison ${d.y1}–${d.y2}.\n\nAccepte ou refuse la demande dans l'admin → Adhérents : https://saccb.fr/?admin=1\n\n--\nSACCB · Notification automatique`,
+      html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">
+        <div style="background: #d97706; padding: 18px 24px; border-radius: 12px 12px 0 0;"><h1 style="color: white; margin: 0; font-size: 19px;">💶 Demande de tarif adulte remisé</h1></div>
+        <div style="background: #fffbeb; padding: 22px 24px; border-radius: 0 0 12px 12px; border: 1px solid #fde68a;">
+          <p style="margin: 0 0 8px;"><strong>${escapeHtml(nom)}</strong> (${escapeHtml(String(m.email || ""))}) demande le tarif adulte remisé pour la saison ${d.y1}–${d.y2}.</p>
+          <p style="margin: 0 0 16px; color: #92400e;">Rien n'est payé tant que le bureau n'a pas répondu.</p>
+          <a href="https://saccb.fr/?admin=1" style="display: inline-block; background: #1e3a5f; color: white; padding: 10px 18px; border-radius: 8px; text-decoration: none; font-weight: 600;">Répondre dans l'admin</a>
+        </div></div>`,
+    });
+  } catch (e) { console.error("[remise] notif admin", e); }
+}
+
 function tshirtSlugOf(url: unknown): string {
   if (typeof url !== "string" || !url) return "";
   try {
@@ -1382,6 +1433,8 @@ async function traiter(req: Request): Promise<Response> {
         m.ok = true;
         m.paymentDate = new Date().toISOString();
         m.paymentMethod = "online";
+        // 💶 Tarif remisé accepté : le montant payé est noté tout de suite (compta, reçu)
+        if (remiseSaison(currentData, m)?.statut === "acceptee" && typeof m.montantPaye !== "number") m.montantPaye = prixRemise(currentData);
         found = true;
         // Pas de break : on marque TOUS les membres avec cet email (inscriptions groupées)
       }
@@ -1395,8 +1448,7 @@ async function traiter(req: Request): Promise<Response> {
       const paidMembre = membres.find((m) => String(m.email || "").toLowerCase() === payerEmail);
       const brevoKey = Deno.env.get("BREVO_API_KEY");
       if (brevoKey && paidMembre) {
-        const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
-        const prix = prixMap[String(paidMembre.type)] ?? 50;
+        const prix = prixAdhesion(currentData, paidMembre);
         const membreCode = String(paidMembre.code || "");
         await sendBrevo(brevoKey, {
             from: "SACCB <contact@saccb.fr>",
@@ -2577,6 +2629,7 @@ async function traiter(req: Request): Promise<Response> {
     const photoConsent = body.photoConsent === true || body.photoConsent === "true";
     const sexe = body.sexe === "F" || body.sexe === "H" ? body.sexe : undefined; // F = fille/femme, H = garçon/homme
     const grouped = body.grouped === true; // inscription groupée = ne pas écraser les autres membres du même email
+    const remiseDemandee = body.remiseDemandee === true && type === "Adulte"; // 💶 demande de tarif adulte remisé
 
     // Validation
     if (!nom || nom.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
@@ -2618,9 +2671,12 @@ async function traiter(req: Request): Promise<Response> {
           photoConsent,
           ok: false,
         };
+        if (remiseDemandee) demanderRemise(currentData, membres[existingIdx], "inscription");
+        else delete membres[existingIdx].remise;
         currentData.membres = membres;
         const { error: renewError } = await saveDB(currentData);
         if (renewError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+        if (remiseDemandee) await notifierDemandeRemise(currentData, membres[existingIdx]);
 
         // 📧 Mail de confirmation pour un renouvellement aussi (en attente de paiement)
         const brevoKeyRenew = Deno.env.get("BREVO_API_KEY");
@@ -2702,12 +2758,14 @@ async function traiter(req: Request): Promise<Response> {
       ...(sexe ? { sexe } : {}),
     };
 
+    if (remiseDemandee) demanderRemise(currentData, newMembre as Record<string, unknown>, "inscription");
     membres.push(newMembre);
     currentData.membres = membres;
 
     const { error: updateError } = await saveDB(currentData);
 
     if (updateError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    if (remiseDemandee) await notifierDemandeRemise(currentData, newMembre as Record<string, unknown>);
 
     // 📧 Envoi du mail de confirmation d'inscription (avant paiement) — fire and forget
     const brevoKeyConfirm = Deno.env.get("BREVO_API_KEY");
@@ -3642,8 +3700,7 @@ async function traiter(req: Request): Promise<Response> {
     const prenom = extractFirstName(String(membre.nom || ""));
     const greeting = prenom ? `Bonjour ${escapeHtml(prenom)},` : "Bonjour,";
     const greetingText = prenom ? `Bonjour ${prenom},` : "Bonjour,";
-    const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
-    const prix = prixMap[String(membre.type)] ?? 50;
+    const prix = prixAdhesion(currentData, membre);
     const yearLabel = `${currentData.y1}–${currentData.y2}`;
     const inscCloseDate = String(currentData.insc_close_date || "");
     const closeFormatted = inscCloseDate
@@ -3964,7 +4021,7 @@ async function traiter(req: Request): Promise<Response> {
     const email = sanitize(String(body.email || "")).toLowerCase().trim();
     const code = sanitize(String(body.code || ""));
     const membreId = String(body.membreId || "");
-    const type = body.type === "Etudiant" ? "Etudiant" : body.type === "Adulte" ? "Adulte" : "";
+    const type = body.type === "Etudiant" ? "Etudiant" : body.type === "Adulte" ? "Adulte" : body.type === "AdulteRemise" ? "AdulteRemise" : "";
     if (!email || !code || !type) return json({ ok: false, reason: "Session expirée, reconnecte-toi." }, 400);
     if (isAccountLocked(email).locked) return json({ ok: false, reason: "Compte temporairement bloqué après plusieurs tentatives. Réessaie plus tard." }, 429);
 
@@ -3980,15 +4037,77 @@ async function traiter(req: Request): Promise<Response> {
       if (autre && await verifyCode(autre.code as string, code)) cible = autre;
     }
     if (cible.ok === true) return json({ ok: false, reason: "Ta cotisation de la saison est déjà réglée : demande au bureau pour changer de catégorie." });
-    if (cible.type === type) return json({ ok: true, type, inchange: true });
+    const remise = remiseSaison(d, cible);
+    const typeActuel = remise && remise.statut !== "refusee" ? "AdulteRemise" : String(cible.type || "Adulte");
+    if (typeActuel === type) return json({ ok: true, type, remise: remise?.statut, inchange: true });
 
-    const avant = String(cible.type || "Adulte");
-    cible.type = type;
-    cible.coordonneesModifiees = [{ at: new Date().toISOString(), champ: "type", avant, apres: type }, ...((cible.coordonneesModifiees as unknown[]) || [])].slice(0, 10);
+    const libelle = (t: string) => (t === "AdulteRemise" ? "Adulte remisé (demande)" : t);
+    cible.coordonneesModifiees = [{ at: new Date().toISOString(), champ: "type", avant: libelle(typeActuel), apres: libelle(type) }, ...((cible.coordonneesModifiees as unknown[]) || [])].slice(0, 10);
+    if (type === "AdulteRemise") demanderRemise(d, cible, "renouvellement");
+    else { cible.type = type; delete cible.remise; }
     d.membres = membres;
     const { error: saveError } = await saveDB(d);
     if (saveError) return json({ ok: false, reason: "Erreur serveur." }, 500);
-    return json({ ok: true, type });
+    if (type === "AdulteRemise") await notifierDemandeRemise(d, cible);
+    return json({ ok: true, type: type === "AdulteRemise" ? "Adulte" : type, remise: type === "AdulteRemise" ? "demandee" : undefined });
+  }
+
+  // ─── ACTION: 💶 Le bureau accepte ou refuse une demande de tarif adulte remisé (mail à l'adhérent) ───
+  if (action === "admin_remise_decision") {
+    const { data } = await loadDB();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
+    if (authError) return authError;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const m = membres.find((x) => String(x.id) === String(body.membreId || ""));
+    const remise = m ? remiseSaison(d, m) : null;
+    if (!m || !remise) return json({ ok: false, reason: "Demande introuvable." }, 404);
+    const accepter = body.accepter === true;
+    remise.statut = accepter ? "acceptee" : "refusee";
+    remise.decideLe = new Date().toISOString();
+    remise.par = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
+    if (accepter) m.type = "Adulte";
+    d.membres = membres;
+    const { error } = await saveDB(d);
+    if (error) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+
+    let mailEnvoye = false;
+    const brevoKey = Deno.env.get("BREVO_API_KEY");
+    const to = String(m.email || "");
+    if (body.notify !== false && brevoKey && to) {
+      const prenom = extractFirstName(String(m.nom || ""));
+      const bonjour = prenom ? `Bonjour ${escapeHtml(prenom)},` : "Bonjour,";
+      const nouveau = remise.origine === "inscription";
+      const bloc = accepter
+        ? `<div style="background: #ecfdf5; border: 2px solid #10b981; border-radius: 12px; padding: 16px 18px; margin: 16px 0;">
+             <p style="margin: 0; color: #047857; font-size: 17px; font-weight: 700;">✅ Tarif adulte remisé accepté par le bureau du SACCB</p>
+             <p style="margin: 8px 0 0; color: #065f46;">Montant de ton adhésion pour la saison ${d.y1}–${d.y2} : <strong>${prixRemise(d)} €</strong>.</p>
+           </div>
+           <p>Tu peux régler ton adhésion en ligne :</p>
+           <p><a href="${lienRemise(d)}" style="display: inline-block; background: #10b981; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;">💳 Payer mon adhésion</a></p>
+           <p style="color: #64748b; font-size: 13px;">Tu préfères payer par virement ou en main propre ? Rapproche-toi d'un membre du bureau au prochain entraînement.</p>`
+        : `<div style="background: #fef2f2; border: 2px solid #ef4444; border-radius: 12px; padding: 16px 18px; margin: 16px 0;">
+             <p style="margin: 0; color: #b91c1c; font-size: 17px; font-weight: 700;">❌ Tarif adulte remisé refusé par le bureau du SACCB</p>
+           </div>` + (nouveau
+          ? `<p>Merci de <strong>refaire ton inscription</strong> sur le site en choisissant la bonne catégorie (Adulte ou Étudiant).</p>
+             <p><a href="https://saccb.fr/#inscription" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;">Refaire mon inscription</a></p>`
+          : `<p>Connecte-toi à ton <strong>espace adhérent</strong> sur saccb.fr pour choisir ta catégorie (Adulte ou Étudiant), puis régler ton adhésion.</p>
+             <p><a href="https://saccb.fr/" style="display: inline-block; background: #1e3a5f; color: white; padding: 12px 20px; border-radius: 8px; text-decoration: none; font-weight: 700;">Aller sur mon espace adhérent</a></p>`);
+      const sujet = accepter ? "✅ Tarif adulte remisé accepté — SACCB" : "Tarif adulte remisé refusé — SACCB";
+      try {
+        const res = await sendBrevo(brevoKey, {
+          from: "SACCB <contact@saccb.fr>",
+          to: [to],
+          subject: sujet,
+          text: `${prenom ? `Bonjour ${prenom},` : "Bonjour,"}\n\n${accepter ? `Tarif adulte remisé accepté par le bureau du SACCB (${prixRemise(d)} €).\nPour payer : ${lienRemise(d)}` : `Tarif adulte remisé refusé par le bureau du SACCB.\n${nouveau ? "Merci de refaire ton inscription avec la bonne catégorie : https://saccb.fr/#inscription" : "Choisis ta catégorie (Adulte ou Étudiant) dans ton espace adhérent : https://saccb.fr/"}`}\n\nSportivement,\nLe bureau du SACCB`,
+          html: `<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; color: #1e293b;"><p>${bonjour}</p>${bloc}<p>Sportivement,<br/>Le bureau du SACCB</p></div>`,
+        });
+        mailEnvoye = res.ok;
+        await logEmailToHistory(supabaseAdmin, { type: accepter ? "remise_acceptee" : "remise_refusee", subject: sujet, recipients: [to], status: res.ok ? "sent" : "failed" });
+      } catch (e) { console.error("[remise] mail adhérent", e); }
+    }
+    return json({ ok: true, mailEnvoye });
   }
 
   // ─── ACTION: ✏️ L'adhérent consulte / change son email et son téléphone (espace adhérent) ───
@@ -4122,8 +4241,7 @@ async function traiter(req: Request): Promise<Response> {
 
     if (!membre) return json({ ok: false, reason: "Membre introuvable ou paiement non validé." });
 
-    const prixMap: Record<string, number> = { Adulte: 50, Etudiant: 30 };
-    const prix = prixMap[String(membre.type)] ?? 50;
+    const prix = prixAdhesion(currentData, membre);
     const membreCode = ""; // Codes hashés en base : on n'affiche plus le code dans l'email
 
     // 📎 Chargement des PDFs marqués 'attachToWelcome' pour les joindre au mail
@@ -5230,7 +5348,8 @@ async function traiter(req: Request): Promise<Response> {
     };
     // 📄 Fiche adhérent (nom, type, montant payé) pour le reçu d'adhésion de l'espace membre
     const adherentInfo = (m: Record<string, unknown> | undefined) =>
-      m ? { id: String(m.id || ""), nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : undefined, ok: m.ok === true } : undefined;
+      m ? { id: String(m.id || ""), nom: String(m.nom || ""), type: m.type === "Etudiant" ? "Etudiant" : "Adulte", montantPaye: typeof m.montantPaye === "number" ? m.montantPaye : (remiseSaison(d, m)?.statut === "acceptee" ? prixRemise(d) : undefined), ok: m.ok === true,
+        remise: (remiseSaison(d, m)?.statut as string | undefined) || undefined, lienRemise: remiseSaison(d, m)?.statut === "acceptee" ? lienRemise(d) : undefined } : undefined;
     // 🎓 État du justificatif d'une fiche étudiante pour la saison en cours
     const justifInfo = (m: Record<string, unknown> | undefined) => {
       if (!m || m.type !== "Etudiant") return { manquant: false, info: undefined };
