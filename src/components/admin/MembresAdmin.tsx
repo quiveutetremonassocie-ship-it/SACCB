@@ -116,7 +116,7 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
     .filter((m) => m.coordonneesModifiees?.length && m.coordonneesModifiees[0].at > vuesLe && Date.now() - new Date(m.coordonneesModifiees[0].at).getTime() < 90 * 86_400_000)
     .sort((a, b) => b.coordonneesModifiees![0].at.localeCompare(a.coordonneesModifiees![0].at));
   const jourFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
-  function ModifBadge({ m, champ }: { m: Membre; champ: "email" | "tel" }) {
+  function ModifBadge({ m, champ }: { m: Membre; champ: "email" | "tel" | "type" }) {
     const h = (m.coordonneesModifiees || []).filter((c) => c.champ === champ);
     if (!h.length) return null;
     const nouveau = h[0].at > vuesLe;
@@ -399,13 +399,13 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
       {changementsRecents.length > 0 && (
         <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
           <div className="flex items-start justify-between gap-2">
-            <p className="font-semibold text-amber-900">✏️ {changementsRecents.length} adhérent{changementsRecents.length > 1 ? "s ont changé leurs" : " a changé ses"} coordonnées</p>
+            <p className="font-semibold text-amber-900">✏️ {changementsRecents.length} adhérent{changementsRecents.length > 1 ? "s ont mis à jour leurs" : " a mis à jour ses"} informations</p>
             {!readOnly && <button onClick={() => onPersist({ ...db, coordonneesVuesLe: new Date().toISOString() })} className="text-xs font-semibold text-amber-800 bg-white border border-amber-300 hover:bg-amber-100 px-2 py-1 rounded-lg shrink-0">✓ Vu</button>}
           </div>
           <ul className="mt-1.5 space-y-0.5 text-xs text-amber-900">
             {changementsRecents.slice(0, 10).map((m) => {
               const c = m.coordonneesModifiees![0];
-              return <li key={m.id}><b>{m.nom}</b> · {c.champ === "email" ? "mail" : "téléphone"} le {jourFr(c.at)} : <span className="text-amber-700">{c.avant || "(vide)"}</span> → <b>{c.apres}</b></li>;
+              return <li key={m.id}><b>{m.nom}</b> · {c.champ === "email" ? "mail" : c.champ === "tel" ? "téléphone" : "catégorie"} le {jourFr(c.at)} : <span className="text-amber-700">{c.avant || "(vide)"}</span> → <b>{c.apres}</b></li>;
             })}
           </ul>
         </div>
@@ -630,7 +630,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
                 <ModifBadge m={m} champ="tel" />
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="text-xs text-slate-400">{m.type}</span>
+                <span className="text-xs text-slate-400">{m.type}</span><ModifBadge m={m} champ="type" />
                 {typeof m.montantPaye === "number" && (
                   <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                 )}
@@ -767,7 +767,7 @@ ${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cu
                 <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">
-                  {m.type}
+                  {m.type}<ModifBadge m={m} champ="type" />
                   {typeof m.montantPaye === "number" && (
                     <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                   )}

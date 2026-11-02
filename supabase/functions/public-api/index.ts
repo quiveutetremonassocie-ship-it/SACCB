@@ -3958,6 +3958,39 @@ async function traiter(req: Request): Promise<Response> {
     return json({ ok: true });
   }
 
+  // ─── ACTION: 🎓 Au renouvellement, l'adhérent indique s'il est adulte ou étudiant cette saison ───
+  // Seulement tant que la cotisation de la saison n'est pas réglée. Noté sur la fiche (suivi dans l'admin).
+  if (action === "member_set_type") {
+    const email = sanitize(String(body.email || "")).toLowerCase().trim();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    const type = body.type === "Etudiant" ? "Etudiant" : body.type === "Adulte" ? "Adulte" : "";
+    if (!email || !code || !type) return json({ ok: false, reason: "Session expirée, reconnecte-toi." }, 400);
+    if (isAccountLocked(email).locked) return json({ ok: false, reason: "Compte temporairement bloqué après plusieurs tentatives. Réessaie plus tard." }, 429);
+
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const moi = await findMembreOuAdmin(membres, email, code);
+    if (!moi) { recordLoginFailure(email); return json({ ok: false, reason: "Session expirée, reconnecte-toi." }); }
+    let cible = moi;
+    if (membreId && String(moi.id) !== membreId) {
+      const autre = membres.find((m) => String(m.id) === membreId && String(m.email || "").toLowerCase() === email);
+      if (autre && await verifyCode(autre.code as string, code)) cible = autre;
+    }
+    if (cible.ok === true) return json({ ok: false, reason: "Ta cotisation de la saison est déjà réglée : demande au bureau pour changer de catégorie." });
+    if (cible.type === type) return json({ ok: true, type, inchange: true });
+
+    const avant = String(cible.type || "Adulte");
+    cible.type = type;
+    cible.coordonneesModifiees = [{ at: new Date().toISOString(), champ: "type", avant, apres: type }, ...((cible.coordonneesModifiees as unknown[]) || [])].slice(0, 10);
+    d.membres = membres;
+    const { error: saveError } = await saveDB(d);
+    if (saveError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    return json({ ok: true, type });
+  }
+
   // ─── ACTION: ✏️ L'adhérent consulte / change son email et son téléphone (espace adhérent) ───
   // Sans newEmail/newTel : renvoie les coordonnées actuelles. Chaque changement est noté sur la fiche
   // (coordonneesModifiees) pour que le bureau le voie dans l'admin.

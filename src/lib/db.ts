@@ -842,6 +842,25 @@ export async function fetchPrivateActualites(
   }
 }
 
+// ─── 🎓 Au renouvellement : l'adhérent indique s'il est adulte ou étudiant cette saison ───
+export async function memberSetType(
+  email: string,
+  code: string,
+  membreId: string,
+  type: "Adulte" | "Etudiant"
+): Promise<{ ok: boolean; type?: "Adulte" | "Etudiant"; inchange?: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "member_set_type", email: email.toLowerCase().trim(), code, membreId, type }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau." };
+  }
+}
+
 // ─── ✏️ Coordonnées de l'adhérent (email, téléphone) : lecture sans newEmail/newTel, sinon changement ───
 export async function memberContact(
   email: string,

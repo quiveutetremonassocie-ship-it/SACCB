@@ -108,7 +108,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       }
     });
     return () => { cancelled = true; };
-  }, [memberSession?.email, memberSession?.membreId, memberSession?.paid]);
+  }, [memberSession?.email, memberSession?.membreId, memberSession?.paid, memberSession?.type]);
   const [privateActualites, setPrivateActualites] = useState<import("@/lib/types").Actualite[]>([]);
 
   // Credentials admin via espace membre (stockés en mémoire uniquement, jamais en localStorage)

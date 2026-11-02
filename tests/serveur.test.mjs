@@ -216,3 +216,20 @@ test("la visite d'un adhérent est notée (le jour seulement), visible par le pr
   assert.equal(proprio?.ok, true);
   assert.equal(proprio.data.membres.find((m) => m.id === "m-marie").vuLe, jour);
 });
+
+// ─── 🎓 Adulte / étudiant au renouvellement ───
+
+test("au renouvellement, un adhérent pas encore payé peut passer d'étudiant à adulte (noté pour le bureau) ; impossible une fois payé", async () => {
+  const r = await appeler({ action: "member_set_type", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul", type: "Adulte" });
+  assert.equal(r.json?.ok, true, r.texte);
+  const paul = etat.base.membres.find((m) => m.id === "m-paul");
+  assert.equal(paul.type, "Adulte");
+  assert.deepEqual([paul.coordonneesModifiees[0].champ, paul.coordonneesModifiees[0].avant, paul.coordonneesModifiees[0].apres], ["type", "Etudiant", "Adulte"]);
+  const ecritures = etat.ecritures;
+  const paye = await appeler({ action: "member_set_type", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", type: "Etudiant" });
+  assert.notEqual(paye.json?.ok, true, "déjà payé : on ne change plus de tarif soi-même");
+  const faux = await appeler({ action: "member_set_type", email: "paul.attente@exemple.fr", code: "mauvais", membreId: "m-paul", type: "Etudiant" });
+  assert.notEqual(faux.json?.ok, true);
+  assert.equal(etat.ecritures, ecritures);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-marie").type, "Adulte");
+});

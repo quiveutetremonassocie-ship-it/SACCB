@@ -11,7 +11,7 @@ import { PRIX } from "@/lib/types";
 import type { ClubConfig, Membre, ReunionReport, OfficialDoc } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
-import { memberChangeCode, memberContact, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
+import { memberChangeCode, memberContact, memberSetType, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 import TournoisInternes from "./TournoisInternes";
@@ -205,6 +205,22 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
       onSessionChange?.(s);
     }
     setContactMsg({ ok: true, text: "Coordonnées enregistrées ✓" + (changeEmail && (r.nbFiches || 1) > 1 ? ` (adresse changée sur les ${r.nbFiches} fiches de ton compte)` : "") });
+  }
+
+  // 🎓 Renouvellement : adulte ou étudiant cette saison
+  const [typeLoading, setTypeLoading] = useState(false);
+  const [typeMsg, setTypeMsg] = useState<string | null>(null);
+  async function choisirType(t: "Adulte" | "Etudiant") {
+    if (t === session.type) return;
+    setTypeLoading(true);
+    setTypeMsg(null);
+    const r = await memberSetType(session.email, codeMembre(), session.membreId, t);
+    setTypeLoading(false);
+    if (!r.ok) { setTypeMsg(r.reason || "Erreur, réessayez."); return; }
+    const s = { ...session, type: t };
+    setMemberSession(s);
+    onSessionChange?.(s);
+    setTypeMsg(t === "Etudiant" ? "C'est noté : tarif étudiant. Pensez à envoyer votre justificatif de scolarité ci-dessous." : "C'est noté : tarif adulte.");
   }
 
   const [showCodeForm, setShowCodeForm] = useState(false);
@@ -523,8 +539,23 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             <p className="text-amber-800 font-semibold text-sm mb-1">⏳ Adhésion à renouveler</p>
             <p className="text-amber-700 text-xs mb-3">
               Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore réglée.
-              Choisissez votre mode de paiement :
             </p>
+            {/* 🎓 La situation a pu changer depuis la saison dernière (fin des études…) */}
+            <p className="text-amber-800 text-xs font-semibold mb-1.5">Cette saison, vous êtes :</p>
+            <div className="grid grid-cols-2 gap-2 mb-3">
+              {(["Adulte", "Etudiant"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => choisirType(t)}
+                  disabled={typeLoading}
+                  className={`text-sm font-semibold px-3 py-2 rounded-xl border-2 transition disabled:opacity-50 ${session.type === t ? "bg-amber-500 border-amber-500 text-white" : "bg-white border-amber-200 text-amber-800 hover:bg-amber-100"}`}
+                >
+                  {t === "Adulte" ? "Adulte" : "Étudiant(e)"} · {t === "Adulte" ? (clubConfig?.prixAdulte ?? PRIX.Adulte) : (clubConfig?.prixEtudiant ?? PRIX.Etudiant)} €
+                </button>
+              ))}
+            </div>
+            {typeMsg && <p className="text-xs text-center text-amber-800 mb-2">{typeMsg}</p>}
+            <p className="text-amber-700 text-xs mb-3">Choisissez votre mode de paiement :</p>
             <div className="space-y-2">
               <a
                 href={session.type === "Etudiant"
