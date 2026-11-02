@@ -35,4 +35,5 @@ jobs:
         run: |
           supabase functions deploy public-api \
             --project-ref "$SUPABASE_PROJECT_REF" \
-            --no-verify-jwt \n            --yes
+            --no-verify-jwt \
+            --yes
