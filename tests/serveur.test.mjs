@@ -159,3 +159,35 @@ test("trop de requêtes depuis la même adresse sont bloquées", async () => {
   assert.ok(statuts.includes(429), "le blocage doit se déclencher");
   assert.ok(statuts.slice(0, 100).every((s) => s !== 429), "une utilisation normale n'est pas bloquée");
 });
+
+// ─── ✏️ Coordonnées changées par l'adhérent ───
+
+test("un adhérent change son mail et son téléphone : c'est noté sur sa fiche, rien d'autre ne bouge, aucun mail", async () => {
+  const lu = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
+  assert.equal(lu.json?.ok, true, lu.texte);
+  assert.equal(lu.json.tel, "0611223344");
+  const r = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", newEmail: "marie.nouvelle@exemple.fr", newTel: "0699887766" });
+  assert.equal(r.json?.ok, true, r.texte);
+  const marie = etat.base.membres.find((m) => m.id === "m-marie");
+  assert.equal(marie.email, "marie.nouvelle@exemple.fr");
+  assert.equal(marie.tel, "0699887766");
+  assert.deepEqual(marie.coordonneesModifiees.map((c) => [c.champ, c.avant, c.apres]).sort(), [["email", "marie.secrete@exemple.fr", "marie.nouvelle@exemple.fr"], ["tel", "0611223344", "0699887766"]]);
+  assert.equal(etat.base.membres.length, 3);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-paul").email, "paul.attente@exemple.fr");
+  assert.deepEqual(mailsIntercepte(), []);
+  // Elle se connecte ensuite avec sa nouvelle adresse
+  const apres = await appeler({ action: "member_contact", email: "marie.nouvelle@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
+  assert.equal(apres.json?.ok, true, apres.texte);
+});
+
+test("changer les coordonnées est refusé avec un faux code, vers l'adresse d'un autre adhérent, ou pour une adresse admin", async () => {
+  const faux = await appeler({ action: "member_contact", email: "paul.attente@exemple.fr", code: "mauvais", newTel: "0600000009" });
+  assert.notEqual(faux.json?.ok, true);
+  const pris = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", newEmail: "paul.attente@exemple.fr" });
+  assert.notEqual(pris.json?.ok, true);
+  const admin = await appeler({ action: "member_contact", email: ADMIN.email, code: ADMIN.code, membreId: "m-admin", newEmail: "autre@exemple.fr" });
+  assert.notEqual(admin.json?.ok, true);
+  const invalide = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", newTel: "abc" });
+  assert.notEqual(invalide.json?.ok, true);
+  assert.equal(etat.ecritures, 0, "rien n'a été enregistré");
+});

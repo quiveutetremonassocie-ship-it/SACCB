@@ -842,6 +842,25 @@ export async function fetchPrivateActualites(
   }
 }
 
+// ─── ✏️ Coordonnées de l'adhérent (email, téléphone) : lecture sans newEmail/newTel, sinon changement ───
+export async function memberContact(
+  email: string,
+  code: string,
+  membreId: string,
+  changes?: { newEmail?: string; newTel?: string }
+): Promise<{ ok: boolean; email?: string; tel?: string; inchange?: boolean; nbFiches?: number; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "member_contact", email: email.toLowerCase().trim(), code, membreId, ...(changes || {}) }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau." };
+  }
+}
+
 // ─── Mettre à jour la préférence news d'un membre ───
 export async function memberUpdateNewsOptIn(
   email: string,

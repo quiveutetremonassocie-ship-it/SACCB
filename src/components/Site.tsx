@@ -708,6 +708,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           officialDocs={db.officialDocs ?? []}
           officialDocsOpen={db.officialDocsOpen === true}
           smashUrl={db.smashUrl}
+          onSessionChange={setMemberSession}
         />
       )}
       {/* Panneau démo en mode présentation */}

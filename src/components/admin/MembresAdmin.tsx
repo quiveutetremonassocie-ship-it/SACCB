@@ -94,6 +94,25 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
     return <span className="text-[10px] text-red-600 bg-red-50 px-1.5 py-0.5 rounded" title="Pas de justificatif de scolarité pour cette saison">⚠️ Justif. manquant</span>;
   }
 
+  // ✏️ Coordonnées changées par les adhérents depuis leur espace
+  const vuesLe = db.coordonneesVuesLe || "";
+  const changementsRecents = db.membres
+    .filter((m) => m.coordonneesModifiees?.length && m.coordonneesModifiees[0].at > vuesLe && Date.now() - new Date(m.coordonneesModifiees[0].at).getTime() < 90 * 86_400_000)
+    .sort((a, b) => b.coordonneesModifiees![0].at.localeCompare(a.coordonneesModifiees![0].at));
+  const jourFr = (iso: string) => new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "short", year: "numeric" });
+  function ModifBadge({ m, champ }: { m: Membre; champ: "email" | "tel" }) {
+    const h = (m.coordonneesModifiees || []).filter((c) => c.champ === champ);
+    if (!h.length) return null;
+    const nouveau = h[0].at > vuesLe;
+    const detail = h.map((c) => `${jourFr(c.at)} : « ${c.avant || "(vide)"} » → « ${c.apres} »`).join("\n");
+    return (
+      <span title={`Changé par l'adhérent depuis son espace :
+${detail}`} className={`inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cursor-help ${nouveau ? "bg-amber-100 text-amber-800 font-semibold" : "bg-slate-100 text-slate-500"}`}>
+        ✏️ modifié le {jourFr(h[0].at)}
+      </span>
+    );
+  }
+
   // 👫 Fille / garçon (sert aux mails des tournois Femmes / Hommes)
   const sansSexeCount = db.membres.filter((m) => m.sexe !== "F" && m.sexe !== "H").length;
   function SexeBadge({ m }: { m: Membre }) {
@@ -349,6 +368,20 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
 
   return (
     <div className="glass p-4 md:p-6">
+      {changementsRecents.length > 0 && (
+        <div className="mb-4 rounded-xl border border-amber-300 bg-amber-50 p-3 text-sm">
+          <div className="flex items-start justify-between gap-2">
+            <p className="font-semibold text-amber-900">✏️ {changementsRecents.length} adhérent{changementsRecents.length > 1 ? "s ont changé leurs" : " a changé ses"} coordonnées</p>
+            {!readOnly && <button onClick={() => onPersist({ ...db, coordonneesVuesLe: new Date().toISOString() })} className="text-xs font-semibold text-amber-800 bg-white border border-amber-300 hover:bg-amber-100 px-2 py-1 rounded-lg shrink-0">✓ Vu</button>}
+          </div>
+          <ul className="mt-1.5 space-y-0.5 text-xs text-amber-900">
+            {changementsRecents.slice(0, 10).map((m) => {
+              const c = m.coordonneesModifiees![0];
+              return <li key={m.id}><b>{m.nom}</b> · {c.champ === "email" ? "mail" : "téléphone"} le {jourFr(c.at)} : <span className="text-amber-700">{c.avant || "(vide)"}</span> → <b>{c.apres}</b></li>;
+            })}
+          </ul>
+        </div>
+      )}
       <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
         <div className="flex items-center gap-3">
           <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-cyan-500 to-blue-500 flex items-center justify-center shrink-0">
@@ -564,7 +597,9 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
                   )}
                 </div>
                 <p className="text-xs text-slate-500 truncate">{m.email}</p>
+                <ModifBadge m={m} champ="email" />
                 {m.tel && <p className="text-xs text-slate-400">{m.tel}</p>}
+                <ModifBadge m={m} champ="tel" />
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
                 <span className="text-xs text-slate-400">{m.type}</span>
@@ -701,8 +736,8 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
             {filtered.map((m) => (
               <tr key={m.id} className={`border-t border-slate-100 ${!m.ok ? "opacity-70" : ""}`}>
                 <td className="p-3 text-slate-800">{m.nom}</td>
-                <td className="p-3 text-slate-500 break-all">{m.email}</td>
-                <td className="p-3 text-slate-400">{m.tel || "-"}</td>
+                <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
+                <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">
                   {m.type}
                   {typeof m.montantPaye === "number" && (

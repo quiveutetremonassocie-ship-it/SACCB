@@ -70,6 +70,7 @@ export const FICHE_SITE: SectionFiche[] = [
   {
     titre: "Espace adhérent (connexion email + code)",
     lignes: [
+      "Mon compte → « Changer mon adresse mail ou mon téléphone » (action serveur member_contact) : l'email change sur toutes les fiches du même compte (même email + même code), le téléphone sur la fiche connectée. Refusé si l'adresse est celle d'un autre adhérent ou d'un admin. Chaque changement est noté sur la fiche (coordonneesModifiees : date, avant, après) ; dans l'admin → Adhérents : bandeau orange « N adhérents ont changé leurs coordonnées » avec bouton « ✓ Vu » (db.coordonneesVuesLe) et pastille « ✏️ modifié le … » sous l'email / le téléphone (historique au survol). Aucun mail envoyé.",
       "Mon espace : fiche, reçu d'adhésion, justificatif étudiant, lien WhatsApp (adhérents à jour), inscriptions aux tournois, « Mes tournois » (parcours, meilleure place, partenaire favori), t-shirts, sondages/AG, documents officiels.",
       "Agenda du club (réservé aux adhérents) : tournois + événements ajoutés par le bureau, ajout à Google Agenda / fichier .ics. Seul le prochain événement est affiché, les suivants sont dans un menu déroulant « Voir les N autres événements » (pour ne pas répéter la rubrique Tournois).",
       "Les noms des adhérents (choix du partenaire) ne sont envoyés qu'aux adhérents connectés.",

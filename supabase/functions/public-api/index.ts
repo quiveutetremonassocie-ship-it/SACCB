@@ -3953,6 +3953,72 @@ async function traiter(req: Request): Promise<Response> {
     return json({ ok: true });
   }
 
+  // ─── ACTION: ✏️ L'adhérent consulte / change son email et son téléphone (espace adhérent) ───
+  // Sans newEmail/newTel : renvoie les coordonnées actuelles. Chaque changement est noté sur la fiche
+  // (coordonneesModifiees) pour que le bureau le voie dans l'admin.
+  if (action === "member_contact") {
+    const email = sanitize(String(body.email || "")).toLowerCase().trim();
+    const code = sanitize(String(body.code || ""));
+    const membreId = String(body.membreId || "");
+    if (!email || !code) return json({ ok: false, reason: "Session expirée, reconnecte-toi." }, 400);
+    if (isAccountLocked(email).locked) return json({ ok: false, reason: "Compte temporairement bloqué après plusieurs tentatives. Réessaie plus tard." }, 429);
+
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const membres = (d.membres || []) as Record<string, unknown>[];
+    const moi = await findMembreOuAdmin(membres, email, code);
+    if (!moi) { recordLoginFailure(email); return json({ ok: false, reason: "Session expirée, reconnecte-toi." }); }
+
+    // Fiches du même compte (inscriptions groupées : même email et même code)
+    const profils: Record<string, unknown>[] = [];
+    for (const m of membres) {
+      if (String(m.email || "").toLowerCase() !== email) continue;
+      if (m === moi || await verifyCode(m.code as string, code)) profils.push(m);
+    }
+    if (!profils.includes(moi)) profils.push(moi);
+    const cible = profils.find((p) => String(p.id) === membreId) || moi;
+
+    const newEmail = sanitize(String(body.newEmail || "")).toLowerCase().trim();
+    const newTel = sanitize(String(body.newTel || "")).trim();
+    if (!newEmail && !newTel) return json({ ok: true, email: cible.email, tel: cible.tel || "" });
+
+    const changeEmail = !!newEmail && newEmail !== email;
+    const changeTel = !!newTel && newTel !== String(cible.tel || "");
+    if (changeEmail) {
+      if (!isValidEmail(newEmail)) return json({ ok: false, reason: "Adresse mail invalide." }, 400);
+      // L'adresse d'un admin sert aussi à l'administration : on ne la change pas d'ici
+      const adminMails = [
+        ...parseAdminEmails((d.adminEmails as unknown[]) || []).map((e) => e.email),
+        ...((d.adminCredentials || []) as { email: string }[]).map((c) => String(c.email || "").toLowerCase()),
+      ];
+      if (adminMails.includes(email)) return json({ ok: false, reason: "Ton adresse sert aussi à l'administration du site : demande au bureau de la changer." });
+      if (membres.some((m) => !profils.includes(m) && String(m.email || "").toLowerCase() === newEmail)) {
+        return json({ ok: false, reason: "Cette adresse est déjà utilisée par un autre adhérent. Contacte le bureau." });
+      }
+    }
+    if (changeTel && !isValidPhone(newTel)) return json({ ok: false, reason: "Numéro de téléphone invalide." }, 400);
+    if (!changeEmail && !changeTel) return json({ ok: true, email: cible.email, tel: cible.tel || "", inchange: true });
+
+    const at = new Date().toISOString();
+    const noter = (p: Record<string, unknown>, champ: "email" | "tel", avant: string, apres: string) => {
+      p[champ] = apres;
+      p.coordonneesModifiees = [{ at, champ, avant, apres }, ...((p.coordonneesModifiees as unknown[]) || [])].slice(0, 10);
+    };
+    // L'email sert à se connecter : il change pour toutes les fiches du compte ; le téléphone, pour cette fiche
+    if (changeEmail) for (const p of profils) noter(p, "email", String(p.email || ""), newEmail);
+    if (changeTel) noter(cible, "tel", String(cible.tel || ""), newTel);
+
+    d.membres = membres;
+    const { error: saveError } = await saveDB(d);
+    if (saveError) return json({ ok: false, reason: "Erreur serveur." }, 500);
+
+    const sheetsWebhook = Deno.env.get("SHEETS_WEBHOOK");
+    if (sheetsWebhook) fetch(sheetsWebhook, { method: "POST", body: JSON.stringify(d) }).catch(() => {});
+
+    return json({ ok: true, email: cible.email, tel: cible.tel || "", nbFiches: changeEmail ? profils.length : 1 });
+  }
+
   if (action === "change_code") {
     const email = sanitize(String(body.email || "")).toLowerCase();
     const oldCode = sanitize(String(body.oldCode || ""));

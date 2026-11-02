@@ -21,6 +21,8 @@ export type Membre = {
   code?: string; // code personnel (4+ chiffres) pour l'espace membre
   newsOptIn?: boolean; // accepte de recevoir les infos tournois & rappels
   photoConsent?: boolean; // autorise l'utilisation de photos prises lors des événements
+  // ✏️ Changements d'email / téléphone faits par l'adhérent depuis son espace (10 derniers, le plus récent d'abord)
+  coordonneesModifiees?: { at: string; champ: "email" | "tel"; avant: string; apres: string }[];
   // 🔕 Ids de tournois pour lesquels le membre a explicitement dit "pas intéressé".
   // Le système n'enverra pas les rappels J-30/J-15/J-5/J-1 pour ces tournois.
   tournoisIgnored?: string[];
@@ -390,6 +392,7 @@ export type DB = {
   agendaEvents?: AgendaEvent[]; // 📅 événements ajoutés à la main dans l'agenda
   agendaMasques?: string[]; // 📅 tournois retirés de l'agenda (ids « t-… » / « ic-… »), le tournoi lui-même reste
   tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
+  coordonneesVuesLe?: string; // ✏️ admin : date où le bureau a marqué « vu » les changements de coordonnées
   tshirtCatalogue?: { url: string; path: string; name: string }; // 📄 catalogue PDF des couleurs/modèles, visible par les adhérents
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)

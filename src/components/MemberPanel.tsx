@@ -1,6 +1,6 @@
 "use client";
 
-import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight, HelpCircle } from "lucide-react";
+import { LogOut, MessageCircle, UserCircle2, Trophy, KeyRound, Mail, Eye, EyeOff, RefreshCw, ChevronDown, ChevronUp, X, Star, Bell, BellOff, FileSignature, ShieldCheck, ArrowRight, HelpCircle } from "lucide-react";
 import confetti from "canvas-confetti";
 import Link from "next/link";
 import TshirtOrderForm from "./TshirtOrderForm";
@@ -11,7 +11,7 @@ import { PRIX } from "@/lib/types";
 import type { ClubConfig, Membre, ReunionReport, OfficialDoc } from "@/lib/types";
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
-import { memberChangeCode, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
+import { memberChangeCode, memberContact, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
 import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 import TournoisInternes from "./TournoisInternes";
@@ -42,8 +42,10 @@ export default function MemberPanel({
   justificatifInfo,
   adherent,
   onJustificatifSent,
+  onSessionChange,
 }: {
   session: MemberSession;
+  onSessionChange?: (s: MemberSession) => void; // ✏️ après un changement d'email
   y1: number;
   y2: number;
   whatsappLink?: string | null;
@@ -165,6 +167,46 @@ export default function MemberPanel({
       return next;
     });
   }
+  // ✏️ Mes coordonnées (email, téléphone)
+  const [showContact, setShowContact] = useState(false);
+  const [contactEmail, setContactEmail] = useState(session.email);
+  const [contactTel, setContactTel] = useState("");
+  const [telActuel, setTelActuel] = useState<string | null>(null);
+  const [contactMsg, setContactMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [contactLoading, setContactLoading] = useState(false);
+  const codeMembre = () => session.memberCode || session.adminCode || (typeof window !== "undefined" ? sessionStorage.getItem("saccb_member_code") : "") || "";
+  async function ouvrirContact() {
+    const ouvrir = !showContact;
+    setShowContact(ouvrir);
+    setContactMsg(null);
+    if (!ouvrir) return;
+    setContactEmail(session.email);
+    const r = await memberContact(session.email, codeMembre(), session.membreId);
+    if (r.ok) { setTelActuel(r.tel || ""); setContactTel(r.tel || ""); }
+    else setContactMsg({ ok: false, text: r.reason || "Impossible de lire tes coordonnées." });
+  }
+  async function enregistrerContact(e: React.FormEvent) {
+    e.preventDefault();
+    const nouvelEmail = contactEmail.trim().toLowerCase();
+    const changeEmail = nouvelEmail !== session.email.toLowerCase();
+    if (changeEmail && !confirm(`Ta nouvelle adresse sera « ${nouvelEmail} ».
+
+C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club. Continuer ?`)) return;
+    setContactLoading(true);
+    setContactMsg(null);
+    const r = await memberContact(session.email, codeMembre(), session.membreId, { newEmail: nouvelEmail, newTel: contactTel.trim() });
+    setContactLoading(false);
+    if (!r.ok) { setContactMsg({ ok: false, text: r.reason || "Erreur." }); return; }
+    if (r.inchange) { setContactMsg({ ok: true, text: "Rien n'a changé." }); return; }
+    setTelActuel(r.tel || "");
+    if (changeEmail) {
+      const s = { ...session, email: nouvelEmail };
+      setMemberSession(s);
+      onSessionChange?.(s);
+    }
+    setContactMsg({ ok: true, text: "Coordonnées enregistrées ✓" + (changeEmail && (r.nbFiches || 1) > 1 ? ` (adresse changée sur les ${r.nbFiches} fiches de ton compte)` : "") });
+  }
+
   const [showCodeForm, setShowCodeForm] = useState(false);
   const [oldCode, setOldCode] = useState("");
   const [newCode, setNewCode] = useState("");
@@ -933,6 +975,34 @@ export default function MemberPanel({
           </div>
           {newsMsg && (
             <p className="text-xs text-slate-500 mt-2 text-center">{newsMsg}</p>
+          )}
+        </div>
+
+        {/* ✏️ Mes coordonnées */}
+        <div className="mb-4">
+          <button
+            onClick={ouvrirContact}
+            className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
+          >
+            <Mail className="w-4 h-4" />
+            Changer mon adresse mail ou mon téléphone
+          </button>
+          {showContact && (
+            <form onSubmit={enregistrerContact} className="mt-3 space-y-2">
+              <label className="block text-[11px] text-slate-500">Adresse mail (sert aussi à te connecter)
+                <input className="input" type="email" value={contactEmail} onChange={(e) => setContactEmail(e.target.value)} required />
+              </label>
+              <label className="block text-[11px] text-slate-500">Téléphone
+                <input className="input" type="tel" value={contactTel} onChange={(e) => setContactTel(e.target.value)} placeholder={telActuel === null ? "Chargement…" : "06 12 34 56 78"} />
+              </label>
+              {contactMsg && (
+                <p className={`text-xs text-center font-semibold ${contactMsg.ok ? "text-emerald-600" : "text-red-500"}`}>{contactMsg.text}</p>
+              )}
+              <button type="submit" className="btn-primary w-full !text-sm" disabled={contactLoading || telActuel === null}>
+                {contactLoading ? "Enregistrement..." : "Enregistrer mes coordonnées"}
+              </button>
+              <p className="text-[11px] text-slate-400 text-center">Le bureau est prévenu du changement.</p>
+            </form>
           )}
         </div>
 
