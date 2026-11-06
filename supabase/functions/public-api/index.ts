@@ -3416,7 +3416,7 @@ async function traiter(req: Request): Promise<Response> {
       results.tempReopenClosed = true;
     }
 
-    // ── Rappels tournois (J-30 / J-15 / J-5 / J-1 avant dateLimit) ──
+    // ── Rappels tournois (un seul rappel à J-5 avant dateLimit) ──
     const tournois = (d.config_tournois || []) as Record<string, unknown>[];
     const inscritsTournoi = (d.inscrits_tournoi || []) as Record<string, unknown>[];
     const tournoiRemindersSent: string[] = [];
@@ -3427,7 +3427,7 @@ async function traiter(req: Request): Promise<Response> {
       if (!parsedT) continue; // date non parsable → on skip ce tournoi
       const tTs = parsedT.getTime();
       const tDaysLeft = Math.round((tTs - todayTs) / (1000 * 60 * 60 * 24));
-      if (tDaysLeft !== 30 && tDaysLeft !== 15 && tDaysLeft !== 5 && tDaysLeft !== 1) continue;
+      if (tDaysLeft !== 5) continue; // un seul rappel, 5 jours avant la fin des inscriptions (trop de mails sinon)
 
       // 🎯 Exclure :
       //  - les membres déjà inscrits à CE tournoi (inutile de leur envoyer un rappel)

@@ -2,7 +2,7 @@
 // ⚠️ À METTRE À JOUR à chaque modification importante (nouvelle rubrique, nouvelle fonction, nouvelle règle).
 // L'historique des modifications et l'état du site sont ajoutés automatiquement dans le PDF.
 
-export const FICHE_MAJ_LE = "2026-11-02";
+export const FICHE_MAJ_LE = "2026-11-06";
 
 export type SectionFiche = { titre: string; lignes: string[] };
 
@@ -128,6 +128,7 @@ export const FICHE_SITE: SectionFiche[] = [
   {
     titre: "Pièges connus (pour Claude)",
     lignes: [
+      "Rappels tournois automatiques (check_reminders, chaque jour à 9h) : UN SEUL rappel par tournoi, 5 jours avant la date limite d'inscription (depuis le 2026-11-06 ; avant : J-30/J-15/J-5/J-1, des adhérents se plaignaient d'environ 14 mails par mois). Ne pas en rajouter sans l'accord du propriétaire. Les rappels de cotisation (saison) restent à J-30/J-15/J-5/J-1.",
       "Déploiement de la fonction serveur : le workflow installe la DERNIÈRE version de l'outil Supabase (setup-cli version latest). Le 2026-11-02 une nouvelle version a cassé le déploiement : il a fallu renommer [inbucket] en [local_smtp] dans supabase/config.toml et ajouter --yes à « supabase functions deploy ». Si le déploiement Supabase échoue sans raison dans le code, lire le journal de l'action GitHub (gh run view <id> --log-failed) : c'est souvent un changement de l'outil. Rappel : tant que la fonction n'est pas déployée, le site en ligne peut appeler des actions serveur qui n'existent pas encore.",
       "Tests (npm test) : une note de requêtes bloquées peut s'écrire en arrière-plan pendant un autre test ; pour vérifier « rien n'a changé », compter etat.ecrituresMembres (écritures qui touchent les adhérents) plutôt que etat.ecritures.",
       "gh CLI : /c/gh-cli/bin/gh.exe. Avant un push : git checkout -- tsconfig.tsbuildinfo puis git pull --rebase (bot keepalive).",

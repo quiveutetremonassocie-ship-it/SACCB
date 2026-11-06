@@ -295,3 +295,15 @@ test("au renouvellement, l'adhérent revoit ses informations, peut corriger son 
   assert.equal(s.json.adherent.infosConfirmees, true);
   assert.deepEqual(mailsIntercepte(), []);
 });
+
+// ─── 🏆 Rappel tournoi : un seul, 5 jours avant la fin des inscriptions ───
+
+test("rappels tournois : un seul mail, 5 jours avant la date limite (rien à 30, 15 ou 1 jour)", async () => {
+  const dans = (n) => { const x = new Date(); x.setDate(x.getDate() + n); return x.toISOString().slice(0, 10); };
+  etat.base.membres.find((m) => m.id === "m-marie").newsOptIn = true;
+  etat.base.config_tournois = [30, 15, 5, 1].map((n) => ({ id: "t" + n, name: "Tournoi J-" + n, dateLimit: dans(n) }));
+  const r = await appeler({ action: "check_reminders", secret: "secret-taches-test" });
+  assert.notEqual(r.status, 401, r.texte);
+  const sujetsT = [...new Set(mailsIntercepte().map((m) => String(m.subject)).filter((s) => s.includes("Tournoi J-")))];
+  assert.deepEqual([...new Set(sujetsT.map((s) => s.match(/Tournoi J-\d+/)[0]))], ["Tournoi J-5"], sujetsT.join(" | "));
+});

@@ -87,8 +87,8 @@ export default function GuideAdmin() {
             desc="Quand un adhérent paie son t-shirt sur la campagne HelloAsso, sa commande passe toute seule en « payée » et il reçoit un mail de confirmation. L'argent des t-shirts ne compte pas dans la comptabilité des adhésions." />
           <AutoItem icon={<Bell className="w-4 h-4 text-rose-600" />} title="🚨 Rappels de cotisation J-30 / J-15 / J-5 / J-1"
             desc="Envoyés aux adhérents NON PAYÉS quand la date limite d'inscription approche (Paramètres saison). Exclus : ceux qui ont coché « Je ne souhaite pas reconduire » dans leur espace membre." />
-          <AutoItem icon={<Bell className="w-4 h-4 text-amber-600" />} title="🏆 Rappels tournois J-30 / J-15 / J-5 / J-1"
-            desc="Envoyés aux adhérents payés (news activées) quand la date limite d'un tournoi approche. Les tournois Dames / Hommes ne sont envoyés qu'aux filles / garçons (d'où l'intérêt de remplir fille/garçon sur chaque fiche). Exclus : déjà inscrits et « Pas intéressé(e) »." />
+          <AutoItem icon={<Bell className="w-4 h-4 text-amber-600" />} title="🏆 Rappel tournoi 5 jours avant la fin des inscriptions (un seul)"
+            desc="Un seul mail par tournoi, envoyé aux adhérents payés (news activées) quand la date limite d'un tournoi approche. Les tournois Dames / Hommes ne sont envoyés qu'aux filles / garçons (d'où l'intérêt de remplir fille/garçon sur chaque fiche). Exclus : déjà inscrits et « Pas intéressé(e) »." />
           <AutoItem icon={<Clock className="w-4 h-4 text-blue-600" />} title="🗓️ Suppression auto des non-payés après la date limite"
             desc="Après la date de fermeture des inscriptions, les comptes non payés sont supprimés automatiquement — sauf ceux « mis de côté » (⏸), qui ne sont jamais supprimés ni relancés." />
           <AutoItem icon={<MailIcon className="w-4 h-4 text-blue-600" />} title="📨 Formulaire de contact"
