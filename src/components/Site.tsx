@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { DB, QUOTA_DEFAULT, getEffectiveConfig, getEffectiveHoraires, getEffectivePrix } from "@/lib/types";
-import { emptyDB, fetchAdminDB, fetchAdminDBByMember, fetchPublicDB, saveDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView, membreInterne, type AgendaAdherent } from "@/lib/db";
+import { emptyDB, fetchAdminDBByMember, fetchPublicDB, saveDBByMember, checkMemberSession, fetchPrivateActualites, trackView, membreInterne, type AgendaAdherent } from "@/lib/db";
 import { supabaseClient } from "@/lib/supabase";
 import ResetCodeLinkModal from "./modals/ResetCodeLinkModal";
 import { getMemberSession, clearMemberSession, setMemberSession as persistMemberSession, MemberSession } from "@/lib/useMemberSession";
@@ -17,7 +17,6 @@ import Horaires from "./Horaires";
 import Tournois from "./Tournois";
 import Inscription from "./Inscription";
 import Footer from "./Footer";
-import LoginModal from "./modals/LoginModal";
 import MemberLoginModal from "./modals/MemberLoginModal";
 import ResetPasswordModal from "./modals/ResetPasswordModal";
 import AdminPanel from "./admin/AdminPanel";
@@ -37,7 +36,9 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [db, setDb] = useState<DB>(emptyDB());
   const [membresCount, setMembresCount] = useState(0);
   const [adminOpen, setAdminOpen] = useState(false);
-  const [loginOpen, setLoginOpen] = useState(false);
+  // 🔒 L'administration passe uniquement par /admin (code admin + vérification par mail).
+  // L'ancienne connexion par mot de passe Supabase (accès direct à toute la base) est supprimée.
+  const ouvrirAdmin = () => { window.location.href = "/admin"; };
   const [resetOpen, setResetOpen] = useState(false);
   const [memberLoginOpen, setMemberLoginOpen] = useState(false);
   const [memberPanelOpen, setMemberPanelOpen] = useState(false);
@@ -136,9 +137,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     if (isMemberAdmin && memberSession && memberAdminCode.current) {
       const result = await fetchAdminDBByMember(memberSession.email, memberAdminCode.current);
       if (result) { adminBaseRef.current = result.db; setDb(result.db); setMembresCount(result.db.membres.length); setIsReadOnlyAdmin(result.readOnly); setAdminPermissions(result.permissions); }
-    } else {
-      const data = await fetchAdminDB();
-      if (data) { adminBaseRef.current = data; setDb(data); setMembresCount(data.membres.length); }
     }
   }, [isMemberAdmin, memberSession]);
 
@@ -150,7 +148,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
       if (r.ok) adminBaseRef.current = next;
       if (!r.ok) alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
     } else {
-      await saveDB(next);
+      // 🔒 Plus d'écriture directe dans la base : tout passe par le serveur (journal, fusion, contrôles)
+      alert("⚠️ Session admin expirée : reconnecte-toi sur saccb.fr/admin puis recommence.");
     }
   }, [isMemberAdmin, memberSession]);
 
@@ -228,14 +227,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         // Nettoyer l'URL
         window.history.replaceState({}, "", window.location.pathname + window.location.hash);
       }
-      // Auto-restauration de session admin Supabase (fallback)
-      supabaseClient.auth.getSession().then(({ data }) => {
-        if (data.session) {
-          setSupabaseAdminEmail(data.session.user?.email ?? undefined);
-          setAdminOpen(true);
-          fetchAdminDB().then((d) => { if (d) { adminBaseRef.current = d; setDb(d); setMembresCount(d.membres.length); } });
-        }
-      });
     }
   }, [refreshPublic]);
 
@@ -244,7 +235,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     function handleKeyDown(e: KeyboardEvent) {
       if ((e.ctrlKey || e.metaKey) && e.shiftKey && e.key === "A") {
         e.preventDefault();
-        if (!adminOpen) setLoginOpen(true);
+        if (!adminOpen) ouvrirAdmin();
       }
     }
     window.addEventListener("keydown", handleKeyDown);
@@ -273,13 +264,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
     return () => { document.body.style.overflow = ""; };
   }, [adminOpen]);
 
-  const onLoginSuccess = async () => {
-    setLoginOpen(false);
-    setAdminOpen(true);
-    const { data: { session } } = await supabaseClient.auth.getSession();
-    setSupabaseAdminEmail(session?.user?.email ?? undefined);
-    await fetchAdminDB().then((d) => { if (d) { adminBaseRef.current = d; setDb(d); setMembresCount(d.membres.length); } });
-  };
 
   const onCloseAdmin = async () => {
     if (!isMemberAdmin) {
@@ -381,7 +365,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           isMember={false}
           isAdmin={isMemberAdmin}
           onAdmin={onReopenAdmin}
-          onAdminLogin={() => setLoginOpen(true)}
+          onAdminLogin={() => ouvrirAdmin()}
         />
         <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#1e3a5f] to-slate-900 text-white px-6 relative overflow-hidden">
           {/* Fond décoratif */}
@@ -406,7 +390,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             </div>
             {/* Bouton admin discret */}
             <button
-              onClick={() => setLoginOpen(true)}
+              onClick={() => ouvrirAdmin()}
               className="mt-10 text-slate-600 hover:text-slate-300 transition text-xs flex items-center gap-1.5 mx-auto opacity-50 hover:opacity-100"
             >
               <svg className="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -417,7 +401,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           </div>
         </div>
         {/* Modales admin toujours accessibles */}
-        <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
         <MemberLoginModal open={memberLoginOpen} onClose={() => setMemberLoginOpen(false)} onSuccess={onMemberLoginSuccess} />
         {adminOpen && (
           <AdminPanel
@@ -449,7 +432,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         isMember={db.presentationMode ? true : !!memberSession}
         isAdmin={isMemberAdmin}
         onAdmin={onReopenAdmin}
-        onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : setLoginOpen(true)}
+        onAdminLogin={() => memberSession?.isAdmin ? setMemberLoginOpen(true) : ouvrirAdmin()}
       />
       {/* Bannière de réinscription : visible uniquement aux adhérents connectés non-payés */}
       {!db.presentationMode && memberSession && memberSession.paid !== true && db.insc_open && (
@@ -646,7 +629,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         )}
       </main>
       <FadeInSection>
-        <Footer year={db.y1} onAdmin={() => setLoginOpen(true)} />
+        <Footer year={db.y1} onAdmin={() => ouvrirAdmin()} />
         {/* 🏸 Bandeau « tournoi du club » : uniquement pour un adhérent connecté */}
         {bandeauTournoi && !memberPanelOpen && (
           <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:max-w-sm z-[60]">
@@ -668,7 +651,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         )}
       </FadeInSection>
 
-      <LoginModal open={loginOpen} onClose={() => setLoginOpen(false)} onSuccess={onLoginSuccess} />
       <ResetPasswordModal open={resetOpen} onClose={() => setResetOpen(false)} />
       {codeResetLink && (
         <ResetCodeLinkModal

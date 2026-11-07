@@ -2,7 +2,7 @@
 // ⚠️ À METTRE À JOUR à chaque modification importante (nouvelle rubrique, nouvelle fonction, nouvelle règle).
 // L'historique des modifications et l'état du site sont ajoutés automatiquement dans le PDF.
 
-export const FICHE_MAJ_LE = "2026-11-06";
+export const FICHE_MAJ_LE = "2026-11-07";
 
 export type SectionFiche = { titre: string; lignes: string[] };
 
@@ -119,6 +119,8 @@ export const FICHE_SITE: SectionFiche[] = [
   {
     titre: "Sauvegardes et sécurité",
     lignes: [
+      "🔒 Audit sécurité du 2026-11-07 (note 13/20 → voir ci-dessous) : (1) ancienne connexion admin par mot de passe Supabase Auth SUPPRIMÉE du site (lien Admin du bas de page, Ctrl+Shift+A, maintenance → /admin) et fonctions fetchAdminDB/saveDB (écriture directe de toute la base) retirées ; (2) blocage 30 min après 5 codes faux appliqué dans findMembreOuAdmin et resolveTshirtMembre, donc sur TOUTES les actions qui demandent un code ; codes trop faciles refusés (codeTropFacile : 1234, 0000, azerty, suites, partie avant @ du mail) ; le minimum reste 4 caractères (choix du propriétaire) ; (3) webhook HelloAsso : adhésion validée mais membre.paiementAlerte {motif montant|formulaire, recu, attendu, formulaire} si montant trop faible ou formulaire non reconnu → badge rouge dans Admin → Adhérents (effacé au changement de saison) ; (4) track_view plafonné (60 pages, 40 sites d'origine par jour, le reste en « autre ») ; (5) authorMembreId jamais public ; (6) secrets (webhooks, CRON, présentation) comparés en temps constant + anti-devinette sur le code de présentation ; (7) anciens codes en clair chiffrés automatiquement à l'ouverture de l'admin ; (8) CSP sans 'unsafe-eval' en production, sans Google Fonts, avec worker-src blob: et upgrade-insecure-requests. Tests correspondants dans tests/serveur.test.mjs.",
+      "🔒 À faire par le propriétaire (hors code) : exécuter supabase/migrations/20261107_securite_max.sql dans Supabase → SQL Editor (ferme l'accès direct à la base pour les comptes Supabase Auth et la liste/ajout/suppression de fichiers avec la clé publique) ; supprimer les comptes de Supabase → Authentication → Users s'il en reste ; activer la double authentification sur GitHub, Supabase, Brevo, Resend, HelloAsso, IONOS ; activer les alertes Dependabot sur GitHub.",
       "Sauvegarde complète (bouton dans Sauvegarde & export, et sauvegarde de nuit) : toute la base + journal (propriétaire) + photos, factures et PDF ; à la restauration, seuls les fichiers manquants sont remis.",
       "Sauvegarde mensuelle automatique par mail (base seule).",
       "Base fermée au public (accès direct refusé), codes chiffrés (PBKDF2), blocage après 5 erreurs (connexion ET accès admin directs), limites de requêtes par adresse IP.",

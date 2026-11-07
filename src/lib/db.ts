@@ -371,35 +371,8 @@ export async function trackView(path: string, referrer: string): Promise<void> {
   }
 }
 
-// ─── Données admin (authentifié via Supabase Auth — protégé par RLS) ───
-export async function fetchAdminDB(): Promise<DB | null> {
-  const { data: { session } } = await supabaseClient.auth.getSession();
-  if (!session) return null;
-  const res = await fetch(`${SUPA_URL}/rest/v1/saccb_db?select=data&id=eq.1`, {
-    headers: { apikey: SUPA_KEY, Authorization: `Bearer ${session.access_token}` },
-  });
-  const json = await res.json();
-  const d = json[0]?.data;
-  if (!d) return null;
-  return {
-    ...emptyDB(),
-    ...d,
-    factures: d.factures ?? [],
-    actualites: d.actualites ?? [],
-    insc_open: d.insc_open ?? true,
-  };
-}
-
-// ─── Sauvegarde admin (authentifié — protégé par RLS) ───
-export async function saveDB(db: DB): Promise<void> {
-  const { error } = await supabaseClient.from("saccb_db").update({ data: db }).eq("id", 1);
-  if (error) {
-    await supabaseClient.from("saccb_db").insert([{ id: 1, data: db }]);
-  }
-  // Note: la sync Google Sheets se fait directement via l'Edge Function (admin_save côté serveur)
-  // ou via un appel séparé authentifié. On ne sync pas ici car sync_sheets requiert maintenant
-  // une auth admin et cette fonction est appelée depuis l'auth Supabase RLS, pas l'admin via espace membre.
-}
+// 🔒 L'ancienne lecture/écriture directe de la base (connexion Supabase Auth) a été supprimée :
+// l'admin passe uniquement par le serveur (fetchAdminDBByMember / saveDBByMember).
 
 // ─── Inscription publique (via Edge Function sécurisée) ───
 export async function publicAddMembre(membre: {

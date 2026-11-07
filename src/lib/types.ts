@@ -26,6 +26,8 @@ export type Membre = {
   infosConfirmees?: { saison: string; le: string }; // ✅ l'adhérent a confirmé ses informations au renouvellement
   // 💶 Tarif adulte remisé demandé pour une saison (accordé ou refusé par le bureau, à redemander chaque saison)
   remise?: { statut: "demandee" | "acceptee" | "refusee"; saison: string; origine: "inscription" | "renouvellement"; demandeLe: string; decideLe?: string; par?: string };
+  // ⚠️ Paiement HelloAsso à vérifier (montant trop faible ou autre formulaire) — noté par le serveur
+  paiementAlerte?: { le: string; recu?: number; attendu: number; formulaire?: string; motif: "montant" | "formulaire" };
   vuLe?: string; // 👀 jour de la dernière visite sur l'espace adhérent (AAAA-MM-JJ) — noté par le serveur, visible par le propriétaire seul
   // 🔕 Ids de tournois pour lesquels le membre a explicitement dit "pas intéressé".
   // Le système n'enverra pas les rappels J-30/J-15/J-5/J-1 pour ces tournois.

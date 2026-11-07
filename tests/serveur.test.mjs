@@ -37,6 +37,8 @@ test("le site public ne montre aucune donnée privée (emails, téléphones, cod
   assert.deepEqual(r.json.actualites.map((a) => a.id), ["a1"], "les actus réservées aux adhérents ne sont pas publiques");
   assert.equal(r.json.polls[0].votes, undefined, "on ne voit pas qui a voté quoi");
   assert.equal(r.json.polls[0].totalVotes, 1);
+  assert.equal(r.json.agItems[0].authorMembreId, null, "aucun identifiant d'adhérent public");
+  assert.equal(r.json.agItems[0].authorNom, "Marie Secrète", "le nom reste affiché");
 });
 
 // ─── Accès admin ───
@@ -306,4 +308,65 @@ test("rappels tournois : un seul mail, 5 jours avant la date limite (rien à 30,
   assert.notEqual(r.status, 401, r.texte);
   const sujetsT = [...new Set(mailsIntercepte().map((m) => String(m.subject)).filter((s) => s.includes("Tournoi J-")))];
   assert.deepEqual([...new Set(sujetsT.map((s) => s.match(/Tournoi J-\d+/)[0]))], ["Tournoi J-5"], sujetsT.join(" | "));
+});
+
+// ─── 🔒 Sécurité renforcée (audit du 2026-11-07) ───
+
+test("deviner un code est bloqué : après 5 codes faux, même sur des actions différentes, le compte est verrouillé", async () => {
+  etat.base.membres.push({ id: "m-lea", nom: "Léa Verrou", email: "lea.verrou@exemple.fr", tel: "0677889900", code: "CodeLea9", type: "Adulte", ok: true, date: "2026-09-04" });
+  const faux = { email: "lea.verrou@exemple.fr", code: "0000", membreId: "m-lea" };
+  for (const action of ["fetch_my_votes", "vote_poll", "update_news_optin", "member_contact", "fetch_private_actualites"]) {
+    const r = await appeler({ action, ...faux, pollId: "p1", optionIdx: 0, newsOptIn: true });
+    assert.notEqual(r.json?.ok, true, action);
+  }
+  const bon = await appeler({ action: "member_contact", email: "lea.verrou@exemple.fr", code: "CodeLea9", membreId: "m-lea" });
+  assert.notEqual(bon.json?.ok, true, "même le bon code est refusé pendant le blocage");
+});
+
+test("les codes trop faciles sont refusés à l'inscription", async () => {
+  for (const code of ["1234", "0000", "azerty", "abcd", "nina"]) {
+    const r = await appeler({ action: "add_membre", nom: "Nina Test", email: "nina@exemple.fr", tel: "0633445566", type: "Adulte", code });
+    assert.notEqual(r.json?.ok, true, code);
+  }
+  assert.equal(etat.base.membres.length, 3);
+});
+
+test("paiement HelloAsso : un montant trop faible ou un autre formulaire valide l'adhésion mais lève une alerte pour le bureau", async () => {
+  const paul = etat.base.membres.find((m) => m.id === "m-paul");
+  paul.type = "Adulte";
+  const h = { "x-helloasso-secret": "secret-helloasso-test" };
+  const r = await appeler({ eventType: "Order", data: { payer: { email: "paul.attente@exemple.fr" }, amount: { total: 3000 }, formSlug: "tarif-etudiant" } }, undefined, h);
+  assert.equal(r.json?.ok, true, r.texte);
+  const p = etat.base.membres.find((m) => m.id === "m-paul");
+  assert.equal(p.ok, true, "adhésion validée (on ne bloque pas l'adhérent)");
+  assert.equal(p.paiementAlerte.motif, "montant");
+  assert.equal(p.paiementAlerte.recu, 30);
+  assert.equal(p.paiementAlerte.attendu, 50);
+  assert.equal(p.montantPaye, 30, "la compta voit le vrai montant");
+  // Faux webhook (mauvais secret) : rien ne bouge
+  etat.base = baseDeTest();
+  const pirate = await appeler({ eventType: "Order", data: { payer: { email: "paul.attente@exemple.fr" }, amount: { total: 5000 } } }, undefined, { "x-helloasso-secret": "pirate" });
+  assert.notEqual(pirate.json?.ok, true);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-paul").ok, false);
+  // Bon montant mais formulaire inconnu (don…) : alerte « formulaire »
+  await appeler({ eventType: "Order", data: { payer: { email: "paul.attente@exemple.fr" }, amount: { total: 3000 }, formSlug: "don-libre" } }, undefined, h);
+  assert.equal(etat.base.membres.find((m) => m.id === "m-paul").paiementAlerte?.motif, "formulaire");
+});
+
+test("statistiques de visite : un robot ne peut pas remplir la base de pages inventées", async () => {
+  for (let i = 0; i < 90; i++) await appeler({ action: "track_view", path: "/page-inventee-" + i + "-" + "x".repeat(20), referrer: "https://site" + i + ".exemple" });
+  const jour = etat.base.analyticsDaily.at(-1);
+  assert.ok(Object.keys(jour.paths).length <= 61, "pages plafonnées");
+  assert.ok(Object.keys(jour.refs).length <= 41, "sites d'origine plafonnés");
+  await appeler({ action: "track_view", path: "/<script>alert(1)</script>" });
+  assert.ok(!JSON.stringify(etat.base.analyticsDaily).includes("<script>"));
+});
+
+test("les anciens codes en clair sont chiffrés à l'ouverture de l'admin, et l'adhérent se connecte toujours", async () => {
+  const a = await appeler({ action: "admin_fetch", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(a.json?.ok, true, a.texte);
+  const marie = etat.base.membres.find((m) => m.id === "m-marie");
+  assert.match(marie.code, /^p2\$/, "code chiffré");
+  const login = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
+  assert.equal(login.json?.ok, true, "Marie se connecte toujours avec son code");
 });

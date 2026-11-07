@@ -183,10 +183,12 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <link rel="preload" href="/fonts/bebas-neue.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
-        {/* Content-Security-Policy : limite les sources autorisées pour scripts/images/fetch */}
+        {/* Content-Security-Policy : limite les sources autorisées pour scripts/images/fetch.
+            🔒 'unsafe-eval' seulement en développement (le site en ligne n'exécute jamais de code fabriqué à la volée) ;
+            polices hébergées sur le site (plus de Google Fonts) ; les liens http sont forcés en https. */}
         <meta
           httpEquiv="Content-Security-Policy"
-          content="default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob: https://*.supabase.co https://www.helloasso.com; connect-src 'self' https://*.supabase.co; frame-src https://www.google.com; form-action 'self' https://www.helloasso.com; base-uri 'self'; object-src 'none';"
+          content={`default-src 'self'; script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === "production" ? "" : " 'unsafe-eval'"}; style-src 'self' 'unsafe-inline'; font-src 'self' data:; img-src 'self' data: blob: https://*.supabase.co https://www.helloasso.com; connect-src 'self' https://*.supabase.co; worker-src 'self' blob:; frame-src https://www.google.com; form-action 'self' https://www.helloasso.com; base-uri 'self'; object-src 'none'; upgrade-insecure-requests;`}
         />
         <script
           type="application/ld+json"

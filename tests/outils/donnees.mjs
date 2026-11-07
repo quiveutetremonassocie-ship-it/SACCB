@@ -41,6 +41,7 @@ export function baseDeTest() {
     config_tournois: [],
     inscrits_tournoi: [],
     interclubs: [],
+    agItems: [{ id: "q1", question: "Budget ?", authorMembreId: "m-marie", authorNom: "Marie Secrète", anonymous: false }],
     polls: [{ id: "p1", question: "Soirée ?", options: ["Oui", "Non"], votes: [{ membreId: "m-marie", optionIdx: 0 }] }],
   };
 }

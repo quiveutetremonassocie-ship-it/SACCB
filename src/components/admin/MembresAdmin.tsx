@@ -108,6 +108,13 @@ Le fichier est effacé et l'adhérent devra en renvoyer un depuis son espace.`))
     await onPersist({ ...db, membres: db.membres.map((x) => (x.id === m.id ? { ...x, type: "Adulte", remise } : x)) });
     alert(r.mailEnvoye ? `✅ Réponse envoyée par mail à ${m.email}.` : "Décision enregistrée, mais le mail n'a pas pu partir (vérifie l'historique des mails).");
   }
+  // ⚠️ Paiement HelloAsso à vérifier (montant trop faible ou autre formulaire que l'adhésion)
+  function PaiementAlerteBadge({ m }: { m: Membre }) {
+    const p = m.paiementAlerte;
+    if (!p) return null;
+    const texte = p.motif === "montant" ? `⚠️ a payé ${p.recu ?? "?"} € au lieu de ${p.attendu} €` : `⚠️ payé via un autre formulaire HelloAsso`;
+    return <span className="block text-[10px] font-bold text-red-600" title={`Paiement HelloAsso à vérifier (le ${new Date(p.le).toLocaleDateString("fr-FR")})${p.formulaire ? " — formulaire : " + p.formulaire : ""}`}>{texte}</span>;
+  }
   function RemiseBadge({ m }: { m: Membre }) {
     const r = remiseSaison(db, m);
     if (!r) return null;
@@ -679,7 +686,7 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
                 <ModifBadge m={m} champ="tel" />
               </div>
               <div className="flex flex-col items-end gap-1 shrink-0">
-                <span className="text-xs text-slate-400">{m.type}</span><RemiseBadge m={m} /><ModifBadge m={m} champ="type" />
+                <span className="text-xs text-slate-400">{m.type}</span><RemiseBadge m={m} /><PaiementAlerteBadge m={m} /><ModifBadge m={m} champ="type" />
                 {typeof m.montantPaye === "number" && (
                   <span className="text-[10px] text-amber-700 bg-amber-50 px-1.5 py-0.5 rounded" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                 )}
@@ -816,7 +823,7 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
                 <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">
-                  {m.type}<RemiseBadge m={m} /><ModifBadge m={m} champ="type" />
+                  {m.type}<RemiseBadge m={m} /><PaiementAlerteBadge m={m} /><ModifBadge m={m} champ="type" />
                   {typeof m.montantPaye === "number" && (
                     <span className="block text-[10px] text-amber-700" title="Montant réellement payé (réduction)">💶 {m.montantPaye} €</span>
                   )}

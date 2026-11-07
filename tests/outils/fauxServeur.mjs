@@ -86,10 +86,10 @@ export async function demarrer() {
 }
 
 /** Envoie une requête au serveur comme le ferait le site ; chaque appel a sa propre adresse IP sauf si `ip` est donnée */
-export async function appeler(corps, ip) {
+export async function appeler(corps, ip, entetes = {}) {
   const req = new Request("http://serveur.test/", {
     method: "POST",
-    headers: { "Content-Type": "application/json", "x-forwarded-for": ip || `10.0.${Math.floor(++n / 250)}.${n % 250}` },
+    headers: { "Content-Type": "application/json", "x-forwarded-for": ip || `10.0.${Math.floor(++n / 250)}.${n % 250}`, ...entetes },
     body: JSON.stringify(corps),
   });
   const res = await gestionnaire(req);

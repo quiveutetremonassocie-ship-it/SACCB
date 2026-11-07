@@ -477,6 +477,18 @@ async function verifyCode(stored: string | undefined | null, input: string): Pro
   return stored === input;
 }
 
+// 🔒 Codes trop faciles à deviner (refusés pour tout nouveau code)
+const CODES_INTERDITS = new Set(["0000","1111","1234","12345","123456","4321","2580","1212","0123","azerty","qwerty","password","motdepasse","saccb","badminton","badminton76"]);
+function codeTropFacile(code: string, email = ""): boolean {
+  const c = code.toLowerCase();
+  if (CODES_INTERDITS.has(c) || /^(.)\1+$/.test(c)) return true;
+  const suites = "0123456789abcdefghijklmnopqrstuvwxyz";
+  if (suites.includes(c) || suites.split("").reverse().join("").includes(c)) return true;
+  const local = email.toLowerCase().split("@")[0];
+  return !!local && c === local;
+}
+const MSG_CODE_FACILE = "Ce code est trop facile à deviner (ex. 1234, 0000, azerty…). Choisis-en un autre.";
+
 function isHashedCode(stored: string | undefined | null): boolean {
   return typeof stored === "string" && (stored.startsWith("h$") || stored.startsWith("p2$"));
 }
@@ -1100,6 +1112,7 @@ async function resolveTshirtMembre(
   code: string,
   membreId: string,
 ): Promise<Record<string, unknown> | null> {
+  if (isAccountLocked(email).locked) return null; // 🔒 trop de codes faux
   const membres = (d.membres || []) as Record<string, unknown>[];
   const membre = await findMembreByCredentials(membres, email, code);
   if (membre && String(membre.id) === membreId) return membre;
@@ -1107,7 +1120,7 @@ async function resolveTshirtMembre(
   // Session admin (ancienne) + code personnel d'adhérent du même email → sa fiche adhérent
   if (legacyAdminId && membre) return membre;
   const adminCredentials = (d.adminCredentials || []) as { email: string; code: string }[];
-  if (!(await findAdminCredByCredentials(adminCredentials, email, code))) return null;
+  if (!(await findAdminCredByCredentials(adminCredentials, email, code))) { if (!membre) recordLoginFailure(email); return null; }
   const sameEmail = membres.filter((m) => String(m.email || "").toLowerCase().trim() === email);
   // Code admin : ancienne session → sa fiche (payée en priorité) ; nouvelle session → la fiche visée
   if (legacyAdminId) return sameEmail.find((m) => m.ok === true) || sameEmail[0] || null;
@@ -1332,12 +1345,15 @@ async function traiter(req: Request): Promise<Response> {
   // 👤 Admins = adhérents : partout où l'on vérifie un adhérent (email + code), le code
   // ADMIN du même email est aussi accepté et renvoie sa fiche adhérent (payée en priorité).
   // Un admin peut ainsi voir les actus réservées, voter, s'inscrire aux tournois, etc.
+  // 🔒 Toutes les vérifications de code d'adhérent passent par ici : après 5 codes faux en 15 min,
+  // le compte est bloqué 30 min, quelle que soit l'action utilisée (empêche de deviner un code).
   const findMembreOuAdmin = async (membres: Record<string, unknown>[], email: string, code: string): Promise<Record<string, unknown> | undefined> => {
+    const e = String(email || "").toLowerCase().trim();
+    if (!e || isAccountLocked(e).locked) return undefined;
     const m = await findMembreByCredentials(membres, email, code);
     if (m) return m;
     const creds = ((dbAccess.snapshot()?.adminCredentials || []) as { email: string; code: string }[]);
-    if (!(await findAdminCredByCredentials(creds, email, code))) return undefined;
-    const e = String(email || "").toLowerCase().trim();
+    if (!(await findAdminCredByCredentials(creds, email, code))) { recordLoginFailure(e); return undefined; }
     const same = membres.filter((x) => String(x.email || "").toLowerCase() === e);
     return same.find((x) => x.ok === true) || same[0];
   };
@@ -1366,7 +1382,7 @@ async function traiter(req: Request): Promise<Response> {
       url.searchParams.get("secret") ||
       req.headers.get("x-helloasso-secret") ||
       "";
-    if (providedSecret !== expectedSecret) {
+    if (!constantTimeEqual(String(providedSecret || ""), expectedSecret)) {
       console.warn("[HelloAsso webhook] Secret invalide depuis IP", ip);
       return json({ ok: false, reason: "Non autorisé." }, 401);
     }
@@ -1428,6 +1444,7 @@ async function traiter(req: Request): Promise<Response> {
 
     // Chercher le membre par email
     let found = false;
+    const valides: Record<string, unknown>[] = [];
     for (const m of membres) {
       if (String(m.email || "").toLowerCase() === payerEmail && !m.ok) {
         m.ok = true;
@@ -1436,8 +1453,29 @@ async function traiter(req: Request): Promise<Response> {
         // 💶 Tarif remisé accepté : le montant payé est noté tout de suite (compta, reçu)
         if (remiseSaison(currentData, m)?.statut === "acceptee" && typeof m.montantPaye !== "number") m.montantPaye = prixRemise(currentData);
         found = true;
+        valides.push(m);
         // Pas de break : on marque TOUS les membres avec cet email (inscriptions groupées)
       }
+    }
+    // 🔒 Contrôle du paiement : montant payé et formulaire HelloAsso. L'adhésion est quand même validée
+    // (on ne bloque pas un adhérent), mais l'admin voit une alerte s'il manque de l'argent ou si le
+    // paiement vient d'un autre formulaire (don, autre campagne, lien étudiant utilisé par un adulte…).
+    if (valides.length > 0) {
+      const brut = body.eventType === "Payment" ? paymentData?.amount : (paymentData?.amount as Record<string, unknown> | undefined)?.total;
+      const recu = Number(brut) / 100;
+      const attendu = valides.reduce((s, m) => s + prixAdhesion(currentData, m), 0);
+      const urls = (((currentData.clubConfig || {}) as Record<string, unknown>).helloassoUrls || {}) as Record<string, unknown>;
+      const slugsAdhesion = new Set(["tarif-adulte", "tarif-adulte-1", "tarif-etudiant",
+        ...["adulte", "etudiant", "mixte", "remise"].map((k) => tshirtSlugOf(urls[k])).filter(Boolean)]);
+      const montantFaible = Number.isFinite(recu) && recu > 0 && recu + 0.01 < attendu;
+      const formulaireInconnu = !!formSlug && !slugsAdhesion.has(formSlug);
+      if (montantFaible || formulaireInconnu) {
+        for (const m of valides) {
+          m.paiementAlerte = { le: new Date().toISOString(), ...(Number.isFinite(recu) ? { recu } : {}), attendu, ...(formSlug ? { formulaire: formSlug } : {}), motif: montantFaible ? "montant" : "formulaire" };
+        }
+        console.warn("[HelloAsso webhook] paiement à vérifier", payerEmail, { recu, attendu, formSlug });
+      }
+      if (valides.length === 1 && Number.isFinite(recu) && recu > 0 && typeof valides[0].montantPaye !== "number" && montantFaible) valides[0].montantPaye = recu;
     }
 
     if (found) {
@@ -1593,7 +1631,7 @@ async function traiter(req: Request): Promise<Response> {
       url.searchParams.get("secret") ||
       req.headers.get("x-brevo-inbound-secret") ||
       "";
-    if (providedSecret !== expectedSecret) {
+    if (!constantTimeEqual(String(providedSecret || ""), expectedSecret)) {
       console.warn("[Brevo Inbound] Secret invalide depuis IP", ip);
       return json({ ok: false, reason: "Non autorisé." }, 401);
     }
@@ -1688,9 +1726,13 @@ async function traiter(req: Request): Promise<Response> {
       }
       entry.views = (entry.views || 0) + 1;
       entry.paths = entry.paths || {};
-      entry.paths[path] = (entry.paths[path] || 0) + 1;
+      // 🔒 Plafonds : un robot ne peut pas remplir la base de pages ou de sites inventés
+      const pageOk = /^\/[a-z0-9\/_-]{0,40}$/i.test(path);
+      const cle = pageOk && (entry.paths[path] !== undefined || Object.keys(entry.paths).length < 60) ? path : "autre";
+      entry.paths[cle] = (entry.paths[cle] || 0) + 1;
       entry.refs = entry.refs || {};
-      entry.refs[ref] = (entry.refs[ref] || 0) + 1;
+      const refCle = /^[a-z0-9.-]{1,60}$/i.test(ref) && (entry.refs[ref] !== undefined || Object.keys(entry.refs).length < 40) ? ref : "autre";
+      entry.refs[refCle] = (entry.refs[refCle] || 0) + 1;
       entry.devices = entry.devices || {};
       entry.devices[device] = (entry.devices[device] || 0) + 1;
       const cutoff = new Date(); cutoff.setDate(cutoff.getDate() - 90);
@@ -1724,7 +1766,7 @@ async function traiter(req: Request): Promise<Response> {
     }));
     const agItems = ((d.agItems as Record<string, unknown>[] | undefined) ?? []).map((q) => ({
       ...q,
-      authorMembreId: q.anonymous ? null : q.authorMembreId,
+      authorMembreId: null, // 🔒 identifiant d'adhérent jamais public (seul le nom est affiché)
       authorNom: q.anonymous ? null : q.authorNom,
     }));
 
@@ -2263,7 +2305,7 @@ async function traiter(req: Request): Promise<Response> {
     const membre = await findMembreOuAdmin(membres, email, code);
 
     if (!membre) {
-      recordLoginFailure(email);
+      // (échec déjà compté par findMembreOuAdmin)
       return json({ ok: false, reason: "Email ou code incorrect." });
     }
     clearLoginFailures(email);
@@ -2377,6 +2419,13 @@ async function traiter(req: Request): Promise<Response> {
     const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
     const isReadOnly = validAdminCred?.readOnly === true || adminEmailEntry?.readOnly === true;
     const permissions = validAdminCred?.permissions ?? adminEmailEntry?.permissions ?? undefined;
+
+    // 🔒 Anciens codes encore enregistrés en clair : chiffrés une fois pour toutes
+    // (un admin peut toujours envoyer un nouveau code avec « Réinitialiser le code »)
+    let codesAChiffrer = false;
+    for (const m of membres) { const c = String(m.code || ""); if (c && !isHashedCode(c)) { m.code = await hashCode(c); codesAChiffrer = true; } }
+    for (const c of adminCredentials) { const v = String(c.code || ""); if (v && !isHashedCode(v)) { c.code = await hashCode(v); codesAChiffrer = true; } }
+    if (codesAChiffrer) { d.membres = membres; d.adminCredentials = adminCredentials; await saveDB(d); }
 
     // 🔒 SÉCURITÉ : masquer les codes hashés dans la réponse admin (l'admin n'a pas besoin de les voir)
     // Les codes en clair restent visibles (legacy, l'admin doit pouvoir les transmettre aux membres)
@@ -2638,6 +2687,7 @@ async function traiter(req: Request): Promise<Response> {
     if (!code || code.length < 4) {
       return json({ ok: false, reason: "Le mot de passe doit contenir au moins 4 caractères." }, 400);
     }
+    if (codeTropFacile(code, email)) return json({ ok: false, reason: MSG_CODE_FACILE }, 400);
 
     // Lire les données actuelles
     const { data, error } = await loadDB();
@@ -3252,7 +3302,7 @@ async function traiter(req: Request): Promise<Response> {
     // 🔒 Tâche planifiée uniquement (GitHub Actions) : sinon n'importe qui pourrait
     // déclencher des vagues de mails vers les adhérents
     const cronOk = Deno.env.get("CRON_SECRET");
-    if (!cronOk || String(body.secret || "") !== cronOk) return json({ ok: false, reason: "Non autorisé." }, 401);
+    if (!cronOk || !constantTimeEqual(String(body.secret || ""), cronOk)) return json({ ok: false, reason: "Non autorisé." }, 401);
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "BREVO_API_KEY manquant." });
 
@@ -3985,6 +4035,7 @@ async function traiter(req: Request): Promise<Response> {
     const newCode = sanitize(String(body.newCode || ""));
     if (!email || !token) return json({ ok: false, reason: "Lien invalide." }, 400);
     if (newCode.length < 4) return json({ ok: false, reason: "Le code doit contenir au moins 4 caractères." }, 400);
+    if (codeTropFacile(newCode, String(body.email || ""))) return json({ ok: false, reason: MSG_CODE_FACILE }, 400);
 
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
@@ -4030,7 +4081,7 @@ async function traiter(req: Request): Promise<Response> {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
     const moi = await findMembreOuAdmin(membres, email, code);
-    if (!moi) { recordLoginFailure(email); return json({ ok: false, reason: "Session expirée, reconnecte-toi." }); }
+    if (!moi) return json({ ok: false, reason: "Session expirée, reconnecte-toi." }); // échec déjà compté par findMembreOuAdmin
     let cible = moi;
     if (membreId && String(moi.id) !== membreId) {
       const autre = membres.find((m) => String(m.id) === membreId && String(m.email || "").toLowerCase() === email);
@@ -4125,7 +4176,7 @@ async function traiter(req: Request): Promise<Response> {
     const d = data.data as Record<string, unknown>;
     const membres = (d.membres || []) as Record<string, unknown>[];
     const moi = await findMembreOuAdmin(membres, email, code);
-    if (!moi) { recordLoginFailure(email); return json({ ok: false, reason: "Session expirée, reconnecte-toi." }); }
+    if (!moi) return json({ ok: false, reason: "Session expirée, reconnecte-toi." }); // échec déjà compté par findMembreOuAdmin
 
     // Fiches du même compte (inscriptions groupées : même email et même code)
     const profils: Record<string, unknown>[] = [];
@@ -4193,6 +4244,7 @@ async function traiter(req: Request): Promise<Response> {
 
     if (!email || !oldCode || !newCode) return json({ ok: false, reason: "Champs manquants." }, 400);
     if (newCode.length < 4) return json({ ok: false, reason: "Le mot de passe doit contenir au moins 4 caractères." }, 400);
+    if (codeTropFacile(newCode, String(body.email || ""))) return json({ ok: false, reason: MSG_CODE_FACILE }, 400);
 
     const { data, error } = await loadDB();
 
@@ -4703,7 +4755,7 @@ async function traiter(req: Request): Promise<Response> {
     // Sécurisé par un secret pour éviter les appels non autorisés
     const secret = String(body.secret || "");
     const expectedSecret = Deno.env.get("CRON_SECRET");
-    if (!expectedSecret || secret !== expectedSecret) {
+    if (!expectedSecret || !constantTimeEqual(secret, expectedSecret)) {
       return json({ ok: false, reason: "Non autorisé." }, 401);
     }
 
@@ -6930,7 +6982,7 @@ async function traiter(req: Request): Promise<Response> {
   if (action === "check_backup_email") {
     // 🔒 Tâche planifiée uniquement (envoie une copie complète de la base par mail)
     const cronOk = Deno.env.get("CRON_SECRET");
-    if (!cronOk || String(body.secret || "") !== cronOk) return json({ ok: false, reason: "Non autorisé." }, 401);
+    if (!cronOk || !constantTimeEqual(String(body.secret || ""), cronOk)) return json({ ok: false, reason: "Non autorisé." }, 401);
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
@@ -7001,7 +7053,8 @@ async function traiter(req: Request): Promise<Response> {
     const secret = rawSecret.replace(/:(remove|restore)$/, "");
     const expected = Deno.env.get("PRESENTATION_SECRET");
     if (!expected) return json({ ok: false, reason: "Code secret non configure sur le serveur." });
-    if (secret !== expected) return json({ ok: false, reason: "Code incorrect." });
+    if (isLoginRateLimited(ip)) return json({ ok: false, reason: "Trop de tentatives. Réessayez dans 15 minutes." }, 429); // 🔒 anti-devinette
+    if (!constantTimeEqual(secret, String(expected))) return json({ ok: false, reason: "Code incorrect." });
 
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
