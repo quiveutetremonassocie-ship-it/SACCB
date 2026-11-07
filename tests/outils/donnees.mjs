@@ -19,9 +19,12 @@ export const SECRETS = [
   "h$seltest$",
 ];
 
+// Chaque base de test a son propre numéro de version : une écriture en retard d'un test précédent
+// (envoi de mail en arrière-plan…) est alors refusée comme sur le vrai serveur, au lieu d'écraser la base.
+let version = 1000;
 export function baseDeTest() {
   return {
-    _rev: 7,
+    _rev: ++version,
     y1: 2026, y2: 2027, insc_open: true, quota: 65,
     adminEmails: [ADMIN.email],
     adminCredentials: [{ email: "bureau.secret@exemple.fr", code: chiffrer("CodeBureau") }],
