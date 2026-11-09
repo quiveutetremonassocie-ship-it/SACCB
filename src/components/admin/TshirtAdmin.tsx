@@ -152,11 +152,19 @@ export default function TshirtAdmin({
 
   async function toggleOpen() {
     if (readOnly) return;
+    // 🪜 Deux étapes séparées pour éviter d'envoyer un mail par réflexe :
+    //   1) Confirmer l'ouverture (ou la fermeture) des commandes
+    //   2) UNIQUEMENT à l'ouverture, demander SÉPARÉMENT si on prévient les adhérents
+    let notify = false;
+    if (!open) {
+      if (!confirm("Ouvrir les commandes de t-shirts ?")) return;
+      notify = confirm("Voulez-vous aussi envoyer un email à tous les adhérents (payés + news activées) pour les prévenir ?\n\nOK = envoyer l'email · Annuler = ouvrir sans envoyer d'email");
+    } else {
+      if (!confirm("Fermer les commandes de t-shirts ?")) return;
+    }
     setSaving(true);
     if (adminEmail && adminCode) {
       // Action dédiée côté serveur : ne touche que ce champ, une copie admin périmée ne peut pas l'écraser
-      // 📧 À l'ouverture, on demande explicitement si on prévient les adhérents (évite les envois sur fausse manip)
-      const notify = !open && confirm("Les commandes vont être ouvertes.\n\nEnvoyer aussi un email à tous les adhérents (payés + news activées) pour les prévenir ?\n\nOK = ouvrir ET envoyer l'email · Annuler = ouvrir SANS email");
       const r = await adminSetTshirt(adminEmail, adminCode, { open: !open, notify });
       if (!r.ok) alert("Erreur : la section t-shirt n'a pas été modifiée. " + (r.reason || ""));
       if (onRefresh) await onRefresh();
