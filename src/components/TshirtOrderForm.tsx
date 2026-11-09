@@ -107,7 +107,9 @@ export default function TshirtOrderForm({
         setColors(cols);
         setCatalogue(data.catalogue && data.catalogue.url ? data.catalogue : null);
         setPhotos(Array.isArray(data.photos) ? data.photos : []);
-        if (!data.order && cols.length === 1) setCouleur(cols[0]);
+        // 🎨 Si une seule couleur est proposée, on la sélectionne automatiquement
+        //    (nouvelle commande ou modif) — l'adhérent n'a pas à choisir.
+        if (cols.length === 1) setCouleur(cols[0]);
         // 👤 Taille initiale : liste correspondant au sexe connu, sinon union
         const listeInitiale = mSexe === "H" ? sH : mSexe === "F" ? sF : sAll;
         if (!data.order) setTaille(listeInitiale.includes("M") ? "M" : listeInitiale[0]);
@@ -363,7 +365,15 @@ export default function TshirtOrderForm({
             </div>
           </div>
         )}
-        {colors.length > 0 && (
+        {colors.length === 1 ? (
+          // 🎨 Une seule couleur proposée : pas de choix, on affiche juste l'info
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Couleur</label>
+            <div className="w-full text-sm border border-amber-200 rounded-lg px-3 py-1.5 bg-amber-50 text-slate-700 font-semibold">
+              {colors[0]}
+            </div>
+          </div>
+        ) : colors.length > 1 ? (
           <div>
             <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Couleur</label>
             <select
@@ -377,10 +387,10 @@ export default function TshirtOrderForm({
               ))}
             </select>
           </div>
-        )}
+        ) : null}
         <div>
           <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">
-            Nom / surnom à floquer <span className="text-slate-400 normal-case">(facultatif, max 30 car.)</span>
+            Nom / surnom à floquer <span className="text-slate-400 normal-case">(facultatif, max 12 car.)</span>
           </label>
           <input
             type="text"
@@ -388,7 +398,7 @@ export default function TshirtOrderForm({
             onChange={(e) => setNomFloque(e.target.value)}
             placeholder="Ex: Gabin, GB, ton surnom..."
             className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500"
-            maxLength={30}
+            maxLength={12}
           />
         </div>
         {msg && (

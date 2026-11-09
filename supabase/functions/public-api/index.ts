@@ -5599,7 +5599,7 @@ async function traiter(req: Request): Promise<Response> {
     const code = sanitize(String(body.code || ""));
     const membreId = String(body.membreId || "");
     const taille = String(body.taille || "");
-    const nomFloque = sanitize(String(body.nomFloque || "")).slice(0, 30);
+    const nomFloque = sanitize(String(body.nomFloque || "")).slice(0, 12);
     // 👤 Sexe pour le t-shirt — seul "H" ou "F" acceptés ; sinon ignoré.
     const sexeBrut = String(body.sexe || "").toUpperCase();
     const sexeFromClient: "H" | "F" | undefined = sexeBrut === "H" || sexeBrut === "F" ? (sexeBrut as "H" | "F") : undefined;
