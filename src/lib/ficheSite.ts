@@ -2,7 +2,7 @@
 // ⚠️ À METTRE À JOUR à chaque modification importante (nouvelle rubrique, nouvelle fonction, nouvelle règle).
 // L'historique des modifications et l'état du site sont ajoutés automatiquement dans le PDF.
 
-export const FICHE_MAJ_LE = "2026-11-07";
+export const FICHE_MAJ_LE = "2026-11-09";
 
 export type SectionFiche = { titre: string; lignes: string[] };
 
@@ -77,6 +77,7 @@ export const FICHE_SITE: SectionFiche[] = [
       "👀 Dernière visite (membre.vuLe = jour AAAA-MM-JJ, sans heure ni historique ; suivi commencé le 2026-11-02) : notée par check_session (une écriture par jour et par adhérent au plus). Envoyée par admin_fetch au PROPRIÉTAIRE SEUL, protégée dans admin_save (un client ne peut ni l'effacer ni l'inventer). Admin → Adhérents : « 👀 vu le … » sous le nom + bandeau « N cette semaine · N ce mois-ci · N pas venus » (clic = filtre). Mentionnée dans la politique de confidentialité.",
       "Mon compte → « Changer mon adresse mail ou mon téléphone » (action serveur member_contact) : l'email change sur toutes les fiches du même compte (même email + même code), le téléphone sur la fiche connectée. Refusé si l'adresse est celle d'un autre adhérent ou d'un admin. Chaque changement est noté sur la fiche (coordonneesModifiees : date, avant, après) ; dans l'admin → Adhérents : bandeau orange « N adhérents ont mis à jour leurs informations cette saison » (sans bouton « vu » : reste affiché toute la saison, effacé au changement de saison avec infosConfirmees) et pastille « ✏️ modifié le … » sous l'email / le téléphone (historique au survol). Aucun mail envoyé.",
       "Mon espace : fiche, reçu d'adhésion, justificatif étudiant, lien WhatsApp (adhérents à jour), inscriptions aux tournois, « Mes tournois » (parcours, meilleure place, partenaire favori), t-shirts, sondages/AG, documents officiels.",
+      "👕 Commande T-shirt (depuis le 2026-11-09) : les tailles proposées dépendent du sexe de l'adhérent. Si son sexe est renseigné sur sa fiche (membre.sexe = \"H\" ou \"F\"), la fiche fait foi et il voit uniquement ses tailles ; sinon il choisit H ou F dans le formulaire de commande (bouton Homme/Femme obligatoire avant la taille). Le sexe est enregistré sur la commande (TshirtOrder.sexe). Le catalogue affiché peut être un PDF (tshirtCatalogue), une ou plusieurs photos (tshirtPhotos), ou les deux. Le bon de commande fabricant (PDF) regroupe les commandes Hommes et Femmes séparément.",
       "Agenda du club (réservé aux adhérents) : tournois + événements ajoutés par le bureau, ajout à Google Agenda / fichier .ics. Seul le prochain événement est affiché, les suivants sont dans un menu déroulant « Voir les N autres événements » (pour ne pas répéter la rubrique Tournois).",
       "Les noms des adhérents (choix du partenaire) ne sont envoyés qu'aux adhérents connectés.",
     ],
@@ -87,7 +88,7 @@ export const FICHE_SITE: SectionFiche[] = [
       "Adhérents : Adhérents, Bureau.",
       "Tournois : Tournois, Inscriptions aux tournois, Tournois inter-clubs (et internes).",
       "Communication : Messages reçus, Envoyer un mail, Agenda, Actualités, Sondages & AG, FAQ adhérents.",
-      "Trésorerie : Comptabilité (factures), T-shirts (tailles, couleurs, catalogue PDF montré aux adhérents, prix, paiement HelloAsso, export PDF pour le fabricant), HelloAsso · QR code.",
+      "Trésorerie : Comptabilité (factures), T-shirts (tailles proposées séparément aux hommes et aux femmes — tshirtSizesH / tshirtSizesF, ancien tshirtSizes gardé comme fallback ; couleurs ; catalogue PDF ET/OU plusieurs photos tshirtPhotos montrés aux adhérents ; prix ; paiement HelloAsso ; sexe (H/F) enregistré sur chaque commande et visible dans l'admin + export PDF fabricant regroupé Hommes/Femmes), HelloAsso · QR code.",
       "Réglages : Paramètres saison, Règlement intérieur, Statistiques (dont rapport d'AG), Sauvegarde & export, Bloc-notes partagé, Journal (privé), Guide admin.",
       "Admins multiples avec droits (lecture seule, permissions par rubrique) ; double vérification par mail à la connexion admin.",
       "Mode hors connexion : si le réseau coupe, les modifications sont gardées sur l'appareil (bandeau rouge) et envoyées au retour du réseau.",

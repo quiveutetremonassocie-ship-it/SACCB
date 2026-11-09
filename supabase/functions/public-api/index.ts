@@ -1102,6 +1102,27 @@ function tshirtSizesOf(d: Record<string, unknown>): string[] {
   const s = Array.isArray(d.tshirtSizes) ? TSHIRT_SIZES_ALL.filter((x) => (d.tshirtSizes as unknown[]).includes(x)) : [];
   return s.length > 0 ? s : TSHIRT_SIZES_DEFAULT;
 }
+// 📏 Tailles proposées pour un sexe donné (H = hommes, F = femmes).
+// Priorité : tshirtSizesH / tshirtSizesF (nouveau) → tshirtSizes (ancien) → défaut.
+// Sans sexe : union des deux (utilisé quand l'adhérent n'a pas précisé).
+function tshirtSizesForSexe(d: Record<string, unknown>, sexe?: "H" | "F"): string[] {
+  function pickArr(raw: unknown): string[] {
+    return Array.isArray(raw) ? TSHIRT_SIZES_ALL.filter((x) => (raw as unknown[]).includes(x)) : [];
+  }
+  if (sexe === "H") {
+    const s = pickArr(d.tshirtSizesH);
+    return s.length > 0 ? s : tshirtSizesOf(d);
+  }
+  if (sexe === "F") {
+    const s = pickArr(d.tshirtSizesF);
+    return s.length > 0 ? s : tshirtSizesOf(d);
+  }
+  const union = new Set<string>();
+  pickArr(d.tshirtSizesH).forEach((s) => union.add(s));
+  pickArr(d.tshirtSizesF).forEach((s) => union.add(s));
+  if (union.size === 0) return tshirtSizesOf(d);
+  return TSHIRT_SIZES_ALL.filter((x) => union.has(x));
+}
 
 // 👕 Retrouve l'adhérent derrière une session t-shirt. Un admin connecté avec son
 // code admin a un membreId factice "admin-<email>" : s'il est AUSSI inscrit comme
@@ -5579,27 +5600,43 @@ async function traiter(req: Request): Promise<Response> {
     const membreId = String(body.membreId || "");
     const taille = String(body.taille || "");
     const nomFloque = sanitize(String(body.nomFloque || "")).slice(0, 30);
+    // 👤 Sexe pour le t-shirt — seul "H" ou "F" acceptés ; sinon ignoré.
+    const sexeBrut = String(body.sexe || "").toUpperCase();
+    const sexeFromClient: "H" | "F" | undefined = sexeBrut === "H" || sexeBrut === "F" ? (sexeBrut as "H" | "F") : undefined;
 
     if (!email || !code || !membreId) return json({ ok: false, reason: "Authentification requise." }, 400);
 
     const { data, error } = await loadDB();
     if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
     const d = data.data as Record<string, unknown>;
-    // Tailles proposées par l'admin ; on accepte aussi la taille déjà commandée (modif d'une ancienne commande)
-    const existingTaille = ((d.tshirtOrders || []) as Record<string, unknown>[]).find((o) => o.membreId === membreId)?.taille;
-    if (!tshirtSizesOf(d).includes(taille) && taille !== existingTaille) return json({ ok: false, reason: "Cette taille n'est pas disponible." }, 400);
-    // 🎨 Couleur : obligatoire si le bureau a proposé des couleurs (l'ancienne couleur reste acceptée)
-    const couleurs = Array.isArray(d.tshirtColors) ? (d.tshirtColors as unknown[]).map(String).filter(Boolean) : [];
-    const couleur = sanitize(String(body.couleur || "")).slice(0, 40);
-    const existingCouleur = ((d.tshirtOrders || []) as Record<string, unknown>[]).find((o) => o.membreId === membreId)?.couleur;
-    if (couleurs.length > 0 && !couleurs.includes(couleur) && couleur !== existingCouleur) return json({ ok: false, reason: "Choisissez une couleur disponible." }, 400);
-    const membres = (d.membres || []) as Record<string, unknown>[];
 
     const membre = await resolveTshirtMembre(d, email, code, membreId);
     if (!membre) return json({ ok: false, reason: "Session invalide ou aucune fiche adhérent associée à ce compte." }, 403);
     const realMembreId = String(membre.id);
     if (membre.ok !== true) return json({ ok: false, reason: "Votre adhésion doit être validée pour commander." }, 403);
     if (d.tshirtOpen !== true) return json({ ok: false, reason: "Les commandes de t-shirts ne sont pas ouvertes." }, 403);
+
+    // 👤 Sexe pour la commande : priorité au sexe stocké sur l'adhérent (si connu),
+    //    sinon celui envoyé par le client lors de cette commande.
+    const sexeMembre = String(membre.sexe || "").toUpperCase();
+    const sexeCommande: "H" | "F" | undefined =
+      sexeMembre === "H" || sexeMembre === "F"
+        ? (sexeMembre as "H" | "F")
+        : sexeFromClient;
+
+    // Tailles proposées par l'admin pour le sexe correspondant ;
+    // on accepte aussi la taille déjà commandée (modif d'une ancienne commande)
+    const existingOrder = ((d.tshirtOrders || []) as Record<string, unknown>[]).find((o) => o.membreId === realMembreId);
+    const existingTaille = existingOrder?.taille;
+    const taillesDispo = tshirtSizesForSexe(d, sexeCommande);
+    if (!taillesDispo.includes(taille) && taille !== existingTaille) {
+      return json({ ok: false, reason: "Cette taille n'est pas disponible." }, 400);
+    }
+    // 🎨 Couleur : obligatoire si le bureau a proposé des couleurs (l'ancienne couleur reste acceptée)
+    const couleurs = Array.isArray(d.tshirtColors) ? (d.tshirtColors as unknown[]).map(String).filter(Boolean) : [];
+    const couleur = sanitize(String(body.couleur || "")).slice(0, 40);
+    const existingCouleur = existingOrder?.couleur;
+    if (couleurs.length > 0 && !couleurs.includes(couleur) && couleur !== existingCouleur) return json({ ok: false, reason: "Choisissez une couleur disponible." }, 400);
 
     // 🔒 SÉCURITÉ : on prend nom/prénom UNIQUEMENT depuis le compte du membre, pas du client
     const fullName = String(membre.nom || "").trim();
@@ -5618,6 +5655,8 @@ async function traiter(req: Request): Promise<Response> {
       nom,
       prenom,
       taille,
+      // 👤 Sexe conservé sur la commande (pratique pour le fabricant + filtres admin)
+      sexe: sexeCommande,
       couleur: couleurs.length > 0 ? couleur : undefined,
       nomFloque: nomFloque || undefined,
       createdAt: existingIdx !== -1 ? orders[existingIdx].createdAt : new Date().toISOString(),
@@ -5646,16 +5685,32 @@ async function traiter(req: Request): Promise<Response> {
     if (!membre) return json({ ok: false, reason: "Session invalide." }, 403);
     const orders = (d.tshirtOrders || []) as Record<string, unknown>[];
     const my = orders.find((o) => o.membreId === String(membre.id)) || null;
+    // 👤 Sexe connu sur la fiche adhérent (si rempli) — sert à filtrer les tailles côté client
+    const sexeMembre = String(membre.sexe || "").toUpperCase();
+    const membreSexe: "H" | "F" | null = sexeMembre === "H" || sexeMembre === "F" ? (sexeMembre as "H" | "F") : null;
+    // 📸 Photos du catalogue (en plus du PDF)
+    const photos = Array.isArray(d.tshirtPhotos)
+      ? (d.tshirtPhotos as Record<string, unknown>[])
+          .filter((p) => p && typeof p.url === "string")
+          .map((p) => ({ url: String(p.url), name: String(p.name || "photo"), legende: typeof p.legende === "string" ? p.legende : undefined }))
+      : [];
     return json({
       ok: true,
       order: my,
       open: d.tshirtOpen === true,
       price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
+      // sizes = ancien champ (fallback compat) ; sizesH/sizesF = nouveau découpage H/F ;
+      // sizesAll = union utilisée quand l'adhérent n'a pas encore choisi H ou F.
       sizes: tshirtSizesOf(d),
+      sizesH: tshirtSizesForSexe(d, "H"),
+      sizesF: tshirtSizesForSexe(d, "F"),
+      sizesAll: tshirtSizesForSexe(d),
+      membreSexe,
       colors: Array.isArray(d.tshirtColors) ? d.tshirtColors : [],
       catalogue: d.tshirtCatalogue && typeof (d.tshirtCatalogue as Record<string, unknown>).url === "string"
         ? { url: (d.tshirtCatalogue as Record<string, unknown>).url, name: (d.tshirtCatalogue as Record<string, unknown>).name || "catalogue.pdf" }
         : null,
+      photos,
       paymentUrl: typeof d.tshirtPaymentUrl === "string" && d.tshirtPaymentUrl ? d.tshirtPaymentUrl : null,
     });
   }
@@ -5865,12 +5920,31 @@ async function traiter(req: Request): Promise<Response> {
       if (sizes.length === 0) return json({ ok: false, reason: "Choisissez au moins une taille." }, 400);
       d.tshirtSizes = sizes;
     }
+    // 👕 Tailles hommes (nouveau champ)
+    if (Array.isArray(body.sizesH)) {
+      const sizes = TSHIRT_SIZES_ALL.filter((s) => (body.sizesH as unknown[]).includes(s));
+      if (sizes.length === 0) return json({ ok: false, reason: "Choisissez au moins une taille pour les hommes." }, 400);
+      d.tshirtSizesH = sizes;
+    }
+    // 👚 Tailles femmes (nouveau champ)
+    if (Array.isArray(body.sizesF)) {
+      const sizes = TSHIRT_SIZES_ALL.filter((s) => (body.sizesF as unknown[]).includes(s));
+      if (sizes.length === 0) return json({ ok: false, reason: "Choisissez au moins une taille pour les femmes." }, 400);
+      d.tshirtSizesF = sizes;
+    }
 
     const { error: saveErr } = await saveDB(d);
     if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
     // 📧 Email aux adhérents UNIQUEMENT si l'admin l'a confirmé (évite les envois sur fausse manip)
     if (tshirtJustOpened && body.notify === true) notifyTshirtOpen(supabaseAdmin, d);
-    return json({ ok: true, open: d.tshirtOpen === true, price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null, sizes: tshirtSizesOf(d) });
+    return json({
+      ok: true,
+      open: d.tshirtOpen === true,
+      price: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
+      sizes: tshirtSizesOf(d),
+      sizesH: tshirtSizesForSexe(d, "H"),
+      sizesF: tshirtSizesForSexe(d, "F"),
+    });
   }
 
   if (action === "vote_poll") {

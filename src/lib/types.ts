@@ -197,6 +197,9 @@ export type TshirtOrder = {
   nom: string;
   prenom: string;
   taille: string; // une des TSHIRT_SIZES_ALL
+  // 👤 Sexe pour le t-shirt (homme ou femme) : les tailles peuvent différer.
+  // Pris du membre.sexe si connu, sinon demandé au moment de la commande.
+  sexe?: "H" | "F";
   nomFloque?: string;      // nom/surnom à floquer sur le t-shirt (optionnel)
   couleur?: string;        // 🎨 couleur choisie (parmi tshirtColors)
   createdAt: string;       // ISO timestamp
@@ -207,6 +210,14 @@ export type TshirtOrder = {
   paidVia?: string;        // "helloasso" si marqué payé automatiquement par HelloAsso
   notes?: string;          // note admin libre
   saison?: string;
+};
+
+// 🖼️ Photo du catalogue t-shirts (en plus du PDF)
+export type TshirtPhoto = {
+  url: string;
+  path: string;
+  name: string;
+  legende?: string; // légende optionnelle affichée sous la photo
 };
 
 export type ReunionReport = {
@@ -394,11 +405,19 @@ export type DB = {
   tshirtOpen?: boolean; // Section commande t-shirt visible/ouverte dans l'espace membre
   tshirtPrice?: number; // Prix unitaire du t-shirt (€) — optionnel, affiché côté membre
   tshirtPaymentUrl?: string; // 💳 lien HelloAsso pour payer le t-shirt en ligne (facultatif)
-  tshirtSizes?: string[]; // Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL) — défaut XS→XL
+  // 📏 Tailles proposées aux adhérents (parmi TSHIRT_SIZES_ALL).
+  // tshirtSizes = ancien champ commun H/F. Reste utilisé comme fallback si
+  // tshirtSizesH/F pas renseignés (compat ascendante). Les nouveaux réglages
+  // utilisent tshirtSizesH (hommes) et tshirtSizesF (femmes) pour proposer
+  // les bonnes tailles selon le sexe de l'adhérent.
+  tshirtSizes?: string[];
+  tshirtSizesH?: string[]; // 👕 Tailles proposées aux hommes
+  tshirtSizesF?: string[]; // 👚 Tailles proposées aux femmes
   agendaEvents?: AgendaEvent[]; // 📅 événements ajoutés à la main dans l'agenda
   agendaMasques?: string[]; // 📅 tournois retirés de l'agenda (ids « t-… » / « ic-… »), le tournoi lui-même reste
   tshirtColors?: string[]; // 🎨 Couleurs proposées (vide = pas de choix de couleur)
   tshirtCatalogue?: { url: string; path: string; name: string }; // 📄 catalogue PDF des couleurs/modèles, visible par les adhérents
+  tshirtPhotos?: TshirtPhoto[]; // 🖼️ photos du catalogue (en plus ou à la place du PDF), visibles par les adhérents
   tshirtOrders?: TshirtOrder[]; // Commandes reçues (centralisées dans l'admin)
   interclubs?: InterClub[]; // Tournois inter-clubs (liens d'inscription par club)
   // ❓ FAQ adhérents : visible sur la home + page /faq
@@ -599,6 +618,35 @@ export const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
 export function getTshirtSizes(db: { tshirtSizes?: string[] }): string[] {
   const s = TSHIRT_SIZES_ALL.filter((x) => (db.tshirtSizes ?? []).includes(x));
   return s.length > 0 ? s : TSHIRT_SIZES_DEFAULT;
+}
+
+// 📏 Tailles proposées pour un sexe donné (H = hommes, F = femmes).
+// Priorité : tshirtSizesH / tshirtSizesF (nouveau format) → tshirtSizes (ancien) → défaut.
+// Si aucun sexe donné : union des deux listes (si l'adhérent n'a pas précisé).
+export function getTshirtSizesFor(
+  db: { tshirtSizes?: string[]; tshirtSizesH?: string[]; tshirtSizesF?: string[] },
+  sexe?: "H" | "F",
+): string[] {
+  function pick(src?: string[]): string[] {
+    const s = TSHIRT_SIZES_ALL.filter((x) => (src ?? []).includes(x));
+    return s;
+  }
+  if (sexe === "H") {
+    const s = pick(db.tshirtSizesH);
+    if (s.length > 0) return s;
+    return getTshirtSizes(db);
+  }
+  if (sexe === "F") {
+    const s = pick(db.tshirtSizesF);
+    if (s.length > 0) return s;
+    return getTshirtSizes(db);
+  }
+  // Pas de sexe précisé : union H ∪ F (ou fallback ancien champ)
+  const union = new Set<string>();
+  pick(db.tshirtSizesH).forEach((s) => union.add(s));
+  pick(db.tshirtSizesF).forEach((s) => union.add(s));
+  if (union.size === 0) return getTshirtSizes(db);
+  return TSHIRT_SIZES_ALL.filter((x) => union.has(x));
 }
 
 // Retourne les prix effectifs (DB ou défaut)

@@ -3,9 +3,10 @@
 import { useEffect, useState } from "react";
 import { Shirt, CheckCircle2, RefreshCw } from "lucide-react";
 import { fetchPublicDB, memberGetMyTshirtOrder, memberSubmitTshirtOrder } from "@/lib/db";
-import { TSHIRT_SIZES_DEFAULT, type TshirtOrder } from "@/lib/types";
+import { TSHIRT_SIZES_DEFAULT, type TshirtOrder, type TshirtPhoto } from "@/lib/types";
 
 type Taille = string;
+type Sexe = "H" | "F";
 
 export default function TshirtOrderForm({
   email,
@@ -22,12 +23,19 @@ export default function TshirtOrderForm({
 }) {
   const [open, setOpen] = useState(false);
   const [price, setPrice] = useState<number | null>(null);
-  // Tailles proposées par l'admin (renvoyées par le serveur)
-  const [sizes, setSizes] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
+  // Tailles proposées par l'admin, séparées H / F (renvoyées par le serveur)
+  const [sizesH, setSizesH] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
+  const [sizesF, setSizesF] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
+  const [sizesAll, setSizesAll] = useState<string[]>(TSHIRT_SIZES_DEFAULT);
+  // 👤 Sexe connu sur la fiche adhérent (si rempli par le bureau). Sinon null → on demande.
+  const [membreSexe, setMembreSexe] = useState<Sexe | null>(null);
+  // 👤 Sexe choisi par l'adhérent au moment de la commande (quand pas renseigné sur sa fiche)
+  const [sexeChoisi, setSexeChoisi] = useState<Sexe | null>(null);
   const [paymentUrl, setPaymentUrl] = useState<string | null>(null);
   // 🎨 Couleurs proposées par le bureau (vide = pas de choix)
   const [colors, setColors] = useState<string[]>([]);
   const [catalogue, setCatalogue] = useState<{ url: string; name: string } | null>(null); // 📄 catalogue PDF
+  const [photos, setPhotos] = useState<TshirtPhoto[]>([]); // 🖼️ photos du catalogue
   const [couleur, setCouleur] = useState("");
   const [order, setOrder] = useState<TshirtOrder | null>(null);
   const [loading, setLoading] = useState(true);
@@ -37,6 +45,11 @@ export default function TshirtOrderForm({
   const [taille, setTaille] = useState<Taille>("M");
   const [nomFloque, setNomFloque] = useState("");
   const [editMode, setEditMode] = useState(false);
+
+  // 👤 Sexe effectif pour cette commande : sexe de la fiche sinon choix de l'adhérent
+  const sexeEffectif: Sexe | null = membreSexe ?? sexeChoisi;
+  // Tailles affichées : filtrées par sexe si connu, sinon toutes (union)
+  const sizes: string[] = sexeEffectif === "H" ? sizesH : sexeEffectif === "F" ? sizesF : sizesAll;
 
   // 🔑 Certaines sessions (ex : admin) ne gardent pas de code en mémoire : on le
   // redemande dans le bloc au lieu de masquer la section (gardé en mémoire, jamais stocké).
@@ -64,21 +77,47 @@ export default function TshirtOrderForm({
         return;
       }
       if (r.ok) {
-        setOpen(r.open === true);
-        setPrice(typeof r.price === "number" ? r.price : null);
-        const avail = Array.isArray(r.sizes) && r.sizes.length > 0 ? r.sizes : TSHIRT_SIZES_DEFAULT;
-        setSizes(avail);
-        setPaymentUrl(typeof r.paymentUrl === "string" && r.paymentUrl ? r.paymentUrl : null);
-        const cols = Array.isArray(r.colors) ? r.colors : [];
+        const data = r as unknown as {
+          open?: boolean;
+          price?: number;
+          sizes?: string[];
+          sizesH?: string[];
+          sizesF?: string[];
+          sizesAll?: string[];
+          membreSexe?: "H" | "F" | null;
+          colors?: string[];
+          catalogue?: { url: string; name: string } | null;
+          photos?: TshirtPhoto[];
+          paymentUrl?: string;
+          order?: TshirtOrder | null;
+        };
+        setOpen(data.open === true);
+        setPrice(typeof data.price === "number" ? data.price : null);
+        const legacy = Array.isArray(data.sizes) && data.sizes.length > 0 ? data.sizes : TSHIRT_SIZES_DEFAULT;
+        const sH = Array.isArray(data.sizesH) && data.sizesH.length > 0 ? data.sizesH : legacy;
+        const sF = Array.isArray(data.sizesF) && data.sizesF.length > 0 ? data.sizesF : legacy;
+        const sAll = Array.isArray(data.sizesAll) && data.sizesAll.length > 0 ? data.sizesAll : legacy;
+        setSizesH(sH);
+        setSizesF(sF);
+        setSizesAll(sAll);
+        const mSexe = data.membreSexe === "H" || data.membreSexe === "F" ? data.membreSexe : null;
+        setMembreSexe(mSexe);
+        setPaymentUrl(typeof data.paymentUrl === "string" && data.paymentUrl ? data.paymentUrl : null);
+        const cols = Array.isArray(data.colors) ? data.colors : [];
         setColors(cols);
-        setCatalogue(r.catalogue && r.catalogue.url ? r.catalogue : null);
-        if (!r.order && cols.length === 1) setCouleur(cols[0]);
-        if (!r.order) setTaille(avail.includes("M") ? "M" : avail[0]);
-        if (r.order) {
-          setOrder(r.order);
-          setTaille(r.order.taille as Taille);
-          setNomFloque(r.order.nomFloque || "");
-          setCouleur(r.order.couleur || "");
+        setCatalogue(data.catalogue && data.catalogue.url ? data.catalogue : null);
+        setPhotos(Array.isArray(data.photos) ? data.photos : []);
+        if (!data.order && cols.length === 1) setCouleur(cols[0]);
+        // 👤 Taille initiale : liste correspondant au sexe connu, sinon union
+        const listeInitiale = mSexe === "H" ? sH : mSexe === "F" ? sF : sAll;
+        if (!data.order) setTaille(listeInitiale.includes("M") ? "M" : listeInitiale[0]);
+        if (data.order) {
+          setOrder(data.order);
+          setTaille(data.order.taille as Taille);
+          setNomFloque(data.order.nomFloque || "");
+          setCouleur(data.order.couleur || "");
+          // 👤 Si la commande a déjà un sexe (modif d'une ancienne) → on le reprend
+          if (data.order.sexe === "H" || data.order.sexe === "F") setSexeChoisi(data.order.sexe);
         }
       }
     });
@@ -87,6 +126,13 @@ export default function TshirtOrderForm({
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
+    // 👤 Si le sexe n'est pas connu (ni sur la fiche, ni choisi ici) → obligatoire avant de valider
+    if (!sexeEffectif) { setMsg({ ok: false, text: "Indique si tu veux un t-shirt Homme ou Femme." }); return; }
+    // Si la taille n'est pas dans la liste du sexe choisi → on aligne silencieusement sur "M" ou la 1re dispo
+    if (!sizes.includes(taille)) {
+      setMsg({ ok: false, text: "Choisis une taille parmi les propositions." });
+      return;
+    }
     if (colors.length > 0 && !couleur) { setMsg({ ok: false, text: "Choisis une couleur." }); return; }
     setSaving(true);
     setMsg(null);
@@ -96,6 +142,8 @@ export default function TshirtOrderForm({
       nom: defaultNom,
       prenom: defaultPrenom,
       taille,
+      // 👤 Envoie le sexe choisi uniquement s'il n'est pas déjà sur la fiche (le serveur l'ignore si fiche remplie)
+      sexe: membreSexe ?? sexeChoisi ?? undefined,
       couleur: colors.length > 0 ? couleur : undefined,
       nomFloque: nomFloque.trim() || undefined,
     });
@@ -109,6 +157,7 @@ export default function TshirtOrderForm({
         nom: defaultNom,
         prenom: defaultPrenom,
         taille,
+        sexe: sexeEffectif,
         couleur: colors.length > 0 ? couleur : undefined,
         nomFloque: nomFloque.trim() || undefined,
         createdAt: order?.createdAt || new Date().toISOString(),
@@ -116,6 +165,15 @@ export default function TshirtOrderForm({
       setEditMode(false);
     } else {
       setMsg({ ok: false, text: r.reason || "Erreur." });
+    }
+  }
+
+  // 👤 Quand l'adhérent change de sexe (quand pas renseigné), on réaligne sa taille sur la nouvelle liste
+  function changerSexe(nouveau: Sexe) {
+    setSexeChoisi(nouveau);
+    const nouvelleListe = nouveau === "H" ? sizesH : sizesF;
+    if (!nouvelleListe.includes(taille)) {
+      setTaille(nouvelleListe.includes("M") ? "M" : (nouvelleListe[0] || "M"));
     }
   }
 
@@ -164,7 +222,12 @@ export default function TshirtOrderForm({
         </div>
         <div className="bg-white border border-amber-200 rounded-xl p-3 text-sm space-y-1">
           <p><strong>Nom :</strong> {order.prenom} {order.nom}</p>
-          <p><strong>Taille :</strong> <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">{order.taille}</span></p>
+          <p>
+            <strong>Taille :</strong>{" "}
+            <span className="inline-block bg-amber-100 text-amber-800 px-2 py-0.5 rounded font-mono">{order.taille}</span>
+            {order.sexe === "H" && <span className="ml-2 text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">👕 Homme</span>}
+            {order.sexe === "F" && <span className="ml-2 text-[11px] font-semibold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded">👚 Femme</span>}
+          </p>
           {order.couleur && <p><strong>Couleur :</strong> {order.couleur}</p>}
           {order.nomFloque && <p><strong>Floqué :</strong> &quot;{order.nomFloque}&quot;</p>}
         </div>
@@ -222,22 +285,83 @@ export default function TshirtOrderForm({
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-2">
+        {/* 👤 Sexe pour le t-shirt — demandé UNIQUEMENT si pas renseigné sur la fiche adhérent */}
+        {!membreSexe && (
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">
+              Coupe du t-shirt <span className="text-red-500">*</span>
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => changerSexe("H")}
+                className={`text-sm font-semibold border rounded-lg px-3 py-2 transition ${
+                  sexeChoisi === "H"
+                    ? "bg-blue-500 border-blue-500 text-white"
+                    : "bg-white border-amber-300 text-slate-700 hover:border-blue-400"
+                }`}
+              >
+                👕 Homme
+              </button>
+              <button
+                type="button"
+                onClick={() => changerSexe("F")}
+                className={`text-sm font-semibold border rounded-lg px-3 py-2 transition ${
+                  sexeChoisi === "F"
+                    ? "bg-pink-500 border-pink-500 text-white"
+                    : "bg-white border-amber-300 text-slate-700 hover:border-pink-400"
+                }`}
+              >
+                👚 Femme
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500 mt-1">Les tailles disponibles dépendent de la coupe choisie.</p>
+          </div>
+        )}
         <div>
-          <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">Taille</label>
+          <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-0.5">
+            Taille
+            {sexeEffectif === "H" && <span className="ml-2 text-[9px] text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded font-semibold">👕 Homme</span>}
+            {sexeEffectif === "F" && <span className="ml-2 text-[9px] text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded font-semibold">👚 Femme</span>}
+          </label>
           <select
             value={taille}
             onChange={(e) => setTaille(e.target.value as Taille)}
-            className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500 bg-white"
+            disabled={!sexeEffectif}
+            className="w-full text-sm border border-amber-300 rounded-lg px-3 py-1.5 focus:outline-none focus:border-amber-500 bg-white disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {(sizes.includes(taille) ? sizes : [...sizes, taille]).map((t) => (
               <option key={t} value={t}>{t}</option>
             ))}
           </select>
+          {!sexeEffectif && <p className="text-[11px] text-slate-500 mt-1">Choisis d&apos;abord Homme ou Femme ci-dessus.</p>}
         </div>
         {catalogue && (
           <a href={catalogue.url} target="_blank" rel="noopener" className="flex items-center gap-2 text-sm font-semibold text-amber-800 bg-amber-100 hover:bg-amber-200 border border-amber-300 rounded-lg px-3 py-2">
             📄 Voir le catalogue (couleurs et modèles)
           </a>
+        )}
+        {photos.length > 0 && (
+          <div>
+            <label className="text-[10px] uppercase tracking-widest text-slate-500 block mb-1">
+              🖼️ Photos du catalogue
+            </label>
+            <div className="grid grid-cols-3 gap-1.5">
+              {photos.map((p) => (
+                <a
+                  key={p.url}
+                  href={p.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="block border border-amber-200 rounded-lg overflow-hidden bg-white aspect-square hover:border-amber-400 transition"
+                  title={p.name}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                </a>
+              ))}
+            </div>
+          </div>
         )}
         {colors.length > 0 && (
           <div>

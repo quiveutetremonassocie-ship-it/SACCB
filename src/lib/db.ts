@@ -115,6 +115,7 @@ export async function memberSubmitTshirtOrder(args: {
   nom: string;
   prenom: string;
   taille: string; // une des TSHIRT_SIZES_ALL
+  sexe?: "H" | "F"; // 👤 utilisé si pas renseigné sur la fiche membre
   couleur?: string;
   nomFloque?: string;
 }): Promise<{ ok: boolean; reason?: string }> {
@@ -241,7 +242,20 @@ export async function adminFaqReject(adminEmail: string, adminCode: string, pend
 }
 
 // 👕 [ADMIN] Ouvre/ferme les commandes t-shirt et/ou change le prix (price: null = retirer le prix)
-export async function adminSetTshirt(adminEmail: string, adminCode: string, changes: { open?: boolean; price?: number | null; notify?: boolean; sizes?: string[]; paymentUrl?: string | null }): Promise<{ ok: boolean; open?: boolean; price?: number | null; sizes?: string[]; reason?: string }> {
+// sizesH / sizesF : tailles proposées respectivement aux hommes et aux femmes (nouveau découpage).
+export async function adminSetTshirt(
+  adminEmail: string,
+  adminCode: string,
+  changes: {
+    open?: boolean;
+    price?: number | null;
+    notify?: boolean;
+    sizes?: string[];
+    sizesH?: string[];
+    sizesF?: string[];
+    paymentUrl?: string | null;
+  },
+): Promise<{ ok: boolean; open?: boolean; price?: number | null; sizes?: string[]; sizesH?: string[]; sizesF?: string[]; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {
       method: "POST",

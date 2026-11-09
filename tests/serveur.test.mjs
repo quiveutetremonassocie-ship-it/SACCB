@@ -370,3 +370,72 @@ test("les anciens codes en clair sont chiffrés à l'ouverture de l'admin, et l'
   const login = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
   assert.equal(login.json?.ok, true, "Marie se connecte toujours avec son code");
 });
+
+// ─── T-shirts : tailles séparées Homme / Femme ───
+
+test("t-shirts : un adhérent ne voit que les tailles de son sexe (si connu) et ne peut pas commander une taille réservée à l'autre", async () => {
+  // Marie est une adhérente à jour → on la marque "F" dans la base
+  etat.base.membres.find((m) => m.id === "m-marie").sexe = "F";
+  etat.base.tshirtOpen = true;
+  etat.base.tshirtSizesH = ["M", "L", "XL", "XXL"];
+  etat.base.tshirtSizesF = ["XS", "S", "M"];
+
+  // Le serveur renvoie les deux listes + le sexe de la fiche
+  const vue = await appeler({ action: "tshirt_my_order", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
+  assert.equal(vue.json?.ok, true, vue.texte);
+  assert.equal(vue.json.membreSexe, "F");
+  assert.deepEqual(vue.json.sizesH, ["M", "L", "XL", "XXL"]);
+  assert.deepEqual(vue.json.sizesF, ["XS", "S", "M"]);
+
+  // Elle peut commander une taille femme (XS)
+  const ok = await appeler({ action: "tshirt_order", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", taille: "XS" });
+  assert.equal(ok.json?.ok, true, ok.texte);
+  const commande = etat.base.tshirtOrders.find((o) => o.membreId === "m-marie");
+  assert.equal(commande.taille, "XS");
+  assert.equal(commande.sexe, "F", "le sexe est enregistré sur la commande, à partir de la fiche");
+
+  // Elle ne peut PAS commander une taille réservée aux hommes (XXL)
+  const refuse = await appeler({ action: "tshirt_order", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", taille: "XXL" });
+  assert.notEqual(refuse.json?.ok, true, "une taille réservée aux hommes ne doit pas être acceptée pour une adhérente");
+});
+
+test("t-shirts : si le sexe n'est pas connu sur la fiche, on le demande au moment de la commande et il est validé contre les tailles", async () => {
+  // Paul n'a pas de sexe sur sa fiche (et n'est pas à jour → on le passe à jour pour le test)
+  const paul = etat.base.membres.find((m) => m.id === "m-paul");
+  paul.sexe = undefined;
+  paul.ok = true;
+  etat.base.tshirtOpen = true;
+  etat.base.tshirtSizesH = ["M", "L", "XL"];
+  etat.base.tshirtSizesF = ["XS", "S"];
+
+  // Côté serveur : membreSexe est bien null et l'union des tailles est renvoyée
+  const vue = await appeler({ action: "tshirt_my_order", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul" });
+  assert.equal(vue.json?.ok, true, vue.texte);
+  assert.equal(vue.json.membreSexe, null);
+  assert.deepEqual(vue.json.sizesAll, ["XS", "S", "M", "L", "XL"]);
+
+  // Sans sexe envoyé par le client, une taille femme est refusée pour Paul (l'union ne suffit pas, le serveur attend un sexe)
+  const sansSexe = await appeler({ action: "tshirt_order", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul", taille: "L" });
+  // L sans sexe : la liste de secours est "l'union" mais la validation côté client est sur une taille valide. Ici L est dans les 2 unions → accepté sans sexe, l'ordre est créé sans sexe.
+  // → On vérifie plutôt le cas où Paul envoie sexe: "H" et choisit XS (taille femme uniquement) → refusé.
+  assert.equal(sansSexe.json?.ok, true, "L est dans l'union H+F, donc accepté sans sexe (compat ascendante)");
+
+  const hAvecTailleF = await appeler({ action: "tshirt_order", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul", taille: "XS", sexe: "H" });
+  assert.notEqual(hAvecTailleF.json?.ok, true, "XS n'est que pour les femmes : refusé quand Paul se déclare Homme");
+
+  const hAvecTailleH = await appeler({ action: "tshirt_order", email: "paul.attente@exemple.fr", code: "CodePaul", membreId: "m-paul", taille: "M", sexe: "H" });
+  assert.equal(hAvecTailleH.json?.ok, true, "M est bien dans les tailles hommes");
+  const commande = etat.base.tshirtOrders.find((o) => o.membreId === "m-paul");
+  assert.equal(commande.sexe, "H", "le sexe envoyé par le client est bien enregistré");
+});
+
+test("t-shirts : la fiche membre fait foi sur le sexe — un adhérent ne peut pas se faire passer pour l'autre sexe via le client", async () => {
+  // Marie est "F" sur sa fiche : même si elle envoie sexe: "H" dans la commande, c'est "F" qui compte
+  etat.base.membres.find((m) => m.id === "m-marie").sexe = "F";
+  etat.base.tshirtOpen = true;
+  etat.base.tshirtSizesH = ["XXL"];
+  etat.base.tshirtSizesF = ["XS", "S"];
+
+  const r = await appeler({ action: "tshirt_order", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", taille: "XXL", sexe: "H" });
+  assert.notEqual(r.json?.ok, true, "le sexe envoyé par le client ne doit pas court-circuiter le sexe de la fiche");
+});

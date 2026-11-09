@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Shirt, Trash2, Download } from "lucide-react";
-import { type DB, TSHIRT_SIZES_ALL, getTshirtSizes } from "@/lib/types";
+import { type DB, type TshirtPhoto, TSHIRT_SIZES_ALL, getTshirtSizesFor } from "@/lib/types";
 import { adminDeleteTshirtOrder, adminSetTshirt, adminTshirtPaid, adminTshirtRelance, adminUploadFile } from "@/lib/db";
 import { REPORTS_BUCKET, supabaseClient } from "@/lib/supabase";
 
@@ -37,25 +37,33 @@ export default function TshirtAdmin({
     return t;
   }, [orders]);
 
-  // 📏 Tailles proposées aux adhérents (choisies ici) ; on affiche aussi celles déjà commandées
-  const availableSizes = getTshirtSizes(db);
-  const shownSizes = TAILLES.filter((t) => availableSizes.includes(t) || totals[t] > 0);
-  const [savingSizes, setSavingSizes] = useState(false);
+  // 📏 Tailles proposées aux adhérents, séparées par sexe (H / F).
+  // On garde aussi l'union (sizesAll) pour afficher les tailles déjà commandées.
+  const availableSizesH = getTshirtSizesFor(db, "H");
+  const availableSizesF = getTshirtSizesFor(db, "F");
+  const availableSizesAll = getTshirtSizesFor(db);
+  const shownSizes = TAILLES.filter((t) => availableSizesAll.includes(t) || totals[t] > 0);
+  const [savingSizesH, setSavingSizesH] = useState(false);
+  const [savingSizesF, setSavingSizesF] = useState(false);
 
-  async function toggleSize(size: string) {
+  async function toggleSize(sexe: "H" | "F", size: string) {
     if (readOnly) return;
-    const next = availableSizes.includes(size) ? availableSizes.filter((s) => s !== size) : [...availableSizes, size];
+    const current = sexe === "H" ? availableSizesH : availableSizesF;
+    const next = current.includes(size) ? current.filter((s) => s !== size) : [...current, size];
     if (next.length === 0) { alert("Il faut proposer au moins une taille."); return; }
     const ordered = TAILLES.filter((t) => next.includes(t));
-    setSavingSizes(true);
+    const setBusy = sexe === "H" ? setSavingSizesH : setSavingSizesF;
+    setBusy(true);
     if (adminEmail && adminCode) {
-      const r = await adminSetTshirt(adminEmail, adminCode, { sizes: [...ordered] });
+      const payload = sexe === "H" ? { sizesH: [...ordered] } : { sizesF: [...ordered] };
+      const r = await adminSetTshirt(adminEmail, adminCode, payload);
       if (!r.ok) alert("Erreur : les tailles n'ont pas été enregistrées. " + (r.reason || ""));
       if (onRefresh) await onRefresh();
     } else {
-      await onPersist({ ...db, tshirtSizes: [...ordered] });
+      const patch = sexe === "H" ? { tshirtSizesH: [...ordered] } : { tshirtSizesF: [...ordered] };
+      await onPersist({ ...db, ...patch });
     }
-    setSavingSizes(false);
+    setBusy(false);
   }
 
   // 🎨 Couleurs proposées aux adhérents
@@ -99,6 +107,45 @@ export default function TshirtAdmin({
     } finally {
       setEnvoiCatalogue(false);
     }
+  }
+
+  // 🖼️ Photos du catalogue (en plus ou à la place du PDF) — upload image/*
+  const photos: TshirtPhoto[] = Array.isArray(db.tshirtPhotos) ? db.tshirtPhotos : [];
+  const [envoiPhoto, setEnvoiPhoto] = useState(false);
+  async function envoyerPhotos(files: FileList | null) {
+    if (!files || files.length === 0 || readOnly) return;
+    const newPhotos: TshirtPhoto[] = [];
+    setEnvoiPhoto(true);
+    try {
+      for (const file of Array.from(files)) {
+        if (!file.type.startsWith("image/")) { alert(`« ${file.name } » n'est pas une image.`); continue; }
+        if (file.size > 10_000_000) { alert(`« ${file.name } » trop lourde (10 Mo max).`); continue; }
+        let url = "", path = "";
+        if (adminEmail && adminCode) {
+          const r = await adminUploadFile({ adminEmail, adminCode, file, bucket: REPORTS_BUCKET, pathPrefix: "tshirt-photo" });
+          if (!r.ok || !r.url || !r.path) { alert(`Erreur envoi de « ${file.name} » : ${r.reason || "inconnue"}`); continue; }
+          url = r.url; path = r.path;
+        } else {
+          path = `tshirt-photo/photo-${Date.now()}-${file.name.replace(/[^a-zA-Z0-9._-]/g, "_")}`;
+          const { error } = await supabaseClient.storage.from(REPORTS_BUCKET).upload(path, file, { upsert: false, contentType: file.type });
+          if (error) { alert(`Erreur envoi de « ${file.name} » : ${error.message}`); continue; }
+          url = supabaseClient.storage.from(REPORTS_BUCKET).getPublicUrl(path).data.publicUrl;
+        }
+        newPhotos.push({ url, path, name: file.name });
+      }
+      if (newPhotos.length > 0) {
+        await onPersist({ ...db, tshirtPhotos: [...photos, ...newPhotos] });
+      }
+    } finally {
+      setEnvoiPhoto(false);
+    }
+  }
+
+  async function retirerPhoto(path: string) {
+    if (readOnly) return;
+    if (!confirm("Retirer cette photo du catalogue ?")) return;
+    // On ne supprime pas le fichier dans Supabase ici (« Libérer de l'espace » du Journal s'en occupera)
+    await onPersist({ ...db, tshirtPhotos: photos.filter((p) => p.path !== path) });
   }
 
   const totalRecette = price !== null ? orders.length * price : null;
@@ -195,10 +242,17 @@ export default function TshirtAdmin({
     else if (!r.ok) alert("Erreur : " + (r.reason || "Inconnue"));
   }
 
+  // 🏷️ Libellé court du sexe pour l'affichage/les exports (pas d'emoji dans les PDF cf. jsPDF)
+  function sexeLabel(s: string | undefined): string {
+    if (s === "H") return "Homme";
+    if (s === "F") return "Femme";
+    return "";
+  }
+
   function exportCSV() {
-    const rows: string[][] = [["Prenom", "Nom", "Taille", "Couleur", "Floque", "Date"]];
+    const rows: string[][] = [["Prenom", "Nom", "Sexe", "Taille", "Couleur", "Floque", "Date"]];
     orders.forEach((o) => {
-      rows.push([o.prenom, o.nom, o.taille, o.couleur || "", o.nomFloque || "", new Date(o.createdAt).toLocaleString("fr-FR")]);
+      rows.push([o.prenom, o.nom, sexeLabel(o.sexe), o.taille, o.couleur || "", o.nomFloque || "", new Date(o.createdAt).toLocaleString("fr-FR")]);
     });
     const csv = rows.map((r) => r.map((v) => `"${v.replace(/"/g, '""')}"`).join(";")).join("\n");
     const blob = new Blob(["﻿" + csv], { type: "text/csv;charset=utf-8;" });
@@ -208,24 +262,67 @@ export default function TshirtAdmin({
     link.click();
   }
 
-  // 🏭 Bon de commande fabricant : récap par taille + détail trié par taille (floquage compris)
-  // Tri : couleur, puis taille, puis nom
+  // 🏭 Bon de commande fabricant : récap par taille + détail trié par sexe, taille (floquage compris)
+  // Tri : sexe (H puis F puis ?), couleur, taille, nom
+  function sexeTri(s: string | undefined): number {
+    if (s === "H") return 0;
+    if (s === "F") return 1;
+    return 2;
+  }
   const ordersBySize = [...orders].sort((a, b) =>
+    sexeTri(a.sexe) - sexeTri(b.sexe) ||
     (a.couleur || "").localeCompare(b.couleur || "", "fr") ||
     TAILLES.indexOf(a.taille as (typeof TAILLES)[number]) - TAILLES.indexOf(b.taille as (typeof TAILLES)[number]) ||
     `${a.nom} ${a.prenom}`.localeCompare(`${b.nom} ${b.prenom}`, "fr")
   );
 
-  // 📄 PDF pour le fabricant : uniquement Taille, Floquage et Nom, trié par taille
+  // 📄 PDF pour le fabricant : Sexe, Taille, Couleur, Floquage, Nom, trié par sexe puis taille
   async function exportFabricantPdf() {
     const { jsPDF } = await import("jspdf");
     const autoTable = (await import("jspdf-autotable")).default;
     const doc = new jsPDF();
+    const totalH = orders.filter((o) => o.sexe === "H").length;
+    const totalF = orders.filter((o) => o.sexe === "F").length;
+    const totalNC = orders.length - totalH - totalF;
     doc.setFontSize(16);
-    doc.text(`Commande T-shirts SACCB — saison ${db.y1}-${db.y2}`, 14, 18);
+    doc.text(`Commande T-shirts SACCB - saison ${db.y1}-${db.y2}`, 14, 18);
     doc.setFontSize(10);
-    doc.text(`${orders.length} t-shirt${orders.length > 1 ? "s" : ""} · ${shownSizes.map((t) => `${t} : ${totals[t]}`).join("  ·  ")}`, 14, 25);
-    let y = 31;
+    const recapSexe = [
+      totalH > 0 ? `${totalH} Homme${totalH > 1 ? "s" : ""}` : null,
+      totalF > 0 ? `${totalF} Femme${totalF > 1 ? "s" : ""}` : null,
+      totalNC > 0 ? `${totalNC} non renseigne${totalNC > 1 ? "s" : ""}` : null,
+    ].filter(Boolean).join(" - ");
+    doc.text(
+      `${orders.length} t-shirt${orders.length > 1 ? "s" : ""}${recapSexe ? ` - ${recapSexe}` : ""}`,
+      14, 25,
+    );
+    doc.text(shownSizes.map((t) => `${t}: ${totals[t]}`).join("  -  "), 14, 31);
+    let y = 37;
+    // 👤 Récapitulatif par sexe × taille (hommes et femmes séparés) pour le fabricant
+    const recapRows: (string | number)[][] = [];
+    if (totalH > 0) {
+      const de = orders.filter((o) => o.sexe === "H");
+      recapRows.push(["Hommes", ...shownSizes.map((t) => de.filter((o) => o.taille === t).length || ""), de.length]);
+    }
+    if (totalF > 0) {
+      const de = orders.filter((o) => o.sexe === "F");
+      recapRows.push(["Femmes", ...shownSizes.map((t) => de.filter((o) => o.taille === t).length || ""), de.length]);
+    }
+    if (totalNC > 0) {
+      const de = orders.filter((o) => o.sexe !== "H" && o.sexe !== "F");
+      recapRows.push(["Non renseigne", ...shownSizes.map((t) => de.filter((o) => o.taille === t).length || ""), de.length]);
+    }
+    if (recapRows.length > 0) {
+      autoTable(doc, {
+        startY: y,
+        head: [["Sexe", ...shownSizes, "Total"]],
+        body: recapRows,
+        styles: { fontSize: 10, halign: "center" },
+        columnStyles: { 0: { halign: "left", fontStyle: "bold" } },
+        headStyles: { fillColor: [30, 58, 95] },
+      });
+      y = (doc as unknown as { lastAutoTable: { finalY: number } }).lastAutoTable.finalY + 6;
+    }
     if (avecCouleur) {
       // Récapitulatif couleur × taille pour le fabricant
       const cols = [...new Set(orders.map((o) => o.couleur || "Sans couleur"))];
@@ -244,10 +341,10 @@ export default function TshirtAdmin({
     }
     autoTable(doc, {
       startY: y,
-      head: [avecCouleur ? ["Taille", "Couleur", "Floquage", "Nom"] : ["Taille", "Floquage", "Nom"]],
+      head: [avecCouleur ? ["Sexe", "Taille", "Couleur", "Floquage", "Nom"] : ["Sexe", "Taille", "Floquage", "Nom"]],
       body: ordersBySize.map((o) => avecCouleur
-        ? [o.taille, o.couleur || "", o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]
-        : [o.taille, o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]),
+        ? [sexeLabel(o.sexe) || "-", o.taille, o.couleur || "", o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]
+        : [sexeLabel(o.sexe) || "-", o.taille, o.nomFloque || "", `${o.prenom} ${o.nom}`.trim()]),
       styles: { fontSize: 11 },
       headStyles: { fillColor: [30, 58, 95] },
     });
@@ -340,28 +437,57 @@ export default function TshirtAdmin({
         </p>
       </div>
 
-      {/* 📏 Tailles proposées aux adhérents */}
+      {/* 📏 Tailles disponibles — séparées homme / femme (coupes et dispo différentes) */}
       <div className="mb-4 bg-white border border-slate-200 rounded-xl p-3">
         <p className="text-xs uppercase tracking-widest text-slate-600 font-semibold mb-2">📏 Tailles disponibles</p>
-        <div className="flex flex-wrap gap-2">
-          {TAILLES.map((t) => {
-            const on = availableSizes.includes(t);
-            return (
-              <button
-                key={t}
-                onClick={() => toggleSize(t)}
-                disabled={readOnly || savingSizes}
-                className={`min-w-[3rem] text-sm font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-60 ${
-                  on ? "bg-emerald-500 border-emerald-500 text-white" : "bg-white border-slate-300 text-slate-400 line-through"
-                }`}
-                title={on ? "Proposée — cliquer pour la retirer" : "Non proposée — cliquer pour l'ajouter"}
-              >
-                {t}
-              </button>
-            );
-          })}
+
+        {/* Hommes */}
+        <div className="mb-3">
+          <p className="text-xs font-semibold text-blue-700 mb-1.5">👕 Hommes</p>
+          <div className="flex flex-wrap gap-2">
+            {TAILLES.map((t) => {
+              const on = availableSizesH.includes(t);
+              return (
+                <button
+                  key={`H-${t}`}
+                  onClick={() => toggleSize("H", t)}
+                  disabled={readOnly || savingSizesH}
+                  className={`min-w-[3rem] text-sm font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-60 ${
+                    on ? "bg-blue-500 border-blue-500 text-white" : "bg-white border-slate-300 text-slate-400 line-through"
+                  }`}
+                  title={on ? "Proposée aux hommes — cliquer pour la retirer" : "Non proposée aux hommes — cliquer pour l'ajouter"}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
         </div>
-        <p className="text-[11px] text-slate-500 mt-1.5">Cliquez sur une taille pour la proposer ou la retirer. Seules les tailles en vert sont proposées aux adhérents.</p>
+
+        {/* Femmes */}
+        <div>
+          <p className="text-xs font-semibold text-pink-700 mb-1.5">👚 Femmes</p>
+          <div className="flex flex-wrap gap-2">
+            {TAILLES.map((t) => {
+              const on = availableSizesF.includes(t);
+              return (
+                <button
+                  key={`F-${t}`}
+                  onClick={() => toggleSize("F", t)}
+                  disabled={readOnly || savingSizesF}
+                  className={`min-w-[3rem] text-sm font-bold px-3 py-1.5 rounded-lg border transition disabled:opacity-60 ${
+                    on ? "bg-pink-500 border-pink-500 text-white" : "bg-white border-slate-300 text-slate-400 line-through"
+                  }`}
+                  title={on ? "Proposée aux femmes — cliquer pour la retirer" : "Non proposée aux femmes — cliquer pour l'ajouter"}
+                >
+                  {t}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        <p className="text-[11px] text-slate-500 mt-2">Chaque adhérent ne verra que les tailles correspondant à son sexe. S&apos;il n&apos;est pas renseigné, la commande lui demandera H ou F avant de choisir la taille.</p>
       </div>
 
       {/* 🎨 Couleurs proposées aux adhérents */}
@@ -418,6 +544,44 @@ export default function TshirtAdmin({
             <p className="text-xs text-slate-400">Aucun catalogue.</p>
           )}
           <p className="text-[11px] text-slate-500 mt-1.5">Les adhérents voient un bouton « Voir le catalogue » dans leur formulaire de commande.</p>
+        </div>
+
+        {/* 🖼️ Photos du catalogue (en plus du PDF) */}
+        <div className="mt-3 pt-3 border-t border-slate-100">
+          <p className="text-xs font-semibold text-slate-600 mb-1.5">🖼️ Photos du catalogue ({photos.length})</p>
+          {photos.length > 0 && (
+            <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-2 mb-2">
+              {photos.map((p) => (
+                <div key={p.path} className="relative group border border-slate-200 rounded-lg overflow-hidden bg-slate-50 aspect-square">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={p.url} alt={p.name} className="w-full h-full object-cover" loading="lazy" />
+                  {!readOnly && (
+                    <button
+                      onClick={() => retirerPhoto(p.path)}
+                      className="absolute top-1 right-1 bg-white/90 hover:bg-white text-red-600 border border-slate-200 rounded-full w-6 h-6 flex items-center justify-center text-xs font-bold shadow-sm"
+                      title="Retirer cette photo"
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+          {!readOnly ? (
+            <label className="inline-flex text-xs bg-emerald-600 hover:bg-emerald-700 text-white font-semibold px-3 py-1.5 rounded-lg cursor-pointer">
+              {envoiPhoto ? "Envoi…" : photos.length === 0 ? "Ajouter une ou plusieurs photos" : "Ajouter d'autres photos"}
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                disabled={envoiPhoto}
+                onChange={(e) => { envoyerPhotos(e.target.files); e.target.value = ""; }}
+              />
+            </label>
+          ) : (photos.length === 0 && <p className="text-xs text-slate-400">Aucune photo.</p>)}
+          <p className="text-[11px] text-slate-500 mt-1.5">Les adhérents voient les photos directement dans leur formulaire de commande, en plus du catalogue PDF s&apos;il y en a un. Images jusqu&apos;à 10 Mo.</p>
         </div>
       </div>
 
@@ -503,6 +667,9 @@ export default function TshirtAdmin({
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800 truncate">
                   {o.prenom} {o.nom}
+                  {o.sexe === "H" && <span className="ml-2 text-[11px] font-semibold text-blue-700 bg-blue-50 px-1.5 py-0.5 rounded">👕 Homme</span>}
+                  {o.sexe === "F" && <span className="ml-2 text-[11px] font-semibold text-pink-700 bg-pink-50 px-1.5 py-0.5 rounded">👚 Femme</span>}
+                  {!o.sexe && <span className="ml-2 text-[11px] font-semibold text-slate-500 bg-slate-100 px-1.5 py-0.5 rounded" title="Sexe non renseigné">H/F ?</span>}
                   {o.couleur && <span className="ml-2 text-[11px] font-semibold text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded">🎨 {o.couleur}</span>}
                 </p>
                 <p className="text-xs text-slate-500 truncate">
