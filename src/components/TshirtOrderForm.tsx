@@ -135,7 +135,10 @@ export default function TshirtOrderForm({
       setMsg({ ok: false, text: "Choisis une taille parmi les propositions." });
       return;
     }
-    if (colors.length > 0 && !couleur) { setMsg({ ok: false, text: "Choisis une couleur." }); return; }
+    // 🎨 Couleur effective : si une seule est proposée, on la prend d'office (évite de bloquer la modif
+    //    d'une commande ancienne qui n'avait pas encore de couleur enregistrée).
+    const couleurEffective = colors.length === 1 ? colors[0] : couleur;
+    if (colors.length > 0 && !couleurEffective) { setMsg({ ok: false, text: "Choisis une couleur." }); return; }
     setSaving(true);
     setMsg(null);
     // Le serveur ignore nom/prenom du body et utilise ceux du compte membre, on les envoie quand même pour le typage
@@ -146,7 +149,7 @@ export default function TshirtOrderForm({
       taille,
       // 👤 Envoie le sexe choisi uniquement s'il n'est pas déjà sur la fiche (le serveur l'ignore si fiche remplie)
       sexe: membreSexe ?? sexeChoisi ?? undefined,
-      couleur: colors.length > 0 ? couleur : undefined,
+      couleur: colors.length > 0 ? couleurEffective : undefined,
       nomFloque: nomFloque.trim() || undefined,
     });
     setSaving(false);
@@ -160,10 +163,12 @@ export default function TshirtOrderForm({
         prenom: defaultPrenom,
         taille,
         sexe: sexeEffectif,
-        couleur: colors.length > 0 ? couleur : undefined,
+        couleur: colors.length > 0 ? couleurEffective : undefined,
         nomFloque: nomFloque.trim() || undefined,
         createdAt: order?.createdAt || new Date().toISOString(),
       });
+      // 🎨 Synchronise l'état local si on a complété la couleur automatiquement
+      if (couleurEffective && couleurEffective !== couleur) setCouleur(couleurEffective);
       setEditMode(false);
     } else {
       setMsg({ ok: false, text: r.reason || "Erreur." });
