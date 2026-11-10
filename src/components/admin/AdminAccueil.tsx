@@ -1,7 +1,40 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Users, Wallet, Inbox, Shirt, Trophy, GraduationCap, PauseCircle, ChevronRight, Radio, CheckCircle2 } from "lucide-react";
 import { DB } from "@/lib/types";
+
+/** 🕒 Date et heure actuelles, rafraîchies à chaque minute (pour éviter de consommer pour rien). */
+function MaintenantFR() {
+  // Côté serveur / avant hydratation : on affiche rien (évite le mismatch SSR/CSR)
+  const [maintenant, setMaintenant] = useState<Date | null>(null);
+  useEffect(() => {
+    setMaintenant(new Date());
+    // Alignement sur la prochaine minute pleine pour que l'heure change pile à :00s
+    const now = new Date();
+    const msJusquaProchaineMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    const t0 = setTimeout(() => {
+      setMaintenant(new Date());
+      const interval = setInterval(() => setMaintenant(new Date()), 60_000);
+      // On garde la ref du setInterval pour pouvoir le couper si le composant se démonte
+      (t0 as unknown as { _interval?: ReturnType<typeof setInterval> })._interval = interval;
+    }, msJusquaProchaineMinute);
+    return () => {
+      clearTimeout(t0);
+      const intv = (t0 as unknown as { _interval?: ReturnType<typeof setInterval> })._interval;
+      if (intv) clearInterval(intv);
+    };
+  }, []);
+  if (!maintenant) return null;
+  const date = maintenant.toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long", year: "numeric" });
+  const heure = maintenant.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+  return (
+    <div className="text-right" aria-live="off">
+      <div className="text-sm font-semibold text-slate-700 capitalize tabular-nums">{date}</div>
+      <div className="text-xl md:text-2xl font-bold text-slate-800 tabular-nums">{heure}</div>
+    </div>
+  );
+}
 
 type Totaux = { totalRecolte: number; reste: number; aPayes: number; aTotal: number; ePayes: number; eTotal: number; totalDepenses: number; solde: number };
 
@@ -60,9 +93,12 @@ export default function AdminAccueil({
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold text-slate-800">{salut}{prenom ? ` ${prenom}` : ""} 👋</h1>
-        <p className="text-slate-500 text-sm">Saison {saison} · voici l&apos;essentiel du moment.</p>
+      <div className="flex items-start justify-between gap-4 flex-wrap">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-bold text-slate-800">{salut}{prenom ? ` ${prenom}` : ""} 👋</h1>
+          <p className="text-slate-500 text-sm">Saison {saison} · voici l&apos;essentiel du moment.</p>
+        </div>
+        <MaintenantFR />
       </div>
 
       {/* Chiffres clés */}
