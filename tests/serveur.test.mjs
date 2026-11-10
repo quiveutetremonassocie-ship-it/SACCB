@@ -468,3 +468,45 @@ test("sauvegarde complète : tous les fichiers sont copiés à l'octet près, la
   assert.equal(s.json?.ok, true);
   assert.equal(s.json.data._fichiers, undefined);
 });
+
+// ─── 🔒 Droits des admins vérifiés par le serveur (lecture seule, sections) ───
+
+test("un admin en lecture seule peut consulter mais rien modifier, même en appelant le serveur directement", async () => {
+  etat.base.adminEmails = [ADMIN.email, { email: "lecteur@exemple.fr", readOnly: true }];
+  etat.base.adminCredentials.push({ email: "lecteur@exemple.fr", code: "CodeLecteur7", readOnly: true });
+  const vue = await appeler({ action: "admin_fetch", email: "lecteur@exemple.fr", code: "CodeLecteur7" });
+  assert.equal(vue.json?.ok, true, vue.texte);
+  assert.equal(vue.json.readOnly, true);
+  const s = await appeler({ action: "admin_save", email: "lecteur@exemple.fr", code: "CodeLecteur7", data: { ...vue.json.data, quota: 1 }, base: vue.json.data });
+  assert.notEqual(s.json?.ok, true, "enregistrement refusé");
+  const t = await appeler({ action: "admin_set_tshirt", adminEmail: "lecteur@exemple.fr", adminCode: "CodeLecteur7", open: true });
+  assert.notEqual(t.json?.ok, true, "action d'écriture refusée");
+  assert.notEqual(etat.base.tshirtOpen, true, "commandes t-shirts pas ouvertes");
+  assert.equal(etat.base.quota, 65);
+});
+
+test("un admin limité à certaines sections ne peut pas toucher aux adhérents ni aux paramètres, mais peut modifier sa section", async () => {
+  etat.base.adminEmails = [ADMIN.email, { email: "redac@exemple.fr", readOnly: false, permissions: ["actualites"] }];
+  etat.base.adminCredentials.push({ email: "redac@exemple.fr", code: "CodeRedac7" });
+  const vue = (await appeler({ action: "admin_fetch", email: "redac@exemple.fr", code: "CodeRedac7" })).json.data;
+  const ok = await appeler({ action: "admin_save", email: "redac@exemple.fr", code: "CodeRedac7", data: { ...structuredClone(vue), actualites: [...vue.actualites, { id: "a3", title: "Nouvelle", description: "x" }] }, base: vue });
+  assert.equal(ok.json?.ok, true, ok.texte);
+  assert.equal(etat.base.actualites.length, 3);
+  const vue2 = (await appeler({ action: "admin_fetch", email: "redac@exemple.fr", code: "CodeRedac7" })).json.data;
+  const k = await appeler({ action: "admin_save", email: "redac@exemple.fr", code: "CodeRedac7", data: { ...structuredClone(vue2), membres: vue2.membres.slice(1), quota: 2 }, base: vue2 });
+  assert.notEqual(k.json?.ok, true, "suppression d'adhérent et quota refusés");
+  assert.equal(etat.base.membres.length, 3);
+  assert.equal(etat.base.quota, 65);
+});
+
+test("la sauvegarde complète est refusée aux admins en lecture seule ou limités à certaines sections", async () => {
+  etat.base.adminEmails = [ADMIN.email, { email: "lecteur@exemple.fr", readOnly: true }, { email: "redac@exemple.fr", permissions: ["actualites"] }];
+  etat.base.adminCredentials.push({ email: "lecteur@exemple.fr", code: "CodeLecteur7", readOnly: true }, { email: "redac@exemple.fr", code: "CodeRedac7" });
+  for (const [e, c] of [["lecteur@exemple.fr", "CodeLecteur7"], ["redac@exemple.fr", "CodeRedac7"]]) {
+    const r = await appeler({ action: "admin_export_backup", adminEmail: e, adminCode: c, sansFichiers: true });
+    assert.notEqual(r.json?.ok, true, e);
+    assert.ok(!r.texte.includes("h$seltest$"), "aucun code chiffré ne sort");
+  }
+  const ok = await appeler({ action: "admin_export_backup", adminEmail: ADMIN.email, adminCode: ADMIN.code, sansFichiers: true });
+  assert.equal(ok.json?.ok, true, "l'admin complet (script de nuit) garde sa sauvegarde");
+});

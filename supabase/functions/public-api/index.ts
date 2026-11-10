@@ -51,6 +51,16 @@ function isForgotRateLimited(ip: string): boolean {
   return entry.count > 5;
 }
 
+// « Code oublié » : max 3 mails par heure pour une même adresse
+const forgotEmailMap = new Map<string, { count: number; reset: number }>();
+function isForgotEmailLimited(email: string): boolean {
+  const now = Date.now();
+  const entry = forgotEmailMap.get(email);
+  if (!entry || now > entry.reset) { forgotEmailMap.set(email, { count: 1, reset: now + 3_600_000 }); return false; }
+  entry.count++;
+  return entry.count > 3;
+}
+
 // Rate limiting login (max 10 tentatives par 15 min par IP) - protection brute force
 const loginLimitMap = new Map<string, { count: number; reset: number }>();
 
@@ -941,8 +951,40 @@ async function checkAdminAuth(
   if (!adminEmails.includes(email) && !validAdminCred) {
     return json({ ok: false, reason: "Accès non autorisé." }, 403);
   }
+  // 🔒 Admin « lecture seule » : vérifié ICI, côté serveur (pas seulement par les écrans de l'admin)
+  const entree = adminEmailEntries.find((e) => e.email === email);
+  const lectureSeule = (validAdminCred as { readOnly?: boolean } | undefined)?.readOnly === true || entree?.readOnly === true;
+  if (lectureSeule && !ACTIONS_ADMIN_LECTURE.has(String(body.action || ""))) {
+    return json({ ok: false, reason: "Compte admin en lecture seule : modification impossible." }, 403);
+  }
   return null;
 }
+
+// Actions admin qui ne modifient rien et n'envoient aucun mail (autorisées aux admins en lecture seule)
+const ACTIONS_ADMIN_LECTURE = new Set([
+  "admin_fetch", "admin_faq_pending_list", "admin_list_locked_accounts", "admin_drafts_list",
+  "admin_espace", "admin_espace_analyse",
+]);
+
+/** 🔒 Sections autorisées d'un admin (undefined = toutes) et lecture seule — même règle que l'écran admin */
+function droitsAdmin(d: Record<string, unknown>, email: string): { lectureSeule: boolean; sections?: string[] } {
+  const e = email.toLowerCase().trim();
+  const entree = parseAdminEmails((d.adminEmails as unknown[]) || []).find((x) => x.email === e);
+  const cred = ((d.adminCredentials || []) as { email: string; readOnly?: boolean; permissions?: string[] }[])
+    .find((c) => String(c.email || "").toLowerCase() === e);
+  return {
+    lectureSeule: cred?.readOnly === true || entree?.readOnly === true,
+    sections: cred?.permissions ?? entree?.permissions ?? undefined,
+  };
+}
+// Données sensibles et section d'admin requise pour les modifier
+const SECTION_DE_LA_CLE: Record<string, string> = {
+  membres: "membres", formerMembers: "membres",
+  factures: "comptabilite",
+  adminEmails: "saison", adminCredentials: "saison", clubConfig: "saison", y1: "saison", y2: "saison",
+  quota: "saison", insc_open: "saison", insc_close_date: "saison", maintenanceMode: "saison", sectionsVisible: "saison",
+  backupEmailConfig: "saison", contactEmails: "saison",
+};
 
 // ─── 🔒 Écritures concurrentes : fusion à 3 voies ───
 // Toute la base tient dans un seul JSON. Si deux requêtes le modifient en même temps,
@@ -2486,6 +2528,8 @@ async function traiter(req: Request): Promise<Response> {
     const authError = await checkAdminAuth({ ...body, __ip: ip }, currentData);
     if (authError) return authError;
     const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
+    // 🔒 Sauvegarde complète (codes chiffrés, factures, fichiers) : admins à accès complet uniquement
+    if (droitsAdmin(currentData, qui).sections !== undefined) return json({ ok: false, reason: "La sauvegarde complète est réservée aux admins à accès complet." }, 403);
     // 🕵️ Le journal ne sort que pour le propriétaire du site
     const { adminJournal: _j, securiteBlocages: _sb, ...sansJournal } = currentData;
     const exporte: Record<string, unknown> = { ...(qui === JOURNAL_PROPRIETAIRE ? currentData : sansJournal) };
@@ -2607,6 +2651,21 @@ async function traiter(req: Request): Promise<Response> {
 
     if (!validAdminCredSave && !validMembreSave) { adminEchec(email, ip); return json({ ok: false, reason: "Identifiants incorrects." }); }
     if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
+
+    // 🔒 Lecture seule et sections autorisées : vérifiées par le serveur, pas seulement par l'écran
+    const droits = droitsAdmin(d, email);
+    if (droits.lectureSeule) return json({ ok: false, reason: "Compte admin en lecture seule : modification impossible." }, 403);
+    if (droits.sections !== undefined) {
+      // On compare à la version que l'admin a chargée (codes masqués des deux côtés) ; champs tenus par le serveur ignorés
+      const reference = isPlainObject(body.base) ? (body.base as Record<string, unknown>) : d;
+      const sansMasques = (v: unknown) => Array.isArray(v)
+        ? v.map((x) => (isPlainObject(x) ? (({ code: _c, _codeHashed: _h, vuLe: _v, ...r }) => r)(x) : x))
+        : v;
+      const interdites = Object.entries(SECTION_DE_LA_CLE)
+        .filter(([cle, section]) => !droits.sections!.includes(section) && newData[cle] !== undefined && !sameValue(sansMasques(reference[cle]), sansMasques(newData[cle])))
+        .map(([cle]) => cle);
+      if (interdites.length) return json({ ok: false, reason: `Ton compte admin n'a pas accès à cette partie (${interdites.join(", ")}).` }, 403);
+    }
 
     // Seuls les super-admins peuvent modifier la liste adminEmails (ajout/suppression)
     const SUPER_ADMINS = ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
@@ -2732,6 +2791,8 @@ async function traiter(req: Request): Promise<Response> {
     // Validation
     if (!nom || nom.length < 2) return json({ ok: false, reason: "Nom invalide." }, 400);
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
+    // 🔒 Une même adresse ne peut pas recevoir des dizaines de mails d'inscription (même depuis plusieurs connexions)
+    if (!grouped && isForgotEmailLimited("insc:" + email)) return json({ ok: false, reason: "Trop de tentatives pour cette adresse. Réessayez dans une heure." }, 429);
     if (!isValidPhone(tel)) return json({ ok: false, reason: "Téléphone invalide." }, 400);
     if (!code || code.length < 4) {
       return json({ ok: false, reason: "Le mot de passe doit contenir au moins 4 caractères." }, 400);
@@ -3651,6 +3712,9 @@ async function traiter(req: Request): Promise<Response> {
 
     const email = sanitize(String(body.email || "")).toLowerCase();
     if (!isValidEmail(email)) return json({ ok: false, reason: "Email invalide." }, 400);
+    // 🔒 3 demandes par heure et par adresse (même depuis plusieurs connexions) : on ne peut pas inonder
+    // la boîte d'un adhérent. Réponse identique pour ne pas révéler si l'adresse est inscrite.
+    if (isForgotEmailLimited(email)) return json({ ok: true });
 
     const brevoKey = Deno.env.get("BREVO_API_KEY");
     if (!brevoKey) return json({ ok: false, reason: "Service email non configuré." });
