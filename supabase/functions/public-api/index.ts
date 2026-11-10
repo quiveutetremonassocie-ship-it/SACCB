@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { Buffer } from "node:buffer"; // conversion base64 native (rapide) pour la sauvegarde des fichiers
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -908,10 +909,10 @@ async function analyseEspace(supabaseAdmin: unknown, d: Record<string, unknown>)
   return { orphelins, photos };
 }
 
+// ⚡ Conversion native : l'ancienne version (caractère par caractère) consommait trop de temps de calcul
+// et le serveur coupait la sauvegarde au bout d'environ 26 Mo.
 function octetsEnBase64(o: Uint8Array): string {
-  let bin = "";
-  for (let i = 0; i < o.length; i += 0x8000) bin += String.fromCharCode(...o.subarray(i, i + 0x8000));
-  return btoa(bin);
+  return Buffer.from(o.buffer, o.byteOffset, o.byteLength).toString("base64");
 }
 
 async function checkAdminAuth(
@@ -2520,8 +2521,8 @@ async function traiter(req: Request): Promise<Response> {
           total += o.length;
           const meta = JSON.stringify({ bucket, path: f.path, type: f.type, taille: o.length });
           yield `${nombre > 0 ? "," : ""}${meta.slice(0, -1)},"base64":"`;
-          // base64 par tranches de 96 Ko (multiple de 3) : jamais tout le fichier converti d'un coup
-          const TRANCHE = 0x8000 * 3;
+          // base64 par tranches de 768 Ko (multiple de 3) : jamais tout le fichier converti d'un coup
+          const TRANCHE = 3 * 256 * 1024; // 768 Ko (multiple de 3)
           for (let i = 0; i < o.length; i += TRANCHE) yield octetsEnBase64(o.subarray(i, i + TRANCHE));
           yield `"}`;
           nombre++;
