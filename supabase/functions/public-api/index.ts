@@ -2488,11 +2488,29 @@ async function traiter(req: Request): Promise<Response> {
     // 🕵️ Le journal ne sort que pour le propriétaire du site
     const { adminJournal: _j, securiteBlocages: _sb, ...sansJournal } = currentData;
     const exporte: Record<string, unknown> = { ...(qui === JOURNAL_PROPRIETAIRE ? currentData : sansJournal) };
-    // 📁 Copie des fichiers (photos, factures, PDF) dans la même sauvegarde
-    if (body.sansFichiers !== true) {
-      const fichiers: { bucket: string; path: string; type: string; taille: number; base64: string }[] = [];
+    // 💾 Chaque sauvegarde téléchargée est notée au journal (permet de vérifier la sauvegarde de nuit)
+    const noterSauvegarde = async () => {
+      try {
+        currentData.adminJournal = noterJournal(currentData.adminJournal, qui, ip, ["💾 Sauvegarde complète téléchargée"]);
+        currentData.lastBackupExport = new Date().toISOString();
+        await saveDB(currentData);
+      } catch { /* la sauvegarde passe avant tout */ }
+    };
+    const exportedAt = new Date().toISOString();
+    if (body.sansFichiers === true) {
+      await noterSauvegarde();
+      return json({ ok: true, exportedAt, data: exporte });
+    }
+
+    // 📁 Avec les fichiers (photos, factures, PDF) : la réponse est envoyée AU FIL DE L'EAU, fichier par fichier.
+    // Avant, tout était chargé en mémoire d'un coup → « WORKER_RESOURCE_LIMIT » quand les fichiers ont grossi.
+    // Le format reste identique : { ok, exportedAt, data: { ...base, _fichiers: { at, fichiers[], nombre, octets, nonCopies } } }
+    const enc = new TextEncoder();
+    async function* morceaux(): AsyncGenerator<string> {
+      const base = JSON.stringify(exporte);
+      yield `{"ok":true,"exportedAt":${JSON.stringify(exportedAt)},"data":${base.slice(0, -1)}${base.length > 2 ? "," : ""}"_fichiers":{"at":${JSON.stringify(new Date().toISOString())},"fichiers":[`;
       const nonCopies: string[] = [];
-      let total = 0;
+      let total = 0, nombre = 0;
       for (const bucket of BUCKETS_SAUVEGARDE) {
         for (const f of await listerFichiers(supabaseAdmin, bucket)) {
           if (total + f.taille > SAUVEGARDE_FICHIERS_MAX) { nonCopies.push(`${bucket}/${f.path}`); continue; }
@@ -2500,22 +2518,31 @@ async function traiter(req: Request): Promise<Response> {
           if (dlErr || !blob) { nonCopies.push(`${bucket}/${f.path}`); continue; }
           const o = new Uint8Array(await blob.arrayBuffer());
           total += o.length;
-          fichiers.push({ bucket, path: f.path, type: f.type, taille: o.length, base64: octetsEnBase64(o) });
+          const meta = JSON.stringify({ bucket, path: f.path, type: f.type, taille: o.length });
+          yield `${nombre > 0 ? "," : ""}${meta.slice(0, -1)},"base64":"`;
+          // base64 par tranches de 96 Ko (multiple de 3) : jamais tout le fichier converti d'un coup
+          const TRANCHE = 0x8000 * 3;
+          for (let i = 0; i < o.length; i += TRANCHE) yield octetsEnBase64(o.subarray(i, i + TRANCHE));
+          yield `"}`;
+          nombre++;
         }
       }
-      exporte._fichiers = { at: new Date().toISOString(), nombre: fichiers.length, octets: total, nonCopies, fichiers };
+      yield `],"nombre":${nombre},"octets":${total},"nonCopies":${JSON.stringify(nonCopies)}}}}`;
+      await noterSauvegarde(); // notée seulement une fois tous les fichiers envoyés
     }
-    // 💾 Chaque sauvegarde téléchargée est notée au journal (permet de vérifier la sauvegarde de nuit)
-    try {
-      currentData.adminJournal = noterJournal(currentData.adminJournal, qui, ip, ["💾 Sauvegarde complète téléchargée"]);
-      currentData.lastBackupExport = new Date().toISOString();
-      await saveDB(currentData);
-    } catch { /* la sauvegarde passe avant tout */ }
-    return json({
-      ok: true,
-      exportedAt: new Date().toISOString(),
-      data: exporte,
+    const it = morceaux();
+    const flux = new ReadableStream<Uint8Array>({
+      async pull(ctrl) {
+        try {
+          const { value, done } = await it.next();
+          if (done) ctrl.close(); else ctrl.enqueue(enc.encode(value));
+        } catch (e) {
+          console.error("[sauvegarde] envoi interrompu", e);
+          ctrl.error(e);
+        }
+      },
     });
+    return new Response(flux, { status: 200, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 
   // ─── ACTION: Restaurer la DB depuis une sauvegarde JSON — AUTH ADMIN REQUISE ───

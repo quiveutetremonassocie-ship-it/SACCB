@@ -9,7 +9,7 @@ import { ADMIN, SECRETS, baseDeTest } from "./outils/donnees.mjs";
 
 let serveur;
 before(async () => { serveur = await demarrer(); });
-beforeEach(() => { etat.base = baseDeTest(); etat.ecritures = 0; etat.ecrituresMembres = 0; etat.appelsExterieurs = []; });
+beforeEach(() => { etat.base = baseDeTest(); etat.ecritures = 0; etat.ecrituresMembres = 0; etat.appelsExterieurs = []; etat.fichiers = {}; });
 // Garantie globale : aucun appel n'est jamais parti vers un vrai service
 after(() => { assert.ok(globalThis.fetch.name === "fauxFetch", "le réseau doit rester intercepté"); });
 
@@ -438,4 +438,33 @@ test("t-shirts : la fiche membre fait foi sur le sexe — un adhérent ne peut p
 
   const r = await appeler({ action: "tshirt_order", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie", taille: "XXL", sexe: "H" });
   assert.notEqual(r.json?.ok, true, "le sexe envoyé par le client ne doit pas court-circuiter le sexe de la fiche");
+});
+
+// ─── 💾 Sauvegarde complète (base + fichiers), envoyée au fil de l'eau ───
+
+test("sauvegarde complète : tous les fichiers sont copiés à l'octet près, la base est entière, et la sauvegarde est notée au journal", async () => {
+  const octets = (n, graine) => Uint8Array.from({ length: n }, (_, i) => (i * 31 + graine) % 256);
+  etat.fichiers = {
+    actualities: { "1775/photo-a.jpg": octets(300_001, 1), "1776/photo-b.jpg": octets(98_305, 2) },
+    reports: { "reglement.pdf": octets(1, 3), "tshirt/catalogue.pdf": octets(250_000, 4) },
+    factures: { "f1/facture.pdf": octets(12_345, 5) },
+  };
+  const r = await appeler({ action: "admin_export_backup", adminEmail: ADMIN.email, adminCode: ADMIN.code });
+  assert.equal(r.status, 200);
+  assert.equal(r.json?.ok, true, r.texte.slice(0, 300));
+  const d = r.json.data;
+  assert.equal(d.membres.length, 3, "la base est entière");
+  assert.equal(d._fichiers.nombre, 5);
+  assert.deepEqual(d._fichiers.nonCopies, []);
+  for (const f of d._fichiers.fichiers) {
+    const attendu = etat.fichiers[f.bucket][f.path];
+    const recu = Uint8Array.from(Buffer.from(f.base64, "base64"));
+    assert.equal(recu.length, attendu.length, f.path);
+    assert.ok(recu.every((v, i) => v === attendu[i]), `contenu identique : ${f.path}`);
+  }
+  assert.ok(etat.base.lastBackupExport, "sauvegarde notée (date dans le Journal)");
+  // Sans fichiers : réponse classique
+  const s = await appeler({ action: "admin_export_backup", adminEmail: ADMIN.email, adminCode: ADMIN.code, sansFichiers: true });
+  assert.equal(s.json?.ok, true);
+  assert.equal(s.json.data._fichiers, undefined);
 });

@@ -21,6 +21,7 @@ export const etat = {
   ecritures: 0,
   ecrituresMembres: 0, // écritures qui ont changé la liste des adhérents
   appelsExterieurs: [], // { url, corps } : tout ce qui aurait quitté le serveur
+  fichiers: {}, // faux stockage : { bucket: { chemin: Uint8Array } }
 };
 
 /** Mails que le serveur a essayé d'envoyer (interceptés) */
@@ -61,8 +62,28 @@ async function fauxFetch(entree, init = {}) {
       return reponseJson([{ id: 1 }]);
     }
   }
-  // Fichiers (stockage) et autres tables : vide
-  if (url.pathname.startsWith("/storage/")) return reponseJson([]);
+  // Faux stockage de fichiers : etat.fichiers = { bucket: { "dossier/nom.jpg": Uint8Array } }
+  const liste = url.pathname.match(/^\/storage\/v1\/object\/list\/([^/]+)$/);
+  if (liste && methode === "POST") {
+    const prefixe = String(JSON.parse(String(corps || "{}")).prefix || "");
+    const contenu = etat.fichiers[liste[1]] || {};
+    const vus = new Map();
+    for (const [chemin, octets] of Object.entries(contenu)) {
+      if (prefixe && !chemin.startsWith(prefixe + "/")) continue;
+      const reste = prefixe ? chemin.slice(prefixe.length + 1) : chemin;
+      const [nom, ...sous] = reste.split("/");
+      vus.set(nom, sous.length
+        ? { name: nom, id: null }
+        : { name: nom, id: "f-" + nom, created_at: "2026-11-01T00:00:00Z", metadata: { size: octets.length, mimetype: "image/jpeg" } });
+    }
+    return reponseJson([...vus.values()]);
+  }
+  const lecture = url.pathname.match(/^\/storage\/v1\/object\/(?:authenticated\/)?([^/]+)\/(.+)$/);
+  if (lecture && methode === "GET") {
+    const octets = etat.fichiers[lecture[1]]?.[decodeURIComponent(lecture[2])];
+    return octets ? new Response(octets, { status: 200, headers: { "Content-Type": "application/octet-stream" } }) : reponseJson({ error: "introuvable" }, 404);
+  }
+  // Autres tables / appels : vide
   return reponseJson([]);
 }
 
