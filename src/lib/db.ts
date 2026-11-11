@@ -461,7 +461,7 @@ export async function verifyMembre(
   code: string,
   code2fa?: string,
   resend2FA?: boolean
-): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; codeJustReset?: boolean; requires2FA?: boolean; trustToken?: string; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
+): Promise<{ ok: boolean; paid?: boolean; isAdmin?: boolean; adminVerrouille?: boolean; verrouAdmin?: boolean; codeJustReset?: boolean; requires2FA?: boolean; trustToken?: string; membre?: { id: string; nom: string; type: string; email: string; newsOptIn?: boolean }; reason?: string }> {
   const normalizedEmail = email.toLowerCase().trim();
   const trustToken = getTrustToken(normalizedEmail);
   const res = await fetch(EDGE_FUNCTION_URL, {
@@ -1246,6 +1246,20 @@ export async function adminEspace(adminEmail: string, adminCode: string): Promis
       method: "POST",
       headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
       body: JSON.stringify({ action: "admin_espace", adminEmail, adminCode }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}
+
+// 🚨 [PROPRIÉTAIRE] Active / retire le verrou d'urgence de l'administration
+export async function adminVerrouAdmin(email: string, code: string, actif: boolean): Promise<{ ok: boolean; actif?: boolean; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_verrou_admin", email, code, actif }),
     });
     return await res.json();
   } catch {

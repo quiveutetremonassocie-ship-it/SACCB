@@ -101,6 +101,14 @@ export default function AdminAccueil({
         <MaintenantFR />
       </div>
 
+      {/* 🚨 Rappel visible tant que le verrou d'urgence est actif (seul le propriétaire peut voir cette page dans ce cas) */}
+      {db.verrouAdmin?.actif && (
+        <button onClick={() => aller("admin-journal")} className="w-full text-left rounded-xl border-2 border-red-400 bg-red-50 px-4 py-3 hover:bg-red-100 transition">
+          <p className="text-sm font-bold text-red-800">🚨 Verrou d&apos;urgence ACTIF : les autres admins sont bloqués</p>
+          <p className="text-xs text-red-700 mt-0.5">Clique ici pour aller le retirer (Journal).</p>
+        </button>
+      )}
+
       {/* Chiffres clés */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
         {peutVoir("membres") && (

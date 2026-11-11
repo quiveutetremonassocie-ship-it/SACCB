@@ -482,6 +482,9 @@ export type DB = {
   bureauMembers?: BureauMember[];
   // 🔑 Activer la double authentification par email pour les admins
   require2FA?: boolean;
+  // 🚨 Verrou d'urgence : tant qu'il est actif, seul le propriétaire accède à l'administration.
+  // Posé / retiré uniquement par l'action serveur admin_verrou_admin (réservée au propriétaire).
+  verrouAdmin?: { actif: boolean; le: string; par: string };
   // 🔑 Codes 2FA en attente (purgés auto à l'expiration). Stockés en DB
   // car les Edge Functions sont stateless.
   twoFAPending?: { email: string; codeHash: string; expires: number }[];

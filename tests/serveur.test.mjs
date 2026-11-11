@@ -510,3 +510,106 @@ test("la sauvegarde complète est refusée aux admins en lecture seule ou limit�
   const ok = await appeler({ action: "admin_export_backup", adminEmail: ADMIN.email, adminCode: ADMIN.code, sansFichiers: true });
   assert.equal(ok.json?.ok, true, "l'admin complet (script de nuit) garde sa sauvegarde");
 });
+
+// ─── 🚨 Verrou d'urgence de l'administration ───
+
+const PROPRIO = { email: "gabin.binay@gmail.com", code: "CodeProprio" };
+function ajouterProprietaire() {
+  etat.base.adminEmails.push(PROPRIO.email);
+  etat.base.adminCredentials.push({ email: PROPRIO.email, code: PROPRIO.code });
+}
+
+test("verrou d'urgence : seul le propriétaire peut le poser, et il est noté dans le journal", async () => {
+  ajouterProprietaire();
+  const refuse = await appeler({ action: "admin_verrou_admin", email: ADMIN.email, code: ADMIN.code, actif: true });
+  assert.notEqual(refuse.json?.ok, true, "un autre admin ne peut pas verrouiller");
+  assert.equal(etat.base.verrouAdmin, undefined);
+  const inconnu = await appeler({ action: "admin_verrou_admin", email: "intrus@exemple.fr", code: "mauvais", actif: true });
+  assert.notEqual(inconnu.json?.ok, true);
+  assert.equal(etat.base.verrouAdmin, undefined);
+
+  const ok = await appeler({ action: "admin_verrou_admin", email: PROPRIO.email, code: PROPRIO.code, actif: true });
+  assert.equal(ok.json?.ok, true, ok.texte);
+  assert.equal(etat.base.verrouAdmin.actif, true);
+  assert.equal(etat.base.verrouAdmin.par, PROPRIO.email);
+  assert.ok(etat.base.adminJournal[0].actions[0].includes("Verrou d'urgence ACTIVÉ"));
+  assert.deepEqual(mailsIntercepte(), [], "aucun mail n'est préparé");
+});
+
+test("verrou d'urgence actif : les autres admins sont coupés partout (lecture, écriture, actions, connexion), le propriétaire et le public non", async () => {
+  ajouterProprietaire();
+  etat.base.require2FA = true;
+  await appeler({ action: "admin_verrou_admin", email: PROPRIO.email, code: PROPRIO.code, actif: true });
+  assert.equal(etat.base.verrouAdmin.actif, true);
+  const ecritures = etat.ecrituresMembres;
+  const membresAvant = JSON.stringify(etat.base.membres);
+
+  // Lecture, écriture et actions admin : refusées avec le motif « verrou »
+  const lecture = await appeler({ action: "admin_fetch", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(lecture.status, 403);
+  assert.equal(lecture.json?.verrouAdmin, true);
+  sansSecret(lecture.texte, "admin_fetch verrouillé");
+  const ecriture = await appeler({ action: "admin_save", email: ADMIN.email, code: ADMIN.code, data: { ...structuredClone(etat.base), quota: 99 } });
+  assert.equal(ecriture.json?.verrouAdmin, true);
+  assert.notEqual(etat.base.quota, 99);
+  for (const action of ["admin_drafts_list", "admin_list_locked_accounts", "admin_export_backup"]) {
+    const r = await appeler({ action, email: ADMIN.email, code: ADMIN.code, adminEmail: ADMIN.email, adminCode: ADMIN.code });
+    assert.equal(r.json?.verrouAdmin, true, `${action} doit être refusée pendant le verrou`);
+  }
+  // Un compte admin sans fiche adhérent ne se connecte plus (et aucun code de connexion n'est envoyé)
+  const sansFiche = await appeler({ action: "verify_membre", email: "bureau.secret@exemple.fr", code: "CodeBureau" });
+  assert.notEqual(sansFiche.json?.ok, true);
+  assert.equal(sansFiche.json?.verrouAdmin, true);
+  // Un inconnu avec un faux code n'apprend pas que le verrou existe
+  const inconnu = await appeler({ action: "admin_fetch", email: "intrus@exemple.fr", code: "mauvais" });
+  assert.equal(inconnu.json?.verrouAdmin, undefined);
+  assert.equal(etat.ecrituresMembres, ecritures, "rien n'a été modifié pendant les refus");
+  assert.equal(JSON.stringify(etat.base.membres), membresAvant);
+  // Un adhérent qui est aussi admin entre comme simple adhérent
+  // (placé après le contrôle « rien n'a changé » : toute connexion re-chiffre un ancien code, c'est normal)
+  const aussiAdherent = await appeler({ action: "verify_membre", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(aussiAdherent.json?.ok, true, aussiAdherent.texte);
+  assert.equal(aussiAdherent.json.isAdmin, false);
+  assert.equal(aussiAdherent.json.adminVerrouille, true);
+  assert.deepEqual(mailsIntercepte(), [], "pas de code de connexion envoyé pendant le verrou");
+
+  // Le propriétaire garde l'accès
+  const proprio = await appeler({ action: "admin_fetch", email: PROPRIO.email, code: PROPRIO.code });
+  assert.equal(proprio.json?.ok, true, proprio.texte);
+  assert.equal(proprio.json.data.verrouAdmin.actif, true);
+  // Le site public et l'espace adhérent continuent de marcher
+  const pub = await appeler({ action: "fetch_public" });
+  assert.equal(pub.status, 200);
+  assert.ok(!pub.texte.includes("verrouAdmin"), "le verrou n'apparaît pas sur la partie publique");
+  const adherent = await appeler({ action: "member_contact", email: "marie.secrete@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
+  assert.equal(adherent.json?.ok, true);
+});
+
+test("verrou d'urgence : ni une sauvegarde d'écran ni une restauration ne peuvent le retirer ; seul le propriétaire le lève", async () => {
+  ajouterProprietaire();
+  await appeler({ action: "admin_verrou_admin", email: PROPRIO.email, code: PROPRIO.code, actif: true });
+  // Le propriétaire enregistre une copie de la base sans le verrou : il reste en place
+  const vue = (await appeler({ action: "admin_fetch", email: PROPRIO.email, code: PROPRIO.code })).json.data;
+  const sansVerrou = { ...structuredClone(vue), quota: 70 };
+  delete sansVerrou.verrouAdmin;
+  const s = await appeler({ action: "admin_save", email: PROPRIO.email, code: PROPRIO.code, data: sansVerrou, base: vue });
+  assert.equal(s.json?.ok, true, s.texte);
+  assert.equal(etat.base.quota, 70, "ses autres changements passent");
+  assert.equal(etat.base.verrouAdmin?.actif, true, "le verrou reste actif");
+  // Une restauration depuis une vieille sauvegarde (sans verrou) ne le retire pas non plus
+  const vieille = structuredClone(etat.base);
+  delete vieille.verrouAdmin;
+  const rest = await appeler({ action: "admin_import_backup", email: PROPRIO.email, code: PROPRIO.code, backupData: vieille, confirmRestore: true });
+  assert.equal(rest.json?.ok, true, rest.texte);
+  assert.equal(etat.base.verrouAdmin?.actif, true, "le verrou survit à une restauration");
+  // Un autre admin ne peut pas le lever
+  const tentative = await appeler({ action: "admin_verrou_admin", email: ADMIN.email, code: ADMIN.code, actif: false });
+  assert.notEqual(tentative.json?.ok, true);
+  assert.equal(etat.base.verrouAdmin?.actif, true);
+  // Le propriétaire le lève : les autres admins reviennent
+  const leve = await appeler({ action: "admin_verrou_admin", email: PROPRIO.email, code: PROPRIO.code, actif: false });
+  assert.equal(leve.json?.ok, true, leve.texte);
+  assert.equal(etat.base.verrouAdmin, undefined);
+  const retour = await appeler({ action: "admin_fetch", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(retour.json?.ok, true, "l'admin peut de nouveau se connecter");
+});

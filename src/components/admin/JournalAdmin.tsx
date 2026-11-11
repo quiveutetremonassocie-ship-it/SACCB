@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Search } from "lucide-react";
 import { DB } from "@/lib/types";
-import { adminEspace, adminEspaceAnalyse, adminEspaceCompresser, adminEspaceSupprimer, adminJournalAnnuler, AnalyseEspace, EspaceServeur } from "@/lib/db";
+import { adminEspace, adminEspaceAnalyse, adminEspaceCompresser, adminEspaceSupprimer, adminJournalAnnuler, adminVerrouAdmin, AnalyseEspace, EspaceServeur } from "@/lib/db";
 import { SUPA_URL } from "@/lib/supabase";
 
 /** Recompresse une photo (1600 px max) ; null si le gain est trop faible */
@@ -275,6 +275,43 @@ function PlaceServeur({ adminEmail, adminCode }: { adminEmail?: string; adminCod
 }
 
 /** 🕵️ Journal des actions admin — visible uniquement par le propriétaire du site (filtré côté serveur) */
+/** 🚨 Verrou d'urgence : coupe l'accès de tous les autres admins en un clic (propriétaire seul) */
+function VerrouUrgence({ db, adminEmail, adminCode, onRefresh }: { db: DB; adminEmail?: string; adminCode?: string; onRefresh?: () => void | Promise<void> }) {
+  const [occupe, setOccupe] = useState(false);
+  const actif = db.verrouAdmin?.actif === true;
+
+  async function changer(nouveau: boolean) {
+    if (!adminEmail || !adminCode) { alert("Reconnecte-toi pour utiliser le verrou."); return; }
+    const message = nouveau
+      ? "🚨 VERROUILLER L'ADMINISTRATION ?\n\n• Tous les autres admins sont coupés immédiatement (connexion, lecture, modifications, mails).\n• Toi seul gardes l'accès.\n• Le site public et l'espace adhérent continuent de fonctionner normalement.\n• Tu pourras retirer le verrou à tout moment.\n\nContinuer ?"
+      : "Retirer le verrou d'urgence ?\n\nLes autres admins pourront de nouveau se connecter avec leur code.";
+    if (!confirm(message)) return;
+    setOccupe(true);
+    const r = await adminVerrouAdmin(adminEmail, adminCode, nouveau);
+    setOccupe(false);
+    if (!r.ok) { alert(r.reason || "Impossible de changer le verrou."); return; }
+    await onRefresh?.();
+  }
+
+  return actif ? (
+    <div className="rounded-xl border-2 border-red-400 bg-red-50 px-4 py-3">
+      <p className="text-sm font-bold text-red-800">🚨 Verrou d&apos;urgence ACTIF{db.verrouAdmin?.le ? ` depuis le ${new Date(db.verrouAdmin.le).toLocaleString("fr-FR", { dateStyle: "short", timeStyle: "short" })}` : ""}</p>
+      <p className="text-xs text-red-700 mt-1">Seul toi peux accéder à l&apos;administration. Les autres admins sont bloqués. Pense à changer les codes concernés (Paramètres saison), puis retire le verrou.</p>
+      <button onClick={() => changer(false)} disabled={occupe} className="mt-2 text-xs font-semibold bg-white border border-red-300 text-red-700 hover:bg-red-100 rounded-lg px-3 py-1.5 disabled:opacity-50">
+        {occupe ? "…" : "🔓 Retirer le verrou"}
+      </button>
+    </div>
+  ) : (
+    <div className="rounded-xl border border-slate-200 bg-white px-4 py-3">
+      <p className="text-sm font-bold text-slate-800">🚨 Verrou d&apos;urgence</p>
+      <p className="text-xs text-slate-500 mt-1">Si quelqu&apos;un d&apos;autre est dans l&apos;administration et que ça n&apos;est pas normal : ce bouton coupe tous les autres admins immédiatement. Toi seul gardes l&apos;accès. Le site public et l&apos;espace adhérent ne changent pas.</p>
+      <button onClick={() => changer(true)} disabled={occupe} className="mt-2 text-xs font-semibold bg-red-600 hover:bg-red-700 text-white rounded-lg px-3 py-1.5 disabled:opacity-50">
+        {occupe ? "…" : "🚨 Verrouiller l'administration maintenant"}
+      </button>
+    </div>
+  );
+}
+
 export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: { db: DB; adminEmail?: string; adminCode?: string; onRefresh?: () => void | Promise<void> }) {
   const [q, setQ] = useState("");
   const [enCours, setEnCours] = useState<string | null>(null);
@@ -310,6 +347,7 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
   let jourPrec = "";
   return (
     <div className="space-y-4">
+      <VerrouUrgence db={db} adminEmail={adminEmail} adminCode={adminCode} onRefresh={onRefresh} />
       <div className={`rounded-xl px-4 py-3 text-sm border ${heures <= 26 ? "bg-emerald-50 border-emerald-200 text-emerald-800" : "bg-red-50 border-red-300 text-red-800"}`}>
         💾 <strong>Dernière sauvegarde complète téléchargée :</strong>{" "}
         {derniere ? derniere.toLocaleString("fr-FR", { dateStyle: "full", timeStyle: "short" }) : "aucune depuis la mise en place du journal"}

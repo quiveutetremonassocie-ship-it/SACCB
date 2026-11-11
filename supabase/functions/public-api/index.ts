@@ -925,6 +925,19 @@ function octetsEnBase64(o: Uint8Array): string {
   return Buffer.from(o.buffer, o.byteOffset, o.byteLength).toString("base64");
 }
 
+// 🚨 Verrou d'urgence : tant qu'il est actif, seul le propriétaire garde l'accès à l'administration.
+// Posé / retiré uniquement par l'action admin_verrou_admin (jamais par admin_save).
+const MSG_VERROU = "L'administration est verrouillée par le propriétaire du site (verrou d'urgence). Contactez-le.";
+function verrouAdminActif(d: Record<string, unknown>): boolean {
+  return (d.verrouAdmin as { actif?: boolean } | undefined)?.actif === true;
+}
+/** Réponse de refus si le verrou est actif et que la personne n'est pas le propriétaire (sinon null) */
+function refusVerrou(d: Record<string, unknown>, email: string, ip: string, action: string): Response | null {
+  if (!verrouAdminActif(d) || email === JOURNAL_PROPRIETAIRE) return null;
+  noterBlocage(ip, action || "admin", "Verrou d'urgence : accès admin refusé");
+  return json({ ok: false, verrouAdmin: true, reason: MSG_VERROU }, 403);
+}
+
 async function checkAdminAuth(
   body: Record<string, unknown>,
   d: Record<string, unknown>
@@ -951,6 +964,9 @@ async function checkAdminAuth(
   if (!adminEmails.includes(email) && !validAdminCred) {
     return json({ ok: false, reason: "Accès non autorisé." }, 403);
   }
+  // 🚨 Verrou d'urgence (après la vérification du code : on ne révèle rien à un inconnu)
+  const verrou = refusVerrou(d, email, ip, String(body.action || ""));
+  if (verrou) return verrou;
   // 🔒 Admin « lecture seule » : vérifié ICI, côté serveur (pas seulement par les écrans de l'admin)
   const entree = adminEmailEntries.find((e) => e.email === email);
   const lectureSeule = (validAdminCred as { readOnly?: boolean } | undefined)?.readOnly === true || entree?.readOnly === true;
@@ -2336,6 +2352,9 @@ async function traiter(req: Request): Promise<Response> {
     const adminCred = await findAdminCredByCredentials(adminCredentials, email, code);
     if (adminCred) {
       clearLoginFailures(email);
+      // 🚨 Verrou d'urgence : compte admin sans fiche adhérent → connexion refusée (pas de code 2FA envoyé non plus)
+      const verrouConnexion = refusVerrou(currentData, email, ip, "verify_membre");
+      if (verrouConnexion) return verrouConnexion;
       // 🔑 Gate 2FA admin si activé
       const gate = await handle2FA();
       if (gate) return gate;
@@ -2379,7 +2398,10 @@ async function traiter(req: Request): Promise<Response> {
       await migrateCodeIfNeeded(supabaseAdmin, currentData, { type: "membre", id: String(membre.id), plainCode: code });
     }
 
-    const isAdmin = adminEmails.includes(email);
+    // 🚨 Verrou d'urgence : un adhérent qui est aussi admin se connecte comme simple adhérent (sans 2FA ni accès admin)
+    const adminVerrouille = adminEmails.includes(email) && verrouAdminActif(currentData) && email !== JOURNAL_PROPRIETAIRE;
+    if (adminVerrouille) noterBlocage(ip, "verify_membre", "Verrou d'urgence : connexion admin refusée");
+    const isAdmin = adminEmails.includes(email) && !adminVerrouille;
     const codeJustReset = membre.codeJustReset === true;
 
     // 🔑 Gate 2FA pour admin via membre
@@ -2418,6 +2440,7 @@ async function traiter(req: Request): Promise<Response> {
       ok: true,
       paid: membre.ok === true,
       isAdmin,
+      ...(adminVerrouille ? { adminVerrouille: true } : {}),
       codeJustReset,
       membre: {
         id: membre.id,
@@ -2479,6 +2502,8 @@ async function traiter(req: Request): Promise<Response> {
 
     if (!validAdminCred && !validMembre) { adminEchec(email, ip); return json({ ok: false, reason: "Identifiants incorrects." }); }
     if (!adminEmails.includes(email) && !validAdminCred) return json({ ok: false, reason: "Accès non autorisé." });
+    const verrouFetch = refusVerrou(d, email, ip, "admin_fetch"); // 🚨 verrou d'urgence
+    if (verrouFetch) return verrouFetch;
 
     const adminEmailEntry = adminEmailEntries.find((e) => e.email === email);
     const isReadOnly = validAdminCred?.readOnly === true || adminEmailEntry?.readOnly === true;
@@ -2617,6 +2642,8 @@ async function traiter(req: Request): Promise<Response> {
       return json({ ok: false, reason: "Flag de confirmation manquant." }, 400);
     }
 
+    // 🚨 Une restauration ne doit pas lever le verrou d'urgence (ni le poser à cause d'une vieille sauvegarde)
+    if (currentData.verrouAdmin === undefined) delete newData.verrouAdmin; else newData.verrouAdmin = currentData.verrouAdmin;
     // 🕵️ Une restauration ne doit pas effacer le journal : on garde l'actuel et on la note
     newData.adminJournal = noterJournal(currentData.adminJournal, sanitize(String(body.email || "")).toLowerCase(), ip, ["♻️ Base restaurée depuis une sauvegarde"]);
     const { error: updateError } = await saveDB(newData);
@@ -2651,6 +2678,8 @@ async function traiter(req: Request): Promise<Response> {
 
     if (!validAdminCredSave && !validMembreSave) { adminEchec(email, ip); return json({ ok: false, reason: "Identifiants incorrects." }); }
     if (!adminEmails.includes(email) && !validAdminCredSave) return json({ ok: false, reason: "Accès non autorisé." });
+    const verrouSave = refusVerrou(d, email, ip, "admin_save"); // 🚨 verrou d'urgence
+    if (verrouSave) return verrouSave;
 
     // 🔒 Lecture seule et sections autorisées : vérifiées par le serveur, pas seulement par l'écran
     const droits = droitsAdmin(d, email);
@@ -2724,6 +2753,9 @@ async function traiter(req: Request): Promise<Response> {
         c.code = await hashCode(v);
       }
     }
+
+    // 🚨 Le verrou d'urgence est tenu par le serveur seul : un client ne peut ni le poser ni le retirer ici
+    if (d.verrouAdmin === undefined) delete newData.verrouAdmin; else newData.verrouAdmin = d.verrouAdmin;
 
     // 🕵️ Journal : ce que cet admin vient de changer (le journal lui-même n'est jamais modifiable par le client)
     const changements = resumeChangements(d, newData);
@@ -5235,6 +5267,26 @@ async function traiter(req: Request): Promise<Response> {
       await saveDB(d);
     }
     return json({ ok: true, supprimes, octets: octetsLiberes, ignores: demandes.length - supprimes });
+  }
+
+  // ─── ACTION: 🚨 Verrou d'urgence de l'administration (propriétaire uniquement) ───
+  // actif = true : plus aucun autre admin ne peut se connecter ni agir (connexion, lecture, écriture, mails…).
+  // actif = false : tout redevient normal. Le propriétaire garde toujours son accès.
+  if (action === "admin_verrou_admin") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
+    if (authError) return authError;
+    const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
+    if (qui !== JOURNAL_PROPRIETAIRE) return json({ ok: false, reason: "Réservé au propriétaire du site." }, 403);
+    if (typeof body.actif !== "boolean") return json({ ok: false, reason: "Choix du verrou manquant." }, 400);
+    if (body.actif) d.verrouAdmin = { actif: true, le: new Date().toISOString(), par: qui };
+    else delete d.verrouAdmin;
+    d.adminJournal = noterJournal(d.adminJournal, qui, ip, [body.actif ? "🚨 Verrou d'urgence ACTIVÉ : seul le propriétaire accède à l'administration" : "🔓 Verrou d'urgence retiré : l'administration est de nouveau accessible aux admins"]);
+    const { error: saveErr } = await saveDB(d);
+    if (saveErr) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true, actif: body.actif });
   }
 
   // ─── ACTION: 📊 Place utilisée sur le serveur (propriétaire uniquement) ───

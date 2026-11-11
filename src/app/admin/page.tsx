@@ -170,7 +170,9 @@ export default function AdminPage() {
       return;
     }
     if (!r.isAdmin) {
-      setError("Ce compte n'a pas accès à l'administration.");
+      setError(r.adminVerrouille
+        ? "L'administration est verrouillée par le propriétaire du site (verrou d'urgence). Contactez-le."
+        : "Ce compte n'a pas accès à l'administration.");
       return;
     }
     setNeeds2FA(false);

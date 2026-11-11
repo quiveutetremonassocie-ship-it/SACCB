@@ -2,7 +2,7 @@
 // ⚠️ À METTRE À JOUR à chaque modification importante (nouvelle rubrique, nouvelle fonction, nouvelle règle).
 // L'historique des modifications et l'état du site sont ajoutés automatiquement dans le PDF.
 
-export const FICHE_MAJ_LE = "2026-11-10";
+export const FICHE_MAJ_LE = "2026-11-11";
 
 export type SectionFiche = { titre: string; lignes: string[] };
 
@@ -101,6 +101,7 @@ export const FICHE_SITE: SectionFiche[] = [
       "Date de la dernière sauvegarde complète (vert < 24 h).",
       "Place sur le serveur (jauges base 500 Mo / fichiers 1 Go) + bouton « Libérer de l'espace » (compression des photos, fichiers inutilisés à supprimer après validation, factures jamais cochées d'office).",
       "Requêtes bloquées (trop de requêtes, essais de codes) avec bouton « Copier pour Claude ».",
+      "🚨 Verrou d'urgence (en haut du Journal, propriétaire seul) : un clic coupe immédiatement tous les autres admins (connexion, lecture, modifications, mails) ; seul gabin.binay@gmail.com garde l'accès. Le site public et l'espace adhérent ne changent pas. Posé / retiré par l'action serveur admin_verrou_admin (db.verrouAdmin {actif, le, par}) ; refusé par checkAdminAuth, admin_fetch, admin_save et verify_membre (un adhérent qui est aussi admin entre alors comme simple adhérent, sans code de connexion envoyé). admin_save et la restauration de sauvegarde ne peuvent ni le poser ni le retirer. Un bandeau rouge rappelle sur le tableau de bord qu'il est actif. Les tentatives refusées apparaissent dans « Requêtes bloquées ».",
       "Bouton « Fiche du site pour Claude » : ce PDF.",
     ],
   },
