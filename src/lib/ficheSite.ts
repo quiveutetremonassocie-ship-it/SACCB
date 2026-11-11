@@ -127,6 +127,7 @@ export const FICHE_SITE: SectionFiche[] = [
       "Sauvegarde complète (bouton dans Sauvegarde & export, et sauvegarde de nuit) : toute la base + journal (propriétaire) + photos, factures et PDF ; à la restauration, seuls les fichiers manquants sont remis.",
       "Sauvegarde mensuelle automatique par mail (base seule).",
       "Base fermée au public (accès direct refusé), codes chiffrés (PBKDF2), blocage après 5 erreurs (connexion ET accès admin directs), limites de requêtes par adresse IP.",
+      "🔔 Alerte de connexion (propriétaire) : à chaque connexion réussie à l'administration sur le compte gabin.binay@gmail.com (après le code mail s'il est demandé), un mail « Connexion à ton compte admin SACCB » part à lui seul avec l'heure, l'adresse IP partielle et l'appareil, et la marche à suivre si ce n'est pas lui. Fonction alerteConnexionProprietaire, appelée par verify_membre (compte admin et compte adhérent-admin). Comme le code admin n'est jamais gardé, ouvrir /admin le redemande : une alerte par ouverture. Volontairement NON enregistré dans l'historique des mails (visible par les autres admins). Une panne d'envoi ne bloque jamais la connexion.",
       "Aucun email, téléphone ni code dans les données publiques ; votes des sondages anonymes.",
     ],
   },

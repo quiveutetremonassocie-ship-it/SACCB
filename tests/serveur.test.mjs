@@ -5,7 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { demarrer, appeler, etat, mailsIntercepte } from "./outils/fauxServeur.mjs";
 import { RACINE } from "./outils/compiler.mjs";
-import { ADMIN, SECRETS, baseDeTest } from "./outils/donnees.mjs";
+import { ADMIN, SECRETS, baseDeTest, chiffrer } from "./outils/donnees.mjs";
 
 let serveur;
 before(async () => { serveur = await demarrer(); });
@@ -612,4 +612,41 @@ test("verrou d'urgence : ni une sauvegarde d'écran ni une restauration ne peuve
   assert.equal(etat.base.verrouAdmin, undefined);
   const retour = await appeler({ action: "admin_fetch", email: ADMIN.email, code: ADMIN.code });
   assert.equal(retour.json?.ok, true, "l'admin peut de nouveau se connecter");
+});
+
+// ─── 🔔 Alerte de connexion sur le compte du propriétaire ───
+
+test("alerte de connexion : le propriétaire reçoit un mail (à lui seul) à chaque connexion admin sur son compte ; rien pour les autres ni pour un code faux ; l'adresse est masquée", async () => {
+  ajouterProprietaire();
+  etat.base.membres.push({ id: "m-proprio", nom: "Gabin Proprio", email: PROPRIO.email, tel: "0600000009", code: chiffrer("CodeMembreProprio"), type: "Adulte", ok: true, date: "2026-09-01" });
+  const alertes = () => mailsIntercepte().filter((m) => JSON.stringify(m).includes("Connexion à ton compte admin"));
+
+  // Code faux sur son compte : aucune alerte
+  await appeler({ action: "verify_membre", email: PROPRIO.email, code: "mauvais" });
+  assert.equal(alertes().length, 0, "pas d'alerte pour un code faux");
+  // Un autre admin se connecte : aucune alerte
+  const autre = await appeler({ action: "verify_membre", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(autre.json?.isAdmin, true, autre.texte);
+  assert.equal(alertes().length, 0, "la connexion d'un autre admin ne déclenche pas d'alerte");
+
+  // Connexion du propriétaire (compte admin) : une alerte, à lui seul, adresse masquée, aucun code dedans
+  const co = await appeler({ action: "verify_membre", email: PROPRIO.email, code: PROPRIO.code }, "203.0.113.45");
+  assert.equal(co.json?.isAdmin, true, co.texte);
+  const recues = alertes();
+  assert.ok(recues.length > 0, "une alerte est préparée");
+  const texte = JSON.stringify(recues);
+  assert.ok(texte.includes(PROPRIO.email), "elle part au propriétaire");
+  assert.ok(!texte.includes("intrus@") && !texte.includes(ADMIN.email), "elle ne part à personne d'autre");
+  assert.ok(texte.includes("203.0.113.x"), "l'adresse est partielle");
+  assert.ok(!texte.includes("203.0.113.45"), "l'adresse complète n'apparaît pas");
+  assert.ok(!texte.includes(PROPRIO.code) && !texte.includes("CodeMembreProprio"), "aucun code dans le mail");
+
+  // Même alerte par l'autre chemin de connexion (son code d'adhérent)
+  etat.appelsExterieurs = [];
+  const parFiche = await appeler({ action: "verify_membre", email: PROPRIO.email, code: "CodeMembreProprio" });
+  assert.equal(parFiche.json?.isAdmin, true, parFiche.texte);
+  assert.ok(alertes().length > 0, "alerte aussi quand il entre avec son code d'adhérent");
+
+  // Ses heures de connexion ne se retrouvent pas dans l'historique des mails visible par les autres admins
+  assert.ok(!JSON.stringify(etat.base).includes("Connexion à ton compte admin"), "pas enregistrée dans l'historique des mails");
 });

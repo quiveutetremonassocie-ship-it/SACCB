@@ -938,6 +938,45 @@ function refusVerrou(d: Record<string, unknown>, email: string, ip: string, acti
   return json({ ok: false, verrouAdmin: true, reason: MSG_VERROU }, 403);
 }
 
+// 🔔 Alerte au propriétaire à chaque connexion admin réussie sur SON compte (envoyée à lui seul).
+// Pas d'enregistrement dans l'historique des mails (visible par les autres admins) : ses heures de connexion restent privées.
+// Best-effort : une panne d'envoi ne doit jamais empêcher la connexion.
+async function alerteConnexionProprietaire(ip: string, userAgent: string): Promise<void> {
+  const brevoKey = Deno.env.get("BREVO_API_KEY");
+  if (!brevoKey) return;
+  const quand = new Date().toLocaleString("fr-FR", { timeZone: "Europe/Paris", dateStyle: "full", timeStyle: "short" });
+  const heure = new Date().toLocaleTimeString("fr-FR", { timeZone: "Europe/Paris", hour: "2-digit", minute: "2-digit" });
+  const appareil = String(userAgent || "inconnu").slice(0, 140);
+  const adresse = ipMasquee(ip);
+  const conduite = "Si ce n'est pas toi :\n1. Ouvre l'administration → Journal → clique sur « Verrouiller l'administration maintenant » (tu gardes l'accès, les autres sont coupés).\n2. Change ton code admin.\n3. Change le mot de passe de ta boîte mail.";
+  try {
+    await sendBrevo(brevoKey, {
+      from: "SACCB <contact@saccb.fr>",
+      to: [JOURNAL_PROPRIETAIRE],
+      subject: `🔔 Connexion à ton compte admin SACCB (${heure})`,
+      text: `Quelqu'un vient de se connecter à ton compte administrateur SACCB.\n\nQuand : ${quand}\nAdresse (partielle) : ${adresse}\nAppareil : ${appareil}\n\nSi c'est toi, tu n'as rien à faire.\n\n${conduite}\nhttps://saccb.fr/admin/`,
+      html: `<div style="font-family: Arial, sans-serif; max-width: 560px; color: #1f2937; line-height: 1.6; font-size: 15px;">
+        <p><strong>🔔 Quelqu'un vient de se connecter à ton compte administrateur SACCB.</strong></p>
+        <table style="border-collapse: collapse; font-size: 14px;">
+          <tr><td style="padding: 4px 12px 4px 0; color: #64748b;">Quand</td><td>${escapeHtml(quand)}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #64748b;">Adresse (partielle)</td><td>${escapeHtml(adresse)}</td></tr>
+          <tr><td style="padding: 4px 12px 4px 0; color: #64748b;">Appareil</td><td>${escapeHtml(appareil)}</td></tr>
+        </table>
+        <p>Si c'est toi, tu n'as rien à faire.</p>
+        <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 12px 14px; font-size: 14px;">
+          <p style="margin: 0 0 6px;"><strong>Si ce n'est pas toi :</strong></p>
+          <ol style="margin: 0; padding-left: 20px;">
+            <li>Ouvre l'administration → Journal → clique sur « Verrouiller l'administration maintenant » (tu gardes l'accès, les autres sont coupés).</li>
+            <li>Change ton code admin.</li>
+            <li>Change le mot de passe de ta boîte mail.</li>
+          </ol>
+        </div>
+        <p style="font-size: 13px;"><a href="https://saccb.fr/admin/">https://saccb.fr/admin/</a></p>
+      </div>`,
+    });
+  } catch (e) { console.error("[alerte connexion propriétaire]", e); }
+}
+
 async function checkAdminAuth(
   body: Record<string, unknown>,
   d: Record<string, unknown>
@@ -2369,6 +2408,8 @@ async function traiter(req: Request): Promise<Response> {
         currentData.adminLoginLog = log.slice(0, 50);
         await saveDB(currentData);
       } catch { /* best-effort */ }
+      // 🔔 Alerte mail au propriétaire quand c'est SON compte qui se connecte (après le code mail s'il est demandé)
+      if (email === JOURNAL_PROPRIETAIRE) await alerteConnexionProprietaire(ip, req.headers.get("user-agent") || "");
       // 👤 Admins = adhérents : si une fiche adhérent existe avec cet email, la session
       // prend son identité (nom, type, statut payé) — sinon identité « admin » minimale.
       const ficheAdmin = membres.filter((m) => String(m.email || "").toLowerCase() === email);
@@ -2419,6 +2460,8 @@ async function traiter(req: Request): Promise<Response> {
         // sera persisté en même temps que codeJustReset ci-dessous
       } catch { /* best-effort */ }
     }
+    // 🔔 Alerte mail au propriétaire quand c'est SON compte qui se connecte à l'administration
+    if (isAdmin && email === JOURNAL_PROPRIETAIRE) await alerteConnexionProprietaire(ip, req.headers.get("user-agent") || "");
 
     // Si le flag est levé, on le retire en base : la popup ne s'affichera qu'une fois après reset
     if (codeJustReset) {
