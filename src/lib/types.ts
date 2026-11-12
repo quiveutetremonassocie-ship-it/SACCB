@@ -456,6 +456,8 @@ export type DB = {
   emailHistory?: EmailLog[];
   // Messages reçus via le formulaire de contact public (boîte de réception partagée)
   contactMessages?: ContactMessage[];
+  // 🚫 Expéditeurs bloqués du formulaire de contact : « nom@domaine.fr » ou « @domaine.fr » (jamais un domaine de messagerie très répandu)
+  contactBloques?: string[];
   // Nom du président (utilisé dans les reçus, signatures, etc.)
   presidentName?: string;
   // 👁️ Toggles de visibilité des sections publiques côté site (admin → "Visibilité sections")
@@ -570,6 +572,7 @@ export type ContactMessage = {
   respondedBy?: string;  // email de l'admin qui a marqué "répondu"
   respondedAt?: string;  // ISO timestamp
   archived?: boolean;    // masqué dans la liste principale
+  lienSuspect?: boolean; // 🔗 le message contient un lien (probable hameçonnage) — rien n'est supprimé
   // 📨 Provenance du message : "form" = via formulaire contact du site (défaut),
   // "email_reply" = réponse par email à un mail envoyé par l'admin, captée
   // automatiquement via Brevo Inbound Parsing.

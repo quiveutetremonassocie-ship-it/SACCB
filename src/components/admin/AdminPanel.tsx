@@ -344,7 +344,7 @@ export default function AdminPanel({
     ) },
     { id: "admin-messages", label: "Messages reçus", icon: Inbox, groupe: "Communication", visible: canSee("emailing"), badge: messagesNonLus, render: () => (
       <>
-        <MessagesAdmin db={db} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
+        <MessagesAdmin db={db} onRefresh={onRefresh} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
       </>
     ) },
     { id: "admin-emailing", label: "Envoyer un mail", icon: Mail, groupe: "Communication", visible: canSee("emailing"), render: () => (

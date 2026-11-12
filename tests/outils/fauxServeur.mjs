@@ -21,6 +21,7 @@ export const etat = {
   ecritures: 0,
   ecrituresMembres: 0, // écritures qui ont changé la liste des adhérents
   appelsExterieurs: [], // { url, corps } : tout ce qui aurait quitté le serveur
+  mailsReussis: false, // true : le faux Brevo répond « envoyé » (le mail reste intercepté, rien ne sort)
   fichiers: {}, // faux stockage : { bucket: { chemin: Uint8Array } }
 };
 
@@ -40,6 +41,7 @@ async function fauxFetch(entree, init = {}) {
     let lu = corps;
     try { lu = JSON.parse(String(corps)); } catch { /* texte brut */ }
     etat.appelsExterieurs.push({ url: url.href, corps: lu });
+    if (etat.mailsReussis && url.hostname === "api.brevo.com") return reponseJson({ messageId: "test" }, 201);
     return reponseJson({ message: "intercepté par les tests" }, 503);
   }
 

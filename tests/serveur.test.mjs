@@ -9,7 +9,7 @@ import { ADMIN, SECRETS, baseDeTest, chiffrer } from "./outils/donnees.mjs";
 
 let serveur;
 before(async () => { serveur = await demarrer(); });
-beforeEach(() => { etat.base = baseDeTest(); etat.ecritures = 0; etat.ecrituresMembres = 0; etat.appelsExterieurs = []; etat.fichiers = {}; });
+beforeEach(() => { etat.base = baseDeTest(); etat.ecritures = 0; etat.ecrituresMembres = 0; etat.appelsExterieurs = []; etat.fichiers = {}; etat.mailsReussis = false; });
 // Garantie globale : aucun appel n'est jamais parti vers un vrai service
 after(() => { assert.ok(globalThis.fetch.name === "fauxFetch", "le réseau doit rester intercepté"); });
 
@@ -649,4 +649,92 @@ test("alerte de connexion : le propriétaire reçoit un mail (à lui seul) à ch
 
   // Ses heures de connexion ne se retrouvent pas dans l'historique des mails visible par les autres admins
   assert.ok(!JSON.stringify(etat.base).includes("Connexion à ton compte admin"), "pas enregistrée dans l'historique des mails");
+});
+
+// ─── 🔗 Liens suspects et 🚫 expéditeurs bloqués du formulaire de contact ───
+
+const POURRIEL = { name: "Alexis Felten", email: "alexis.felten2391@probox.my.id", message: "Quels tarifs d'inscription ? Voir https://unpartage.online/fr/asso/saccb" };
+const contact = (extra = {}) => appeler({ action: "contact", ...POURRIEL, ...extra });
+async function bloquerViaAdmin(liste, qui = ADMIN) {
+  const vue = (await appeler({ action: "admin_fetch", email: qui.email, code: qui.code })).json.data;
+  return appeler({ action: "admin_save", email: qui.email, code: qui.code, data: { ...structuredClone(vue), contactBloques: liste }, base: vue });
+}
+
+test("contact : un message avec un lien est gardé tel quel, marqué suspect, et le lien est désactivé dans le mail d'alerte", async () => {
+  etat.mailsReussis = true;
+  const r = await contact();
+  assert.equal(r.json?.ok, true, r.texte);
+  const stocke = etat.base.contactMessages.at(-1);
+  assert.equal(stocke.lienSuspect, true, "le message est marqué suspect");
+  assert.ok(stocke.message.includes("https://unpartage.online/fr/asso/saccb"), "rien n'est perdu : le message d'origine est intact");
+  const mails = JSON.stringify(mailsIntercepte());
+  assert.ok(mails.includes("Message suspect (lien)"), "le sujet du mail prévient");
+  assert.ok(mails.includes("hxxps://unpartage[.]online/fr/asso/saccb"), "le lien est désactivé dans le mail");
+  assert.ok(!mails.includes("https://unpartage.online"), "aucun lien cliquable dans le mail");
+  // Un lien écrit sans « http » est repéré aussi
+  etat.appelsExterieurs = [];
+  await contact({ message: "Bonjour, regardez unpartage.online/fr ce week-end" });
+  assert.ok(etat.base.contactMessages.at(-1).lienSuspect, "domaine sans http repéré");
+  assert.ok(!JSON.stringify(mailsIntercepte()).includes("unpartage.online/fr"));
+});
+
+test("contact : un message normal reste normal (ni badge, ni sujet d'alerte)", async () => {
+  etat.mailsReussis = true;
+  const r = await contact({ message: "Bonjour, à quelle heure commence l'entraînement du mardi ? Merci, Léa (saccb.fr)" });
+  assert.equal(r.json?.ok, true, r.texte);
+  assert.equal(etat.base.contactMessages.at(-1).lienSuspect, undefined);
+  const mails = JSON.stringify(mailsIntercepte());
+  assert.ok(mails.includes("Message de Alexis Felten via saccb.fr"));
+  assert.ok(!mails.includes("suspect"));
+});
+
+test("contact : une adresse bloquée est ignorée (rien d'enregistré, aucun mail), les autres passent, et on peut débloquer", async () => {
+  etat.mailsReussis = true;
+  const b = await bloquerViaAdmin([POURRIEL.email.toUpperCase()]);
+  assert.equal(b.json?.ok, true, b.texte);
+  assert.deepEqual(etat.base.contactBloques, [POURRIEL.email], "adresse enregistrée en minuscules");
+  const avant = etat.base.contactMessages?.length ?? 0;
+  const r = await contact();
+  assert.equal(r.json?.ok, true, "le robot croit que ça a marché");
+  assert.equal(etat.base.contactMessages?.length ?? 0, avant, "rien n'est enregistré");
+  assert.deepEqual(mailsIntercepte(), [], "aucun mail n'est envoyé");
+  // Une autre adresse du même domaine passe encore (seule l'adresse exacte est bloquée)
+  const autre = await contact({ email: "alexis.felten9892@probox.my.id" });
+  assert.equal(autre.json?.ok, true);
+  assert.equal(etat.base.contactMessages.at(-1).email, "alexis.felten9892@probox.my.id");
+  // Débloquer : le message est de nouveau reçu
+  await bloquerViaAdmin([]);
+  const apres = etat.base.contactMessages.length;
+  await contact();
+  assert.equal(etat.base.contactMessages.length, apres + 1);
+});
+
+test("contact : bloquer un domaine coupe toutes ses adresses, mais jamais un domaine de messagerie répandu (gmail…)", async () => {
+  etat.mailsReussis = true;
+  const b = await bloquerViaAdmin(["@probox.my.id", "@gmail.com", "pas une adresse", "@orange.fr"]);
+  assert.equal(b.json?.ok, true, b.texte);
+  assert.deepEqual(etat.base.contactBloques, ["@probox.my.id"], "gmail, orange et les entrées invalides sont refusés par le serveur");
+  const avant = etat.base.contactMessages?.length ?? 0;
+  await contact();
+  await contact({ email: "autre.numero7777@probox.my.id" });
+  assert.equal(etat.base.contactMessages?.length ?? 0, avant, "toutes les adresses du domaine sont ignorées");
+  // Un adhérent avec un compte gmail écrit normalement
+  const g = await contact({ name: "Léa Martin", email: "lea.martin@gmail.com", message: "Bonjour, une question sur les horaires." });
+  assert.equal(g.json?.ok, true);
+  assert.equal(etat.base.contactMessages.at(-1).email, "lea.martin@gmail.com");
+});
+
+test("contact : seuls les admins du courrier peuvent bloquer un expéditeur", async () => {
+  etat.base.adminEmails = [ADMIN.email, { email: "redac@exemple.fr", permissions: ["actualites"] }, { email: "courrier@exemple.fr", permissions: ["emailing"] }];
+  etat.base.adminCredentials.push({ email: "redac@exemple.fr", code: "CodeRedac7" }, { email: "courrier@exemple.fr", code: "CodeCourrier7" });
+  const refuse = await bloquerViaAdmin([POURRIEL.email], { email: "redac@exemple.fr", code: "CodeRedac7" });
+  assert.notEqual(refuse.json?.ok, true, "un rédacteur d'actus ne peut pas bloquer");
+  assert.equal(etat.base.contactBloques, undefined);
+  const ok = await bloquerViaAdmin([POURRIEL.email], { email: "courrier@exemple.fr", code: "CodeCourrier7" });
+  assert.equal(ok.json?.ok, true, ok.texte);
+  assert.deepEqual(etat.base.contactBloques, [POURRIEL.email]);
+  assert.ok(JSON.stringify(etat.base.adminJournal).includes("expéditeurs bloqués"), "le blocage est noté dans le Journal");
+  // La liste n'est jamais visible sur la partie publique
+  const pub = await appeler({ action: "fetch_public" });
+  assert.ok(!pub.texte.includes("probox"), "liste des bloqués absente du site public");
 });

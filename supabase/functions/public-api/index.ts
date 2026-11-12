@@ -288,6 +288,7 @@ function resumeChangements(avant: Record<string, unknown>, apres: Record<string,
 
 const REGLAGES_JOURNAL: Record<string, string> = {
   y1: "saison", insc_open: "inscriptions ouvertes", quota: "quota d'adhérents", tshirtOpen: "commandes t-shirt ouvertes",
+  contactBloques: "expéditeurs bloqués du formulaire de contact",
   tshirtPrice: "prix du t-shirt", maintenanceMode: "mode maintenance", presentationMode: "mode présentation", whatsappLink: "lien WhatsApp",
   pollsOpen: "sondages ouverts", agOpen: "questions AG ouvertes", require2FA: "double authentification", clubConfig: "paramètres du club (tarifs, horaires…)",
   clubRules: "règlement intérieur", bureauMembers: "membres du bureau", presidentName: "nom du président", emailSignature: "signature des mails",
@@ -938,6 +939,42 @@ function refusVerrou(d: Record<string, unknown>, email: string, ip: string, acti
   return json({ ok: false, verrouAdmin: true, reason: MSG_VERROU }, 403);
 }
 
+// 🔗 Liens contenus dans un message du formulaire de contact : http(s)://…, www.… ou un nom de domaine à
+// terminaison très utilisée par le spam (sans « http »). 5 maximum, sans ponctuation finale.
+const MOTIF_LIEN = /(?:https?:\/\/|www\.)[^\s<>"')\]]+|\b[a-z0-9][a-z0-9-]*\.(?:online|xyz|top|click|site|live|icu|link|buzz|cfd|sbs|store|fun)\b[^\s<>"')\]]*/gi;
+function extraireLiens(texte: string): string[] {
+  const trouves = texte.match(MOTIF_LIEN) || [];
+  return [...new Set(trouves.map((l) => l.replace(/[.,;:!?]+$/, "")))].slice(0, 5);
+}
+/** Désactive les liens pour un mail : hxxps://exemple[.]com (rien de cliquable, même dans Gmail) */
+function neutraliserLiens(texte: string): string {
+  return texte.replace(MOTIF_LIEN, (l) => l.replace(/^http/i, "hxxp").replace(/\./g, "[.]"));
+}
+
+// 🚫 Expéditeurs bloqués du formulaire de contact (db.contactBloques : « nom@domaine.fr » ou « @domaine.fr »)
+// Un domaine de messagerie très répandu (gmail…) ne peut jamais être bloqué en entier.
+const DOMAINES_PUBLICS = new Set([
+  "gmail.com", "googlemail.com", "hotmail.com", "hotmail.fr", "outlook.com", "outlook.fr", "live.com", "live.fr", "msn.com",
+  "yahoo.com", "yahoo.fr", "orange.fr", "wanadoo.fr", "free.fr", "sfr.fr", "neuf.fr", "laposte.net", "bbox.fr", "numericable.fr",
+  "icloud.com", "me.com", "proton.me", "protonmail.com", "gmx.com", "gmx.fr", "aol.com",
+]);
+function expediteurBloque(d: Record<string, unknown>, email: string): "adresse" | "domaine" | null {
+  const liste = (Array.isArray(d.contactBloques) ? d.contactBloques : []).map((x) => String(x).toLowerCase().trim());
+  const e = email.toLowerCase().trim();
+  if (liste.includes(e)) return "adresse";
+  const dom = e.split("@")[1] || "";
+  if (dom && !DOMAINES_PUBLICS.has(dom) && liste.includes("@" + dom)) return "domaine";
+  return null;
+}
+/** Liste enregistrée : format vérifié, doublons retirés, domaines très répandus refusés, 200 maximum */
+function nettoyerContactBloques(brut: unknown): string[] {
+  const ok = (Array.isArray(brut) ? brut : [])
+    .map((x) => String(x).toLowerCase().trim())
+    .filter((x) => /^(@[a-z0-9.-]+\.[a-z]{2,}|[^\s@]+@[a-z0-9.-]+\.[a-z]{2,})$/.test(x))
+    .filter((x) => !(x.startsWith("@") && DOMAINES_PUBLICS.has(x.slice(1))));
+  return [...new Set(ok)].slice(0, 200);
+}
+
 // 🔔 Alerte au propriétaire à chaque connexion admin réussie sur SON compte (envoyée à lui seul).
 // Pas d'enregistrement dans l'historique des mails (visible par les autres admins) : ses heures de connexion restent privées.
 // Best-effort : une panne d'envoi ne doit jamais empêcher la connexion.
@@ -1038,7 +1075,7 @@ const SECTION_DE_LA_CLE: Record<string, string> = {
   factures: "comptabilite",
   adminEmails: "saison", adminCredentials: "saison", clubConfig: "saison", y1: "saison", y2: "saison",
   quota: "saison", insc_open: "saison", insc_close_date: "saison", maintenanceMode: "saison", sectionsVisible: "saison",
-  backupEmailConfig: "saison", contactEmails: "saison",
+  backupEmailConfig: "saison", contactEmails: "saison", contactBloques: "emailing",
 };
 
 // ─── 🔒 Écritures concurrentes : fusion à 3 voies ───
@@ -2799,6 +2836,8 @@ async function traiter(req: Request): Promise<Response> {
 
     // 🚨 Le verrou d'urgence est tenu par le serveur seul : un client ne peut ni le poser ni le retirer ici
     if (d.verrouAdmin === undefined) delete newData.verrouAdmin; else newData.verrouAdmin = d.verrouAdmin;
+    // 🚫 Expéditeurs bloqués : format vérifié côté serveur (jamais un domaine de messagerie très répandu)
+    if (newData.contactBloques !== undefined) newData.contactBloques = nettoyerContactBloques(newData.contactBloques);
 
     // 🕵️ Journal : ce que cet admin vient de changer (le journal lui-même n'est jamais modifiable par le client)
     const changements = resumeChangements(d, newData);
@@ -4672,6 +4711,20 @@ async function traiter(req: Request): Promise<Response> {
     const contactEmails = ((dbD.contactEmails || []) as string[]);
     const toEmails = contactEmails.length > 0 ? contactEmails : ["gabin.binay@gmail.com", "hernancm68@hotmail.com"];
 
+    // 🚫 Expéditeur bloqué par le bureau : succès simulé (comme pour un robot), rien n'est enregistré ni envoyé.
+    // Les tentatives apparaissent dans « Requêtes bloquées » du Journal.
+    const bloque = expediteurBloque(dbD, email);
+    if (bloque) {
+      noterBlocage(ip, "contact", bloque === "domaine" ? "Formulaire de contact : domaine bloqué" : "Formulaire de contact : adresse bloquée");
+      return json({ ok: true });
+    }
+
+    // 🔗 Message contenant un lien : probablement du hameçonnage. On l'enregistre quand même (rien n'est perdu),
+    // mais le mail d'alerte est marqué « suspect » et le lien y est désactivé.
+    const suspect = extraireLiens(message).length > 0;
+    const messageMail = suspect ? neutraliserLiens(message) : message;
+    const sujetMail = suspect ? `⚠️ Message suspect (lien) de ${name} via saccb.fr` : `📩 Message de ${name} via saccb.fr`;
+
     const sendRes = await sendBrevo(brevoKey, {
         from: "SACCB Site <contact@saccb.fr>",
         headers: {
@@ -4681,14 +4734,15 @@ async function traiter(req: Request): Promise<Response> {
         to: toEmails.length > 0 ? [toEmails[0]] : ["contact@saccb.fr"],
         bcc: toEmails.length > 1 ? toEmails.slice(1) : undefined,
         reply_to: [email],
-        subject: `📩 Message de ${name} via saccb.fr`,
+        subject: sujetMail,
         html: `
           <div style="font-family: sans-serif; max-width: 600px; margin: 0 auto; padding: 24px;">
             <h2 style="color: #1e3a5f;">Nouveau message depuis saccb.fr</h2>
+            ${suspect ? `<div style="background: #fef2f2; border: 2px solid #f87171; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; color: #991b1b; font-size: 14px;"><strong>⚠️ Ce message contient un lien.</strong> C'est très souvent du hameçonnage : ne clique sur rien. Le lien est volontairement désactivé ci-dessous (« hxxps » et « [.] »). Tu peux le voir et décider dans l'administration → Messages reçus.</div>` : ""}
             <p><strong>De :</strong> ${name}</p>
             <p><strong>Email :</strong> <a href="mailto:${email}">${email}</a></p>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
-            <p style="white-space: pre-wrap; color: #475569;">${message}</p>
+            <p style="white-space: pre-wrap; color: #475569;">${messageMail}</p>
             <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 16px 0;" />
             <p style="color: #94a3b8; font-size: 12px;">Message reçu via le formulaire de contact de saccb.fr</p>
           </div>
@@ -4710,6 +4764,7 @@ async function traiter(req: Request): Promise<Response> {
         email,
         message,
         createdAt: new Date().toISOString(),
+        ...(suspect ? { lienSuspect: true } : {}),
       });
       // Conserver max 200 messages (on coupe les + anciens si > 200)
       const trimmed = messages.length > 200 ? messages.slice(messages.length - 200) : messages;
@@ -4721,8 +4776,8 @@ async function traiter(req: Request): Promise<Response> {
 
     await logEmailToHistory(supabaseAdmin, {
       type: "contact_form",
-      subject: `📩 Message de ${name} via saccb.fr`,
-      body: `Message reçu via le formulaire de contact de ${name} (${email}) : ${message.slice(0, 200)}${message.length > 200 ? "..." : ""}`,
+      subject: sujetMail,
+      body: `Message reçu via le formulaire de contact de ${name} (${email}) : ${messageMail.slice(0, 200)}${messageMail.length > 200 ? "..." : ""}`,
       recipients: toEmails,
       sentBy: "system",
     });

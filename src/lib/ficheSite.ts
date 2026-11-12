@@ -2,7 +2,7 @@
 // ⚠️ À METTRE À JOUR à chaque modification importante (nouvelle rubrique, nouvelle fonction, nouvelle règle).
 // L'historique des modifications et l'état du site sont ajoutés automatiquement dans le PDF.
 
-export const FICHE_MAJ_LE = "2026-11-11";
+export const FICHE_MAJ_LE = "2026-11-12";
 
 export type SectionFiche = { titre: string; lignes: string[] };
 
@@ -88,6 +88,8 @@ export const FICHE_SITE: SectionFiche[] = [
       "Adhérents : Adhérents, Bureau.",
       "Tournois : Tournois, Inscriptions aux tournois, Tournois inter-clubs (et internes).",
       "Communication : Messages reçus, Envoyer un mail, Agenda, Actualités, Sondages & AG, FAQ adhérents.",
+      "📩 Messages reçus — spam par liens : le formulaire de contact reçoit des messages automatiques avec un lien de hameçonnage (faux « espace de partage de fichiers », nom de domaine qui change à chaque envoi, expéditeur jetable). Tout message contenant un lien (http(s)://, www. ou domaine en .online/.xyz/.top…, fonctions extraireLiens côté serveur ET src/lib/liens.ts côté écran) est GARDÉ tel quel (rien n'est supprimé) mais marqué « ⚠️ Lien suspect » (champ lienSuspect) ; le mail d'alerte au bureau a pour sujet « ⚠️ Message suspect (lien) » et le lien y est désactivé (hxxps://exemple[.]com). Dans l'admin le lien n'est jamais cliquable directement : bouton « Ouvrir quand même… » qui montre d'abord l'adresse complète et demande confirmation.",
+      "🚫 Bloquer un expéditeur (Messages reçus, droit « emailing ») : bouton « Bloquer cette adresse » ou « Bloquer tout @domaine » (utile quand l'expéditeur change de numéro mais garde son domaine), liste db.contactBloques avec « Débloquer » en bas de la page. Un expéditeur bloqué reçoit un faux succès : rien n'est enregistré ni envoyé, la tentative apparaît dans « Requêtes bloquées » du Journal. Le serveur refuse de bloquer un domaine de messagerie répandu (gmail.com, orange.fr…) et vérifie le format (nettoyerContactBloques, dans admin_save).",
       "Trésorerie : Comptabilité (factures), T-shirts (tailles proposées séparément aux hommes et aux femmes — tshirtSizesH / tshirtSizesF, ancien tshirtSizes gardé comme fallback ; couleurs ; catalogue PDF ET/OU plusieurs photos tshirtPhotos montrés aux adhérents ; prix ; paiement HelloAsso ; sexe (H/F) enregistré sur chaque commande et visible dans l'admin + export PDF fabricant regroupé Hommes/Femmes), HelloAsso · QR code.",
       "Réglages : Paramètres saison, Règlement intérieur, Statistiques (dont rapport d'AG), Sauvegarde & export, Bloc-notes partagé, Journal (privé), Guide admin.",
       "Admins multiples avec droits (lecture seule, permissions par rubrique) ; double vérification par mail à la connexion admin.",

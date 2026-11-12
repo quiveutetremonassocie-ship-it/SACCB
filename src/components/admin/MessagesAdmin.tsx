@@ -4,16 +4,19 @@ import { useMemo, useState } from "react";
 import { Inbox, CheckCircle2, Circle, Mail, Trash2, Archive, ArchiveRestore, ChevronDown, ChevronUp, User } from "lucide-react";
 import { DB, ContactMessage } from "@/lib/types";
 import { adminMarkMessageResponded, adminArchiveMessage } from "@/lib/db";
+import { extraireLiens, urlDuLien, DOMAINES_PUBLICS, domaineDe, blocageDe } from "@/lib/liens";
 
 export default function MessagesAdmin({
   db,
   onRefresh,
+  onPersist,
   adminEmail,
   adminCode,
   readOnly,
 }: {
   db: DB;
   onRefresh: () => Promise<void>;
+  onPersist?: (db: DB) => Promise<void>;
   adminEmail?: string;
   adminCode?: string;
   readOnly?: boolean;
@@ -22,6 +25,31 @@ export default function MessagesAdmin({
   const [showArchived, setShowArchived] = useState(false);
   const [openId, setOpenId] = useState<string | null>(null);
   const [busyId, setBusyId] = useState<string | null>(null);
+
+  // 🚫 Expéditeurs bloqués du formulaire de contact (« nom@domaine.fr » ou « @domaine.fr »)
+  const bloques = db.contactBloques ?? [];
+  async function bloquer(m: ContactMessage, genre: "adresse" | "domaine") {
+    if (!onPersist) return;
+    const entree = genre === "adresse" ? m.email.toLowerCase().trim() : "@" + domaineDe(m.email);
+    const quoi = genre === "adresse"
+      ? `l'adresse ${entree}`
+      : `TOUT le domaine ${entree} (toutes les adresses qui se terminent par ${entree})`;
+    if (!confirm(`Bloquer ${quoi} ?\n\nSes prochains messages du formulaire de contact seront ignorés : rien ne sera enregistré et aucun mail ne sera envoyé au bureau. Les messages déjà reçus restent dans la boîte.\n\nTu pourras débloquer à tout moment (liste en bas de cette page).`)) return;
+    if (bloques.includes(entree)) return;
+    await onPersist({ ...db, contactBloques: [...bloques, entree] });
+  }
+  async function debloquer(entree: string) {
+    if (!onPersist) return;
+    if (!confirm(`Débloquer ${entree} ?\n\nSes messages du formulaire de contact seront de nouveau reçus.`)) return;
+    await onPersist({ ...db, contactBloques: bloques.filter((x) => x !== entree) });
+  }
+  // 🔗 Ouvrir un lien d'un message : jamais en un clic, toujours après avoir vu l'adresse complète
+  function ouvrirLien(lien: string) {
+    const url = urlDuLien(lien);
+    if (!url) { alert("Ce lien n'est pas une adresse web valide."); return; }
+    if (!confirm(`⚠️ OUVRIR CE LIEN À TES RISQUES ?\n\nAdresse complète :\n${url}\n\nCe message ressemble à du hameçonnage. Si la page te demande un mot de passe ou de télécharger un fichier : ferme-la et ne saisis rien.\n\nOK = ouvrir dans un nouvel onglet`)) return;
+    window.open(url, "_blank", "noopener,noreferrer");
+  }
 
   // 🔍 Helper : résoudre une adresse email vers un prénom (lookup dans les membres + admins)
   function resolveName(email?: string): string {
@@ -190,6 +218,11 @@ export default function MessagesAdmin({
           const isOpen = openId === m.id;
           const isResponded = !!m.respondedBy;
           const isMine = adminEmail && m.respondedBy === adminEmail.toLowerCase();
+          // 🔗 Lien suspect : seulement pour les messages du formulaire (pas les réponses à nos mails)
+          const liens = m.source === "email_reply" ? [] : extraireLiens(m.message);
+          const suspect = liens.length > 0;
+          const blocage = blocageDe(bloques, m.email);
+          const domaineBloquable = !!domaineDe(m.email) && !DOMAINES_PUBLICS.has(domaineDe(m.email));
           return (
             <div
               key={m.id}
@@ -228,6 +261,22 @@ export default function MessagesAdmin({
                           title="Réponse par email à un mail envoyé par l'admin"
                         >
                           ✉ Réponse
+                        </span>
+                      )}
+                      {suspect && (
+                        <span
+                          className="text-[9px] uppercase tracking-widest text-red-700 bg-red-100 border border-red-300 px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                          title="Ce message contient un lien : très souvent du hameçonnage. Ne clique pas."
+                        >
+                          ⚠️ Lien suspect
+                        </span>
+                      )}
+                      {blocage && (
+                        <span
+                          className="text-[9px] uppercase tracking-widest text-slate-700 bg-slate-200 border border-slate-300 px-1.5 py-0.5 rounded-full font-bold shrink-0"
+                          title={blocage === "adresse" ? "Cette adresse est bloquée" : "Ce domaine est bloqué"}
+                        >
+                          🚫 Bloqué
                         </span>
                       )}
                     </div>
@@ -297,14 +346,91 @@ export default function MessagesAdmin({
               </div>
 
               {isOpen && (
-                <div className="px-4 pb-3 pt-2 border-t border-slate-100 bg-slate-50">
+                <div className="px-4 pb-3 pt-2 border-t border-slate-100 bg-slate-50 space-y-3">
+                  {suspect && (
+                    <div className="rounded-lg border-2 border-red-300 bg-red-50 px-3 py-2">
+                      <p className="text-xs font-bold text-red-800">⚠️ Ce message contient un lien : très souvent du hameçonnage. Ne clique pas et ne saisis aucun mot de passe.</p>
+                    </div>
+                  )}
                   <p className="text-sm text-slate-700 whitespace-pre-wrap leading-relaxed">{m.message}</p>
+
+                  {/* 🔗 Liens : jamais cliquables directement, on les ouvre volontairement après avoir vu l'adresse complète */}
+                  {liens.length > 0 && (
+                    <div className="space-y-1">
+                      {liens.map((l) => (
+                        <div key={l} className="flex items-center gap-2 flex-wrap rounded-lg bg-white border border-slate-200 px-2 py-1.5">
+                          <span className="font-mono text-[11px] text-slate-600 break-all flex-1 min-w-0">{l}</span>
+                          <button
+                            onClick={() => ouvrirLien(l)}
+                            className="text-[11px] font-semibold text-red-700 border border-red-300 hover:bg-red-50 rounded px-2 py-1 shrink-0"
+                          >
+                            Ouvrir quand même…
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* 🚫 Blocage de l'expéditeur */}
+                  {!readOnly && onPersist && (
+                    <div className="flex flex-wrap items-center gap-2">
+                      {blocage ? (
+                        <>
+                          <span className="text-xs text-slate-600">🚫 {blocage === "adresse" ? "Cette adresse est bloquée" : "Ce domaine est bloqué"}</span>
+                          <button
+                            onClick={() => debloquer(blocage === "adresse" ? m.email.toLowerCase().trim() : "@" + domaineDe(m.email))}
+                            className="text-[11px] font-semibold text-slate-700 border border-slate-300 hover:bg-slate-100 rounded px-2 py-1"
+                          >
+                            Débloquer
+                          </button>
+                        </>
+                      ) : (
+                        <>
+                          <button
+                            onClick={() => bloquer(m, "adresse")}
+                            className="text-[11px] font-semibold text-white bg-slate-700 hover:bg-slate-800 rounded px-2.5 py-1"
+                          >
+                            🚫 Bloquer cette adresse
+                          </button>
+                          {domaineBloquable && (
+                            <button
+                              onClick={() => bloquer(m, "domaine")}
+                              className="text-[11px] font-semibold text-slate-700 border border-slate-300 hover:bg-slate-100 rounded px-2.5 py-1"
+                              title="Utile quand l'expéditeur change de numéro à chaque envoi mais garde le même domaine"
+                            >
+                              🚫 Bloquer tout @{domaineDe(m.email)}
+                            </button>
+                          )}
+                        </>
+                      )}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
           );
         })}
       </div>
+
+      {/* 🚫 Liste des expéditeurs bloqués */}
+      {bloques.length > 0 && (
+        <div className="mt-4 rounded-xl border border-slate-200 bg-white p-3">
+          <p className="text-xs font-bold text-slate-700 mb-1">🚫 Expéditeurs bloqués ({bloques.length})</p>
+          <p className="text-[11px] text-slate-500 mb-2">Leurs messages du formulaire de contact sont ignorés : rien n&apos;est enregistré et aucun mail n&apos;est envoyé au bureau. « @domaine » = toutes les adresses de ce domaine.</p>
+          <ul className="space-y-1">
+            {bloques.map((x) => (
+              <li key={x} className="flex items-center justify-between gap-2 text-xs">
+                <span className="font-mono break-all">{x}</span>
+                {!readOnly && onPersist && (
+                  <button onClick={() => debloquer(x)} className="shrink-0 font-semibold text-slate-700 border border-slate-300 hover:bg-slate-100 rounded px-2 py-1">
+                    Débloquer
+                  </button>
+                )}
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <p className="text-xs text-slate-400 mt-4 italic">
         💡 Cliquez sur le rond à gauche d&apos;un message pour le marquer comme répondu — tous les autres admins verront que vous l&apos;avez traité.
