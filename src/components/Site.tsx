@@ -12,7 +12,6 @@ import AccueilHero from "./AccueilHero";
 import Agenda from "./Agenda";
 import { evenementsAgenda } from "@/lib/agenda";
 import Presentation from "./Presentation";
-import RejoindreClub from "./RejoindreClub";
 import Actualites from "./Actualites";
 import Horaires from "./Horaires";
 import Tournois from "./Tournois";
@@ -562,14 +561,6 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           </FadeInSection>
         )}
 
-        {/* 🏸 Rejoindre le club (visiteurs) : le bouton fait défiler jusqu'au formulaire d'inscription */}
-        {mode === "full" && (!memberSession || db.presentationMode) && (
-          <RejoindreClub
-            inscOpen={db.insc_open !== false}
-            formulaireSurLaPage={db.presentationMode === true || db.sectionsVisible?.inscription !== false}
-          />
-        )}
-
         {/* Vague de transition avant Tournois */}
 
         {(mode === "tournois" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.tournois !== false))) && (
@@ -606,6 +597,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               quota={db.quota ?? QUOTA_DEFAULT}
               prix={getEffectiveConfig(db).prix}
               onMembreAdded={db.presentationMode ? () => {} : () => setMembresCount((n) => n + 1)}
+              replie={mode === "full"}
             />
           </FadeInSection>
         )}

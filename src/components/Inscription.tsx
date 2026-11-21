@@ -57,13 +57,16 @@ export default function Inscription({
   quota,
   prix,
   onMembreAdded,
+  replie = false,
 }: {
   db: DB;
   membresCount: number;
   quota: number;
   prix: { Adulte: number; Etudiant: number };
   onMembreAdded: () => void;
+  replie?: boolean; // accueil : formulaire replié sous le bloc « Rejoindre le club », déroulé au clic
 }) {
+  const [deroule, setDeroule] = useState(!replie);
   const [done, setDone] = useState<{ personnes: Personne[]; mode: PaymentMode | "remise" } | null>(null);
   const [loading, setLoading] = useState(false);
   const [mode, setMode] = useState<PaymentMode>("online");
@@ -330,19 +333,40 @@ export default function Inscription({
   return (
     <section id="inscription" className="bg-section-wrap bg-signup relative scroll-mt-20">
       <div className="section-pad relative">
-        <div className="text-center mb-14">
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-emerald-600">Adhésion</span>
+        {/* 🏸 Rejoindre le club : photo du volant ; « Commencer mon inscription » déroule le formulaire juste en dessous */}
+        <div className="relative overflow-hidden rounded-xl text-white min-h-[300px] flex max-w-3xl mx-auto mb-6">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/photos/volant-terrain.webp" alt="" width={1000} height={750} loading="lazy" className="absolute inset-0 w-full h-full object-cover object-[30%_50%]" />
+          <div className="absolute inset-0 bg-gradient-to-r from-[#06181A]/90 via-[#06181A]/65 to-[#06181A]/10" />
+          <div className="relative p-6 sm:p-10 flex flex-col justify-center gap-4 max-w-xl">
+            <h2 className="font-display text-5xl sm:text-6xl leading-[0.9]">Rejoindre le club</h2>
+            {db.insc_open ? (
+              <>
+                <p className="text-lg text-[#E6EEF4]">Saison {db.y1}-{db.y2} : inscription en ligne en quelques minutes. Paiement avec HelloAsso ou par virement.</p>
+                {!deroule && !done && (
+                  <button
+                    type="button"
+                    onClick={() => { setDeroule(true); setTimeout(() => document.getElementById("formulaire-inscription")?.scrollIntoView({ behavior: "smooth", block: "start" }), 120); }}
+                    aria-expanded={false}
+                    aria-controls="formulaire-inscription"
+                    className="btn bg-white text-[#0F1B26] hover:bg-[#E6EEF4] !text-base !px-6 self-start"
+                  >
+                    Commencer mon inscription
+                  </button>
+                )}
+              </>
+            ) : (
+              <p className="text-lg text-[#E6EEF4]">Les inscriptions de la saison {db.y1}-{db.y2} sont fermées pour le moment.</p>
+            )}
           </div>
-          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">
-            Saison {db.y1}–{db.y2}
-          </h2>
-          <p className="text-slate-500 max-w-2xl mx-auto">
-            Rejoignez l&apos;aventure SACCB. Quelques minutes suffisent.
-          </p>
         </div>
 
+        {/* Le formulaire se déroule (hauteur animée) */}
+        <div
+          id="formulaire-inscription"
+          className={`grid transition-[grid-template-rows] duration-500 ease-out scroll-mt-24 ${deroule || done || !db.insc_open ? "grid-rows-[1fr]" : "grid-rows-[0fr]"}`}
+        >
+        <div className="overflow-hidden">
         <motion.div
           className="glass-strong p-8 md:p-10 max-w-2xl mx-auto"
         >
@@ -808,6 +832,8 @@ export default function Inscription({
             </form>
           )}
         </motion.div>
+        </div>
+        </div>
       </div>
 
       {/* ⚠️ Modale d'avertissement "parler au bureau" — affichée 1 fois avant 1ère validation */}
