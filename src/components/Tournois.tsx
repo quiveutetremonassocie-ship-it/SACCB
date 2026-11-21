@@ -1,13 +1,10 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Calendar, Trophy, Users, Lock, Clock, AlertCircle, CheckCircle2, ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone, BellOff, Bell } from "lucide-react";
+import { ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone, BellOff, Bell, Lock } from "lucide-react";
 import { useState } from "react";
-import { DB, Tournoi, InscritTournoi, SeasonArchive, joueursCourts } from "@/lib/types";
+import { DB, Tournoi, InscritTournoi, joueursCourts } from "@/lib/types";
 import { publicRegisterTournoiWithCovoiturage, memberToggleTournoiIgnored } from "@/lib/db";
 import { MemberSession } from "@/lib/useMemberSession";
-import { MiniCalendarBadge } from "./MiniCalendar";
-import TiltCard from "./TiltCard";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -36,243 +33,7 @@ function isTermine(t: Tournoi) {
   return false;
 }
 
-export default function Tournois({
-  db,
-  memberSession,
-  onLoginRequest,
-  membreNoms = [],
-  readOnly = false,
-}: {
-  db: DB;
-  memberSession: MemberSession | null;
-  onLoginRequest: () => void;
-  membreNoms?: string[];
-  readOnly?: boolean;
-}) {
-  const tournois = db.config_tournois ?? [];
-  // 📅 À venir : le plus proche en premier · Passés : le plus récent en premier
-  const upcoming = tournois.filter((t) => !isTermine(t)).sort((a, b) => tournoiTime(a) - tournoiTime(b));
-  const done = tournois.filter((t) => isTermine(t)).sort((a, b) => tournoiTime(b) - tournoiTime(a));
-  const archives = db.archives ?? [];
 
-  const hasPast = done.length > 0 || archives.length > 0;
-  const [tab, setTab] = useState<"avenir" | "passes">("avenir");
-  const [openArchive, setOpenArchive] = useState<string | null>(null);
-
-  return (
-    <section id="tournois" className="bg-section-wrap bg-tournament relative">
-      <div className="section-pad relative">
-        <div className="text-center mb-10">
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-amber-600">Compétitions</span>
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">Tournois</h2>
-          <p className="text-slate-500 max-w-2xl mx-auto">
-            Inscrivez votre binôme aux prochains tournois de l’association.
-          </p>
-        </div>
-
-        {/* ── Onglets ── */}
-        {hasPast && (
-          <div className="flex justify-center mb-8">
-            <div className="inline-flex rounded-2xl bg-slate-100 p-1 gap-1">
-              <button
-                onClick={() => setTab("avenir")}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
-                  tab === "avenir"
-                    ? "bg-white text-slate-800 shadow"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  À venir {upcoming.length > 0 && <span className="bg-emerald-100 text-emerald-700 text-xs px-1.5 py-0.5 rounded-full">{upcoming.length}</span>}
-                </span>
-              </button>
-              <button
-                onClick={() => setTab("passes")}
-                className={`px-5 py-2 rounded-xl text-sm font-semibold transition ${
-                  tab === "passes"
-                    ? "bg-white text-slate-800 shadow"
-                    : "text-slate-500 hover:text-slate-700"
-                }`}
-              >
-                <span className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4" />
-                  Passés {done.length > 0 && <span className="bg-slate-200 text-slate-600 text-xs px-1.5 py-0.5 rounded-full">{done.length}</span>}
-                </span>
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* ── Tournois à venir ── */}
-        {tab === "avenir" && (
-          <>
-            {upcoming.length === 0 ? (
-              <div className="glass-sport p-10 text-center text-slate-400">
-                <Trophy className="w-12 h-12 mx-auto mb-4 text-slate-300" />
-                Aucun tournoi à venir pour le moment.
-              </div>
-            ) : (
-              <div className="space-y-6">
-                {upcoming.map((t) => {
-                  const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
-                  return (
-                    <TiltCard key={t.id}><TournoiCard t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} readOnly={readOnly} /></TiltCard>
-                  );
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── Tournois passés ── */}
-        {tab === "passes" && (
-          <>
-            {done.length > 0 && (
-              <div className="space-y-4 mb-8">
-                <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-1 mb-3">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500" /> Saison en cours
-                </p>
-                {done.map((t) => {
-                  const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
-                  return <TournoiTermineCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />;
-                })}
-              </div>
-            )}
-          </>
-        )}
-
-        {/* ── Saisons précédentes (dans onglet Passés) ── */}
-        {tab === "passes" && archives.length > 0 && (
-          <div className="mt-6">
-            {done.length > 0 && <div className="border-t border-slate-200 mb-6" />}
-            <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold flex items-center gap-1 mb-3">
-              <Trophy className="w-3.5 h-3.5 text-amber-500" /> Saisons précédentes
-            </p>
-            <div className="space-y-3">
-              {[...archives].reverse().map((archive) => {
-                const key = `${archive.y1}-${archive.y2}`;
-                const isOpen = openArchive === key;
-                const hasTournois = (archive.config_tournois ?? []).length > 0;
-                const hasResults = (archive.inscrits_tournoi ?? []).some((i) => i.resultat);
-                return (
-                  <div key={key} className="glass rounded-2xl overflow-hidden">
-                    <button
-                      onClick={() => setOpenArchive(isOpen ? null : key)}
-                      className="w-full flex items-center justify-between px-6 py-4 hover:bg-slate-50 transition text-left"
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="font-display text-xl text-slate-700 tracking-wider">Saison {archive.y1}–{archive.y2}</span>
-                        <span className="text-xs text-slate-400">{hasTournois ? `${archive.config_tournois.length} tournoi${archive.config_tournois.length > 1 ? "s" : ""}` : "Aucun tournoi"}</span>
-                        {hasResults && <span className="text-xs bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">🏅 Classements disponibles</span>}
-                      </div>
-                      {isOpen ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
-                    </button>
-                    {isOpen && (
-                      <div className="px-6 pb-6 border-t border-slate-100">
-                        {!memberSession ? (
-                          <div className="mt-4 flex flex-col items-center gap-3 py-6 text-center">
-                            <Lock className="w-8 h-8 text-slate-300" />
-                            <p className="text-slate-500 text-sm">Connectez-vous pour voir les détails de cette saison.</p>
-                            <button onClick={onLoginRequest} className="btn-primary !px-5 !py-2 !text-sm">Se connecter</button>
-                          </div>
-                        ) : (
-                          <>
-                            {hasTournois && (
-                              <div className="mt-4 space-y-3">
-                                {archive.config_tournois.map((t) => {
-                                  const inscrits = (archive.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
-                                  return <TournoiTermineCard key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />;
-                                })}
-                              </div>
-                            )}
-                            {!hasTournois && <p className="text-slate-400 text-sm mt-4">Aucun tournoi enregistré pour cette saison.</p>}
-                          </>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        )}
-      </div>
-    </section>
-  );
-}
-
-// ── Carte tournoi terminé ──────────────────────────────────────
-function TournoiTermineCard({ t, inscrits, memberSession, onLoginRequest }: {
-  t: Tournoi; inscrits: InscritTournoi[];
-  memberSession: MemberSession | null;
-  onLoginRequest: () => void;
-}) {
-  const withResults = inscrits.filter((i) => i.resultat).sort((a, b) => {
-    const ra = parseInt(a.resultat?.split("/")[0] ?? "99");
-    const rb = parseInt(b.resultat?.split("/")[0] ?? "99");
-    return ra - rb;
-  });
-
-  return (
-    <div className="glass-sport overflow-hidden opacity-80">
-      <div className="relative p-5 border-l-4 border-slate-300">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-3">
-          <div>
-            <div className="flex items-center gap-2">
-              <h3 className="text-lg font-semibold text-slate-600 leading-snug">{t.name}</h3>
-              <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold">
-                <CheckCircle2 className="w-3 h-3" /> Terminé
-              </span>
-            </div>
-            <div className="flex flex-wrap items-center gap-3 mt-1 text-sm text-slate-400">
-              <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {t.date}</span>
-              {t.type && <span className="text-xs">Double {t.type}</span>}
-              <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {inscrits.length} binôme{inscrits.length > 1 ? "s" : ""}</span>
-            </div>
-          </div>
-        </div>
-        {!memberSession ? (
-          <div className="flex items-center justify-between bg-slate-50 rounded-xl px-4 py-3 border border-slate-200">
-            <span className="text-sm text-slate-400 flex items-center gap-2"><Lock className="w-4 h-4" /> Résultats réservés aux membres</span>
-            <button onClick={onLoginRequest} className="text-xs text-blue-600 hover:underline font-semibold">Se connecter</button>
-          </div>
-        ) : withResults.length > 0 ? (
-          <div className="bg-slate-50 rounded-xl p-3">
-            <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Classement</p>
-            <div className="space-y-1">
-              {withResults.map((i) => {
-                const rank = parseInt(i.resultat!.split("/")[0]);
-                return (
-                  <div key={i.id} className="flex items-center gap-2 text-sm">
-                    <span>{rank === 1 ? "🥇" : rank === 2 ? "🥈" : rank === 3 ? "🥉" : `${rank}.`}</span>
-                    <span className="text-slate-700">{joueursCourts(i.joueurs)}</span>
-                    <span className="text-slate-400 text-xs ml-auto">{i.resultat}</span>
-                  </div>
-                );
-              })}
-            </div>
-          </div>
-        ) : inscrits.length > 0 ? (
-          <div className="bg-slate-50 rounded-xl p-3">
-            <p className="text-xs uppercase tracking-widest text-slate-400 mb-1">Participants</p>
-            <div className="space-y-1">
-              {inscrits.map((i) => (
-                <p key={i.id} className="text-sm text-slate-600">• {joueursCourts(i.joueurs)}</p>
-              ))}
-            </div>
-          </div>
-        ) : null}
-      </div>
-    </div>
-  );
-}
-
-
-// ── Carte tournoi à venir ──────────────────────────────────────
 function getDaysLeft(dateLimit: string | null | undefined): number | null {
   if (!dateLimit) return null;
   let date: Date;
@@ -287,17 +48,6 @@ function getDaysLeft(dateLimit: string | null | undefined): number | null {
   now.setHours(0, 0, 0, 0);
   date.setHours(0, 0, 0, 0);
   return Math.floor((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
-}
-
-function CountdownBadge({ dateLimit }: { dateLimit?: string | null }) {
-  const days = getDaysLeft(dateLimit);
-  if (days === null) return null;
-  if (days < 0) return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-slate-100 text-slate-500 text-xs font-semibold"><Lock className="w-3 h-3" /> Inscriptions closes</span>;
-  if (days === 0) return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold animate-pulse"><AlertCircle className="w-3 h-3" /> Dernier jour !</span>;
-  if (days <= 3) return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-red-100 text-red-600 text-xs font-bold"><Clock className="w-3 h-3" /> Plus que {days} jour{days > 1 ? "s" : ""} !</span>;
-  if (days <= 7) return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-amber-100 text-amber-700 text-xs font-semibold"><Clock className="w-3 h-3" /> {days} jours restants</span>;
-  if (days <= 14) return <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full bg-yellow-50 text-yellow-700 text-xs font-semibold"><Clock className="w-3 h-3" /> {days} jours restants</span>;
-  return null;
 }
 
 // 📅 Helpers pour le download d'un fichier iCal (.ics) ajoutable dans tout agenda
@@ -381,10 +131,214 @@ function downloadIcs(t: Tournoi) {
   URL.revokeObjectURL(link.href);
 }
 
-function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = [], readOnly = false }: {
+
+/** Jour et mois courts d'un tournoi pour la colonne date (« 28 » / « nov. ») */
+function jourEtMois(t: Tournoi): { jour: string; mois: string } {
+  const d = parseFreeDate(t.date);
+  if (!d) return { jour: "?", mois: "" };
+  const jour = d.getDate() === 1 ? "1er" : String(d.getDate());
+  return { jour, mois: d.toLocaleDateString("fr-FR", { month: "short" }) };
+}
+
+/** Date limite lisible : « 28 novembre » */
+function limiteLisible(dateLimit?: string | null): string {
+  if (!dateLimit) return "";
+  const d = parseFreeDate(dateLimit);
+  if (!d) return dateLimit;
+  return d.getDate() === 1
+    ? `1er ${d.toLocaleDateString("fr-FR", { month: "long" })}`
+    : d.toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+}
+
+export default function Tournois({
+  db,
+  memberSession,
+  onLoginRequest,
+  membreNoms = [],
+  readOnly = false,
+}: {
+  db: DB;
+  memberSession: MemberSession | null;
+  onLoginRequest: () => void;
+  membreNoms?: string[];
+  readOnly?: boolean;
+}) {
+  const tournois = db.config_tournois ?? [];
+  // 📅 À venir : le plus proche en premier · Passés : le plus récent en premier
+  const upcoming = tournois.filter((t) => !isTermine(t)).sort((a, b) => tournoiTime(a) - tournoiTime(b));
+  const done = tournois.filter((t) => isTermine(t)).sort((a, b) => tournoiTime(b) - tournoiTime(a));
+  const archives = db.archives ?? [];
+
+  const hasPast = done.length > 0 || archives.length > 0;
+  const [tab, setTab] = useState<"avenir" | "passes">("avenir");
+  const [openArchive, setOpenArchive] = useState<string | null>(null);
+
+  return (
+    <section id="tournois" className="bg-[#F2F6F9] scroll-mt-20" aria-labelledby="titre-tournois">
+      <div className="max-w-6xl mx-auto px-5 py-16">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 mb-6">
+          <h2 id="titre-tournois" className="font-display text-4xl md:text-5xl text-[#0F1B26] leading-[0.95]">
+            {tab === "avenir" ? "Les prochains tournois" : "Les tournois passés"}
+          </h2>
+          {hasPast && (
+            <button
+              onClick={() => setTab(tab === "avenir" ? "passes" : "avenir")}
+              className="font-bold text-[#007DB0] underline underline-offset-4 min-h-[48px] inline-flex items-center"
+            >
+              {tab === "avenir" ? "Voir les tournois passés et le palmarès" : `Voir les tournois à venir${upcoming.length ? ` (${upcoming.length})` : ""}`}
+            </button>
+          )}
+        </div>
+
+        {/* ── Tournois à venir : feuille de matchs ── */}
+        {tab === "avenir" && (
+          upcoming.length === 0 ? (
+            <div className="border-t-[3px] border-[#0F1B26] py-10 text-slate-600 text-lg">
+              Aucun tournoi à venir pour le moment. Les prochains seront annoncés ici et par mail.
+            </div>
+          ) : (
+            <div className="border-t-[3px] border-[#0F1B26]">
+              {upcoming.map((t) => {
+                const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
+                return <TournoiLigne key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} membreNoms={membreNoms} readOnly={readOnly} />;
+              })}
+            </div>
+          )
+        )}
+
+        {/* ── Tournois passés (saison en cours) ── */}
+        {tab === "passes" && done.length > 0 && (
+          <div className="border-t-[3px] border-[#0F1B26]">
+            {done.map((t) => {
+              const inscrits = (db.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
+              return <TournoiTermineLigne key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />;
+            })}
+          </div>
+        )}
+
+        {/* ── Saisons précédentes ── */}
+        {tab === "passes" && archives.length > 0 && (
+          <div className="mt-10">
+            <h3 className="font-display text-3xl text-[#0F1B26] mb-3">Saisons précédentes</h3>
+            <div className="border-t-2 border-[#0F1B26]">
+              {[...archives].reverse().map((archive) => {
+                const key = `${archive.y1}-${archive.y2}`;
+                const isOpen = openArchive === key;
+                const nb = (archive.config_tournois ?? []).length;
+                const hasResults = (archive.inscrits_tournoi ?? []).some((i) => i.resultat);
+                return (
+                  <div key={key} className="border-b border-[#D3DEE6]">
+                    <button
+                      onClick={() => setOpenArchive(isOpen ? null : key)}
+                      aria-expanded={isOpen}
+                      className="w-full flex items-center justify-between gap-3 py-4 min-h-[56px] text-left hover:text-[#007DB0]"
+                    >
+                      <span className="flex flex-wrap items-baseline gap-x-3">
+                        <span className="font-display font-bold text-2xl">Saison {archive.y1}-{archive.y2}</span>
+                        <span className="text-slate-600">{nb ? `${nb} tournoi${nb > 1 ? "s" : ""}` : "Aucun tournoi"}{hasResults ? ", classements disponibles" : ""}</span>
+                      </span>
+                      {isOpen ? <ChevronUp className="w-5 h-5 shrink-0" /> : <ChevronDown className="w-5 h-5 shrink-0" />}
+                    </button>
+                    {isOpen && (
+                      <div className="pb-5">
+                        {!memberSession ? (
+                          <p className="text-slate-600 flex flex-wrap items-center gap-3">
+                            Les détails des saisons passées sont réservés aux adhérents.
+                            <button onClick={onLoginRequest} className="btn-primary">Se connecter</button>
+                          </p>
+                        ) : nb ? (
+                          <div className="border-t border-[#D3DEE6]">
+                            {archive.config_tournois.map((t) => {
+                              const inscrits = (archive.inscrits_tournoi ?? []).filter((i) => i.tournoiId === t.id);
+                              return <TournoiTermineLigne key={t.id} t={t} inscrits={inscrits} memberSession={memberSession} onLoginRequest={onLoginRequest} />;
+                            })}
+                          </div>
+                        ) : (
+                          <p className="text-slate-600">Aucun tournoi enregistré pour cette saison.</p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
+  );
+}
+
+/** Liste des binômes inscrits (noms courts « Prénom N. ») */
+function ListeBinomes({ inscrits, avecResultat = false }: { inscrits: InscritTournoi[]; avecResultat?: boolean }) {
+  return (
+    <ul className="grid sm:grid-cols-2 gap-x-6 gap-y-1 mt-2">
+      {inscrits.map((i) => (
+        <li key={i.id} className="flex items-baseline gap-2 text-slate-700">
+          <span className="text-[#157A55] font-bold" aria-hidden="true">✓</span>
+          <span>{joueursCourts(i.joueurs)}</span>
+          {avecResultat && i.resultat && <span className="ml-auto text-slate-500 tabular-nums">{i.resultat}</span>}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ── Ligne d'un tournoi terminé (classement) ──────────────────────
+function TournoiTermineLigne({ t, inscrits, memberSession, onLoginRequest }: {
+  t: Tournoi; inscrits: InscritTournoi[];
+  memberSession: MemberSession | null;
+  onLoginRequest: () => void;
+}) {
+  const { jour, mois } = jourEtMois(t);
+  const classement = inscrits.filter((i) => i.resultat).sort((a, b) => {
+    const ra = parseInt(a.resultat?.split("/")[0] ?? "99");
+    const rb = parseInt(b.resultat?.split("/")[0] ?? "99");
+    return ra - rb;
+  });
+
+  return (
+    <article className="grid grid-cols-[4.5rem_1fr] sm:grid-cols-[5.5rem_1fr] gap-x-4 py-5 border-b border-[#D3DEE6]">
+      <div className="font-display leading-[0.9] text-slate-500">
+        <span className="block text-4xl sm:text-5xl font-extrabold">{jour}</span>
+        <span className="text-lg font-bold">{mois}</span>
+      </div>
+      <div className="min-w-0">
+        <h3 className="font-bold text-lg leading-snug">{t.name}</h3>
+        <p className="text-slate-600">
+          {t.type ? `Double ${t.type}, ` : ""}{inscrits.length} binôme{inscrits.length > 1 ? "s" : ""}, terminé
+        </p>
+        {!memberSession ? (
+          <p className="mt-2 text-slate-600">
+            Résultats réservés aux adhérents. <button onClick={onLoginRequest} className="font-bold text-[#007DB0] underline underline-offset-4">Se connecter</button>
+          </p>
+        ) : classement.length > 0 ? (
+          <ol className="mt-2 space-y-1">
+            {classement.map((i) => {
+              const rang = parseInt(i.resultat!.split("/")[0]);
+              return (
+                <li key={i.id} className="flex items-baseline gap-2">
+                  <span className="font-display font-bold text-xl w-8 text-[#007DB0] tabular-nums">{rang}<sup className="text-xs">{rang === 1 ? "er" : "e"}</sup></span>
+                  <span className="text-slate-800">{joueursCourts(i.joueurs)}</span>
+                  <span className="ml-auto text-slate-500 tabular-nums">{i.resultat}</span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : inscrits.length > 0 ? (
+          <ListeBinomes inscrits={inscrits} />
+        ) : null}
+      </div>
+    </article>
+  );
+}
+
+// ── Ligne d'un tournoi à venir (feuille de matchs) ───────────────
+function TournoiLigne({ t, inscrits, memberSession, onLoginRequest, membreNoms = [], readOnly = false }: {
   t: Tournoi; inscrits: InscritTournoi[]; memberSession: MemberSession | null; onLoginRequest: () => void; membreNoms?: string[]; readOnly?: boolean;
 }) {
   const isFull = !!(t.quota && inscrits.length >= t.quota);
+  const [ouvert, setOuvert] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [showCovoiturage, setShowCovoiturage] = useState(false);
   const [covoSeats, setCovoSeats] = useState("");
@@ -392,11 +346,11 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
   const [covoContact, setCovoContact] = useState("");
   const daysLeft = getDaysLeft(t.dateLimit);
   const inscriptionsClosed = t.closed === true || (daysLeft !== null && daysLeft < 0);
+  const { jour, mois } = jourEtMois(t);
   // 🔕 Le membre a-t-il dit "pas intéressé" pour ce tournoi ?
-  const [ignored, setIgnored] = useState<boolean>(
-    !!memberSession?.tournoisIgnored?.includes(t.id)
-  );
+  const [ignored, setIgnored] = useState<boolean>(!!memberSession?.tournoisIgnored?.includes(t.id));
   const [togglingIgnored, setTogglingIgnored] = useState(false);
+  const panneauId = `inscription-${t.id}`;
 
   async function toggleIgnoredFn() {
     if (!memberSession) return;
@@ -408,11 +362,8 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
     setTogglingIgnored(true);
     const r = await memberToggleTournoiIgnored(memberSession.email, code, memberSession.membreId, t.id, !ignored);
     setTogglingIgnored(false);
-    if (r.ok) {
-      setIgnored(!ignored);
-    } else {
-      alert("Erreur : " + (r.reason || "inconnue"));
-    }
+    if (r.ok) setIgnored(!ignored);
+    else alert("Erreur : " + (r.reason || "inconnue"));
   }
 
   // Offres de covoiturage pour ce tournoi
@@ -428,7 +379,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
     if (!p1 || !p2) { setSubmitting(false); return; }
     const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) {
-      alert("Vous devez etre connecte a votre espace membre pour vous inscrire a un tournoi.");
+      alert("Vous devez être connecté à votre espace membre pour vous inscrire à un tournoi.");
       setSubmitting(false);
       return;
     }
@@ -437,233 +388,150 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
       : null;
     try {
       const r = await publicRegisterTournoiWithCovoiturage(t.id, p1, p2, memberSession.email, code, covo);
-      if (r.ok) { alert(`Inscription enregistree pour ${t.name} !`); (e.target as HTMLFormElement).reset(); window.location.reload(); }
+      if (r.ok) { alert(`Inscription enregistrée pour ${t.name} !`); (e.target as HTMLFormElement).reset(); window.location.reload(); }
       else alert(r.reason || "Erreur.");
     } finally { setSubmitting(false); }
   }
 
+  // État des inscriptions, en une phrase (couleur selon l'urgence)
+  const etat = isFull
+    ? { texte: "Complet", couleur: "text-[#C62828]" }
+    : inscriptionsClosed
+    ? { texte: "Inscriptions fermées", couleur: "text-[#C62828]" }
+    : daysLeft === 0
+    ? { texte: "Dernier jour pour s'inscrire", couleur: "text-[#C62828]" }
+    : daysLeft !== null && daysLeft <= 3
+    ? { texte: `Plus que ${daysLeft} jour${daysLeft > 1 ? "s" : ""} pour s'inscrire`, couleur: "text-[#B45309]" }
+    : t.dateLimit
+    ? { texte: `Inscriptions jusqu'au ${limiteLisible(t.dateLimit)}`, couleur: "text-[#157A55]" }
+    : { texte: "Inscriptions ouvertes", couleur: "text-[#157A55]" };
+
   return (
-    <motion.div className={`glass-sport overflow-hidden ${inscriptionsClosed ? "opacity-75" : ""}`}>
-      <div className={`relative p-7 border-l-4 ${inscriptionsClosed ? "border-red-400" : "border-emerald-500"}`}>
-        <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl ${inscriptionsClosed ? "from-red-100/40" : "from-emerald-100/40"} to-transparent rounded-full blur-2xl pointer-events-none`} />
-        <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
-          <div className="flex gap-4 items-start">
-            {/* Mini calendrier */}
-            <MiniCalendarBadge dateStr={t.date} />
-            <div>
-              <h3 className="text-xl md:text-2xl font-bold text-slate-800 leading-snug">{t.name}</h3>
-              <div className="flex flex-wrap items-center gap-3 mt-2 text-sm text-slate-500">
-                <span className="flex items-center gap-1.5"><Calendar className="w-4 h-4" /> {t.date}</span>
-                {t.type && <span className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${inscriptionsClosed ? "bg-red-50 text-red-400" : "bg-blue-100 text-blue-700"}`}>Double {t.type}</span>}
-                {t.quota && <span className={`flex items-center gap-1.5 ${inscriptionsClosed ? "text-red-400" : "text-emerald-600"}`}><Users className="w-4 h-4" /> {inscrits.length} / {t.quota} doubles</span>}
-              </div>
-              {t.description && <p className="mt-3 text-sm text-slate-600 whitespace-pre-line">{t.description}</p>}
-              {t.dateLimit && !inscriptionsClosed && <div className="mt-3"><CountdownBadge dateLimit={t.dateLimit} /></div>}
-              <button
-                onClick={() => downloadIcs(t)}
-                className="mt-3 inline-flex items-center gap-1.5 text-xs text-slate-500 hover:text-blue-600 transition"
-                title="Telecharge un fichier .ics a ouvrir avec Google Calendar / iPhone / Outlook"
-              >
-                <CalendarPlus className="w-3.5 h-3.5" />
-                Ajouter a mon agenda
-              </button>
-            </div>
-          </div>
-          <div className="flex flex-col items-end gap-2">
-            {isFull && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase">Complet</span>}
-            {!isFull && inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-red-100 text-red-600 text-sm font-bold uppercase flex items-center gap-1.5"><Lock className="w-3.5 h-3.5" /> Inscriptions fermees</span>}
-            {!isFull && !inscriptionsClosed && <span className="px-4 py-2 rounded-full bg-emerald-100 text-emerald-700 text-sm font-bold uppercase flex items-center gap-1.5"><CheckCircle2 className="w-3.5 h-3.5" /> Inscriptions ouvertes</span>}
-          </div>
+    <article className="py-5 border-b border-[#D3DEE6]">
+      <div className="grid grid-cols-[4.5rem_1fr] sm:grid-cols-[5.5rem_1fr_auto] gap-x-4 gap-y-3 items-start">
+        <div className="font-display leading-[0.9] text-[#0F1B26]">
+          <span className="block text-4xl sm:text-5xl font-extrabold">{jour}</span>
+          <span className="text-lg font-bold text-slate-600">{mois}</span>
         </div>
-        <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-4">
-          {memberSession ? (
-            <>
-              <p className="text-xs uppercase tracking-widest text-slate-400 mb-2">Binômes inscrits</p>
-              {inscrits.length === 0 ? <p className="text-slate-400 text-sm">Aucun pour le moment</p> : (
-                <ul className="space-y-1">
-                  {inscrits.map((i) => <li key={i.id} className="text-sm text-slate-600 flex items-center gap-2"><span className="text-emerald-500">✓</span> {joueursCourts(i.joueurs)}</li>)}
-                </ul>
-              )}
-            </>
-          ) : (
-            <div className="flex items-center gap-3 text-sm text-slate-400">
-              <Lock className="w-4 h-4 shrink-0" />
-              <span>
-                {isFull
-                  ? <strong className="text-red-500">Complet</strong>
-                  : t.quota
-                  ? <>{inscrits.length} / {t.quota} places prises</>
-                  : <>{inscrits.length} binôme{inscrits.length > 1 ? "s" : ""} inscrit{inscrits.length > 1 ? "s" : ""}</>
-                }
-                {" — "}liste réservée aux membres
-              </span>
+        <div className="min-w-0">
+          <h3 className="font-bold text-lg sm:text-xl leading-snug">{t.name}</h3>
+          <p className="text-slate-600">
+            {[t.type ? `Double ${t.type}` : "", t.quota ? `${inscrits.length} / ${t.quota} binômes` : inscrits.length === 0 ? "aucun binôme inscrit pour l'instant" : `${inscrits.length} binôme${inscrits.length > 1 ? "s" : ""} inscrit${inscrits.length > 1 ? "s" : ""}`].filter(Boolean).join(", ")}
+          </p>
+          <p className={`font-bold ${etat.couleur}`}>{etat.texte}</p>
+          {t.description && <p className="mt-2 text-slate-700 whitespace-pre-line max-w-[62ch]">{t.description}</p>}
+
+          {/* Offres de covoiturage */}
+          {memberSession && covoiturageOffers.length > 0 && (
+            <div className="mt-3">
+              <p className="font-bold mb-2 flex items-center gap-2"><Car className="w-4 h-4 text-[#007DB0]" aria-hidden="true" /> Covoiturage proposé</p>
+              <ul className="space-y-1">
+                {covoiturageOffers.map((i) => (
+                  <li key={i.id} className="flex flex-wrap gap-x-4 text-slate-700">
+                    <span className="font-bold text-[#007DB0]">{i.covoiturage!.seats} place{i.covoiturage!.seats > 1 ? "s" : ""}</span>
+                    <span>{joueursCourts(i.joueurs)}</span>
+                    {i.covoiturage!.depart && <span className="inline-flex items-center gap-1 text-slate-600"><MapPin className="w-3.5 h-3.5" /> {i.covoiturage!.depart}</span>}
+                    {i.covoiturage!.contact && <span className="inline-flex items-center gap-1 text-slate-600"><Phone className="w-3.5 h-3.5" /> {i.covoiturage!.contact}</span>}
+                  </li>
+                ))}
+              </ul>
             </div>
           )}
-        </div>
-        {/* Offres de covoiturage */}
-        {memberSession && covoiturageOffers.length > 0 && (
-          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4">
-            <p className="text-xs uppercase tracking-widest text-blue-600 font-semibold mb-2 flex items-center gap-1.5">
-              <Car className="w-3.5 h-3.5" /> Covoiturage ({covoiturageOffers.length} offre{covoiturageOffers.length > 1 ? "s" : ""})
-            </p>
-            <div className="space-y-2">
-              {covoiturageOffers.map((i) => (
-                <div key={i.id} className="flex items-center gap-3 bg-white rounded-lg px-3 py-2 text-sm border border-blue-100">
-                  <span className="text-blue-600 font-bold shrink-0">{i.covoiturage!.seats} place{i.covoiturage!.seats > 1 ? "s" : ""}</span>
-                  <span className="text-slate-600 truncate">{joueursCourts(i.joueurs)}</span>
-                  {i.covoiturage!.depart && (
-                    <span className="flex items-center gap-1 text-xs text-slate-400 shrink-0">
-                      <MapPin className="w-3 h-3" /> {i.covoiturage!.depart}
-                    </span>
-                  )}
-                  {i.covoiturage!.contact && (
-                    <span className="flex items-center gap-1 text-xs text-slate-400 shrink-0">
-                      <Phone className="w-3 h-3" /> {i.covoiturage!.contact}
-                    </span>
-                  )}
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-        {inscriptionsClosed ? (
-          <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-            <p className="text-amber-800 text-sm">
-              💬 <strong>Vous souhaitez participer à ce tournoi ?</strong> Contactez un <strong>membre du bureau</strong> — il est peut-être encore possible de vous inscrire.
-            </p>
-          </div>
-        ) : !isFull && (
-          memberSession && memberSession.paid === true ? (
-            <form onSubmit={readOnly ? (e: React.FormEvent) => { e.preventDefault(); alert("Mode presentation : les inscriptions sont desactivees."); } : regT} className="space-y-3">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <input
-                  className="input"
-                  name="p1"
-                  placeholder="Joueur 1 (votre nom)"
-                  list={`members-list-${t.id}`}
-                  defaultValue={memberSession.nom || ""}
-                  required
-                  autoComplete="off"
-                />
-                <input
-                  className="input"
-                  name="p2"
-                  placeholder="Joueur 2 (partenaire)"
-                  list={`members-list-${t.id}`}
-                  required
-                  autoComplete="off"
-                />
+          {/* 👥 Binômes déjà inscrits */}
+          {inscrits.length > 0 && (
+            memberSession ? (
+              <div className="mt-3">
+                <p className="font-bold text-sm text-slate-700">Déjà inscrits</p>
+                <ListeBinomes inscrits={inscrits} />
               </div>
-              {/* Datalist pour autocomplétion : permet de sélectionner un adhérent existant */}
+            ) : (
+              <p className="mt-3 text-sm text-slate-600">La liste des binômes inscrits est visible par les adhérents connectés.</p>
+            )
+          )}
+        </div>
+        <div className="col-start-2 sm:col-start-3 sm:row-start-1 sm:self-center">
+          {isFull ? (
+            <span className="inline-flex items-center gap-2 font-bold text-[#C62828] min-h-[48px]"><Lock className="w-4 h-4" /> Complet</span>
+          ) : inscriptionsClosed ? (
+            <button onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert} aria-controls={panneauId} className="btn-ghost">Me renseigner</button>
+          ) : !memberSession ? (
+            <button onClick={onLoginRequest} className="btn-primary !px-6">S&apos;inscrire</button>
+          ) : (
+            <button onClick={() => setOuvert((o) => !o)} aria-expanded={ouvert} aria-controls={panneauId} className={ouvert ? "btn-ghost !px-6" : "btn-primary !px-6"}>
+              {ouvert ? "Fermer" : "S'inscrire"}
+            </button>
+          )}
+        </div>
+      </div>
+
+      {ouvert && (
+        <div id={panneauId} className="mt-4 sm:ml-[6.5rem] bg-white border border-[#D3DEE6] rounded-xl p-5 space-y-4">
+          {inscriptionsClosed ? (
+            <p className="text-slate-700">
+              <strong>Vous souhaitez participer à ce tournoi ?</strong> Contactez un membre du bureau : il est peut-être encore possible de vous inscrire.
+            </p>
+          ) : memberSession && memberSession.paid !== true ? (
+            <p className="text-slate-700">
+              <strong>Adhésion à finaliser pour s&apos;inscrire.</strong> Renouvelez votre adhésion de la saison depuis votre espace membre pour pouvoir vous inscrire aux tournois.
+            </p>
+          ) : memberSession ? (
+            <form onSubmit={readOnly ? (e: React.FormEvent) => { e.preventDefault(); alert("Mode présentation : les inscriptions sont désactivées."); } : regT} className="space-y-4">
+              <div className="grid sm:grid-cols-2 gap-3">
+                <label className="block">
+                  <span className="label">Joueur 1</span>
+                  <input className="input" name="p1" list={`members-list-${t.id}`} defaultValue={memberSession.nom || ""} required autoComplete="off" />
+                </label>
+                <label className="block">
+                  <span className="label">Joueur 2 (partenaire)</span>
+                  <input className="input" name="p2" list={`members-list-${t.id}`} required autoComplete="off" placeholder="Tapez le prénom" />
+                </label>
+              </div>
+              {/* Liste des adhérents : évite les fautes de frappe */}
               <datalist id={`members-list-${t.id}`}>
-                {membreNoms.map((nom) => (
-                  <option key={nom} value={nom} />
-                ))}
+                {membreNoms.map((nom) => <option key={nom} value={nom} />)}
               </datalist>
-              <p className="text-xs text-slate-400">
-                Commencez a taper le prenom pour voir la liste des adherents et eviter les fautes de frappe.
-              </p>
+
               {/* Covoiturage */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-3">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={showCovoiturage}
-                    onChange={(e) => setShowCovoiturage(e.target.checked)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <Car className="w-4 h-4 text-blue-600" />
-                  <span className="text-sm font-medium text-slate-700">Je propose des places en covoiturage</span>
+              <div>
+                <label className="inline-flex items-center gap-3 cursor-pointer min-h-[44px]">
+                  <input type="checkbox" checked={showCovoiturage} onChange={(e) => setShowCovoiturage(e.target.checked)} className="w-5 h-5 rounded border-slate-400" />
+                  <Car className="w-5 h-5 text-[#007DB0]" aria-hidden="true" />
+                  <span className="font-bold">Je propose des places en covoiturage</span>
                 </label>
                 {showCovoiturage && (
-                  <div className="mt-3 space-y-2">
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="text-xs text-slate-500 block mb-1">Places</label>
-                        <input
-                          className="input !text-sm"
-                          type="number"
-                          min="1"
-                          max="7"
-                          value={covoSeats}
-                          onChange={(e) => setCovoSeats(e.target.value)}
-                          placeholder="2"
-                        />
-                      </div>
-                      <div className="col-span-2">
-                        <label className="text-xs text-slate-500 block mb-1">Depart depuis</label>
-                        <input
-                          className="input !text-sm"
-                          value={covoDepart}
-                          onChange={(e) => setCovoDepart(e.target.value)}
-                          placeholder="Sainte-Adresse"
-                        />
-                      </div>
-                    </div>
-                    <div>
-                      <label className="text-xs text-slate-500 block mb-1">Contact (optionnel)</label>
-                      <input
-                        className="input !text-sm"
-                        value={covoContact}
-                        onChange={(e) => setCovoContact(e.target.value)}
-                        placeholder="Tel ou via WhatsApp"
-                      />
-                    </div>
+                  <div className="mt-2 grid sm:grid-cols-[6rem_1fr_1fr] gap-3">
+                    <label className="block"><span className="label">Places</span><input className="input" type="number" min="1" max="7" value={covoSeats} onChange={(e) => setCovoSeats(e.target.value)} placeholder="2" /></label>
+                    <label className="block"><span className="label">Départ depuis</span><input className="input" value={covoDepart} onChange={(e) => setCovoDepart(e.target.value)} placeholder="Sainte-Adresse" /></label>
+                    <label className="block"><span className="label">Contact (facultatif)</span><input className="input" value={covoContact} onChange={(e) => setCovoContact(e.target.value)} placeholder="Téléphone ou WhatsApp" /></label>
                   </div>
                 )}
               </div>
-              <button type="submit" className="btn-primary w-full" disabled={submitting}>{submitting ? "Envoi..." : "S'inscrire"}</button>
 
-              {/* 🔕 Bouton "Pas intéressé(e)" — pour ne plus recevoir les rappels de ce tournoi */}
-              {!readOnly && !ignored && (
-                <button
-                  type="button"
-                  onClick={toggleIgnoredFn}
-                  disabled={togglingIgnored}
-                  className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-white border border-slate-300 hover:border-slate-400 text-slate-600 hover:text-slate-800 text-xs font-medium px-4 py-2 rounded-xl transition disabled:opacity-50"
-                  title="Cocher cette case pour ne plus recevoir les rappels d'inscription pour ce tournoi"
-                >
-                  <BellOff className="w-3.5 h-3.5" />
-                  {togglingIgnored ? "..." : "Pas intéressé(e) — ne plus me rappeler"}
+              <div className="flex flex-wrap items-center gap-3">
+                <button type="submit" className="btn-primary !px-6" disabled={submitting}>{submitting ? "Envoi…" : "Valider l'inscription"}</button>
+                <button type="button" onClick={() => downloadIcs(t)} className="btn-ghost" title="Fichier à ouvrir avec Google Agenda, iPhone ou Outlook">
+                  <CalendarPlus className="w-4 h-4" /> Ajouter à mon agenda
                 </button>
-              )}
-              {!readOnly && ignored && (
-                <div className="mt-3 bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center justify-between gap-2">
-                  <p className="text-xs text-slate-600">
-                    🔕 Vous ne recevrez pas de rappel pour ce tournoi.
+              </div>
+
+              {/* 🔕 « Pas intéressé(e) » : plus de rappel pour ce tournoi */}
+              {!readOnly && (
+                ignored ? (
+                  <p className="text-slate-700 flex flex-wrap items-center gap-3">
+                    Vous ne recevrez pas de rappel pour ce tournoi.
+                    <button type="button" onClick={toggleIgnoredFn} disabled={togglingIgnored} className="btn-ghost"><Bell className="w-4 h-4" /> Réactiver les rappels</button>
                   </p>
-                  <button
-                    type="button"
-                    onClick={toggleIgnoredFn}
-                    disabled={togglingIgnored}
-                    className="text-xs bg-emerald-500 hover:bg-emerald-600 text-white font-semibold px-3 py-1.5 rounded-lg inline-flex items-center gap-1 disabled:opacity-50 shrink-0"
-                  >
-                    <Bell className="w-3 h-3" />
-                    Réactiver
+                ) : (
+                  <button type="button" onClick={toggleIgnoredFn} disabled={togglingIgnored} className="text-slate-600 underline underline-offset-4 inline-flex items-center gap-2 min-h-[44px]">
+                    <BellOff className="w-4 h-4" /> {togglingIgnored ? "…" : "Pas intéressé(e), ne plus me rappeler ce tournoi"}
                   </button>
-                </div>
+                )
               )}
             </form>
-          ) : memberSession && memberSession.paid !== true ? (
-            <div className="bg-amber-50 border border-amber-200 rounded-xl p-4">
-              <div className="flex items-start gap-3">
-                <Lock className="w-5 h-5 text-amber-600 shrink-0 mt-0.5" />
-                <div>
-                  <p className="text-amber-800 font-semibold text-sm mb-1">Adhésion à finaliser pour s'inscrire</p>
-                  <p className="text-amber-700 text-xs">
-                    Renouvelez votre adhésion saison en cours pour pouvoir vous inscrire aux tournois. Rendez-vous dans votre espace membre.
-                  </p>
-                </div>
-              </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
-              <p className="text-slate-600 text-sm flex items-center gap-2"><Lock className="w-4 h-4 text-slate-400" /> Inscription réservée aux adhérents</p>
-              <button onClick={onLoginRequest} className="text-sm font-semibold text-[#0F1B26] hover:underline">Se connecter →</button>
-            </div>
-          )
-        )}
-      </div>
-    </motion.div>
+          ) : null}
+
+        </div>
+      )}
+    </article>
   );
 }
