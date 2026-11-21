@@ -328,7 +328,7 @@ export default function Inscription({
   }
 
   return (
-    <section id="inscription" className="bg-section-wrap bg-signup relative">
+    <section id="inscription" className="bg-section-wrap bg-signup relative scroll-mt-20">
       <div className="section-pad relative">
         <div className="text-center mb-14">
           <div className="sport-label mb-5">

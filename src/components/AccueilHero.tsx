@@ -59,8 +59,10 @@ export default function AccueilHero({
           <div className="absolute inset-0 bg-gradient-to-t from-[#031A2C]/95 via-[#031A2C]/70 to-[#031A2C]/15 lg:bg-gradient-to-r lg:from-[#031A2C]/90 lg:via-[#031A2C]/60 lg:to-transparent" />
           <div className="absolute inset-0">
             <div className="max-w-6xl h-full mx-auto px-5 flex flex-col justify-end lg:justify-center gap-5 pb-10 lg:pb-0">
-              <p className="font-bold text-[#5CCBF7]">
-                Saison {seasonY1}-{seasonY2}, {inscOpen ? "les inscriptions sont ouvertes" : "les inscriptions sont fermées"}
+              {/* Statut des inscriptions : bien visible, couleur + texte (pas seulement la couleur) */}
+              <p className={`self-start inline-flex items-center gap-2.5 rounded-full px-4 py-2 text-base sm:text-lg font-bold ${inscOpen ? "bg-[#157A55] text-white" : "bg-[#C62828] text-white"}`}>
+                <span className={`w-3 h-3 rounded-full ${inscOpen ? "bg-[#7FE0B4]" : "bg-[#FFB3B3]"}`} aria-hidden="true" />
+                {inscOpen ? "Inscriptions ouvertes" : "Inscriptions fermées"} pour la saison {seasonY1}-{seasonY2}
               </p>
               <h1 id="titre-accueil" className="font-display text-[2.6rem] sm:text-6xl lg:text-[5.2rem] leading-[0.92] max-w-[14ch]">
                 Le badminton à Sainte-Adresse, pour tous les niveaux

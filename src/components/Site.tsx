@@ -12,6 +12,7 @@ import AccueilHero from "./AccueilHero";
 import Agenda from "./Agenda";
 import { evenementsAgenda } from "@/lib/agenda";
 import Presentation from "./Presentation";
+import RejoindreClub from "./RejoindreClub";
 import Actualites from "./Actualites";
 import Horaires from "./Horaires";
 import Tournois from "./Tournois";
@@ -559,6 +560,14 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
               salleAdresse={getEffectiveConfig(db).salleAdresse}
             />
           </FadeInSection>
+        )}
+
+        {/* 🏸 Rejoindre le club (visiteurs) : le bouton fait défiler jusqu'au formulaire d'inscription */}
+        {mode === "full" && (!memberSession || db.presentationMode) && (
+          <RejoindreClub
+            inscOpen={db.insc_open !== false}
+            formulaireSurLaPage={db.presentationMode === true || db.sectionsVisible?.inscription !== false}
+          />
         )}
 
         {/* Vague de transition avant Tournois */}
