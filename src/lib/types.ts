@@ -487,6 +487,7 @@ export type DB = {
   // 🚨 Verrou d'urgence : tant qu'il est actif, seul le propriétaire accède à l'administration.
   // Posé / retiré uniquement par l'action serveur admin_verrou_admin (réservée au propriétaire).
   verrouAdmin?: { actif: boolean; le: string; par: string };
+  checklistRentree?: { saison: string; faits: string[] }; // ✅ liste « début de saison » cochée par le bureau (repart à zéro chaque saison)
   // 🔑 Codes 2FA en attente (purgés auto à l'expiration). Stockés en DB
   // car les Edge Functions sont stateless.
   twoFAPending?: { email: string; codeHash: string; expires: number }[];

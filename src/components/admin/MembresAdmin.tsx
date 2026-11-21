@@ -198,6 +198,53 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
       .sort((a, b) => (a.ok === b.ok ? 0 : a.ok ? 1 : -1));
   }, [db.membres, search, filterNoPhoto, filterType, filterPayment, showAttente, filtreVisite]);
 
+  // ☑️ Sélection de plusieurs adhérents (actions groupées)
+  const [selection, setSelection] = useState<Set<string>>(new Set());
+  const choisis = db.membres.filter((m) => selection.has(m.id));
+  const basculer = (id: string) => setSelection((prev) => { const n = new Set(prev); if (n.has(id)) n.delete(id); else n.add(id); return n; });
+  const toutCoche = filtered.length > 0 && filtered.every((m) => selection.has(m.id));
+  const basculerTout = () => setSelection(toutCoche ? new Set() : new Set(filtered.map((m) => m.id)));
+  const [envoiLot, setEnvoiLot] = useState(false);
+
+  /** 📊 Export de la sélection (ou de la liste affichée) en fichier tableur, ouvrable dans Excel */
+  function exporterTableur(liste: Membre[]) {
+    const col = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
+    const lignes = [
+      ["Nom", "Email", "Téléphone", "Catégorie", "Payé", "Mode de paiement", "Date de paiement"].map(col).join(";"),
+      ...liste.map((m) => [m.nom, m.email, m.tel || "", m.type, m.ok ? "oui" : "non", m.paymentMethod === "virement" ? "virement" : "en ligne", m.paymentDate ? new Date(m.paymentDate).toLocaleDateString("fr-FR") : ""].map(col).join(";")),
+    ];
+    const blob = new Blob(["\ufeff" + lignes.join("\r\n")], { type: "text/csv;charset=utf-8" });
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `adherents-saccb-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(a); a.click(); a.remove();
+    URL.revokeObjectURL(a.href);
+  }
+
+  /** 💸 Rappel de paiement à tous les non-payés sélectionnés (une seule confirmation, liste des destinataires affichée) */
+  async function relancerSelection() {
+    if (!adminEmail || !adminCode) { alert("Identifiants admin manquants."); return; }
+    const cibles = choisis.filter((m) => !m.ok && !m.enAttente);
+    if (cibles.length === 0) { alert("Aucun adhérent non payé dans la sélection."); return; }
+    if (!confirm(`Envoyer un rappel de paiement à ${cibles.length} adhérent${cibles.length > 1 ? "s" : ""} ?\n\n${cibles.map((m) => `• ${m.nom} (${m.email})`).join("\n")}`)) return;
+    setEnvoiLot(true);
+    const now = new Date().toISOString();
+    const reussis: string[] = [], echecs: string[] = [];
+    for (const m of cibles) {
+      const r = await adminSendPaymentReminder(m.id, adminEmail, adminCode);
+      (r.ok ? reussis : echecs).push(m.nom);
+    }
+    if (reussis.length) {
+      await onPersist({ ...db, membres: db.membres.map((x) => (cibles.some((c) => c.id === x.id) && reussis.includes(x.nom) ? { ...x, paymentRemindersSent: [...(x.paymentRemindersSent || []), now] } : x)) });
+    }
+    setEnvoiLot(false);
+    alert(`Rappels envoyés : ${reussis.length}${echecs.length ? `\nÉchecs : ${echecs.join(", ")}` : ""}`);
+  }
+
+  // 👤 Fiche complète d'un adhérent (panneau latéral)
+  const [ficheId, setFicheId] = useState<string | null>(null);
+  const fiche = db.membres.find((m) => m.id === ficheId) || null;
+
   // 📧 Suit l'envoi auto pour notifier l'admin si ça échoue silencieusement
   const [autoSendStatus, setAutoSendStatus] = useState<{ ok: boolean; text: string } | null>(null);
 
@@ -659,6 +706,24 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
       )}
 
       {/* Mobile : cartes */}
+      {/* ☑️ Actions groupées */}
+      <div className={`mb-3 rounded-xl border px-4 py-3 flex flex-wrap items-center gap-2 ${selection.size ? "border-[#00B0F0] bg-[#E6F7FE]" : "border-[#D3DEE6] bg-white"}`}>
+        <label className="inline-flex items-center gap-2 font-bold min-h-[44px] mr-2 cursor-pointer">
+          <input type="checkbox" checked={toutCoche} onChange={basculerTout} className="w-5 h-5" />
+          {selection.size ? `${selection.size} sélectionné${selection.size > 1 ? "s" : ""}` : "Tout sélectionner"}
+        </label>
+        {selection.size > 0 ? (
+          <>
+            <button onClick={() => exporterTableur(choisis)} className="btn-ghost !min-h-[40px] !py-1.5 !text-sm">Exporter (Excel)</button>
+            <button onClick={() => { navigator.clipboard?.writeText(choisis.map((m) => m.email).join(", ")).then(() => alert(`${choisis.length} adresse${choisis.length > 1 ? "s" : ""} copiée${choisis.length > 1 ? "s" : ""}.`)).catch(() => alert(choisis.map((m) => m.email).join(", "))); }} className="btn-ghost !min-h-[40px] !py-1.5 !text-sm">Copier les mails</button>
+            {!readOnly && <button onClick={relancerSelection} disabled={envoiLot} className="btn-primary !min-h-[40px] !py-1.5 !text-sm">{envoiLot ? "Envoi…" : "Relancer pour le paiement"}</button>}
+            <button onClick={() => setSelection(new Set())} className="text-sm font-bold text-slate-600 underline underline-offset-4 min-h-[40px] px-2">Tout désélectionner</button>
+          </>
+        ) : (
+          <button onClick={() => exporterTableur(filtered)} className="btn-ghost !min-h-[40px] !py-1.5 !text-sm">Exporter la liste affichée (Excel)</button>
+        )}
+      </div>
+
       <div className="md:hidden space-y-3">
         {filtered.map((m) => (
           <div
@@ -668,7 +733,8 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
             <div className="flex items-start justify-between gap-2 mb-2">
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
-                  <p className="font-semibold text-slate-800 truncate">{m.nom}<VisiteBadge m={m} /><ModifBadge m={m} champ="nom" /></p>
+                  <input type="checkbox" checked={selection.has(m.id)} onChange={() => basculer(m.id)} className="w-5 h-5 shrink-0" aria-label={`Sélectionner ${m.nom}`} />
+                  <p className="font-semibold text-slate-800 truncate"><button onClick={() => setFicheId(m.id)} className="font-bold text-[#0F1B26] underline decoration-[#D3DEE6] underline-offset-4 hover:decoration-[#00B0F0] text-left">{m.nom}</button><VisiteBadge m={m} /><ModifBadge m={m} champ="nom" /></p>
                   {m.newsOptIn === true ? (
                     <Bell className="w-3 h-3 text-emerald-500 shrink-0" aria-label="Abonné aux news" />
                   ) : (
@@ -804,7 +870,8 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
       <div className="hidden md:block overflow-x-auto rounded-xl border border-slate-200">
         <table className="w-full text-sm">
           <thead className="bg-slate-50">
-            <tr className="text-left text-xs uppercase tracking-widest text-slate-500">
+            <tr className="text-left text-sm font-bold text-slate-600">
+              <th className="p-3 w-10"><input type="checkbox" checked={toutCoche} onChange={basculerTout} className="w-5 h-5" aria-label="Tout sélectionner" /></th>
               <th className="p-3">Nom</th>
               <th className="p-3">Email</th>
               <th className="p-3">Tel</th>
@@ -819,7 +886,8 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
           <tbody>
             {filtered.map((m) => (
               <tr key={m.id} className={`border-t border-slate-100 ${!m.ok ? "opacity-70" : ""}`}>
-                <td className="p-3 text-slate-800">{m.nom}<VisiteBadge m={m} /><ModifBadge m={m} champ="nom" /></td>
+                <td className="p-3"><input type="checkbox" checked={selection.has(m.id)} onChange={() => basculer(m.id)} className="w-5 h-5" aria-label={`Sélectionner ${m.nom}`} /></td>
+                <td className="p-3 text-slate-800"><button onClick={() => setFicheId(m.id)} className="font-bold text-[#0F1B26] underline decoration-[#D3DEE6] underline-offset-4 hover:decoration-[#00B0F0] text-left">{m.nom}</button><VisiteBadge m={m} /><ModifBadge m={m} champ="nom" /></td>
                 <td className="p-3 text-slate-500 break-all">{m.email}<br /><ModifBadge m={m} champ="email" /></td>
                 <td className="p-3 text-slate-400">{m.tel || "-"}<br /><ModifBadge m={m} champ="tel" /></td>
                 <td className="p-3 text-slate-500">
@@ -961,6 +1029,20 @@ ${detail}`} className="inline-block text-[10px] px-1.5 py-0.5 rounded mt-0.5 cur
       {(db.formerMembers ?? []).length > 0 && (
         <FormerMembersSection formerMembers={db.formerMembers!} db={db} onPersist={onPersist} readOnly={readOnly} />
       )}
+      {fiche && (
+        <FicheAdherent
+          m={fiche}
+          db={db}
+          readOnly={!!readOnly}
+          onClose={() => setFicheId(null)}
+          onEdit={() => { setFicheId(null); onEdit(fiche); }}
+          onRecu={() => onRecu(fiche)}
+          onPaiement={() => togglePaiement(fiche.id, !fiche.ok)}
+          onRappel={() => sendPaymentReminder(fiche)}
+          onCode={() => resetCode(fiche)}
+          onConfirmation={() => sendEmail(fiche)}
+        />
+      )}
     </div>
   );
 }
@@ -1067,6 +1149,97 @@ function FormerMembersSection({
           )}
         </div>
       )}
+    </div>
+  );
+}
+
+
+/** 👤 Fiche complète d'un adhérent : tout au même endroit, avec les actions principales */
+function FicheAdherent({ m, db, readOnly, onClose, onEdit, onRecu, onPaiement, onRappel, onCode, onConfirmation }: {
+  m: Membre; db: DB; readOnly: boolean; onClose: () => void;
+  onEdit: () => void; onRecu: () => void; onPaiement: () => void; onRappel: () => void; onCode: () => void; onConfirmation: () => void;
+}) {
+  const nom = m.nom.toLowerCase();
+  const tournois = [
+    ...(db.inscrits_tournoi || []).map((i) => ({ i, t: (db.config_tournois || []).find((t) => t.id === i.tournoiId), saison: `${db.y1}-${db.y2}` })),
+    ...(db.archives || []).flatMap((a) => (a.inscrits_tournoi || []).map((i) => ({ i, t: (a.config_tournois || []).find((t) => t.id === i.tournoiId), saison: `${a.y1}-${a.y2}` }))),
+  ].filter((x) => x.t && (x.i.joueurs || "").toLowerCase().includes(nom));
+  const tshirts = (db.tshirtOrders || []).filter((o) => o.membreId === m.id);
+  const jour = (iso?: string) => (iso ? new Date(iso).toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" }) : "");
+  const ligne = (titre: string, valeur: React.ReactNode) => (
+    <div className="grid grid-cols-[9rem_1fr] gap-3 py-2 border-b border-[#E3EBF1]"><dt className="text-slate-600 font-bold">{titre}</dt><dd className="min-w-0 break-words">{valeur}</dd></div>
+  );
+  return (
+    <div className="fixed inset-0 z-[2100] bg-black/40 flex justify-end" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="titre-fiche">
+      <div className="w-full max-w-lg h-full bg-[#F2F6F9] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+        <div className="sticky top-0 bg-white border-b border-[#D3DEE6] px-5 py-4 flex items-start justify-between gap-3">
+          <div className="min-w-0">
+            <h2 id="titre-fiche" className="font-display text-3xl text-[#0F1B26] leading-none">{m.nom}</h2>
+            <p className={`mt-1 font-bold ${m.ok ? "text-[#157A55]" : "text-[#C62828]"}`}>{m.ok ? "Cotisation payée" : m.enAttente ? "Inscription mise de côté" : "Cotisation pas encore payée"}</p>
+          </div>
+          <button onClick={onClose} className="p-2 rounded-lg hover:bg-[#F2F6F9]" aria-label="Fermer la fiche"><X className="w-6 h-6" /></button>
+        </div>
+
+        <div className="p-5 space-y-5">
+          {!readOnly && (
+            <div className="flex flex-wrap gap-2">
+              <button onClick={onEdit} className="btn-ghost"><Pencil className="w-4 h-4" /> Modifier</button>
+              <button onClick={onPaiement} className={m.ok ? "btn-ghost" : "btn-primary"}><CheckCircle2 className="w-4 h-4" /> {m.ok ? "Annuler le paiement" : "Valider le paiement"}</button>
+              {m.ok && <button onClick={onRecu} className="btn-ghost"><Receipt className="w-4 h-4" /> Reçu</button>}
+              {m.ok && <button onClick={onConfirmation} className="btn-ghost"><Mail className="w-4 h-4" /> Mail de confirmation</button>}
+              {!m.ok && <button onClick={onRappel} className="btn-ghost"><AlarmClock className="w-4 h-4" /> Rappel de paiement</button>}
+              <button onClick={onCode} className="btn-ghost"><KeyRound className="w-4 h-4" /> Nouveau code</button>
+            </div>
+          )}
+
+          <section className="bg-white rounded-xl border border-[#D3DEE6] px-4 py-2">
+            <h3 className="font-display text-2xl text-[#0F1B26] pt-2">Coordonnées</h3>
+            <dl>
+              {ligne("Mail", m.email)}
+              {ligne("Téléphone", m.tel || "non renseigné")}
+              {ligne("Catégorie", `${m.type}${remiseSaison(db, m)?.statut === "acceptee" ? ", tarif remisé" : ""}`)}
+              {ligne("Paiement", `${m.paymentMethod === "virement" ? "virement" : "en ligne"}${m.paymentDate ? `, le ${jour(m.paymentDate)}` : ""}${typeof m.montantPaye === "number" ? `, ${m.montantPaye} €` : ""}`)}
+              {ligne("News du club", m.newsOptIn ? "oui" : "non")}
+              {ligne("Droit à l'image", m.photoConsent ? "oui" : "non")}
+              {m.vuLe && ligne("Dernière visite", jour(m.vuLe))}
+            </dl>
+          </section>
+
+          {!!m.coordonneesModifiees?.length && (
+            <section className="bg-white rounded-xl border border-[#D3DEE6] px-4 py-3">
+              <h3 className="font-display text-2xl text-[#0F1B26]">Changements faits par l&apos;adhérent</h3>
+              <ul className="mt-2 space-y-1">
+                {m.coordonneesModifiees.map((c, k) => (
+                  <li key={k} className="text-slate-700">{jour(c.at)} : {c.champ === "email" ? "mail" : c.champ === "tel" ? "téléphone" : c.champ === "type" ? "catégorie" : "nom"} « {c.avant || "vide"} » → « {c.apres} »</li>
+                ))}
+              </ul>
+            </section>
+          )}
+
+          <section className="bg-white rounded-xl border border-[#D3DEE6] px-4 py-3">
+            <h3 className="font-display text-2xl text-[#0F1B26]">Tournois joués</h3>
+            {tournois.length === 0 ? <p className="text-slate-600 mt-1">Aucun tournoi pour l&apos;instant.</p> : (
+              <ul className="mt-2 space-y-1">
+                {tournois.map(({ i, t, saison }) => (
+                  <li key={i.id + saison} className="flex justify-between gap-3 text-slate-700">
+                    <span className="min-w-0">{t!.name} <span className="text-slate-500">({saison})</span></span>
+                    {i.resultat && <span className="font-bold tabular-nums shrink-0">{i.resultat}</span>}
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          {tshirts.length > 0 && (
+            <section className="bg-white rounded-xl border border-[#D3DEE6] px-4 py-3">
+              <h3 className="font-display text-2xl text-[#0F1B26]">T-shirts</h3>
+              <ul className="mt-2 space-y-1">
+                {tshirts.map((o) => <li key={o.id} className="text-slate-700">Taille {o.taille}{o.couleur ? `, ${o.couleur}` : ""}{o.nomFloque ? `, floqué « ${o.nomFloque} »` : ""} : <b className={o.paid ? "text-[#157A55]" : "text-[#C62828]"}>{o.paid ? "payé" : "pas encore payé"}</b></li>)}
+              </ul>
+            </section>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
