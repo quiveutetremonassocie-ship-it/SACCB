@@ -493,7 +493,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
       >
         <div className="flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F1B26] to-emerald-600 flex items-center justify-center">
               <UserCircle2 className="w-5 h-5 text-white" />
             </div>
             <div>
@@ -532,7 +532,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             <button
               key={id}
               onClick={() => setOnglet(id)}
-              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${onglet === id ? "bg-white text-[#1e3a5f] shadow" : "text-slate-500 hover:text-slate-700"}`}
+              className={`flex-1 flex items-center justify-center gap-1.5 py-2 rounded-xl text-xs sm:text-sm font-semibold transition ${onglet === id ? "bg-white text-[#0F1B26] shadow" : "text-slate-500 hover:text-slate-700"}`}
             >
               <Icone className="w-4 h-4" /> {label}
               {id === "tournois" && tournoiEnDirect && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
@@ -883,11 +883,11 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             </p>
             <div className="grid grid-cols-2 gap-3">
               <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
-                <p className="text-2xl font-bold text-[#1e3a5f]">{personalStats.currentSeason}</p>
+                <p className="text-2xl font-bold text-[#0F1B26]">{personalStats.currentSeason}</p>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">Cette saison</p>
               </div>
               <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
-                <p className="text-2xl font-bold text-[#1e3a5f]">{personalStats.totalAllTime}</p>
+                <p className="text-2xl font-bold text-[#0F1B26]">{personalStats.totalAllTime}</p>
                 <p className="text-[10px] uppercase tracking-widest text-slate-500 mt-0.5">Total tournois</p>
               </div>
               <div className="bg-white rounded-xl p-3 text-center border border-slate-100">
@@ -1055,7 +1055,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
                 <a href="/tournois" className="btn-primary !text-xs inline-flex">Voir les prochains tournois</a>
               </div>
             )}
-            <a href="/tournois" className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-[#1e3a5f] border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50">
+            <a href="/tournois" className="mt-2 flex items-center justify-center gap-2 text-sm font-semibold text-[#0F1B26] border border-slate-200 rounded-xl py-2.5 hover:bg-slate-50">
               <Trophy className="w-4 h-4 text-amber-500" /> S&apos;inscrire à un tournoi <ArrowRight className="w-4 h-4" />
             </a>
           </>
@@ -1190,7 +1190,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
               className="flex items-center justify-center gap-2 w-full text-sm font-medium text-slate-700 border border-slate-200 rounded-xl px-4 py-2.5 hover:bg-slate-50 transition"
               title="Génère une procuration si tu ne peux pas être présent(e) à l'Assemblée Générale"
             >
-              <FileSignature className="w-4 h-4 text-[#1e3a5f]" />
+              <FileSignature className="w-4 h-4 text-[#0F1B26]" />
               Procuration Assemblée Générale
             </button>
           </div>
@@ -1264,7 +1264,7 @@ function Badge({ nom, type, y1, y2, onCelebrate }: { nom: string; type: string; 
       type="button"
       onClick={onCelebrate}
       aria-label="Faire pleuvoir des confettis 🎉"
-      className="relative max-w-sm mx-auto block w-full text-left bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
+      className="relative max-w-sm mx-auto block w-full text-left bg-gradient-to-br from-[#0F1B26] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden cursor-pointer hover:scale-[1.02] active:scale-[0.98] transition-transform"
     >
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
       <div className="font-display text-xl text-blue-400 tracking-widest border-b border-white/10 pb-2 mb-4">

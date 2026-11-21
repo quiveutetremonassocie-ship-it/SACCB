@@ -51,7 +51,7 @@ export default function ScrollButton() {
       ref={btnRef}
       onClick={handleClick}
       style={{ display: "none" }}
-      className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-[#1e3a5f]/90 hover:bg-[#1e3a5f] text-white shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-300 items-center justify-center group"
+      className="fixed bottom-6 right-6 z-40 w-11 h-11 rounded-full bg-[#0F1B26]/90 hover:bg-[#0F1B26] text-white shadow-lg hover:shadow-xl backdrop-blur-sm transition-all duration-300 items-center justify-center group"
       aria-label="Scroll"
     >
       <ChevronUp ref={iconUpRef} className="w-5 h-5 group-hover:-translate-y-0.5 transition-transform" style={{ display: "none" }} />

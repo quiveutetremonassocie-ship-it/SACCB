@@ -8,7 +8,7 @@ export default function ContactSection({ whatsappLink }: { whatsappLink?: string
     <section className="max-w-5xl mx-auto px-6 py-16">
       <div className="text-center mb-12">
         <p className="text-xs uppercase tracking-widest text-emerald-600 font-semibold mb-3">Contact</p>
-        <h1 className="font-display text-5xl md:text-6xl h-display text-[#1e3a5f] mb-4">Contactez-nous</h1>
+        <h1 className="font-display text-5xl md:text-6xl h-display text-[#0F1B26] mb-4">Contactez-nous</h1>
         <p className="text-slate-500 max-w-xl mx-auto">
           Une question sur l&apos;association, les entra&icirc;nements ou l&apos;adh&eacute;sion ? &Eacute;crivez-nous, on vous r&eacute;pond rapidement.
         </p>
@@ -82,7 +82,7 @@ export default function ContactSection({ whatsappLink }: { whatsappLink?: string
             </p>
             <a
               href="/inscription"
-              className="inline-flex items-center gap-2 bg-[#1e3a5f] hover:bg-[#2d5a8e] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-sm"
+              className="inline-flex items-center gap-2 bg-[#0F1B26] hover:bg-[#007DB0] text-white text-sm font-semibold px-5 py-2.5 rounded-xl transition shadow-sm"
             >
               S&apos;inscrire en ligne
             </a>

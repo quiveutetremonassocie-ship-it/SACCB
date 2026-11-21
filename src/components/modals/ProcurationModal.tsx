@@ -43,7 +43,7 @@ export default function ProcurationModal({
         <div className="no-print bg-white border border-slate-200 rounded-2xl shadow-2xl p-5 sm:p-8 w-full max-w-md my-auto">
           <div className="flex items-center justify-between mb-5">
             <div className="flex items-center gap-3 min-w-0">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-[#0F1B26] to-emerald-600 flex items-center justify-center shrink-0">
                 <FileSignature className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
               </div>
               <h3 className="font-display text-lg sm:text-xl tracking-wider text-slate-800 truncate">

@@ -192,7 +192,7 @@ function AskQuestionBlock({ memberSession }: { memberSession?: MemberSession | n
         <MessageCircleQuestion className="w-8 h-8 text-slate-400 mx-auto mb-2" />
         <p className="text-sm text-slate-600 font-semibold mb-1">Vous avez une autre question ?</p>
         <p className="text-xs text-slate-500 mb-3">Connectez-vous à votre espace membre pour la poser au bureau.</p>
-        <Link href="/?member=1" className="inline-block bg-[#1e3a5f] hover:bg-[#2d5a8e] text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
+        <Link href="/?member=1" className="inline-block bg-[#0F1B26] hover:bg-[#007DB0] text-white text-xs font-semibold px-4 py-2 rounded-lg transition">
           Se connecter
         </Link>
       </div>

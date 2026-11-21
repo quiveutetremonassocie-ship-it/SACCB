@@ -30,7 +30,7 @@ export default function ProgrammeEditor({
     <div className="rounded-2xl border border-slate-200 bg-white overflow-hidden">
       <div className="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2 flex-wrap">
         <div>
-          <p className="font-bold text-[#1e3a5f] text-sm">📋 Programme de la journée</p>
+          <p className="font-bold text-[#0F1B26] text-sm">📋 Programme de la journée</p>
           <p className="text-[11px] text-slate-500">
             Prévu à l&apos;avance : le jour J, chaque tour se lance en un clic avec ces réglages. Le règlement du tournoi s&apos;écrit tout seul à partir de ce programme.
           </p>
@@ -53,7 +53,7 @@ export default function ProgrammeEditor({
           const [mn, mx] = matchsParEquipe(nbEquipes, p.poules);
           return (
             <div key={i} className={`px-4 py-3 flex flex-wrap items-center gap-2 ${bloque ? "bg-slate-50/70" : ""}`}>
-              <span className="w-7 h-7 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
+              <span className="w-7 h-7 shrink-0 rounded-full bg-[#0F1B26] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
               <input
                 className="input !py-1.5 !text-sm w-32"
                 value={p.nom}

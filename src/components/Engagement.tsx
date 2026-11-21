@@ -159,10 +159,6 @@ export default function Engagement({
     <section id="engagement" className="bg-section-wrap">
       <div className="section-pad">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
           <div className="sport-label mb-5 animate-pulse">

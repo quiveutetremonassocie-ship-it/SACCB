@@ -101,7 +101,7 @@ export default function ReglageManuel({
               <button
                 onClick={() => onSave({ ...phase, nom: nomTour.trim() || phase.nom, format: { sets, points, cassant } })}
                 disabled={busy || !formatChange}
-                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#1e3a5f] text-white disabled:opacity-40"
+                className="text-xs font-semibold px-3 py-1.5 rounded-lg bg-[#0F1B26] text-white disabled:opacity-40"
               >
                 Enregistrer
               </button>
@@ -112,7 +112,7 @@ export default function ReglageManuel({
           <div className="flex flex-wrap gap-1.5">
             {phase.poules.map((p) => (
               <button key={p.id} onClick={() => setPouleId(p.id)}
-                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${p.id === poule.id ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white text-slate-600 border-slate-300"}`}>
+                className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${p.id === poule.id ? "bg-[#0F1B26] text-white border-[#0F1B26]" : "bg-white text-slate-600 border-slate-300"}`}>
                 {p.nom}{p.ordreManuel?.length ? " ✋" : ""}
               </button>
             ))}

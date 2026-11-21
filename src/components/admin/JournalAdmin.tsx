@@ -164,7 +164,7 @@ function FicheSite({ db, adminEmail, adminCode }: { db: DB; adminEmail?: string;
         <p className="text-sm font-bold text-slate-700">📘 Fiche du site pour Claude</p>
         <p className="text-xs text-slate-500">Un PDF qui explique tout le site (fonctionnement, services utilisés, règles, état actuel, historique des modifications). Donne-le à Claude au début d&apos;une nouvelle conversation. Toujours à jour : il est créé au moment du clic.</p>
       </div>
-      <button onClick={telecharger} disabled={enCours} className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#1e3a5f] text-white disabled:opacity-50">
+      <button onClick={telecharger} disabled={enCours} className="text-xs font-semibold px-3 py-2 rounded-lg bg-[#0F1B26] text-white disabled:opacity-50">
         {enCours ? "Création…" : "📥 Télécharger la fiche (PDF)"}
       </button>
     </div>
@@ -388,7 +388,7 @@ export default function JournalAdmin({ db, adminEmail, adminCode, onRefresh }: {
                 <div className="px-4 py-2 flex gap-3 text-sm">
                   <span className="font-mono text-xs text-slate-400 shrink-0 pt-0.5">{d.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" })}</span>
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs font-semibold text-[#1e3a5f] truncate">{l.email}</p>
+                    <p className="text-xs font-semibold text-[#0F1B26] truncate">{l.email}</p>
                     <ul className={`text-[13px] space-y-0.5 ${l.annulee ? "text-slate-400 line-through" : "text-slate-700"}`}>
                       {l.actions.map((a, k) => <li key={k} className="break-words">{a}</li>)}
                     </ul>

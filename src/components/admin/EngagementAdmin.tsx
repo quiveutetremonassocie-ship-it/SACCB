@@ -414,11 +414,11 @@ function AGTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Pro
 <title>Questions et idées AG — Saison ${db.y1}–${db.y2}</title>
 <style>
   body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; max-width: 800px; margin: 0 auto; padding: 32px; color: #1e293b; }
-  .header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 24px; }
+  .header { display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #0F1B26; padding-bottom: 12px; margin-bottom: 24px; }
   .header img { width: 70px; height: 70px; object-fit: contain; }
-  h1 { color: #1e3a5f; font-size: 22px; margin: 0; }
+  h1 { color: #0F1B26; font-size: 22px; margin: 0; }
   .subtitle { font-size: 12px; color: #64748b; margin: 4px 0 0; }
-  h2 { color: #1e3a5f; font-size: 16px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 28px 0 12px; }
+  h2 { color: #0F1B26; font-size: 16px; border-bottom: 2px solid #cbd5e1; padding-bottom: 6px; margin: 28px 0 12px; }
   .empty { color: #94a3b8; font-style: italic; padding: 12px 0; }
   .item { background: #f8fafc; border-left: 3px solid #f59e0b; padding: 12px 16px; margin-bottom: 12px; border-radius: 4px; page-break-inside: avoid; }
   .item.resolved { border-left-color: #3b82f6; background: #eff6ff; }
@@ -427,7 +427,7 @@ function AGTab({ db, onPersist, readOnly }: { db: DB; onPersist: (db: DB) => Pro
   .badge-traite { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 8px; font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; }
   .item-text { font-size: 13px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
   .item-reponse { margin-top: 10px; padding-top: 8px; border-top: 1px solid #e2e8f0; background: white; padding: 8px 12px; border-radius: 4px; }
-  .item-reponse-label { text-transform: uppercase; font-size: 10px; font-weight: 700; color: #1e3a5f; margin: 0 0 4px; letter-spacing: 0.05em; }
+  .item-reponse-label { text-transform: uppercase; font-size: 10px; font-weight: 700; color: #0F1B26; margin: 0 0 4px; letter-spacing: 0.05em; }
   .item-reponse p { font-size: 12px; line-height: 1.5; margin: 0; white-space: pre-wrap; }
   .footer { margin-top: 32px; padding-top: 16px; border-top: 1px solid #e2e8f0; font-size: 10px; color: #94a3b8; text-align: center; }
   @media print { body { padding: 16px; } }

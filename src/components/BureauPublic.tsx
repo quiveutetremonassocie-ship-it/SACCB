@@ -17,10 +17,6 @@ export default function BureauPublic({ members }: { members: BureauMember[] }) {
       <div className="relative max-w-5xl mx-auto px-6">
         {/* Header */}
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.5 }}
           className="text-center mb-12"
         >
           <div className="inline-flex items-center gap-2 bg-indigo-100 text-indigo-700 px-4 py-1.5 rounded-full text-xs font-semibold uppercase tracking-widest mb-4">
@@ -40,10 +36,6 @@ export default function BureauPublic({ members }: { members: BureauMember[] }) {
           {members.map((m, i) => (
             <motion.div
               key={m.id}
-              initial={{ opacity: 0, y: 24 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true, margin: "-30px" }}
-              transition={{ duration: 0.4, delay: i * 0.08 }}
               className="group bg-white border border-slate-200 rounded-2xl p-5 hover:shadow-lg hover:border-indigo-200 transition-all duration-300"
             >
               <div className="flex items-start gap-4">

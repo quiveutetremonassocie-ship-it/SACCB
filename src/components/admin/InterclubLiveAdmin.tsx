@@ -391,7 +391,7 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
   };
 
   return (
-    <div className="fixed inset-0 z-[5000] bg-gradient-to-br from-[#0f2440] via-[#1e3a5f] to-[#0f2440] overflow-y-auto">
+    <div className="fixed inset-0 z-[5000] bg-gradient-to-br from-[#0f2440] via-[#0F1B26] to-[#0f2440] overflow-y-auto">
       <div className="max-w-6xl mx-auto px-4 py-5">
         <div className="flex items-center justify-between gap-3 mb-5 text-white">
           <div>
@@ -425,11 +425,11 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
               <>
                 {programme.length > 0 && (
                   <div className="rounded-2xl bg-slate-50 border border-slate-200 p-4">
-                    <p className="font-bold text-[#1e3a5f] mb-2">📋 Programme de la journée ({nbEquipes} binômes)</p>
+                    <p className="font-bold text-[#0F1B26] mb-2">📋 Programme de la journée ({nbEquipes} binômes)</p>
                     <ol className="space-y-1 text-sm">
                       {programme.map((p, i) => (
                         <li key={i} className="flex gap-2 items-center">
-                          <span className="w-6 h-6 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                          <span className="w-6 h-6 shrink-0 rounded-full bg-[#0F1B26] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
                           <span><strong>{p.nom}</strong> — {p.poules} poule{p.poules > 1 ? "s" : ""} · {formatTexte(p.format)}</span>
                         </li>
                       ))}
@@ -442,7 +442,7 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
                 ) : (
                 <>
                 <div>
-                  <p className="font-bold text-[#1e3a5f] mb-1">Les poules du premier tour</p>
+                  <p className="font-bold text-[#0F1B26] mb-1">Les poules du premier tour</p>
                   <p className="text-sm text-slate-500 mb-3">
                     {nbEquipes} binômes inscrits. Les poules sont équilibrées en niveau et on évite de mettre deux équipes du même club ensemble.
                   </p>
@@ -458,7 +458,7 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
                   </div>
                 </div>
                 <div>
-                  <p className="font-bold text-[#1e3a5f] mb-2">Format des matchs</p>
+                  <p className="font-bold text-[#0F1B26] mb-2">Format des matchs</p>
                   <FormatChoix f={format1} set={(f) => { setFormat1(f); if (brouillon) setBrouillon({ ...brouillon, format: f }); }} />
                 </div>
                 </>
@@ -469,14 +469,14 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
 
                 {brouillon && (
                   <div className="border-t border-slate-200 pt-5">
-                    <p className="font-bold text-[#1e3a5f] mb-1">Vérifie les poules</p>
+                    <p className="font-bold text-[#0F1B26] mb-1">Vérifie les poules</p>
                     <p className="text-sm text-slate-500 mb-3">Tu peux déplacer une équipe avec le menu à côté de son nom.</p>
                     <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
                       {brouillon.poules.map((p, pi) => {
                         const clubsPoule = p.equipes.map((id) => eqs[id]?.clubId);
                         return (
                           <div key={p.id} className="rounded-2xl border border-slate-200 overflow-hidden">
-                            <p className="px-3 py-2 bg-[#1e3a5f] text-white font-bold text-sm">{p.nom} · {p.equipes.length}</p>
+                            <p className="px-3 py-2 bg-[#0F1B26] text-white font-bold text-sm">{p.nom} · {p.equipes.length}</p>
                             <ul className="divide-y divide-slate-100">
                               {p.equipes.map((id) => {
                                 const memeClub = clubsPoule.filter((c) => c === eqs[id]?.clubId).length > 1;
@@ -519,8 +519,8 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
                   </span>
                 ) : null;
               })()}
-              <Monitor className="w-4 h-4 text-[#1e3a5f]" />
-              <span className="font-semibold text-[#1e3a5f]">Écran géant pour la salle :</span>
+              <Monitor className="w-4 h-4 text-[#0F1B26]" />
+              <span className="font-semibold text-[#0F1B26]">Écran géant pour la salle :</span>
               <button onClick={() => copier(lienEcran, "ecran")} className="text-xs font-semibold text-blue-700 bg-blue-50 border border-blue-200 rounded-md px-2 py-1 flex items-center gap-1">
                 {copie === "ecran" ? <Check className="w-3 h-3" /> : <Copy className="w-3 h-3" />} {copie === "ecran" ? "Copié" : "Copier le lien"}
               </button>
@@ -568,7 +568,7 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
             )}
             {!readOnly && !live.termine && phases.length > 1 && (
               <div className="bg-white rounded-2xl shadow-xl p-4 space-y-2">
-                <p className="text-sm font-bold text-[#1e3a5f]">✏️ Modifier un tour déjà joué</p>
+                <p className="text-sm font-bold text-[#0F1B26]">✏️ Modifier un tour déjà joué</p>
                 <p className="text-xs text-slate-600">
                   Les scores de « {phases.slice(0, -1).map((p) => p.nom).join(" », « ")} » restent modifiables : clique sur l&apos;onglet du tour au-dessus des poules, puis « Corriger ».
                   Les poules et le classement se règlent dans « ✋ Prendre la main » (choisis le tour). Les poules de « {courante.nom} » ne bougent pas toutes seules : si les changements modifient qui va où, refais-les.
@@ -588,7 +588,7 @@ Pour éviter de mélanger deux tournois, il ne peut pas être restauré ici. Ouv
                   const suivant = programme[phases.length];
                   return (
                     <div className={`rounded-2xl p-4 ${fini ? "bg-emerald-50 border-2 border-emerald-400" : "bg-slate-50 border border-slate-200"}`}>
-                      <p className="font-bold text-[#1e3a5f]">
+                      <p className="font-bold text-[#0F1B26]">
                         {fini ? `✅ « ${courante.nom} » terminé` : `« ${courante.nom} » en cours : ${joues}/${total} matchs joués`}
                       </p>
                       {suivant ? (
@@ -754,7 +754,7 @@ function HistoriqueMatch({ m, clubs }: { m: LiveMatch; clubs: Record<string, str
               <span className="font-mono text-slate-400 shrink-0">{new Date(e.at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit", second: "2-digit" })}</span>
               <span className="font-semibold shrink-0">{e.par === "admin" ? "Table de marque" : clubs[e.par] || "?"}</span>
               <span className="flex-1">{e.action}</span>
-              {score(e.sa, e.sb) && <span className="font-mono font-bold text-[#1e3a5f] shrink-0">{score(e.sa, e.sb)}</span>}
+              {score(e.sa, e.sb) && <span className="font-mono font-bold text-[#0F1B26] shrink-0">{score(e.sa, e.sb)}</span>}
             </li>
           ))}
         </ol>

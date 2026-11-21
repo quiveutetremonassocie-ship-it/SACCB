@@ -344,9 +344,6 @@ export default function Inscription({
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
           className="glass-strong p-8 md:p-10 max-w-2xl mx-auto"
         >
           {/* Barre de progression */}
@@ -870,7 +867,7 @@ export default function Inscription({
 
 function Badge({ nom, type, y1, y2 }: { nom: string; type: string; y1: number; y2: number }) {
   return (
-    <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
+    <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#0F1B26] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
       <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
       <div className="font-display text-xl text-blue-400 tracking-widest border-b border-white/10 pb-2 mb-4">
         MEMBRE OFFICIEL SACCB

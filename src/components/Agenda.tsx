@@ -140,7 +140,7 @@ export default function Agenda({
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5">
         <div className="flex items-center justify-between mb-3">
           <button onClick={() => changerMois(-1)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" aria-label="Mois précédent"><ChevronLeft className="w-5 h-5" /></button>
-          <p className="font-display text-lg sm:text-xl text-[#1e3a5f] capitalize">{mois.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</p>
+          <p className="font-display text-lg sm:text-xl text-[#0F1B26] capitalize">{mois.toLocaleDateString("fr-FR", { month: "long", year: "numeric" })}</p>
           <button onClick={() => changerMois(1)} className="p-2 rounded-lg hover:bg-slate-100 text-slate-600" aria-label="Mois suivant"><ChevronRight className="w-5 h-5" /></button>
         </div>
         <div className="grid grid-cols-7 gap-1 text-center">
@@ -155,7 +155,7 @@ export default function Agenda({
                 key={k}
                 onClick={() => { setJour(choisi ? null : k); setForm(null); }}
                 className={`relative aspect-square sm:aspect-auto sm:h-14 rounded-xl flex flex-col items-center justify-center gap-1 text-sm transition
-                  ${choisi ? "bg-[#1e3a5f] text-white shadow" : evs.length ? "bg-slate-50 hover:bg-slate-100 font-semibold text-slate-800" : "hover:bg-slate-50 text-slate-600"}
+                  ${choisi ? "bg-[#0F1B26] text-white shadow" : evs.length ? "bg-slate-50 hover:bg-slate-100 font-semibold text-slate-800" : "hover:bg-slate-50 text-slate-600"}
                   ${horsMois && !choisi ? "opacity-35" : ""}
                   ${k === aujourdhui && !choisi ? "ring-2 ring-emerald-400" : ""}`}
               >
@@ -179,7 +179,7 @@ export default function Agenda({
       {/* ── Événements du jour choisi (ou prochains événements) ── */}
       <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 sm:p-5 flex flex-col">
         <div className="flex items-center justify-between gap-2 mb-3">
-          <p className="font-semibold text-[#1e3a5f] first-letter:uppercase">{jour ? joliJour(jour) : "Prochain événement"}</p>
+          <p className="font-semibold text-[#0F1B26] first-letter:uppercase">{jour ? joliJour(jour) : "Prochain événement"}</p>
           {jour && <button onClick={() => { setJour(null); setForm(null); }} className="text-xs text-slate-500 hover:text-slate-800">Tout voir</button>}
         </div>
 
@@ -211,7 +211,7 @@ export default function Agenda({
             {/* Les autres événements à venir restent repliés pour ne pas répéter la rubrique Tournois */}
             {!jour && liste.length > 1 && (
               <details className="group mt-3">
-                <summary className="list-none cursor-pointer select-none inline-flex items-center gap-1.5 text-sm font-semibold text-[#1e3a5f] px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 [&::-webkit-details-marker]:hidden">
+                <summary className="list-none cursor-pointer select-none inline-flex items-center gap-1.5 text-sm font-semibold text-[#0F1B26] px-3 py-2 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 [&::-webkit-details-marker]:hidden">
                   <ChevronRight className="w-4 h-4 transition-transform group-open:rotate-90" />
                   <span className="group-open:hidden">Voir les {liste.length - 1} autres événements à venir</span>
                   <span className="hidden group-open:inline">Masquer les autres événements</span>
@@ -225,7 +225,7 @@ export default function Agenda({
               </button>
             )}
             {!admin && onAdmin && (
-              <button onClick={onAdmin} className="mt-4 text-xs text-slate-500 hover:text-[#1e3a5f] underline self-start">➕ Ajouter un événement (admin)</button>
+              <button onClick={onAdmin} className="mt-4 text-xs text-slate-500 hover:text-[#0F1B26] underline self-start">➕ Ajouter un événement (admin)</button>
             )}
           </>
         )}

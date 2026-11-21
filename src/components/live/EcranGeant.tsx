@@ -123,7 +123,7 @@ function AjusteEcran({ children }: { children: React.ReactNode }) {
 
 function Fond({ children, plein }: { children: React.ReactNode; plein?: boolean }) {
   return (
-    <div className={`bg-gradient-to-br from-[#0f2440] via-[#1e3a5f] to-[#0f2440] ${plein ? "fixed inset-0 overflow-hidden" : "min-h-screen"}`}>
+    <div className={`bg-gradient-to-br from-[#0f2440] via-[#0F1B26] to-[#0f2440] ${plein ? "fixed inset-0 overflow-hidden" : "min-h-screen"}`}>
       {children}
     </div>
   );
@@ -155,7 +155,7 @@ function PouleTV({ poule, equipes }: { poule: LivePoule; equipes: EquipesMap }) 
   const joues = poule.matchs.filter(matchJoue).length;
   return (
     <div className="bg-white text-slate-800 rounded-2xl overflow-hidden shadow-xl">
-      <div className="px-4 py-2 bg-gradient-to-r from-[#1e3a5f] to-[#2a5285] text-white flex items-center justify-between">
+      <div className="px-4 py-2 bg-gradient-to-r from-[#0F1B26] to-[#2a5285] text-white flex items-center justify-between">
         <p className="text-2xl font-bold">{poule.nom}</p>
         <p className="text-base text-white/70">{joues}/{poule.matchs.length} matchs</p>
       </div>
@@ -179,7 +179,7 @@ function PouleTV({ poule, equipes }: { poule: LivePoule; equipes: EquipesMap }) 
                 <p className="text-lg font-semibold leading-tight truncate">{nom(equipes, l.id)}</p>
                 <p className="text-sm text-slate-500 leading-tight truncate">{equipes[l.id]?.club}</p>
               </td>
-              <td className="text-center text-2xl font-bold text-[#1e3a5f]">{l.v}</td>
+              <td className="text-center text-2xl font-bold text-[#0F1B26]">{l.v}</td>
               <td className="text-center pr-3 text-base text-slate-500">{l.ptsPour - l.ptsContre > 0 ? "+" : ""}{l.ptsPour - l.ptsContre}</td>
             </tr>
           ))}
@@ -195,7 +195,7 @@ function PouleTV({ poule, equipes }: { poule: LivePoule; equipes: EquipesMap }) 
             <div key={m.id} className="flex items-center gap-1.5 text-sm leading-tight min-w-0">
               <span className={`w-2 h-2 rounded-full shrink-0 ${m.forfait ? "bg-red-500" : m.conteste && m.etat !== "valide" ? "bg-violet-500" : !matchJoue(m) ? "bg-slate-300" : m.etat === "valide" || m.par === "admin" ? "bg-emerald-500" : "bg-amber-400"}`} />
               <span className={`truncate ${w === m.a ? "font-bold" : w ? "text-slate-400" : ""}`}>{court(e1)}</span>
-              <span className="shrink-0 font-mono font-bold text-[#1e3a5f]">{matchJoue(m) ? m.sa!.map((v, i) => `${v}-${m.sb![i]}`).join(" ") : "–"}</span>
+              <span className="shrink-0 font-mono font-bold text-[#0F1B26]">{matchJoue(m) ? m.sa!.map((v, i) => `${v}-${m.sb![i]}`).join(" ") : "–"}</span>
               <span className={`truncate ${w === m.b ? "font-bold" : w ? "text-slate-400" : ""}`}>{court(e2)}</span>
             </div>
           );

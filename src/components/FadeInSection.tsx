@@ -1,25 +1,12 @@
-"use client";
-
-import { motion } from "framer-motion";
-
+// Ancienne apparition en fondu au défilement : retirée du nouveau design (le contenu est visible tout de suite,
+// plus rapide et plus lisible). Le composant reste pour ne pas toucher aux pages qui l'utilisent.
 export default function FadeInSection({
   children,
   className = "",
-  delay = 0,
 }: {
   children: React.ReactNode;
   className?: string;
   delay?: number;
 }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 40 }}
-      whileInView={{ opacity: 1, y: 0 }}
-      viewport={{ once: true, margin: "-80px" }}
-      transition={{ duration: 0.6, delay, ease: "easeOut" }}
-      className={className}
-    >
-      {children}
-    </motion.div>
-  );
+  return <div className={className}>{children}</div>;
 }

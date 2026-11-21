@@ -110,13 +110,13 @@ export default function TournoisInternes({
         }
         if (!t.ouvert || complet) return null;
         return (
-          <div key={t.id} className="rounded-2xl p-4 bg-gradient-to-r from-[#1e3a5f] to-emerald-600 text-white shadow-lg">
+          <div key={t.id} className="rounded-2xl p-4 bg-gradient-to-r from-[#0F1B26] to-emerald-600 text-white shadow-lg">
             <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-200 font-semibold">🏸 Nouveau tournoi du club</p>
             <p className="font-bold text-lg leading-tight">{t.name}</p>
             <p className="text-xs text-white/80 mb-3">
               {t.date ? dateFr(t.date) : ""}{t.type ? ` · ${TYPE_LABEL[t.type] || t.type}` : ""}{t.dateLimit ? ` · inscriptions jusqu'au ${dateFr(t.dateLimit)}` : ""}
             </p>
-            <button onClick={onVoirTout} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-[#1e3a5f] font-bold text-sm hover:bg-emerald-50">
+            <button onClick={onVoirTout} className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-white text-[#0F1B26] font-bold text-sm hover:bg-emerald-50">
               Je m&apos;inscris avec un partenaire →
             </button>
           </div>
@@ -193,7 +193,7 @@ function CarteTournoi({
 
   return (
     <div className="rounded-2xl border border-slate-200 overflow-hidden">
-      <div className="px-4 py-3 bg-gradient-to-r from-[#1e3a5f] to-[#2a5285] text-white">
+      <div className="px-4 py-3 bg-gradient-to-r from-[#0F1B26] to-[#2a5285] text-white">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-[10px] uppercase tracking-[0.2em] text-emerald-300 font-semibold">Tournoi du club</p>
@@ -254,7 +254,7 @@ function CarteTournoi({
                 <div className="flex flex-wrap gap-1.5">
                   {t.niveaux.map((n) => (
                     <button key={n} type="button" onClick={() => setNiveau(n)}
-                      className={`text-xs px-3 py-1.5 rounded-full border font-semibold ${niveau === n ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white text-slate-600 border-slate-300"}`}>
+                      className={`text-xs px-3 py-1.5 rounded-full border font-semibold ${niveau === n ? "bg-[#0F1B26] text-white border-[#0F1B26]" : "bg-white text-slate-600 border-slate-300"}`}>
                       {n}
                     </button>
                   ))}
@@ -290,7 +290,7 @@ function CarteTournoi({
                 contester={contester}
               />
             )}
-            <div className="rounded-2xl bg-gradient-to-br from-[#0f2440] to-[#1e3a5f] p-3">
+            <div className="rounded-2xl bg-gradient-to-br from-[#0f2440] to-[#0F1B26] p-3">
               <p className="text-white text-sm font-bold mb-2 flex items-center gap-2">
                 <Radio className={`w-4 h-4 ${live.termine ? "" : "text-red-400 animate-pulse"}`} /> {live.termine ? "Résultats" : "En direct"}
                 <span className="text-[10px] font-normal text-white/50">· mis à jour toutes les 5 s</span>
@@ -302,7 +302,7 @@ function CarteTournoi({
 
         {t.deroulement && !live && (
           <details className="text-sm">
-            <summary className="cursor-pointer font-semibold text-[#1e3a5f]">Déroulement</summary>
+            <summary className="cursor-pointer font-semibold text-[#0F1B26]">Déroulement</summary>
             <p className="mt-2 whitespace-pre-line text-slate-600">{t.deroulement}</p>
           </details>
         )}

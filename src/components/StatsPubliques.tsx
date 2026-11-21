@@ -121,10 +121,6 @@ export default function StatsPubliques({
             <motion.div
               key={s.label}
               ref={s.ref}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
               className="bg-white border border-slate-200 rounded-2xl p-6 text-center shadow-sm hover:shadow-md transition group"
             >
               <div className={`w-12 h-12 mx-auto rounded-xl bg-gradient-to-br ${s.color} flex items-center justify-center text-white mb-4 group-hover:scale-110 transition`}>

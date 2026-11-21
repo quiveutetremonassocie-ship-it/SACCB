@@ -66,7 +66,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport = {
-  themeColor: "#1e3a5f",
+  themeColor: "#0F1B26",
   width: "device-width",
   initialScale: 1,
   maximumScale: 5, // permet le zoom (accessibilité) mais empêche le zoom intempestif
@@ -180,8 +180,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
         <meta name="referrer" content="strict-origin-when-cross-origin" />
         {/* 🔤 Polices hébergées sur le site (déclarées dans globals.css) : préchargées pour un affichage immédiat */}
-        <link rel="preload" href="/fonts/outfit.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
-        <link rel="preload" href="/fonts/bebas-neue.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/atkinson-hyperlegible-400.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
+        <link rel="preload" href="/fonts/barlow-condensed-800.woff2" as="font" type="font/woff2" crossOrigin="anonymous" />
         <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=(), geolocation=()" />
         {/* Content-Security-Policy : limite les sources autorisées pour scripts/images/fetch.
             🔒 'unsafe-eval' seulement en développement (le site en ligne n'exécute jamais de code fabriqué à la volée) ;
@@ -209,13 +209,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   } catch(e) { return; }
   var d = document.createElement('div');
   d.id = 'splash';
-  d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,#1e3a5f 0%,#0f2440 50%,#1e3a5f 100%);overflow:hidden;';
+  d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#FFFFFF;overflow:hidden;';
   d.innerHTML = '<div style="text-align:center">'
-    + '<img src="/logo.png" alt="" width="80" height="80" style="border-radius:16px;opacity:0.9;margin-bottom:20px">'
-    + '<div style="font-family:Oswald,sans-serif;font-size:3rem;letter-spacing:0.3em;background-image:linear-gradient(to right,#fff,#93c5fd,#6ee7b7);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:8px">SACCB</div>'
-    + '<div style="font-family:Oswald,sans-serif;font-size:0.65rem;letter-spacing:0.35em;text-transform:uppercase;color:rgba(255,255,255,0.45)">Badminton \\u00b7 Sainte-Adresse</div>'
-    + '<div style="width:180px;height:3px;border-radius:3px;background:rgba(255,255,255,0.1);margin:24px auto 0;overflow:hidden">'
-    + '<div id="splash-bar" style="width:0%;height:100%;border-radius:3px;background:linear-gradient(to right,#60a5fa,#34d399)"></div>'
+    + '<img src="/logo.png" alt="" width="160" height="160" style="display:block;margin:0 auto">'
+    + '<div style="width:160px;height:4px;border-radius:4px;background:#E3EBF1;margin:18px auto 0;overflow:hidden">'
+    + '<div id="splash-bar" style="width:0%;height:100%;background:#00B0F0"></div>'
     + '</div></div>';
   document.body.appendChild(d);
   var b = document.getElementById('splash-bar');

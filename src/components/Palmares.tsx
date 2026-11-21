@@ -173,9 +173,6 @@ export default function Palmares({ db, memberSession, onLoginRequest }: {
         </div>
 
         <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
         >
           {!memberSession ? (
             <div className="glass-strong p-10 text-center max-w-md mx-auto">

@@ -1,59 +1,43 @@
 "use client";
 
-import { motion } from "framer-motion";
-import { Heart, Users2, Trophy, Smile } from "lucide-react";
-
 const POINTS = [
-  { icone: Smile, couleur: "from-amber-400 to-orange-500", titre: "Convivialité", texte: "On vient pour jouer, rire et partager un bon moment entre amis." },
-  { icone: Users2, couleur: "from-sky-500 to-blue-600", titre: "Tous niveaux", texte: "Débutant ou confirmé, chacun trouve sa place et ses partenaires." },
-  { icone: Trophy, couleur: "from-emerald-500 to-teal-600", titre: "Des tournois", texte: "Tournois du club et entre clubs tout au long de l'année." },
-  { icone: Heart, couleur: "from-rose-400 to-pink-500", titre: "Une équipe", texte: "Un bureau de bénévoles qui fait vivre l'association." },
+  { titre: "Convivialité", texte: "On vient pour jouer, rire et partager un bon moment entre amis." },
+  { titre: "Tous niveaux", texte: "Débutant ou confirmé, chacun trouve sa place et ses partenaires." },
+  { titre: "Des tournois", texte: "Tournois du club et entre clubs tout au long de l'année." },
+  { titre: "Une équipe", texte: "Un bureau de bénévoles qui fait vivre l'association." },
 ];
 
-export default function Presentation() {
+/** 🏸 L'association : qui on est, en quelques mots et en chiffres réels */
+export default function Presentation({ membresCount = 0, creneaux = 0 }: { membresCount?: number; creneaux?: number }) {
   return (
-    <section id="presentation" className="bg-section-wrap relative">
-      <div className="section-pad grid lg:grid-cols-[1fr_1.1fr] gap-10 items-center">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.5 }}
-          className="text-center lg:text-left"
-        >
-          <div className="sport-label mb-4">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-emerald-700">L&apos;association</span>
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl h-display mb-4">Qui sommes-nous ?</h2>
-          <p className="text-slate-600 text-lg leading-relaxed">
-            Le <span className="text-[#1e3a5f] font-semibold">SACCB</span> est l&apos;une des associations de badminton de
-            Sainte-Adresse. Un esprit convivial, du jeu pour tous les niveaux et une équipe accueillante qui vit au rythme
-            du volant depuis plusieurs saisons.
+    <section id="presentation" className="bg-[#F2F6F9] scroll-mt-20" aria-labelledby="titre-asso">
+      <div className="max-w-6xl mx-auto px-5 py-16 grid lg:grid-cols-[1.3fr_1fr] gap-12 items-start">
+        <div className="space-y-5">
+          <h2 id="titre-asso" className="font-display text-4xl md:text-5xl text-[#0F1B26] leading-[0.95]">Un club où chacun trouve sa place</h2>
+          <p className="text-lg text-slate-700 max-w-[62ch]">
+            Le SACCB est l&apos;une des associations de badminton de Sainte-Adresse. Débutant qui découvre le volant ou joueur
+            qui enchaîne les tournois, tout le monde joue ensemble, surtout en double, dans une ambiance détendue.
           </p>
-        </motion.div>
-
-        <div className="grid sm:grid-cols-2 gap-4">
-          {POINTS.map((p, i) => {
-            const Icone = p.icone;
-            return (
-              <motion.div
-                key={p.titre}
-                initial={{ opacity: 0, y: 16 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.4, delay: i * 0.08 }}
-                className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5"
-              >
-                <span className={`inline-flex w-10 h-10 rounded-xl bg-gradient-to-br ${p.couleur} text-white items-center justify-center mb-3`}>
-                  <Icone className="w-5 h-5" />
-                </span>
-                <p className="font-bold text-slate-800">{p.titre}</p>
-                <p className="text-sm text-slate-500">{p.texte}</p>
-              </motion.div>
-            );
-          })}
+          {(membresCount > 0 || creneaux > 0) && (
+            <div className="flex flex-wrap gap-x-10 gap-y-4 pt-2">
+              {membresCount > 0 && (
+                <p className="flex items-baseline gap-2"><b className="font-display text-6xl text-[#007DB0] leading-none tabular-nums">{membresCount}</b><span className="text-lg">adhérents<br />cette saison</span></p>
+              )}
+              {creneaux > 0 && (
+                <p className="flex items-baseline gap-2"><b className="font-display text-6xl text-[#007DB0] leading-none tabular-nums">{creneaux}</b><span className="text-lg">créneaux<br />par semaine</span></p>
+              )}
+            </div>
+          )}
         </div>
+
+        <dl className="border-t-[3px] border-[#0F1B26]">
+          {POINTS.map((p) => (
+            <div key={p.titre} className="py-4 border-b border-[#D3DEE6] grid sm:grid-cols-[9rem_1fr] gap-x-4 gap-y-1">
+              <dt className="font-display font-bold text-2xl text-[#0F1B26]">{p.titre}</dt>
+              <dd className="text-slate-700">{p.texte}</dd>
+            </div>
+          ))}
+        </dl>
       </div>
     </section>
   );

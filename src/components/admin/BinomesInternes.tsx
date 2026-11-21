@@ -77,7 +77,7 @@ export default function BinomesInternes({
             <div className="flex flex-wrap gap-1.5">
               {t.niveaux.map((n) => (
                 <button key={n} type="button" onClick={() => setNiveau(n)}
-                  className={`text-xs px-3 py-1 rounded-full border font-semibold ${niveau === n ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white text-slate-600 border-slate-300"}`}>
+                  className={`text-xs px-3 py-1 rounded-full border font-semibold ${niveau === n ? "bg-[#0F1B26] text-white border-[#0F1B26]" : "bg-white text-slate-600 border-slate-300"}`}>
                   {n}
                 </button>
               ))}

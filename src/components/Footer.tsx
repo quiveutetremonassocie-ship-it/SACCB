@@ -5,21 +5,24 @@ import ContactForm from "./ContactForm";
 
 export default function Footer({ year }: { year: number; onAdmin?: () => void }) {
   return (
-    <footer id="contact" className="bg-[#1e3a5f] border-t border-[#1e3a5f] mt-20">
-      <div className="max-w-6xl mx-auto px-6 py-20">
-        <div className="text-center mb-12">
-          <p className="text-xs uppercase tracking-widest text-blue-300 font-semibold mb-3">Contact</p>
-          <h2 className="font-display text-5xl h-display text-transparent bg-clip-text bg-gradient-to-r from-white via-blue-200 to-emerald-300">Contactez-nous</h2>
-          <p className="text-white/50 mt-3 text-sm">Une question ? Envoyez-nous un message.</p>
-        </div>
-
-        <div className="max-w-lg mx-auto">
-          <ContactForm theme="dark" />
+    <footer id="contact" className="bg-[#0F1B26] text-[#EAF1F6] mt-16 scroll-mt-20">
+      <div className="max-w-6xl mx-auto px-5 py-16">
+        <div className="grid lg:grid-cols-[1fr_1.2fr] gap-10 items-start">
+          <div className="space-y-4">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo.png" alt="SACCB" width={88} height={88} className="w-[88px] h-[88px] rounded-xl bg-white" />
+            <h2 className="font-display text-4xl md:text-5xl text-white leading-[0.95]">Nous écrire</h2>
+            <p className="text-[#C9D6E0] text-lg max-w-[40ch]">Une question sur l&apos;adhésion, les horaires ou un tournoi ? Le bureau vous répond par mail.</p>
+            <p className="text-[#C9D6E0]">contact@saccb.fr</p>
+          </div>
+          <div className="w-full max-w-lg lg:justify-self-end">
+            <ContactForm theme="dark" />
+          </div>
         </div>
 
         {/* Boutons de partage */}
         <div className="mt-16 flex items-center justify-center gap-3">
-          <span className="text-xs uppercase tracking-widest text-white/40 font-semibold mr-2">Partager</span>
+          <span className="text-sm text-[#C9D6E0] font-bold mr-2">Partager le site</span>
           <a
             href="https://wa.me/?text=Decouvrez%20le%20SACCB%2C%20association%20de%20badminton%20a%20Sainte-Adresse%20!%20https%3A%2F%2Fsaccb.fr"
             target="_blank"
@@ -47,15 +50,11 @@ export default function Footer({ year }: { year: number; onAdmin?: () => void })
           </button>
         </div>
 
-        <div className="mt-8 pt-8 border-t border-white/5 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-xs text-white/50">
+        <div className="mt-8 pt-8 border-t border-white/10 flex flex-wrap items-center justify-center gap-x-6 gap-y-2 text-sm text-[#C9D6E0]">
           <Link href="/mentions-legales" className="hover:text-white transition">Mentions légales</Link>
-          <span className="text-white/20">•</span>
           <Link href="/cgu" className="hover:text-white transition">CGU</Link>
-          <span className="text-white/20">•</span>
           <Link href="/cgv" className="hover:text-white transition">CGV</Link>
-          <span className="text-white/20">•</span>
           <Link href="/politique-confidentialite" className="hover:text-white transition">Politique de confidentialité</Link>
-          <span className="text-white/20">•</span>
           {/* Lien admin volontairement invisible pour les visiteurs */}
           <Link
             href="/admin"
@@ -68,8 +67,8 @@ export default function Footer({ year }: { year: number; onAdmin?: () => void })
           </Link>
         </div>
 
-        <p className="text-center mt-6 text-xs text-white/70">
-          © {year} SACCB — Sainte-Adresse · Salle Paul Vatine
+        <p className="text-center mt-6 text-sm text-[#C9D6E0]">
+          © {year} SACCB, Sainte-Adresse Club Compétition Badminton, salle Paul Vatine
         </p>
       </div>
     </footer>

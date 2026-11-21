@@ -17,7 +17,7 @@ export default function LegalLayout({
       <div className="max-w-3xl mx-auto">
         <Link
           href="/"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-[#1e3a5f] bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-2.5 hover:bg-slate-100 transition mb-8"
+          className="inline-flex items-center gap-2 text-sm font-semibold text-[#0F1B26] bg-white border border-slate-200 shadow-sm rounded-xl px-4 py-2.5 hover:bg-slate-100 transition mb-8"
         >
           <ArrowLeft className="w-4 h-4" /> Retour à l'accueil
         </Link>

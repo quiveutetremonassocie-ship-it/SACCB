@@ -24,9 +24,9 @@ export default function ReglementTournoi({
   return (
     <div className="bg-white rounded-3xl shadow-2xl overflow-hidden">
       <button onClick={() => setOuvert(!ouvert)} className="w-full flex items-center gap-2 px-5 py-4 text-left hover:bg-slate-50">
-        <BookOpen className="w-5 h-5 text-[#1e3a5f]" />
+        <BookOpen className="w-5 h-5 text-[#0F1B26]" />
         <span className="flex-1">
-          <span className="block font-bold text-[#1e3a5f]">📌 Règlement du tournoi</span>
+          <span className="block font-bold text-[#0F1B26]">📌 Règlement du tournoi</span>
           <span className="block text-[11px] text-slate-500">Déroulement, poules, points et saisie des scores</span>
         </span>
         {ouvert ? <ChevronUp className="w-5 h-5 text-slate-400" /> : <ChevronDown className="w-5 h-5 text-slate-400" />}
@@ -42,7 +42,7 @@ export default function ReglementTournoi({
               <ol className="space-y-1">
                 {etapes.map((e, i) => (
                   <li key={i} className="flex gap-2">
-                    <span className="w-6 h-6 shrink-0 rounded-full bg-[#1e3a5f] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
+                    <span className="w-6 h-6 shrink-0 rounded-full bg-[#0F1B26] text-white text-xs font-bold flex items-center justify-center">{i + 1}</span>
                     <span><strong>{e.nom}</strong>{e.poules ? ` — ${e.poules} poule${e.poules > 1 ? "s" : ""}` : ""} · {e.texte}</span>
                   </li>
                 ))}
@@ -111,7 +111,7 @@ export default function ReglementTournoi({
 function Bloc({ titre, children }: { titre: string; children: React.ReactNode }) {
   return (
     <div>
-      <p className="font-semibold text-[#1e3a5f] mb-1">{titre}</p>
+      <p className="font-semibold text-[#0F1B26] mb-1">{titre}</p>
       {children}
     </div>
   );

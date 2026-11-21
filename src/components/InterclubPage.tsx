@@ -294,7 +294,7 @@ export default function InterclubPage() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo.png" alt="SACCB" className="w-16 h-16 mx-auto mb-3 object-contain" />
           <p className="text-xs uppercase tracking-[0.3em] text-emerald-600 font-semibold mb-1">Tournoi inter-clubs</p>
-          <p className="font-bold text-[#1e3a5f] text-xl mb-1 flex items-center justify-center gap-2">
+          <p className="font-bold text-[#0F1B26] text-xl mb-1 flex items-center justify-center gap-2">
             <Lock className="w-5 h-5" /> Espace réservé
           </p>
           <p className="text-slate-500 text-sm mb-5">Entrez le code d&apos;accès communiqué à votre club par le SACCB.</p>
@@ -382,7 +382,7 @@ export default function InterclubPage() {
       {page.live?.termine && (
         <div className="max-w-3xl mx-auto px-4 mb-8">
           <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-amber-300 via-yellow-200 to-amber-400 p-[3px] shadow-2xl">
-            <div className="rounded-[22px] bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] px-6 py-7 text-center text-white">
+            <div className="rounded-[22px] bg-gradient-to-br from-[#0F1B26] to-[#0f2440] px-6 py-7 text-center text-white">
               <p className="text-5xl mb-2 animate-float">🏆</p>
               <p className="text-3xl md:text-4xl mb-3 bg-gradient-to-r from-amber-200 via-yellow-100 to-amber-300 bg-clip-text text-transparent" style={{ fontFamily: "'Bebas Neue', Oswald, sans-serif", letterSpacing: "0.06em" }}>
                 Tournoi terminé
@@ -417,13 +417,13 @@ export default function InterclubPage() {
         <div className="max-w-5xl mx-auto px-4 mb-6 flex justify-center gap-2">
           <button
             onClick={() => setOnglet("direct")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition ${onglet === "direct" ? "bg-white text-[#1e3a5f] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"}`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition ${onglet === "direct" ? "bg-white text-[#0F1B26] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"}`}
           >
             <Radio className={`w-4 h-4 ${page.live.termine ? "" : "text-red-500 animate-pulse"}`} /> {page.live.termine ? "Résultats" : "En direct"}
           </button>
           <button
             onClick={() => setOnglet("infos")}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition ${onglet === "infos" ? "bg-white text-[#1e3a5f] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"}`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-bold transition ${onglet === "infos" ? "bg-white text-[#0F1B26] shadow-lg" : "bg-white/10 text-white hover:bg-white/20"}`}
           >
             <Info className="w-4 h-4" /> Infos pratiques
           </button>
@@ -461,10 +461,10 @@ export default function InterclubPage() {
           <div className="flex items-start justify-between gap-3 mb-1 flex-wrap">
             <div>
               <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold">Espace d&apos;inscription</p>
-              <h2 className="text-2xl font-bold text-[#1e3a5f]">{club.nom}</h2>
+              <h2 className="text-2xl font-bold text-[#0F1B26]">{club.nom}</h2>
             </div>
             <div className="text-right">
-              <p className="text-3xl font-bold text-[#1e3a5f] leading-none">
+              <p className="text-3xl font-bold text-[#0F1B26] leading-none">
                 {lignes.length}<span className="text-slate-300 text-xl">/{quota}</span>
               </p>
               <p className="text-[11px] text-slate-500">binômes</p>
@@ -493,7 +493,7 @@ export default function InterclubPage() {
             {lignes.map((l, i) => (
               <div key={l.id || `n${i}`} className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                 <div className="flex items-center justify-between mb-2">
-                  <p className="text-xs font-bold text-[#1e3a5f] uppercase tracking-wider">Binôme {i + 1}</p>
+                  <p className="text-xs font-bold text-[#0F1B26] uppercase tracking-wider">Binôme {i + 1}</p>
                   {page.ouvert && (
                     <button
                       onClick={() => { setLignes((ls) => ls.filter((_, j) => j !== i)); setMsg(null); }}
@@ -520,8 +520,8 @@ export default function InterclubPage() {
                         onClick={() => maj(i, "niveau", n)}
                         className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition ${
                           l.niveau === n
-                            ? "bg-[#1e3a5f] text-white border-[#1e3a5f]"
-                            : "bg-white text-slate-600 border-slate-300 hover:border-[#1e3a5f]"
+                            ? "bg-[#0F1B26] text-white border-[#0F1B26]"
+                            : "bg-white text-slate-600 border-slate-300 hover:border-[#0F1B26]"
                         }`}
                       >
                         {n}
@@ -569,7 +569,7 @@ export default function InterclubPage() {
               )}
               <div className="p-5">
                 <p className="text-xs uppercase tracking-widest text-slate-400 font-semibold mb-1">Le lieu</p>
-                {t.salleNom && <p className="text-lg font-bold text-[#1e3a5f]">{t.salleNom}</p>}
+                {t.salleNom && <p className="text-lg font-bold text-[#0F1B26]">{t.salleNom}</p>}
                 {t.salleAdresse && <p className="text-sm text-slate-600 flex items-start gap-1.5 mt-1"><MapPin className="w-4 h-4 mt-0.5 shrink-0 text-emerald-600" />{t.salleAdresse}</p>}
               </div>
               {mapQuery && (
@@ -585,7 +585,7 @@ export default function InterclubPage() {
                     href={`https://www.google.com/maps/dir/?api=1&destination=${mapQuery}`}
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="flex items-center justify-center gap-2 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#1e3a5f] to-emerald-600 hover:opacity-90 transition"
+                    className="flex items-center justify-center gap-2 py-3 text-sm font-semibold text-white bg-gradient-to-r from-[#0F1B26] to-emerald-600 hover:opacity-90 transition"
                   >
                     <Navigation className="w-4 h-4" /> Itinéraire
                   </a>
@@ -691,7 +691,7 @@ export function MesMatchs({
           <>
             <div className="flex items-center gap-2">
               <div className="flex-1 min-w-0"><NomEquipe id={m.a} equipes={live.equipes} compact /></div>
-              <span className="font-mono font-bold text-[#1e3a5f] text-sm">{texteScore(m)}</span>
+              <span className="font-mono font-bold text-[#0F1B26] text-sm">{texteScore(m)}</span>
             </div>
             <div className="flex items-center gap-2 mt-0.5"><div className="flex-1 min-w-0"><NomEquipe id={m.b} equipes={live.equipes} compact /></div></div>
             {conteste && (
@@ -735,7 +735,7 @@ export function MesMatchs({
   return (
     <section className="bg-white rounded-3xl shadow-2xl p-5 md:p-6">
       <div className="flex items-center justify-between gap-2 flex-wrap mb-1">
-        <h2 className="text-xl font-bold text-[#1e3a5f]">Vos binômes — {ph.nom}</h2>
+        <h2 className="text-xl font-bold text-[#0F1B26]">Vos binômes — {ph.nom}</h2>
         <p className="text-xs text-slate-500">{formatTexte(ph.format)}</p>
       </div>
       <p className="text-xs text-slate-500 mb-4">
@@ -751,9 +751,9 @@ export function MesMatchs({
           const place = general.indexOf(id) + 1;
           const deplie = ouvert === id;
           return (
-            <div key={id} className={`rounded-2xl border overflow-hidden ${deplie ? "border-[#1e3a5f]/40 shadow" : "border-slate-200"}`}>
+            <div key={id} className={`rounded-2xl border overflow-hidden ${deplie ? "border-[#0F1B26]/40 shadow" : "border-slate-200"}`}>
               <button onClick={() => basculer(id)} className="w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-slate-50">
-                <span className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white flex flex-col items-center justify-center leading-none" title="Place provisoire dans le tournoi">
+                <span className="w-12 h-12 shrink-0 rounded-xl bg-gradient-to-br from-[#0F1B26] to-emerald-600 text-white flex flex-col items-center justify-center leading-none" title="Place provisoire dans le tournoi">
                   {classementVisible && place > 0 ? (
                     <span className="font-bold whitespace-nowrap">
                       <span className="text-lg">{place}</span>
@@ -794,7 +794,7 @@ export function MesMatchs({
 
 function Fond({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[#0f2440] via-[#1e3a5f] to-[#0f2440] relative overflow-hidden">
+    <div className="min-h-screen bg-gradient-to-br from-[#0f2440] via-[#0F1B26] to-[#0f2440] relative overflow-hidden">
       <div className="pointer-events-none absolute -top-40 -left-40 w-[28rem] h-[28rem] rounded-full bg-blue-500/20 blur-[120px]" />
       <div className="pointer-events-none absolute top-1/3 -right-40 w-[28rem] h-[28rem] rounded-full bg-emerald-500/20 blur-[120px]" />
       <div className="relative">{children}</div>

@@ -27,9 +27,9 @@ export default function RapportAG({ db }: { db: DB }) {
   return (
     <div className="rounded-2xl border border-slate-200 bg-white p-5">
       <div className="flex items-start gap-3 mb-4">
-        <div className="w-10 h-10 rounded-xl bg-[#1e3a5f] text-white flex items-center justify-center shrink-0"><FileText className="w-5 h-5" /></div>
+        <div className="w-10 h-10 rounded-xl bg-[#0F1B26] text-white flex items-center justify-center shrink-0"><FileText className="w-5 h-5" /></div>
         <div>
-          <p className="font-semibold text-[#1e3a5f]">Rapport d&apos;activité pour l&apos;AG</p>
+          <p className="font-semibold text-[#0F1B26]">Rapport d&apos;activité pour l&apos;AG</p>
           <p className="text-xs text-slate-500">Un PDF prêt à présenter, rempli automatiquement avec les chiffres de la saison {db.y1}-{db.y2}.</p>
         </div>
       </div>
@@ -42,7 +42,7 @@ export default function RapportAG({ db }: { db: DB }) {
           [c.podiums.length, "podiums"],
         ].map(([v, l]) => (
           <div key={String(l)} className="rounded-xl bg-slate-50 px-3 py-2 text-center">
-            <p className="text-xl font-bold text-[#1e3a5f]">{v}</p>
+            <p className="text-xl font-bold text-[#0F1B26]">{v}</p>
             <p className="text-[11px] text-slate-500 leading-tight">{l}</p>
           </div>
         ))}

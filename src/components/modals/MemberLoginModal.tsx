@@ -191,7 +191,7 @@ export default function MemberLoginModal({
       <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm">
         <div className="flex items-center justify-between mb-5">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F1B26] to-emerald-600 flex items-center justify-center">
               {view === "resetPrompt" || view === "changeCode" ? (
                 <KeyRound className="w-5 h-5 text-white" />
               ) : (

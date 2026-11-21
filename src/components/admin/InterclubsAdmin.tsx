@@ -436,7 +436,7 @@ export default function InterclubsAdmin({
                             key={n}
                             disabled={readOnly}
                             onClick={() => majDraft({ niveaux: on ? d.niveaux.filter((x) => x !== n) : INTERCLUB_NIVEAUX.filter((x) => x === n || d.niveaux.includes(x)) })}
-                            className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition ${on ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white text-slate-500 border-slate-300"}`}
+                            className={`text-xs px-3 py-1.5 rounded-full border font-semibold transition ${on ? "bg-[#0F1B26] text-white border-[#0F1B26]" : "bg-white text-slate-500 border-slate-300"}`}
                           >
                             {on ? "✓ " : ""}{n}
                           </button>
@@ -572,10 +572,10 @@ export default function InterclubsAdmin({
                         const deplie = clubsOuverts.has(c.id);
                         const complet = binomes.length >= c.quota;
                         return (
-                          <div key={c.id} className={"bg-white rounded-xl border overflow-hidden " + (deplie ? "border-[#1e3a5f]/40 shadow-sm" : "border-slate-200")}>
+                          <div key={c.id} className={"bg-white rounded-xl border overflow-hidden " + (deplie ? "border-[#0F1B26]/40 shadow-sm" : "border-slate-200")}>
                             {/* En-tête du club (toujours visible) */}
                             <div className="flex items-center gap-3 px-3 py-2.5 hover:bg-slate-50 cursor-pointer" onClick={() => basculerClub(c.id)}>
-                              <span className="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white font-bold flex items-center justify-center">
+                              <span className="w-9 h-9 shrink-0 rounded-lg bg-gradient-to-br from-[#0F1B26] to-emerald-600 text-white font-bold flex items-center justify-center">
                                 {(c.nom.trim()[0] || "?").toUpperCase()}
                               </span>
                               <div className="flex-1 min-w-0">

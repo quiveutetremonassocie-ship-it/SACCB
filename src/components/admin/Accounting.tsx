@@ -236,9 +236,9 @@ export default function Accounting({
   <style>
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { font-family: Arial, sans-serif; font-size: 13px; color: #1e293b; padding: 32px; }
-    h1 { font-size: 22px; font-weight: bold; color: #1e3a5f; margin-bottom: 4px; }
+    h1 { font-size: 22px; font-weight: bold; color: #0F1B26; margin-bottom: 4px; }
     .subtitle { font-size: 12px; color: #64748b; margin-bottom: 24px; }
-    h2 { font-size: 14px; font-weight: bold; color: #1e3a5f; border-bottom: 2px solid #1e3a5f; padding-bottom: 4px; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
+    h2 { font-size: 14px; font-weight: bold; color: #0F1B26; border-bottom: 2px solid #0F1B26; padding-bottom: 4px; margin: 20px 0 10px; text-transform: uppercase; letter-spacing: 0.05em; }
     table { width: 100%; border-collapse: collapse; margin-bottom: 8px; }
     th { background: #f1f5f9; text-align: left; padding: 6px 10px; font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; }
     td { padding: 6px 10px; border-bottom: 1px solid #e2e8f0; }
@@ -257,7 +257,7 @@ export default function Accounting({
   </style>
 </head>
 <body>
-  <div style="display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #1e3a5f; padding-bottom: 12px; margin-bottom: 20px;">
+  <div style="display: flex; align-items: center; gap: 16px; border-bottom: 2px solid #0F1B26; padding-bottom: 12px; margin-bottom: 20px;">
     <img src="/logo.png" alt="Logo SACCB" style="width: 70px; height: 70px; object-fit: contain;" />
     <div>
       <h1 style="margin: 0;">Bilan financier — Saison ${db.y1}–${db.y2}</h1>

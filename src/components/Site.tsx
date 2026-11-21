@@ -367,7 +367,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           onAdmin={onReopenAdmin}
           onAdminLogin={() => ouvrirAdmin()}
         />
-        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#1e3a5f] to-slate-900 text-white px-6 relative overflow-hidden">
+        <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-slate-900 via-[#0F1B26] to-slate-900 text-white px-6 relative overflow-hidden">
           {/* Fond décoratif */}
           <div className="absolute inset-0 opacity-10">
             <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-blue-500 rounded-full blur-[120px]" />
@@ -453,7 +453,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <div className="max-w-7xl mx-auto px-6 pt-2 pb-4">
             <Link
               href="/"
-              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#1e3a5f] transition group"
+              className="inline-flex items-center gap-2 text-sm text-slate-500 hover:text-[#0F1B26] transition group"
             >
               <svg className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M15 19l-7-7 7-7" />
@@ -503,7 +503,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
         {/* Mode présentation : toutes les sections visibles. Sinon on respecte les toggles. */}
         {mode === "full" && (db.presentationMode || db.sectionsVisible?.presentation !== false) && (
-          <FadeInSection><Presentation /></FadeInSection>
+          <FadeInSection><Presentation membresCount={membresCount} creneaux={getEffectiveHoraires(db).length} /></FadeInSection>
         )}
 
         {/* 📅 Agenda du club : tournois (automatique) + événements ajoutés par le bureau */}
@@ -633,7 +633,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         {/* 🏸 Bandeau « tournoi du club » : uniquement pour un adhérent connecté */}
         {bandeauTournoi && !memberPanelOpen && (
           <div className="fixed bottom-4 inset-x-4 sm:inset-x-auto sm:right-6 sm:max-w-sm z-[60]">
-            <div className={`rounded-2xl shadow-2xl text-white p-4 flex items-center gap-3 ${bandeauTournoi.direct ? "bg-gradient-to-r from-red-500 to-orange-500" : "bg-gradient-to-r from-[#1e3a5f] to-emerald-600"}`}>
+            <div className={`rounded-2xl shadow-2xl text-white p-4 flex items-center gap-3 ${bandeauTournoi.direct ? "bg-gradient-to-r from-red-500 to-orange-500" : "bg-gradient-to-r from-[#0F1B26] to-emerald-600"}`}>
               <span className="text-2xl">{bandeauTournoi.direct ? "🔴" : "🏸"}</span>
               <button onClick={onMemberButtonClick} className="flex-1 min-w-0 text-left">
                 <span className="block text-sm font-bold truncate">{bandeauTournoi.direct ? "Ton tournoi est en cours" : "Nouveau tournoi du club"}</span>
@@ -699,7 +699,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <div className="bg-white border border-slate-200 rounded-2xl shadow-2xl p-8 w-full max-w-sm my-auto">
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-[#0F1B26] to-emerald-600 flex items-center justify-center">
                   <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
                 </div>
                 <div>
@@ -714,7 +714,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
             {/* Carte membre démo */}
             <div className="mb-6">
-              <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#1e3a5f] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
+              <div className="relative max-w-sm mx-auto bg-gradient-to-br from-[#0F1B26] to-[#0f2440] border-2 border-blue-400/60 rounded-2xl p-6 shadow-2xl shadow-blue-500/20 overflow-hidden">
                 <div className="absolute -top-10 -right-10 w-32 h-32 bg-blue-500/10 rounded-full blur-2xl" />
                 <div className="font-display text-xl text-blue-400 tracking-widest border-b border-white/10 pb-2 mb-4">MEMBRE OFFICIEL SACCB</div>
                 <div className="text-2xl font-bold uppercase text-white">Visiteur Demo</div>

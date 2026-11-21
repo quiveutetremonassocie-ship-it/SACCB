@@ -1,16 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import { Menu, X, UserCircle2, ShieldCheck } from "lucide-react";
-import Shuttlecock from "./Shuttlecock";
 
 export default function Navbar({
   onMember,
   isMember,
   isAdmin,
-  onAdmin,
-  onAdminLogin,
   rubriques = {},
 }: {
   onMember: () => void;
@@ -21,20 +18,12 @@ export default function Navbar({
   // Rubriques désactivées dans l'admin (false) : leur lien disparaît du menu
   rubriques?: Partial<Record<"presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription" | "agenda", boolean>>;
 }) {
-  const [scrolled, setScrolled] = useState(false);
   const [open, setOpen] = useState(false);
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 30);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
-
-  // Liens : si href commence par "/" ou est une URL absolue → page dédiée (Next Link)
-  // Si href commence par "#" → ancre sur la home (scroll). Sur les pages dédiées, on préfixe avec "/" pour revenir à la home.
+  // Liens : « /… » = page dédiée ; « /#… » = rubrique de la page d'accueil
   const allLinks: { href: string; label: string; hideIfMember?: boolean; rubrique?: keyof typeof rubriques }[] = [
-    { href: "/#presentation", label: "L'Asso", rubrique: "presentation" },
-    { href: "/actualites", label: "Actus", rubrique: "actualites" },
+    { href: "/#presentation", label: "L'asso", rubrique: "presentation" },
+    { href: "/actualites", label: "Actualités", rubrique: "actualites" },
     { href: "/#agenda", label: "Agenda", rubrique: "agenda" },
     { href: "/#horaires", label: "Horaires", rubrique: "horaires" },
     { href: "/tournois", label: "Tournois", rubrique: "tournois" },
@@ -47,110 +36,79 @@ export default function Navbar({
   const links = allLinks.filter((l) => !(l.hideIfMember && isMember) && !(l.rubrique && rubriques[l.rubrique] === false));
 
   return (
-    <nav
-      className={`fixed top-0 inset-x-0 z-50 transition-all duration-300 ${
-        scrolled
-          ? "bg-white/95 backdrop-blur-xl border-b border-slate-200 shadow-sm py-3"
-          : "bg-transparent py-5"
-      }`}
-    >
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
-        <Link href="/" className="flex items-center gap-2 group">
-          <span className="relative w-12 h-12 rounded-xl bg-white shadow-lg shadow-slate-300/40 group-hover:scale-110 transition overflow-hidden border border-slate-200">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/logo.png" alt="Logo SACCB" className="w-full h-full object-contain" />
-          </span>
-          <span className="font-display text-2xl tracking-widest text-[#1e3a5f]">
-            SACCB
-          </span>
+    <nav className="fixed top-0 inset-x-0 z-50 bg-white border-b border-[#D3DEE6]" aria-label="Menu principal">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 h-[80px] flex items-center justify-between gap-4">
+        <Link href="/" className="shrink-0 rounded-lg" aria-label="SACCB, retour à l'accueil">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/logo.png" alt="SACCB, Badminton Sainte-Adresse" width={64} height={64} className="w-16 h-16 object-contain" />
         </Link>
 
-        <div className="hidden md:flex items-center gap-8">
+        <div className="hidden lg:flex items-center gap-1">
           {links.map((l) => (
             <Link
               key={l.href}
               href={l.href}
-              className="text-xs font-semibold uppercase tracking-widest text-slate-600 hover:text-[#1e3a5f] transition relative group"
+              className="px-3 min-h-[48px] inline-flex items-center rounded-lg font-bold text-[0.95rem] text-[#0F1B26] hover:bg-[#F2F6F9] hover:text-[#007DB0] transition-colors"
             >
               {l.label}
-              <span className="absolute -bottom-1 left-0 w-0 h-0.5 bg-gradient-to-r from-[#1e3a5f] to-emerald-500 group-hover:w-full transition-all" />
             </Link>
           ))}
+        </div>
+
+        <div className="hidden lg:flex items-center gap-2">
           {isAdmin && (
-            <Link
-              href="/admin"
-              className="btn-ghost !px-4 !py-2.5 !text-xs flex items-center gap-1.5 !border-amber-400 !text-amber-700 hover:!bg-amber-50"
-            >
+            <Link href="/admin" className="btn-ghost !px-4">
               <ShieldCheck className="w-4 h-4" />
               Admin
             </Link>
           )}
           {!isAdmin && isMember && (
-            <Link
-              href="/admin"
-              className="text-slate-300 hover:text-amber-500 transition p-1"
-              title="Accès admin"
-            >
-              <ShieldCheck className="w-4 h-4" />
+            <Link href="/admin" className="text-slate-400 hover:text-[#0F1B26] p-3 rounded-lg" title="Accès admin" aria-label="Accès admin">
+              <ShieldCheck className="w-5 h-5" />
             </Link>
           )}
-          <button
-            onClick={onMember}
-            className={`btn-ghost !px-4 !py-2.5 !text-xs flex items-center gap-1.5 ${isMember ? "!border-emerald-400 !text-emerald-700" : ""}`}
-          >
-            <UserCircle2 className="w-4 h-4" />
+          <button onClick={onMember} className="btn-primary !px-5">
+            <UserCircle2 className="w-5 h-5" />
             {isMember ? "Mon espace" : "Espace membre"}
           </button>
         </div>
 
         <button
-          className="md:hidden text-[#1e3a5f] p-2"
+          className="lg:hidden text-[#0F1B26] p-3 rounded-lg hover:bg-[#F2F6F9]"
           onClick={() => setOpen((o) => !o)}
-          aria-label="Menu"
+          aria-label={open ? "Fermer le menu" : "Ouvrir le menu"}
+          aria-expanded={open}
         >
-          {open ? <X /> : <Menu />}
+          {open ? <X className="w-7 h-7" /> : <Menu className="w-7 h-7" />}
         </button>
       </div>
 
       {open && (
-        <div className="md:hidden bg-white/95 backdrop-blur-xl border-t border-slate-200 px-6 py-4 space-y-3">
-          {links.map((l) => (
-            <Link
-              key={l.href}
-              href={l.href}
-              onClick={() => setOpen(false)}
-              className="block text-slate-700 hover:text-[#1e3a5f] py-2 text-sm uppercase tracking-widest font-semibold"
-            >
-              {l.label}
-            </Link>
-          ))}
-          {isAdmin && (
-            <Link
-              href="/admin"
-              onClick={() => setOpen(false)}
-              className="btn-ghost w-full !border-amber-400 !text-amber-700"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Panneau Admin
-            </Link>
-          )}
-          {!isAdmin && isMember && (
-            <Link
-              href="/admin"
-              onClick={() => setOpen(false)}
-              className="btn-ghost w-full !border-slate-200 !text-slate-400"
-            >
-              <ShieldCheck className="w-4 h-4" />
-              Connexion Admin
-            </Link>
-          )}
-          <button
-            onClick={() => { setOpen(false); onMember(); }}
-            className={`btn-ghost w-full ${isMember ? "!border-emerald-400 !text-emerald-700" : ""}`}
-          >
-            <UserCircle2 className="w-4 h-4" />
-            {isMember ? "Mon espace" : "Espace membre"}
-          </button>
+        <div className="lg:hidden bg-white border-t border-[#D3DEE6] px-4 py-3 max-h-[calc(100vh-80px)] overflow-y-auto">
+          <div className="grid">
+            {links.map((l) => (
+              <Link
+                key={l.href}
+                href={l.href}
+                onClick={() => setOpen(false)}
+                className="py-3 min-h-[52px] flex items-center text-lg font-bold text-[#0F1B26] border-b border-[#EEF3F7] last:border-0"
+              >
+                {l.label}
+              </Link>
+            ))}
+          </div>
+          <div className="grid gap-2 pt-3">
+            <button onClick={() => { setOpen(false); onMember(); }} className="btn-primary w-full !text-base">
+              <UserCircle2 className="w-5 h-5" />
+              {isMember ? "Mon espace" : "Espace membre"}
+            </button>
+            {(isAdmin || isMember) && (
+              <Link href="/admin" onClick={() => setOpen(false)} className="btn-ghost w-full">
+                <ShieldCheck className="w-4 h-4" />
+                {isAdmin ? "Panneau admin" : "Connexion admin"}
+              </Link>
+            )}
+          </div>
         </div>
       )}
     </nav>

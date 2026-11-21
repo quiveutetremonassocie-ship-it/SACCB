@@ -1,9 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { motion } from "framer-motion";
-import { Trophy, Users2, MapPin, Clock, CalendarDays, ArrowRight, Newspaper, Award } from "lucide-react";
-
 type Props = {
   seasonY1: number;
   seasonY2: number;
@@ -21,158 +17,104 @@ type Props = {
   rubriques?: Partial<Record<"actualites" | "horaires" | "tournois", boolean>>;
 };
 
-/** 🏸 Accueil v2 : clair et sportif — texte à gauche, photo de la salle à droite, infos pratiques juste en dessous */
+/** « 18h30 → Fermeture » → { debut: "18:30", fin: "jusqu'à la fermeture" } */
+function lireCreneau(heure: string): { debut: string; fin: string } {
+  const [avant, apres = ""] = heure.split(/→|->|–|-/).map((x) => x.trim());
+  const h = avant.match(/(\d{1,2})\s*[h:]\s*(\d{2})?/i);
+  const debut = h ? `${h[1]}:${h[2] || "00"}` : avant;
+  const hf = apres.match(/(\d{1,2})\s*[h:]\s*(\d{2})?/i);
+  const fin = /ferm/i.test(apres) ? "jusqu'à la fermeture" : hf ? `jusqu'à ${hf[1]}:${hf[2] || "00"}` : apres;
+  return { debut, fin };
+}
+
+/** Date d'un tournoi lisible : « 2026-11-28 » ou « 28/11/2026 » → « 28 novembre » */
+function jourMois(dateStr: string): string {
+  const iso = /^\d{4}-\d{2}-\d{2}/.test(dateStr) ? dateStr.slice(0, 10) : (() => {
+    const m = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
+    return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
+  })();
+  if (!iso) return dateStr;
+  return new Date(iso + "T12:00:00").toLocaleDateString("fr-FR", { day: "numeric", month: "long" });
+}
+
+/** 🏸 Accueil : grande photo de jeu, puis le « tableau de marque » des créneaux (horaires réglés dans l'admin) */
 export default function AccueilHero({
-  seasonY1, seasonY2, inscOpen, isMember = false, membresCount = 0, nextTournoi,
-  horaires = [], prixAdulte, prixEtudiant, salleNom, salleAdresse, onMember, rubriques = {},
+  seasonY1, seasonY2, inscOpen, isMember = false, nextTournoi,
+  horaires = [], salleNom, onMember, rubriques = {},
 }: Props) {
   const voir = (r: "actualites" | "horaires" | "tournois") => rubriques[r] !== false;
-  const plan = salleAdresse ? `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent([salleNom, salleAdresse].filter(Boolean).join(", "))}` : null;
 
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-sky-50 via-white to-[#f8fafc] pt-28 pb-14">
-      {/* Lignes de terrain en décor */}
-      <svg className="absolute -right-24 top-16 w-[44rem] h-[44rem] text-sky-200/60 pointer-events-none hidden md:block" viewBox="0 0 400 400" fill="none" stroke="currentColor" strokeWidth="2">
-        <rect x="20" y="20" width="360" height="360" rx="4" />
-        <line x1="20" y1="200" x2="380" y2="200" />
-        <line x1="200" y1="20" x2="200" y2="380" />
-        <rect x="60" y="20" width="280" height="360" />
-        <line x1="20" y1="140" x2="380" y2="140" />
-        <line x1="20" y1="260" x2="380" y2="260" />
-      </svg>
-
-      {/* 🎯 H1 SEO */}
-      <h1 className="sr-only">Badminton Sainte-Adresse — SACCB, l&apos;association de badminton de Sainte-Adresse</h1>
-
-      <div className="relative max-w-6xl mx-auto px-5 grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-14 items-center">
-        {/* ── Texte ── */}
-        <div className="min-w-0 text-center lg:text-left">
-          <span
-            className={`inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-xs font-semibold mb-5 ${inscOpen ? "bg-emerald-100 text-emerald-800 border border-emerald-300" : "bg-red-100 text-red-700 border border-red-300"}`}
-          >
-            <span className={`w-2 h-2 rounded-full ${inscOpen ? "bg-emerald-500 animate-pulse" : "bg-red-500"}`} />
-            Saison {seasonY1}–{seasonY2} · {inscOpen ? "inscriptions ouvertes" : "inscriptions fermées"}
-          </span>
-
-          <h2
-            className="font-display text-[3.4rem] sm:text-7xl lg:text-8xl leading-[0.9] tracking-wide text-[#1e3a5f] mb-4"
-          >
-            SACCB
-            <span className="block text-[2rem] sm:text-4xl lg:text-5xl text-transparent bg-clip-text bg-gradient-to-r from-amber-500 to-emerald-600">
-              Badminton · Sainte&#8209;Adresse
-            </span>
-          </h2>
-
-          <p className="text-lg text-slate-600 max-w-lg mx-auto lg:mx-0 mb-7">
-            Une association conviviale pour jouer au badminton à tous les niveaux, se retrouver entre amis et participer à des tournois toute l&apos;année.
-          </p>
-
-          <div className="flex flex-col sm:flex-row gap-3 justify-center lg:justify-start mb-7">
-            {inscOpen && !isMember && (
-              <a href="/inscription" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold text-white bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8e] shadow-lg shadow-blue-900/20 hover:-translate-y-0.5 transition">
-                <Trophy className="w-5 h-5" /> Adhérer au club
-              </a>
-            )}
-            {onMember && (
-              <button onClick={onMember} className={`inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-bold transition hover:-translate-y-0.5 ${inscOpen && !isMember ? "text-[#1e3a5f] bg-white border-2 border-[#1e3a5f]/15" : "text-white bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8e] shadow-lg"}`}>
-                <Users2 className="w-5 h-5" /> {isMember ? "Mon espace adhérent" : "Espace adhérent"}
-              </button>
-            )}
-            {voir("horaires") && (
-              <a href="#horaires" className="inline-flex items-center justify-center gap-2 px-6 py-3.5 rounded-2xl font-semibold text-slate-600 hover:text-[#1e3a5f]">
-                Horaires &amp; tarifs <ArrowRight className="w-4 h-4" />
-              </a>
-            )}
-          </div>
-
-          <div className="flex flex-wrap justify-center lg:justify-start gap-x-5 gap-y-2 text-sm text-slate-500">
-            {membresCount > 0 && <span className="flex items-center gap-1.5"><Users2 className="w-4 h-4 text-emerald-500" /> <strong className="text-slate-700">{membresCount}</strong> adhérents</span>}
-            <span className="flex items-center gap-1.5"><Award className="w-4 h-4 text-amber-500" /> Tous niveaux</span>
-            <span className="flex items-center gap-1.5"><MapPin className="w-4 h-4 text-sky-500" /> {salleNom || "Sainte-Adresse"}</span>
+    <>
+      <section className="relative bg-[#0F1B26] text-white pt-[80px] overflow-hidden" aria-labelledby="titre-accueil">
+        <div className="relative">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/photos/accueil-smash.webp"
+            alt="Un joueur saute pour frapper le volant dans une salle de badminton"
+            width={1600}
+            height={1067}
+            className="w-full h-[560px] sm:h-[600px] lg:h-[640px] object-cover object-[70%_35%] lg:object-[62%_40%]"
+          />
+          <div className="absolute inset-0 bg-gradient-to-t from-[#031A2C]/95 via-[#031A2C]/70 to-[#031A2C]/15 lg:bg-gradient-to-r lg:from-[#031A2C]/90 lg:via-[#031A2C]/60 lg:to-transparent" />
+          <div className="absolute inset-0">
+            <div className="max-w-6xl h-full mx-auto px-5 flex flex-col justify-end lg:justify-center gap-5 pb-10 lg:pb-0">
+              <p className="font-bold text-[#5CCBF7]">
+                Saison {seasonY1}-{seasonY2}, {inscOpen ? "les inscriptions sont ouvertes" : "les inscriptions sont fermées"}
+              </p>
+              <h1 id="titre-accueil" className="font-display text-[2.6rem] sm:text-6xl lg:text-[5.2rem] leading-[0.92] max-w-[14ch]">
+                Le badminton à Sainte-Adresse, pour tous les niveaux
+              </h1>
+              <p className="text-lg text-[#E6EEF4] max-w-[38ch]">
+                {horaires.length > 0 ? `${horaires.length === 3 ? "Trois" : horaires.length} soirs par semaine` : "Plusieurs soirs par semaine"} à la {salleNom || "salle Paul Vatine"}. On vient pour se dépenser, progresser et partir ensemble en tournoi.
+              </p>
+              <div className="flex flex-wrap gap-3 mt-1">
+                {inscOpen && !isMember && (
+                  <a href="/inscription" className="btn-primary !text-base !px-6">S&apos;inscrire pour la saison</a>
+                )}
+                {onMember && (
+                  <button onClick={onMember} className={inscOpen && !isMember ? "btn !text-base !px-6 text-white border-2 border-white/80 hover:bg-white/10" : "btn-primary !text-base !px-6"}>
+                    {isMember ? "Mon espace adhérent" : "Espace adhérent"}
+                  </button>
+                )}
+              </div>
+              {nextTournoi && voir("tournois") && (
+                <a href="/tournois" className="text-[#E6EEF4] underline underline-offset-4 decoration-[#5CCBF7] hover:text-white self-start">
+                  Prochain tournoi : {nextTournoi.name}, le {jourMois(nextTournoi.date)}
+                </a>
+              )}
+            </div>
           </div>
         </div>
+      </section>
 
-        {/* ── Photo + cartes flottantes ── */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.97 }} animate={{ opacity: 1, scale: 1 }} transition={{ duration: 0.6, delay: 0.1 }}
-          className="relative min-w-0 mx-auto w-full max-w-lg"
-        >
-          <div className="rounded-[2rem] overflow-hidden shadow-2xl shadow-sky-900/20 rotate-1 border-[6px] border-white">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/salle.jpg" alt="Salle Paul Vatine — Sainte-Adresse" width={974} height={599} className="w-full h-72 sm:h-96 object-cover" />
+      {/* 🟦 Tableau de marque : les créneaux de jeu */}
+      {horaires.length > 0 && (
+        <section className="bg-[#00B0F0] text-[#04202E]" aria-label="Créneaux de jeu">
+          <div className="max-w-6xl mx-auto px-5 grid grid-cols-3 lg:grid-cols-[auto_repeat(3,1fr)]">
+            <div className="col-span-3 lg:col-span-1 py-5 lg:pr-8 border-b lg:border-b-0 lg:border-r border-[#04202E]/20 flex flex-col justify-center">
+              <p className="font-display text-3xl leading-none">On joue</p>
+              <p className="text-sm text-[#04202E]/75 mt-1">{salleNom || "Salle Paul Vatine"}, jeu libre tous niveaux</p>
+            </div>
+            {horaires.slice(0, 3).map((h, i) => {
+              const c = lireCreneau(h.heure);
+              return (
+                <div key={i} className={`py-5 lg:px-6 ${i < Math.min(horaires.length, 3) - 1 ? "border-r border-[#04202E]/20 pr-3" : ""} ${i > 0 ? "pl-3 lg:pl-6" : ""}`}>
+                  <p className="font-display font-bold text-xl lg:text-2xl">{h.jour}</p>
+                  <p className="font-display text-[1.85rem] min-[400px]:text-[2.2rem] sm:text-6xl lg:text-7xl leading-[0.9] tabular-nums">{c.debut}</p>
+                  {c.fin && <p className="text-sm text-[#04202E]/75 mt-1">{c.fin}</p>}
+                </div>
+              );
+            })}
           </div>
-          {nextTournoi && voir("tournois") && <ProchainTournoi name={nextTournoi.name} dateStr={nextTournoi.date} />}
-          {(prixAdulte !== undefined || prixEtudiant !== undefined) && (
-            <div className="absolute -bottom-5 right-3 sm:-right-4 bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-100">
-              <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">Adhésion / an</p>
-              <p className="text-sm font-bold text-[#1e3a5f]">
-                {prixAdulte !== undefined && <>{prixAdulte} € <span className="font-normal text-slate-500">adulte</span></>}
-                {prixAdulte !== undefined && prixEtudiant !== undefined && <span className="text-slate-300"> · </span>}
-                {prixEtudiant !== undefined && <>{prixEtudiant} € <span className="font-normal text-slate-500">étudiant</span></>}
-              </p>
-            </div>
+          {horaires.length > 3 && (
+            <p className="max-w-6xl mx-auto px-5 pb-4 text-sm">
+              Aussi : {horaires.slice(3).map((h) => `${h.jour} ${h.heure}`).join(", ")}.
+            </p>
           )}
-        </motion.div>
-      </div>
+        </section>
+      )}
 
-      {/* ── Infos pratiques ── */}
-      <div className={`relative max-w-6xl mx-auto px-5 mt-16 grid gap-4 ${voir("actualites") || voir("tournois") ? "sm:grid-cols-3" : "sm:grid-cols-2"}`}>
-        <Info icone={<Clock className="w-5 h-5" />} couleur="from-sky-500 to-blue-600" titre="Quand on joue">
-          {horaires.length > 0 ? (
-            <ul className="space-y-0.5">
-              {horaires.map((h, i) => <li key={i} className="flex justify-between gap-2"><span className="font-semibold text-slate-700">{h.jour}</span><span>{h.heure}</span></li>)}
-            </ul>
-          ) : <p>Voir les horaires plus bas.</p>}
-        </Info>
-        <Info icone={<MapPin className="w-5 h-5" />} couleur="from-emerald-500 to-teal-600" titre="Où">
-          <p className="font-semibold text-slate-700">{salleNom}</p>
-          {salleAdresse && <p>{salleAdresse}</p>}
-          {plan && <a href={plan} target="_blank" rel="noopener noreferrer" className="inline-block mt-1 font-semibold text-emerald-700 hover:underline">Itinéraire →</a>}
-        </Info>
-        {(voir("actualites") || voir("tournois")) && (
-          <Info icone={<Newspaper className="w-5 h-5" />} couleur="from-amber-500 to-orange-500" titre="La vie du club">
-            <p>{voir("actualites") && voir("tournois") ? "Actualités et tournois : tout est sur le site." : voir("actualites") ? "Les dernières nouvelles du club sont sur le site." : "Les prochains tournois sont sur le site."}</p>
-            <div className="flex gap-3 mt-1 font-semibold">
-              {voir("actualites") && <a href="/actualites" className="text-amber-700 hover:underline">Actualités →</a>}
-              {voir("tournois") && <a href="/tournois" className="text-amber-700 hover:underline">Tournois →</a>}
-            </div>
-          </Info>
-        )}
-      </div>
-    </section>
-  );
-}
-
-function Info({ icone, couleur, titre, children }: { icone: React.ReactNode; couleur: string; titre: string; children: React.ReactNode }) {
-  return (
-    <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5 text-sm text-slate-500">
-      <div className="flex items-center gap-2.5 mb-3">
-        <span className={`w-9 h-9 rounded-xl bg-gradient-to-br ${couleur} text-white flex items-center justify-center`}>{icone}</span>
-        <p className="font-bold text-slate-800">{titre}</p>
-      </div>
-      {children}
-    </div>
-  );
-}
-
-/** Carte flottante « prochain tournoi » avec compte à rebours */
-function ProchainTournoi({ name, dateStr }: { name: string; dateStr: string }) {
-  const [jours, setJours] = useState<number | null>(null);
-  useEffect(() => {
-    const iso = /^\d{4}-\d{2}-\d{2}/.test(dateStr) ? dateStr.slice(0, 10) : (() => {
-      const m = dateStr.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/);
-      return m ? `${m[3]}-${m[2].padStart(2, "0")}-${m[1].padStart(2, "0")}` : "";
-    })();
-    if (!iso) return;
-    const diff = Math.ceil((new Date(iso + "T00:00:00").getTime() - Date.now()) / 86_400_000);
-    setJours(diff);
-  }, [dateStr]);
-  if (jours !== null && jours < 0) return null;
-  return (
-    <a href="/tournois" className="absolute -top-5 left-3 sm:-left-6 max-w-[16rem] bg-white rounded-2xl shadow-xl px-4 py-3 border border-slate-100 hover:-translate-y-0.5 transition">
-      <p className="text-[10px] uppercase tracking-widest text-emerald-600 font-bold flex items-center gap-1"><CalendarDays className="w-3.5 h-3.5" /> Prochain tournoi</p>
-      <p className="text-sm font-bold text-slate-800 truncate">{name}</p>
-      {jours !== null && <p className="text-xs text-slate-500">{jours === 0 ? "aujourd'hui !" : `dans ${jours} jour${jours > 1 ? "s" : ""}`}</p>}
-    </a>
+    </>
   );
 }

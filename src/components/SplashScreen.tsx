@@ -25,7 +25,7 @@ export default function SplashScreen() {
           initial={{ opacity: 1 }}
           exit={{ opacity: 0 }}
           transition={{ duration: 0.5, ease: "easeInOut" }}
-          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#1e3a5f] via-[#0f2440] to-[#1e3a5f]"
+          className="fixed inset-0 z-[9999] flex items-center justify-center bg-gradient-to-br from-[#0F1B26] via-[#0f2440] to-[#0F1B26]"
         >
           {/* Orbes lumineux */}
           <div className="absolute inset-0 overflow-hidden pointer-events-none">

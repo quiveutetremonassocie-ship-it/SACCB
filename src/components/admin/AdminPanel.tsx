@@ -529,7 +529,7 @@ export default function AdminPanel({
                   <li key={it.id}>
                     <button
                       onClick={() => aller(it.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-left transition ${actif ? "bg-white text-[#1e3a5f] font-semibold shadow" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-left transition ${actif ? "bg-white text-[#0F1B26] font-semibold shadow" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
                     >
                       <Icone className="w-4 h-4 shrink-0" />
                       <span className="flex-1 truncate">{it.label}</span>
@@ -559,7 +559,7 @@ export default function AdminPanel({
   return (
     <div className="admin-shell fixed inset-0 z-[2000] bg-[#f1f5f9] flex">
       {/* ── Menu latéral (ordinateur) ── */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-gradient-to-b from-[#0f2440] to-[#1e3a5f] text-white">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-gradient-to-b from-[#0f2440] to-[#0F1B26] text-white">
         {enteteMenu}
         {navigation}
         <div className="p-3 border-t border-white/10">
@@ -570,7 +570,7 @@ export default function AdminPanel({
       {/* ── Menu tiroir (téléphone) ── */}
       {menuOuvert && (
         <div className="lg:hidden fixed inset-0 z-[2050] bg-black/50" onClick={() => setMenuOuvert(false)}>
-          <aside className="w-72 max-w-[85vw] h-full flex flex-col bg-gradient-to-b from-[#0f2440] to-[#1e3a5f] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <aside className="w-72 max-w-[85vw] h-full flex flex-col bg-gradient-to-b from-[#0f2440] to-[#0F1B26] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {enteteMenu}
             {navigation}
           </aside>
@@ -690,7 +690,7 @@ export default function AdminPanel({
       {showBackToTop && (
         <button
           onClick={scrollToTop}
-          className="fixed bottom-6 right-6 z-[2100] w-12 h-12 rounded-full bg-gradient-to-br from-[#1e3a5f] to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition flex items-center justify-center"
+          className="fixed bottom-6 right-6 z-[2100] w-12 h-12 rounded-full bg-gradient-to-br from-[#0F1B26] to-emerald-600 text-white shadow-xl hover:shadow-2xl hover:-translate-y-0.5 transition flex items-center justify-center"
           title="Retour en haut"
           aria-label="Retour en haut"
         >

@@ -443,7 +443,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
   }
 
   return (
-    <motion.div initial={{ opacity: 0, y: 20 }} whileInView={{ opacity: 1, y: 0 }} viewport={{ once: true }} transition={{ duration: 0.5 }} className={`glass-sport overflow-hidden ${inscriptionsClosed ? "opacity-75" : ""}`}>
+    <motion.div className={`glass-sport overflow-hidden ${inscriptionsClosed ? "opacity-75" : ""}`}>
       <div className={`relative p-7 border-l-4 ${inscriptionsClosed ? "border-red-400" : "border-emerald-500"}`}>
         <div className={`absolute top-0 right-0 w-40 h-40 bg-gradient-to-bl ${inscriptionsClosed ? "from-red-100/40" : "from-emerald-100/40"} to-transparent rounded-full blur-2xl pointer-events-none`} />
         <div className="flex flex-wrap items-start justify-between gap-4 mb-4">
@@ -659,7 +659,7 @@ function TournoiCard({ t, inscrits, memberSession, onLoginRequest, membreNoms = 
           ) : (
             <div className="flex items-center justify-between gap-3 flex-wrap bg-slate-50 border border-slate-200 rounded-xl px-4 py-2.5">
               <p className="text-slate-600 text-sm flex items-center gap-2"><Lock className="w-4 h-4 text-slate-400" /> Inscription réservée aux adhérents</p>
-              <button onClick={onLoginRequest} className="text-sm font-semibold text-[#1e3a5f] hover:underline">Se connecter →</button>
+              <button onClick={onLoginRequest} className="text-sm font-semibold text-[#0F1B26] hover:underline">Se connecter →</button>
             </div>
           )
         )}

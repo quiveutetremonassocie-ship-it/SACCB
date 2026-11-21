@@ -1,7 +1,19 @@
-/* 🔤 Polices hébergées sur le site (plus d'appel à Google au chargement : affichage plus rapide) */
-@font-face { font-family: "Outfit"; font-style: normal; font-weight: 300 800; font-display: swap; src: url("/fonts/outfit.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "Oswald"; font-style: normal; font-weight: 200 700; font-display: swap; src: url("/fonts/oswald.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
-@font-face { font-family: "Bebas Neue"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/bebas-neue.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+/* 🔤 Polices hébergées sur le site (nouveau design 2026-11) :
+   - titres : Barlow Condensed (esprit maillot / tableau de marque)
+   - textes : Atkinson Hyperlegible (créée pour les personnes malvoyantes : lisible à tout âge)
+   Les anciens noms (« Bebas Neue », « Oswald », « Outfit ») pointent vers les nouvelles polices,
+   pour que tout le site (y compris l'admin et les styles écrits en ligne) change d'un coup. */
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 600; font-display: swap; src: url("/fonts/barlow-condensed-600.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/barlow-condensed-700.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow Condensed"; font-style: normal; font-weight: 800; font-display: swap; src: url("/fonts/barlow-condensed-800.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/atkinson-hyperlegible-400.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: italic; font-weight: 400; font-display: swap; src: url("/fonts/atkinson-hyperlegible-400i.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Atkinson Hyperlegible"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/atkinson-hyperlegible-700.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Bebas Neue"; font-style: normal; font-weight: 400; font-display: swap; src: url("/fonts/barlow-condensed-800.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Oswald"; font-style: normal; font-weight: 200 600; font-display: swap; src: url("/fonts/barlow-condensed-600.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Oswald"; font-style: normal; font-weight: 700; font-display: swap; src: url("/fonts/barlow-condensed-700.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Outfit"; font-style: normal; font-weight: 300 500; font-display: swap; src: url("/fonts/atkinson-hyperlegible-400.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Outfit"; font-style: normal; font-weight: 600 800; font-display: swap; src: url("/fonts/atkinson-hyperlegible-700.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
 
 @tailwind base;
 @tailwind components;
@@ -9,14 +21,19 @@
 
 
 :root {
-  --bg-light: #f8fafc;
+  /* 🎨 Couleurs tirées du logo SACCB */
+  --bg-light: #F2F6F9;
   --bg-card: #ffffff;
-  --primary: #1e3a5f;
-  --accent: #10b981;
-  --accent-2: #f59e0b;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --danger: #ef4444;
+  --primary: #0F1B26;       /* encre du volant */
+  --marque: #00B0F0;        /* cyan exact du logo */
+  --marque-texte: #007DB0;  /* cyan lisible sur fond blanc */
+  --sur-marque: #04202E;
+  --accent: #157A55;        /* vert terrain */
+  --accent-2: #FFD23F;
+  --text-main: #0F1B26;
+  --text-muted: #4B5B69;
+  --trait: #D3DEE6;
+  --danger: #C62828;
 }
 
 * { box-sizing: border-box; }
@@ -110,68 +127,66 @@ body {
 
 /* ============ SPORTY COMPONENTS ============ */
 @layer components {
+  /* Cadres : fond blanc et trait fin, sans ombre ni dégradé décoratif */
   .glass {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-lg;
+    @apply bg-white border border-[#D3DEE6] rounded-xl;
   }
   .glass-strong {
-    @apply bg-white border border-slate-200 rounded-2xl shadow-xl;
+    @apply bg-white border border-[#D3DEE6] rounded-xl;
   }
   .glass-sport {
-    @apply relative bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-shadow overflow-hidden;
+    @apply relative bg-white border border-[#D3DEE6] rounded-xl overflow-hidden;
   }
-  .glass-sport::before {
-    content: "";
-    position: absolute;
-    top: 0; left: 0; right: 0;
-    height: 3px;
-    background: linear-gradient(90deg, #1e3a5f, #10b981, #f59e0b);
-  }
+  /* Boutons : couleurs pleines, texte en minuscules lisible, grande zone à toucher (48 px) */
   .btn {
-    @apply inline-flex items-center justify-center gap-2 px-6 py-3 rounded-xl font-bold uppercase tracking-widest text-sm transition-all duration-200 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
-    font-family: "Oswald", "Outfit", sans-serif;
-    letter-spacing: 0.12em;
+    @apply inline-flex items-center justify-center gap-2 px-5 py-3 rounded-[10px] font-bold text-[0.95rem] transition-colors duration-150 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed;
+    font-family: "Atkinson Hyperlegible", system-ui, sans-serif;
+    min-height: 48px;
   }
   .btn-primary {
-    @apply btn text-white bg-gradient-to-r from-[#1e3a5f] to-[#2d5a8e] hover:from-[#2d5a8e] hover:to-[#3b72b0] shadow-lg shadow-blue-900/20 hover:-translate-y-0.5;
+    @apply btn bg-[#00B0F0] text-[#04202E] hover:bg-[#0AA0DB];
   }
   .btn-accent {
-    @apply btn text-white bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 shadow-lg shadow-emerald-600/20 hover:-translate-y-0.5;
+    @apply btn bg-[#157A55] text-white hover:bg-[#106746];
   }
   .btn-sport {
-    @apply btn text-white bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 shadow-lg shadow-amber-500/20 hover:-translate-y-0.5;
+    @apply btn bg-[#FFD23F] text-[#0F1B26] hover:bg-[#F5C518];
   }
   .btn-danger {
-    @apply btn text-white bg-gradient-to-r from-red-500 to-red-600 hover:from-red-400 hover:to-red-500 shadow-lg shadow-red-600/20 hover:-translate-y-0.5;
+    @apply btn bg-[#C62828] text-white hover:bg-[#A91F1F];
   }
   .btn-ghost {
-    @apply btn text-slate-700 bg-white border border-slate-200 hover:bg-slate-50 hover:border-slate-300 shadow-sm;
+    @apply btn text-[#0F1B26] bg-white border-2 border-[#D3DEE6] hover:border-[#0F1B26];
   }
   .quick-link {
-    @apply flex items-center justify-center gap-2 px-4 py-3 rounded-xl bg-white/90 backdrop-blur border border-slate-200 text-slate-700 hover:bg-white hover:border-slate-300 hover:shadow-md hover:-translate-y-0.5 transition shadow-sm text-sm font-medium;
+    @apply flex items-center justify-center gap-2 px-4 py-3 rounded-[10px] bg-white border-2 border-[#D3DEE6] text-[#0F1B26] hover:border-[#0F1B26] transition-colors text-sm font-bold;
+    min-height: 48px;
   }
   .input {
-    @apply w-full px-4 py-3 rounded-xl bg-slate-50 border border-slate-200 text-slate-800 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white focus:ring-2 focus:ring-blue-500/20 transition;
+    @apply w-full px-4 py-3 rounded-[10px] bg-white border-2 border-[#D3DEE6] text-[#0F1B26] placeholder-slate-500 focus:outline-none focus:border-[#00B0F0] focus:ring-2 focus:ring-[#00B0F0]/25 transition-colors;
+    min-height: 48px;
   }
   select.input option {
     background-color: #ffffff;
     color: #1e293b;
   }
   .label {
-    @apply text-xs uppercase tracking-widest text-slate-500 font-semibold mb-1 block;
+    @apply text-sm text-slate-600 font-bold mb-1 block;
   }
   .h-display {
-    @apply font-display tracking-wide text-[#1e3a5f];
+    @apply font-display tracking-wide text-[#0F1B26];
   }
   .h-display-sport {
-    @apply font-display tracking-wider text-transparent bg-clip-text bg-gradient-to-br from-amber-500 via-[#1e3a5f] to-emerald-600;
+    @apply font-display tracking-wide text-[#0F1B26];
   }
   .section-pad {
     @apply max-w-6xl mx-auto px-5 py-16 md:py-20;
   }
 
   /* Étiquette de section type "sport" */
+  /* Ancienne petite étiquette au-dessus des titres : retirée du nouveau design */
   .sport-label {
-    @apply inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-50 border border-emerald-200;
+    @apply hidden;
   }
   .sport-label-dot {
     @apply w-1.5 h-1.5 rounded-full bg-emerald-500;
@@ -185,13 +200,7 @@ body {
   .stat-box {
     @apply relative bg-white border border-slate-200 rounded-2xl p-5 shadow-sm overflow-hidden;
   }
-  .stat-box::after {
-    content: "";
-    position: absolute;
-    inset: 0;
-    background: radial-gradient(circle at top right, rgba(245,158,11,0.06), transparent 70%);
-    pointer-events: none;
-  }
+
 }
 
 /* ============ SECTION BACKGROUNDS ============ */
@@ -199,10 +208,10 @@ body {
   position: relative;
 }
 .bg-section-wrap:nth-child(even) {
-  background: #f5f8fc;
+  background: #FFFFFF;
 }
 .bg-section-wrap + .bg-section-wrap {
-  border-top: 1px solid #e8eef5;
+  border-top: 1px solid #D3DEE6;
 }
 
 /* ============ ANIMATIONS ============ */
@@ -222,10 +231,11 @@ body {
   0%, 100% { box-shadow: 0 0 0 0 rgba(30,58,95,0.2); }
   50% { box-shadow: 0 0 40px 10px rgba(30,58,95,0.05); }
 }
-.animate-float { animation: float 7s ease-in-out infinite; }
-.animate-float-rev { animation: floatRev 9s ease-in-out infinite; }
-.animate-spin-slow { animation: spin-slow 40s linear infinite; }
-.animate-pulse-glow { animation: pulse-glow 3s ease-in-out infinite; }
+/* Décors animés (volants qui flottent…) : arrêtés dans le nouveau design */
+.animate-float, .animate-float-rev, .animate-spin-slow, .animate-pulse-glow { animation: none; }
+/* Focus clavier bien visible partout (accessibilité) */
+:focus-visible { outline: 3px solid #FFD23F; outline-offset: 2px; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; scroll-behavior: auto !important; } }
 
 /* ============ LEGAL PAGES ============ */
 .legal-content h2 {
@@ -241,8 +251,8 @@ body {
 /* ============ SCROLLBAR ============ */
 ::-webkit-scrollbar { width: 10px; height: 10px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
-::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #1e3a5f, #10b981); border-radius: 10px; }
-::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #2d5a8e, #059669); }
+::-webkit-scrollbar-thumb { background: linear-gradient(180deg, #0F1B26, #10b981); border-radius: 10px; }
+::-webkit-scrollbar-thumb:hover { background: linear-gradient(180deg, #007DB0, #059669); }
 
 /* ============ PRINT ============ */
 @page {

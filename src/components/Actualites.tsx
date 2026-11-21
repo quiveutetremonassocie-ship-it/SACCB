@@ -108,10 +108,6 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
     <section id="actualites" className="bg-section-wrap bg-news relative">
       <div className="section-pad relative">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
           className="text-center"
         >
           <div className="sport-label mb-5">
@@ -134,10 +130,6 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
     <section id="actualites" className="bg-section-wrap bg-news relative">
       <div className="section-pad relative">
         <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.6 }}
           className="text-center mb-10"
         >
           <div className="sport-label mb-5">

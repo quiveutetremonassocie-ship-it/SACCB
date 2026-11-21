@@ -12,7 +12,7 @@ export async function imprimerQrCodes(t: InterClub) {
   w.document.write("<p style='font-family:sans-serif;padding:20px'>Préparation des QR codes…</p>");
 
   const QRCode = (await import("qrcode")).default;
-  const qr = (url: string) => QRCode.toDataURL(url, { width: 520, margin: 1, errorCorrectionLevel: "M", color: { dark: "#1e3a5f", light: "#ffffff" } });
+  const qr = (url: string) => QRCode.toDataURL(url, { width: 520, margin: 1, errorCorrectionLevel: "M", color: { dark: "#0F1B26", light: "#ffffff" } });
   const date = t.date ? new Date(t.date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" }) : "";
 
   const fiches: string[] = [];
@@ -46,8 +46,8 @@ export async function imprimerQrCodes(t: InterClub) {
   w.document.write(`<!doctype html><html lang="fr"><head><meta charset="utf-8"><title>QR codes — ${esc(t.name)}</title>
 <style>
   * { box-sizing: border-box; }
-  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #1e3a5f; background: #f1f5f9; }
-  .barre { position: sticky; top: 0; background: #1e3a5f; color: #fff; padding: 12px 20px; display: flex; gap: 12px; align-items: center; }
+  body { margin: 0; font-family: Arial, Helvetica, sans-serif; color: #0F1B26; background: #f1f5f9; }
+  .barre { position: sticky; top: 0; background: #0F1B26; color: #fff; padding: 12px 20px; display: flex; gap: 12px; align-items: center; }
   .barre button { background: #10b981; color: #fff; border: 0; border-radius: 8px; padding: 10px 18px; font-weight: bold; font-size: 15px; cursor: pointer; }
   .grille { display: grid; grid-template-columns: repeat(2, 1fr); gap: 16px; padding: 16px; max-width: 900px; margin: 0 auto; }
   .fiche { background: #fff; border: 2px dashed #94a3b8; border-radius: 16px; padding: 18px; text-align: center; page-break-inside: avoid; break-inside: avoid; }

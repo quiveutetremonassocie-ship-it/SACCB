@@ -90,7 +90,7 @@ export function ScoreForm({
         <input
           key={i}
           inputMode="numeric"
-          className="w-12 h-10 rounded-lg border border-slate-300 text-center text-lg font-bold focus:border-[#1e3a5f] focus:outline-none"
+          className="w-12 h-10 rounded-lg border border-slate-300 text-center text-lg font-bold focus:border-[#0F1B26] focus:outline-none"
           value={v}
           placeholder={nbSets > 1 && i === 2 ? "–" : "0"}
           onChange={(e) => { const c = [...vals]; c[i] = e.target.value.replace(/\D/g, "").slice(0, 2); set(c); setErr(null); }}
@@ -123,8 +123,8 @@ export function PouleCard({
   const cl = classementPoule(poule);
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden">
-      <div className="px-4 py-2.5 bg-gradient-to-r from-[#1e3a5f] to-[#2a5285] text-white flex items-center justify-between">
-        <p className={`font-bold tracking-wide ${grand ? "text-xl" : ""}`}>{poule.nom}{poule.ordreManuel?.length ? <span className="ml-2 text-[10px] font-semibold bg-amber-400 text-[#1e3a5f] px-1.5 py-0.5 rounded" title="Classement ajusté par la table de marque">✋ ajusté</span> : null}</p>
+      <div className="px-4 py-2.5 bg-gradient-to-r from-[#0F1B26] to-[#2a5285] text-white flex items-center justify-between">
+        <p className={`font-bold tracking-wide ${grand ? "text-xl" : ""}`}>{poule.nom}{poule.ordreManuel?.length ? <span className="ml-2 text-[10px] font-semibold bg-amber-400 text-[#0F1B26] px-1.5 py-0.5 rounded" title="Classement ajusté par la table de marque">✋ ajusté</span> : null}</p>
         <p className="text-[11px] text-white/70">{poule.matchs.filter(matchJoue).length}/{poule.matchs.length} matchs</p>
       </div>
       <table className="w-full text-sm table-fixed">
@@ -147,7 +147,7 @@ export function PouleCard({
                 </td>
                 <td className="py-1.5 pr-2 overflow-hidden"><NomEquipe id={l.id} equipes={equipes} grand={grand} /></td>
                 <td className={`text-center text-slate-500 ${grand ? "text-base" : ""}`}>{l.joues}</td>
-                <td className={`text-center font-bold text-[#1e3a5f] ${grand ? "text-lg" : ""}`}>{l.v}</td>
+                <td className={`text-center font-bold text-[#0F1B26] ${grand ? "text-lg" : ""}`}>{l.v}</td>
                 <td className={`text-center pr-3 text-slate-500 ${grand ? "text-base" : ""}`}>{l.ptsPour - l.ptsContre > 0 ? "+" : ""}{l.ptsPour - l.ptsContre}</td>
               </tr>
             );
@@ -161,7 +161,7 @@ export function PouleCard({
             <div key={m.id} className="px-3 py-2">
               <div className="flex items-center gap-2">
                 <div className={`flex-1 min-w-0 text-right ${w === m.a ? "" : w ? "opacity-60" : ""}`}><NomEquipe id={m.a} equipes={equipes} compact grand={grand} /></div>
-                <div className={`shrink-0 text-center font-mono font-bold ${grand ? "text-lg min-w-[6rem]" : "text-xs min-w-[4.5rem]"} ${matchJoue(m) ? "text-[#1e3a5f]" : "text-slate-300"}`}>
+                <div className={`shrink-0 text-center font-mono font-bold ${grand ? "text-lg min-w-[6rem]" : "text-xs min-w-[4.5rem]"} ${matchJoue(m) ? "text-[#0F1B26]" : "text-slate-300"}`}>
                   {matchJoue(m) ? texteScore(m) : "vs"}
                 </div>
                 <div className={`flex-1 min-w-0 ${w === m.b ? "" : w ? "opacity-60" : ""}`}><NomEquipe id={m.b} equipes={equipes} compact grand={grand} /></div>
@@ -223,7 +223,7 @@ export function LiveBoard({
               key={p.id}
               onClick={() => setChoix(i)}
               className={`shrink-0 px-4 py-2 rounded-full text-sm font-semibold border transition ${
-                i === idx ? "bg-[#1e3a5f] text-white border-[#1e3a5f]" : "bg-white/90 text-slate-600 border-slate-200 hover:border-[#1e3a5f]"
+                i === idx ? "bg-[#0F1B26] text-white border-[#0F1B26]" : "bg-white/90 text-slate-600 border-slate-200 hover:border-[#0F1B26]"
               }`}
             >
               {p.nom}{phaseTerminee(p) ? " ✓" : i === derniere && !termine ? " · en cours" : ""}

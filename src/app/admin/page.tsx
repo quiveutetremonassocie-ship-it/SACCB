@@ -346,7 +346,7 @@ export default function AdminPage() {
 
         <div className="bg-white rounded-2xl border border-slate-200 shadow-xl p-8">
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#1e3a5f] to-emerald-600 flex items-center justify-center shadow-lg">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#0F1B26] to-emerald-600 flex items-center justify-center shadow-lg">
               <ShieldCheck className="w-6 h-6 text-white" />
             </div>
             <div>
