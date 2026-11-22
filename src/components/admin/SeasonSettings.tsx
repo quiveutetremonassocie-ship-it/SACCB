@@ -52,6 +52,7 @@ export default function SeasonSettings({
   adminCode?: string;
   readOnly?: boolean;
 }) {
+  const [onglet, setOnglet] = useState<"saison" | "club" | "mails" | "admins">("saison");
   const isSuperAdmin = SUPER_ADMINS.includes(adminEmail?.toLowerCase() ?? "");
   const [y1, setY1] = useState(db.y1);
   const [y2, setY2] = useState(db.y2);
@@ -294,6 +295,17 @@ export default function SeasonSettings({
         </div>
       )}
 
+      {/* 🗂️ Onglets : chaque thème à sa place */}
+      <div className="flex flex-wrap gap-2 mb-5 border-b border-[#D3DEE6] pb-3" role="tablist" aria-label="Thèmes des paramètres">
+        {([["saison", "Saison et inscriptions"], ["club", "Club et site"], ["mails", "Mails et paiements"], ["admins", "Admins et sécurité"]] as const).map(([k, l]) => (
+          <button key={k} role="tab" aria-selected={onglet === k} onClick={() => setOnglet(k)}
+            className={`px-4 min-h-[44px] rounded-[10px] font-bold text-sm border-2 transition-colors ${onglet === k ? "bg-[#0F1B26] border-[#0F1B26] text-white" : "bg-white border-[#D3DEE6] text-[#0F1B26] hover:border-[#0F1B26]"}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
+      {onglet === "saison" && (<>
       <div className="grid grid-cols-2 gap-3 mb-3">
         <input type="number" className="input" value={y1} onChange={(e) => setY1(Number(e.target.value))} placeholder="Année 1" disabled={readOnly} />
         <input type="number" className="input" value={y2} onChange={(e) => setY2(Number(e.target.value))} placeholder="Année 2" disabled={readOnly} />
@@ -343,6 +355,8 @@ export default function SeasonSettings({
         <p className="text-xs text-slate-400 mt-1">Apparaît sur les reçus de cotisation. Laisse vide pour conserver le nom par défaut.</p>
       </div>
 
+      </>)}
+      {onglet === "mails" && (<>
       {/* ✍️ Signature commune pour les mails manuels */}
       <div className="mb-3">
         <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
@@ -364,6 +378,8 @@ export default function SeasonSettings({
       {/* 💳 RIB pour les rappels de virement */}
       <RibUploadField db={db} onPersist={onPersist} readOnly={readOnly} adminEmail={adminEmail} adminCode={adminCode} />
 
+      </>)}
+      {onglet === "club" && (<>
       {/* 🏆 URL Smash — appli partenaire pour les mini-tournois entre adhérents */}
       <div className="mb-3">
         <label className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
@@ -382,6 +398,8 @@ export default function SeasonSettings({
         </p>
       </div>
 
+      </>)}
+      {onglet === "admins" && (<>
       {/* 🔑 Toggle 2FA admin */}
       <div className="mb-3 p-3 bg-emerald-50 border border-emerald-200 rounded-xl">
         <label className="flex items-start gap-2 cursor-pointer">
@@ -402,12 +420,16 @@ export default function SeasonSettings({
         </label>
       </div>
 
+      </>)}
+      {onglet === "club" && (<>
       {/* ⚙️ Configuration du club */}
       <ClubConfigSection db={db} onPersist={onPersist} readOnly={readOnly} />
 
       {/* 👁️ Toggles de visibilité des sections du site public */}
       <SectionVisibilityToggles db={db} onPersist={onPersist} readOnly={readOnly} />
 
+      </>)}
+      {onglet === "saison" && (<>
       {!readOnly && (
         <div className="space-y-3">
           <button onClick={toggle} className={db.insc_open ? "btn-danger w-full" : "btn-accent w-full"}>
@@ -416,9 +438,6 @@ export default function SeasonSettings({
           {/* Réouverture temporaire avec fermeture auto après N jours */}
           <button onClick={reopenForDays} className="btn-accent w-full !bg-gradient-to-r !from-amber-500 !to-orange-500">
             <Clock className="w-4 h-4" /> Rouvrir temporairement (N jours)
-          </button>
-          <button onClick={update} className="btn-accent w-full">
-            <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
           </button>
           <button onClick={newSeason} className="btn-accent w-full">
             <Sparkles className="w-4 h-4" /> Démarrer une nouvelle saison
@@ -429,6 +448,8 @@ export default function SeasonSettings({
         </div>
       )}
 
+      </>)}
+      {onglet === "saison" && (<>
       {/* Gestion des archives */}
       {db.archives && db.archives.length > 0 && (
         <div className="mt-6 pt-5 border-t border-slate-200">
@@ -498,6 +519,8 @@ export default function SeasonSettings({
         </div>
       )}
 
+      </>)}
+      {onglet === "admins" && (<>
       {/* Accès admin via espace membre — visible uniquement par le super-admin */}
       {isSuperAdmin && <div className="mt-6 pt-5 border-t border-slate-200">
         <p className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
@@ -887,6 +910,8 @@ export default function SeasonSettings({
         </label>
       </div>}
 
+      </>)}
+      {onglet === "mails" && (<>
       {/* Emails recevant les messages du formulaire de contact — visible uniquement par les super-admins */}
       {isSuperAdmin && <div className="mt-6 pt-5 border-t border-slate-200">
         <p className="text-xs uppercase tracking-widest text-slate-400 mb-1 flex items-center gap-1">
@@ -949,6 +974,16 @@ export default function SeasonSettings({
           </button>
         </div>
       </div>}
+
+      </>)}
+      {/* Enregistre les champs des onglets (saison, signature, Smash…) */}
+      {!readOnly && (
+        <div className="mt-6 pt-4 border-t border-[#D3DEE6]">
+          <button onClick={update} className="btn-primary w-full">
+            <RefreshCw className="w-4 h-4" /> Mettre à jour les paramètres
+          </button>
+        </div>
+      )}
 
       {/* Modal d'édition complète d'une archive */}
       {archiveContentIdx !== null && (

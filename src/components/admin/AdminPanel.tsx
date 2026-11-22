@@ -283,9 +283,19 @@ export default function AdminPanel({
   const [section, setSection] = useState<string>("admin-accueil");
   const [menuOuvert, setMenuOuvert] = useState(false);
   useEffect(() => {
-    try { const s = localStorage.getItem("saccb_admin_section"); if (s) setSection(s); } catch { /* ignore */ }
+    try {
+      const s = localStorage.getItem("saccb_admin_section");
+      if (s === "admin-inscriptions" || s === "admin-interclubs") { setSection("admin-tournois"); setOngletTournois(s === "admin-inscriptions" ? "inscriptions" : "interclubs"); }
+      else if (s) setSection(s);
+    } catch { /* ignore */ }
   }, []);
-  function aller(id: string) {
+  // 🗂️ Tournois, inscriptions aux tournois et inter-clubs sont réunis sur une page à onglets
+  const [ongletTournois, setOngletTournois] = useState<"tournois" | "inscriptions" | "interclubs">("tournois");
+  function aller(cible: string) {
+    let id = cible;
+    if (cible === "admin-inscriptions") { id = "admin-tournois"; setOngletTournois("inscriptions"); }
+    else if (cible === "admin-interclubs") { id = "admin-tournois"; setOngletTournois("interclubs"); }
+    else if (cible === "admin-tournois") setOngletTournois("tournois");
     setSection(id);
     setMenuOuvert(false);
     try { localStorage.setItem("saccb_admin_section", id); } catch { /* ignore */ }
@@ -307,7 +317,7 @@ export default function AdminPanel({
   const messagesNonLus = (db.contactMessages ?? []).filter((m) => !m.archived && !m.respondedBy).length;
   const SECTIONS: { id: string; label: string; icon: typeof Users; groupe: string; visible: boolean; badge?: number; render: () => React.ReactNode }[] = [
     { id: "admin-accueil", label: "Tableau de bord", icon: LayoutDashboard, groupe: "", visible: true, render: () => (
-      <AdminAccueil db={db} totals={totals} aller={aller} prenom={prenomAdmin} peutVoir={canSee} />
+      <AdminAccueil db={db} totals={totals} aller={aller} prenom={prenomAdmin} peutVoir={canSee} onPersist={safePersist} lectureSeule={readOnly} />
     ) },
     { id: "admin-membres", label: "Adhérents", icon: Users, groupe: "Adhérents", visible: canSee("membres"), render: () => (
       <>
@@ -327,21 +337,29 @@ export default function AdminPanel({
         <BureauAdmin db={db} onPersist={safePersist} readOnly={!canEdit("bureau")} />
       </>
     ) },
-    { id: "admin-tournois", label: "Tournois", icon: Trophy, groupe: "Tournois", visible: canSee("tournois"), render: () => (
-      <>
-        <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />
-      </>
-    ) },
-    { id: "admin-inscriptions", label: "Inscriptions aux tournois", icon: ClipboardList, groupe: "Tournois", visible: canSee("inscriptions"), render: () => (
-      <>
-        <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />
-      </>
-    ) },
-    { id: "admin-interclubs", label: "Tournois inter-clubs", icon: Swords, groupe: "Tournois", visible: canSee("tournois"), render: () => (
-      <>
-        <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} onRefresh={onRefresh} />
-      </>
-    ) },
+    { id: "admin-tournois", label: "Tournois", icon: Trophy, groupe: "Tournois", visible: canSee("tournois") || canSee("inscriptions"), render: () => {
+      const onglets = ([
+        ["tournois", "Tournois du club", canSee("tournois")],
+        ["inscriptions", "Inscriptions aux tournois", canSee("inscriptions")],
+        ["interclubs", "Tournois inter-clubs", canSee("tournois")],
+      ] as const).filter((o) => o[2]);
+      const actif = onglets.some((o) => o[0] === ongletTournois) ? ongletTournois : onglets[0]?.[0];
+      return (
+        <>
+          <div className="flex flex-wrap gap-2" role="tablist" aria-label="Tournois">
+            {onglets.map(([k, l]) => (
+              <button key={k} role="tab" aria-selected={actif === k} onClick={() => setOngletTournois(k)}
+                className={`px-4 min-h-[44px] rounded-[10px] font-bold text-sm border-2 transition-colors ${actif === k ? "bg-[#0F1B26] border-[#0F1B26] text-white" : "bg-white border-[#D3DEE6] text-[#0F1B26] hover:border-[#0F1B26]"}`}>
+                {l}
+              </button>
+            ))}
+          </div>
+          {actif === "tournois" && <TournoisAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} />}
+          {actif === "inscriptions" && <InscriptionsAdmin db={db} onPersist={safePersist} onEditBin={setEditBin} readOnly={!canEdit("inscriptions")} />}
+          {actif === "interclubs" && <InterclubsAdmin db={db} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("tournois")} onRefresh={onRefresh} />}
+        </>
+      );
+    } },
     { id: "admin-messages", label: "Messages reçus", icon: Inbox, groupe: "Communication", visible: canSee("emailing"), badge: messagesNonLus, render: () => (
       <>
         <MessagesAdmin db={db} onRefresh={onRefresh} onPersist={safePersist} adminEmail={adminEmail} adminCode={adminCode} readOnly={!canEdit("emailing")} />
@@ -520,7 +538,7 @@ export default function AdminPanel({
         if (items.length === 0) return null;
         return (
           <div key={g || "accueil"}>
-            {g && <p className="px-3 mb-1 text-[10px] uppercase tracking-[0.2em] text-white/40 font-semibold">{g}</p>}
+            {g && <p className="px-3 mb-1 text-sm text-[#8FA3B3] font-bold">{g}</p>}
             <ul className="space-y-0.5">
               {items.map((it) => {
                 const Icone = it.icon;
@@ -529,7 +547,7 @@ export default function AdminPanel({
                   <li key={it.id}>
                     <button
                       onClick={() => aller(it.id)}
-                      className={`w-full flex items-center gap-3 px-3 py-2 rounded-xl text-sm text-left transition ${actif ? "bg-white text-[#0F1B26] font-semibold shadow" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+                      className={`w-full flex items-center gap-3 px-3 min-h-[44px] rounded-[10px] text-[0.95rem] text-left transition-colors ${actif ? "bg-[#00B0F0] text-[#04202E] font-bold" : "text-[#E6EEF4] hover:bg-white/10"}`}
                     >
                       <Icone className="w-4 h-4 shrink-0" />
                       <span className="flex-1 truncate">{it.label}</span>
@@ -548,18 +566,18 @@ export default function AdminPanel({
   const enteteMenu = (
     <div className="px-5 py-5 flex items-center gap-3 border-b border-white/10">
       {/* eslint-disable-next-line @next/next/no-img-element */}
-      <img src="/logo.png" alt="" className="w-10 h-10 rounded-xl bg-white/10 p-1" />
+      <img src="/logo.png" alt="" className="w-12 h-12 rounded-lg bg-white" />
       <div className="min-w-0">
-        <p className="font-bold tracking-wider">SACCB</p>
+        <p className="font-display text-2xl leading-none">Admin</p>
         <p className="text-[11px] text-white/50 truncate">{adminEmail || "Administration"}</p>
       </div>
     </div>
   );
 
   return (
-    <div className="admin-shell fixed inset-0 z-[2000] bg-[#f1f5f9] flex">
+    <div className="admin-shell fixed inset-0 z-[2000] bg-[#F2F6F9] flex">
       {/* ── Menu latéral (ordinateur) ── */}
-      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-gradient-to-b from-[#0f2440] to-[#0F1B26] text-white">
+      <aside className="hidden lg:flex w-64 shrink-0 flex-col bg-[#0F1B26] text-white">
         {enteteMenu}
         {navigation}
         <div className="p-3 border-t border-white/10">
@@ -570,7 +588,7 @@ export default function AdminPanel({
       {/* ── Menu tiroir (téléphone) ── */}
       {menuOuvert && (
         <div className="lg:hidden fixed inset-0 z-[2050] bg-black/50" onClick={() => setMenuOuvert(false)}>
-          <aside className="w-72 max-w-[85vw] h-full flex flex-col bg-gradient-to-b from-[#0f2440] to-[#0F1B26] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
+          <aside className="w-72 max-w-[85vw] h-full flex flex-col bg-[#0F1B26] text-white shadow-2xl" onClick={(e) => e.stopPropagation()}>
             {enteteMenu}
             {navigation}
           </aside>
@@ -584,8 +602,8 @@ export default function AdminPanel({
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex-1 min-w-0">
-            {courante.groupe && <p className="text-[10px] uppercase tracking-[0.2em] text-slate-400 font-semibold">{courante.groupe}</p>}
-            <h2 className="text-lg md:text-xl font-bold text-slate-800 truncate">{courante.label}</h2>
+            {courante.groupe && <p className="text-sm text-slate-500 font-bold">{courante.groupe}</p>}
+            <h2 className="font-display text-2xl md:text-3xl text-[#0F1B26] leading-none truncate">{courante.label}</h2>
           </div>
           <GlobalSearch db={db} />
           <button
