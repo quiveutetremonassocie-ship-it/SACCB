@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { BookOpen, ChevronDown, ChevronUp, Zap, Bell, Clock, Shield, Mail as MailIcon, Database, Compass, Trophy, Sparkles, Camera, Eye } from "lucide-react";
+import { BookOpen, ChevronDown, ChevronUp, Zap, Bell, Clock, Shield, Mail as MailIcon, Database, Compass, Trophy, Sparkles, Camera, Eye, EyeOff, Link2, Newspaper } from "lucide-react";
 
 export default function GuideAdmin() {
   const [ouvert, setOuvert] = useState<string | null>("nouveautes");
@@ -35,8 +35,14 @@ export default function GuideAdmin() {
             desc="La page d'accueil de l'admin résume l'essentiel (adhérents payés, trésorerie, messages, prochain tournoi) et liste automatiquement ce qu'il reste « À faire » : messages sans réponse, adhérents non payés, justificatifs étudiants manquants, inscriptions mises de côté, t-shirts non payés… Un clic sur une ligne ouvre la bonne page." />
           <AutoItem icon={<Trophy className="w-4 h-4 text-emerald-600" />} title="🏆 Tournois inter-clubs avec jour J en direct"
             desc="Lien + code par club, inscriptions en ligne, programme de la journée prévu à l'avance, poules générées automatiquement, scores saisis par les clubs, écran géant pour la salle, classement final et podium. Voir la section « Tournois inter-clubs » ci-dessous." />
-          <AutoItem icon={<Camera className="w-4 h-4 text-rose-600" />} title="📸 Qui est sur les photos"
-            desc="Dans Actualités, le bouton « 👥 Qui ? » sous chaque photo permet de cocher les adhérents présents. Ceux qui n'ont pas donné leur accord pour apparaître sur le site sont signalés en rouge." />
+          <AutoItem icon={<Newspaper className="w-4 h-4 text-sky-600" />} title="📰 Actualités en colonnes"
+            desc="Sur l'accueil, les 3 dernières actus s'affichent en colonnes (la dernière ajoutée en premier), avec un lien « Toutes les actualités » s'il y en a plus. Photos facultatives : une actu sans photo s'affiche en texte seul. Nouveau champ « Catégorie » (Boutique, Assemblée générale, Tournoi…) affiché au-dessus du titre. Les textes s'enregistrent tout seuls dès que tu fais une pause dans l'écriture." />
+          <AutoItem icon={<EyeOff className="w-4 h-4 text-slate-600" />} title="🙈 Masquer une actu sans la supprimer"
+            desc="Bouton « Visible sur le site / Masquée du site » dans chaque actu : une actu masquée reste dans l'admin (en grisé) mais n'apparaît plus nulle part sur le site, ni pour les visiteurs ni pour les adhérents. Un clic la refait apparaître." />
+          <AutoItem icon={<Link2 className="w-4 h-4 text-cyan-700" />} title="🔗 Bouton vers un endroit du site"
+            desc="Dans une actu, la liste « Bouton vers le site » ajoute un grand bouton sous le texte : page Adhésion, Tournois, Horaires, Aide, Contact, ou directement un endroit de l'espace adhérent (changer mail / téléphone, réinscription, t-shirt, mes tournois, procuration AG, changer de code). Si l'adhérent n'est pas connecté, on lui demande d'abord de se connecter. Le texte du bouton peut être changé." />
+          <AutoItem icon={<Camera className="w-4 h-4 text-rose-600" />} title="📸 Qui est sur les photos + floutage"
+            desc="Sous chaque photo d'actu, « 👥 Qui ? » permet de cocher les adhérents présents (en rouge ceux qui n'ont pas donné leur accord photo). S'il y en a, l'outil de floutage s'ouvre tout seul et demande chaque personne l'une après l'autre : « Floutez Marie (1/2) » → tu traces un rectangle sur son visage. On ne peut pas enregistrer tant que tout le monde n'est pas flouté. La photo publiée est floutée pour de bon ; l'original est gardé à part, seulement dans l'admin. Le bouton sous la photo passe à « ✓ Floutée » : un clic permet d'ajuster le flou ou de « Remettre la photo d'origine »." />
           <AutoItem icon={<Eye className="w-4 h-4 text-slate-600" />} title="🕵️ Journal des actions (propriétaire du site uniquement)"
             desc="Toutes les modifications faites dans l'admin (adhérents, factures, tournois, réglages, droits admin…), les connexions admin et les sauvegardes téléchargées sont notées avec la date et l'auteur. Visible seulement par le propriétaire du site." />
           <AutoItem icon={<MailIcon className="w-4 h-4 text-blue-600" />} title="✉️ Mails : le site demande avant d'envoyer"

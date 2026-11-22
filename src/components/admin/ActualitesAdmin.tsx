@@ -21,6 +21,7 @@ import { supabaseClient, ACTU_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/
 import Actualites from "../Actualites";
 import PhotoPeopleModal, { sansAccordPhoto } from "./PhotoPeopleModal";
 import FloutageModal from "./FloutageModal";
+import ChampDiffere from "./ChampDiffere";
 import { adminPhotoFloue } from "@/lib/db";
 import type { ZoneFlou } from "@/lib/types";
 import { LIENS_ACTU, lienActu } from "@/lib/liensActu";
@@ -551,17 +552,18 @@ export default function ActualitesAdmin({
               {isOpen && (
                 <div className="border-t border-slate-200 p-4 space-y-3">
                   <div className="space-y-2">
-                    <input
+                    <ChampDiffere
                       className="input w-full !text-sm"
-                      value={a.title}
-                      onChange={(e) => updateField(a.id, "title", e.target.value)}
+                      aria-label="Titre"
+                      valeur={a.title}
+                      onSave={(v) => updateField(a.id, "title", v)}
                       disabled={readOnly}
                     />
-                    <input
+                    <ChampDiffere
                       className="input w-full !text-sm"
                       placeholder="Catégorie (facultatif)"
-                      value={a.categorie || ""}
-                      onChange={(e) => updateField(a.id, "categorie", e.target.value)}
+                      valeur={a.categorie || ""}
+                      onSave={(v) => updateField(a.id, "categorie", v)}
                       list="saccb-categories-actu"
                       maxLength={40}
                       disabled={readOnly}
@@ -572,15 +574,18 @@ export default function ActualitesAdmin({
                         {LIENS_ACTU.map((l) => <option key={l.cle} value={l.cle}>{l.libelle}</option>)}
                       </select>
                       {a.lien && (
-                        <input className="input w-full !text-sm" placeholder={`Texte du bouton : « ${lienActu(a.lien)?.bouton} »`} value={a.lienTexte || ""} onChange={(e) => updateField(a.id, "lienTexte", e.target.value)} maxLength={50} disabled={readOnly} />
+                        <ChampDiffere className="input w-full !text-sm" placeholder={`Texte du bouton : « ${lienActu(a.lien)?.bouton} »`} valeur={a.lienTexte || ""} onSave={(v) => updateField(a.id, "lienTexte", v)} maxLength={50} disabled={readOnly} />
                       )}
                     </div>
-                    <textarea
-                      className="input w-full !text-xs min-h-[60px] resize-y"
-                      value={a.description}
-                      onChange={(e) => updateField(a.id, "description", e.target.value)}
+                    <ChampDiffere
+                      multiligne
+                      className="input w-full !text-sm min-h-[90px] resize-y"
+                      aria-label="Description"
+                      valeur={a.description}
+                      onSave={(v) => updateField(a.id, "description", v)}
                       disabled={readOnly}
                     />
+                    <p className="text-[11px] text-slate-400">Enregistré automatiquement dès que tu fais une pause dans l&apos;écriture.</p>
                   </div>
                   <div className="flex items-center gap-2 flex-wrap">
                     {!readOnly && (

@@ -129,17 +129,44 @@ export default function AdminPage() {
     } catch { /* ignore */ }
   }, [adminReady]); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const persist = useCallback(async (next: DB) => {
-    setDb(next);
-    if (memberSession && memberAdminCode.current) {
-      // Déjà des modifications en attente : celle-ci part avec elles au retour du réseau
-      if (enAttenteRef.current) { garderSurAppareil(next); envoyerAttente(); return; }
-      const r = await saveDBByMember(memberSession.email, memberAdminCode.current, next, adminBaseRef.current ?? undefined);
-      if (r.ok) adminBaseRef.current = next;
-      else if (r.reason === "Erreur réseau" || (typeof navigator !== "undefined" && !navigator.onLine)) garderSurAppareil(next);
-      else alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
+  // 📮 File d'enregistrement : UN SEUL envoi au serveur à la fois. Si d'autres modifications arrivent
+  // pendant un envoi, seule la plus récente part ensuite (elle contient toutes les précédentes).
+  // Avant : une frappe = un envoi en parallèle → serveur saturé (erreur 546) et lettres qui disparaissaient.
+  const fileEnvoi = useRef<{ db: DB; fins: (() => void)[] } | null>(null);
+  const envoiFileEnCours = useRef(false);
+  const viderFile = useCallback(async () => {
+    if (envoiFileEnCours.current) return;
+    envoiFileEnCours.current = true;
+    try {
+      while (fileEnvoi.current) {
+        const { db: aEnvoyer, fins } = fileEnvoi.current;
+        fileEnvoi.current = null;
+        if (memberSession && memberAdminCode.current) {
+          // Déjà des modifications en attente du réseau : celle-ci part avec elles
+          if (enAttenteRef.current) { garderSurAppareil(aEnvoyer); envoyerAttente(); }
+          else {
+            const r = await saveDBByMember(memberSession.email, memberAdminCode.current, aEnvoyer, adminBaseRef.current ?? undefined);
+            if (r.ok) adminBaseRef.current = aEnvoyer;
+            else if (r.reason === "Erreur réseau" || (typeof navigator !== "undefined" && !navigator.onLine)) garderSurAppareil(aEnvoyer);
+            else if (!fileEnvoi.current) alert("⚠️ La modification n'a PAS été enregistrée : " + (r.reason || "erreur inconnue") + "\nRechargez la page et réessayez.");
+            // (si une version plus récente attend déjà, elle repart tout de suite et contient celle-ci)
+          }
+        }
+        fins.forEach((f) => f());
+      }
+    } finally {
+      envoiFileEnCours.current = false;
     }
   }, [memberSession, envoyerAttente]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const persist = useCallback((next: DB) => {
+    setDb(next);
+    return new Promise<void>((fin) => {
+      const fins = [...(fileEnvoi.current?.fins ?? []), fin];
+      fileEnvoi.current = { db: next, fins };
+      void viderFile();
+    });
+  }, [viderFile]);
 
   const refresh = useCallback(async () => {
     // Des modifications attendent le réseau : on ne les écrase pas avec la version du serveur
