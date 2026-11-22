@@ -1292,3 +1292,21 @@ export async function adminInterneNotifier(email: string, code: string, tournoiI
     return { ok: false, reason: "Connexion impossible." };
   }
 }
+
+// 🫥 [ADMIN] Floutage d'une photo d'actualité (voir action serveur admin_photo_floue)
+export async function adminPhotoFloue(
+  adminEmail: string,
+  adminCode: string,
+  params: { op: "envoyer" | "lien_original" | "restaurer" | "nettoyer"; actuId?: string; path: string; fileData?: string; bucket?: "actualities" | "factures" }
+): Promise<{ ok: boolean; url?: string; path?: string; originalPath?: string; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_photo_floue", adminEmail, adminCode, ...params }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Erreur réseau (photo trop lourde ?)" };
+  }
+}

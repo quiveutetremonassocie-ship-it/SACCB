@@ -20,6 +20,10 @@ import { DB, Actualite, ActualiteImage, actualiteImages } from "@/lib/types";
 import { supabaseClient, ACTU_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import Actualites from "../Actualites";
 import PhotoPeopleModal, { sansAccordPhoto } from "./PhotoPeopleModal";
+import FloutageModal from "./FloutageModal";
+import { adminPhotoFloue } from "@/lib/db";
+import type { ZoneFlou } from "@/lib/types";
+import { LIENS_ACTU, lienActu } from "@/lib/liensActu";
 
 export default function ActualitesAdmin({
   db,
@@ -37,6 +41,8 @@ export default function ActualitesAdmin({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [categorie, setCategorie] = useState("");
+  const [lien, setLien] = useState("");
+  const [lienTexte, setLienTexte] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -45,8 +51,76 @@ export default function ActualitesAdmin({
   // 📸 Photo dont on renseigne les personnes présentes
   const [peopleFor, setPeopleFor] = useState<{ actuId: string; idx: number } | null>(null);
   const membres = db.membres || [];
+  // 🫥 Photo en cours de floutage
+  const [floutage, setFloutage] = useState<{ actuId: string; idx: number; src: string; personnes: { id: string; nom: string }[] } | null>(null);
+  const peutFlouter = !readOnly && !!adminEmail && !!adminCode;
+
+  // Ouvre l'outil de floutage : on part toujours de l'ORIGINAL (si la photo a déjà été floutée, on peut ajuster)
+  async function ouvrirFloutage(actuId: string, idx: number, people?: string[]) {
+    const a = (db.actualites || []).find((x) => x.id === actuId);
+    const img = a ? actualiteImages(a)[idx] : undefined;
+    if (!img) return;
+    if (!adminEmail || !adminCode) { alert("Le floutage demande d'être connecté à l'admin avec ton mail et ton code."); return; }
+    if (!img.path) { alert("Cette ancienne photo ne peut pas être floutée ici : supprime-la et ajoute-la à nouveau."); return; }
+    let src = img.url;
+    if (img.original?.path) {
+      const r = await adminPhotoFloue(adminEmail, adminCode, { op: "lien_original", actuId, path: img.path });
+      if (!r.ok || !r.url) { alert(r.reason || "Impossible d'ouvrir l'original."); return; }
+      src = r.url;
+    }
+    const ids = people ?? img.people ?? [];
+    const personnes = membres.filter((m) => ids.includes(m.id) && m.photoConsent !== true).map((m) => ({ id: m.id, nom: m.nom }));
+    setFloutage({ actuId, idx, src, personnes });
+  }
+
+  // Remplace l'image idx de l'actu par une nouvelle version (garde l'ordre)
+  async function remplacerImage(actuId: string, idx: number, maj: (img: ActualiteImage) => ActualiteImage) {
+    await onPersist({
+      ...db,
+      actualites: (db.actualites || []).map((x) => {
+        if (x.id !== actuId) return x;
+        const imgs = actualiteImages(x).map((img, i) => (i === idx ? maj(img) : img));
+        return { ...x, images: imgs, imageUrl: undefined, imagePath: undefined };
+      }),
+    });
+  }
+
+  async function enregistrerFlou(jpeg: string, zones: ZoneFlou[], floutes: string[]) {
+    if (!floutage || !adminEmail || !adminCode) return;
+    const a = (db.actualites || []).find((x) => x.id === floutage.actuId);
+    const img = a ? actualiteImages(a)[floutage.idx] : undefined;
+    if (!img?.path) throw new Error("Photo introuvable.");
+    const ancien = img.path;
+    const r = await adminPhotoFloue(adminEmail, adminCode, { op: "envoyer", actuId: floutage.actuId, path: ancien, fileData: jpeg });
+    if (!r.ok || !r.url || !r.path || !r.originalPath) throw new Error(r.reason || "Envoi impossible.");
+    const { url, path, originalPath } = r;
+    await remplacerImage(floutage.actuId, floutage.idx, (x) => ({ ...x, url, path, floutes, zonesFlou: zones, original: { path: originalPath } }));
+    // L'ancienne version publique (photo nette ou ancien flou) n'est plus utilisée : on la retire du site
+    await adminPhotoFloue(adminEmail, adminCode, { op: "nettoyer", bucket: "actualities", path: ancien });
+    setFloutage(null);
+  }
+
+  async function restaurerOriginal() {
+    if (!floutage || !adminEmail || !adminCode) return;
+    const a = (db.actualites || []).find((x) => x.id === floutage.actuId);
+    const img = a ? actualiteImages(a)[floutage.idx] : undefined;
+    if (!img?.path || !img.original?.path) throw new Error("Pas d'original pour cette photo.");
+    const floue = img.path;
+    const orig = img.original.path;
+    const r = await adminPhotoFloue(adminEmail, adminCode, { op: "restaurer", actuId: floutage.actuId, path: floue });
+    if (!r.ok || !r.url || !r.path) throw new Error(r.reason || "Impossible de remettre l'original.");
+    const { url, path } = r;
+    await remplacerImage(floutage.actuId, floutage.idx, (x) => ({ url, path, ...(x.people ? { people: x.people } : {}) }));
+    await adminPhotoFloue(adminEmail, adminCode, { op: "nettoyer", bucket: "actualities", path: floue });
+    await adminPhotoFloue(adminEmail, adminCode, { op: "nettoyer", bucket: "factures", path: orig });
+    setFloutage(null);
+  }
 
   async function setPeople(actuId: string, imgIndex: number, ids: string[]) {
+    const avant = (db.actualites || []).find((x) => x.id === actuId);
+    const imgAvant = avant ? actualiteImages(avant)[imgIndex] : undefined;
+    // S'il reste des personnes sans accord pas encore floutées → l'outil de floutage s'ouvre tout de suite
+    const aFlouter = sansAccordPhoto(ids, membres, imgAvant?.floutes).length > 0;
     const next = {
       ...db,
       actualites: list.map((x) => {
@@ -56,6 +130,7 @@ export default function ActualitesAdmin({
       }),
     };
     await onPersist(next);
+    if (aFlouter && peutFlouter && imgAvant?.path) await ouvrirFloutage(actuId, imgIndex, ids);
   }
   const fileInput = useRef<HTMLInputElement>(null);
 
@@ -144,6 +219,7 @@ export default function ActualitesAdmin({
       title,
       description,
       ...(categorie.trim() ? { categorie: categorie.trim() } : {}),
+      ...(lien ? { lien, ...(lienTexte.trim() ? { lienTexte: lienTexte.trim() } : {}) } : {}),
       images,
       createdAt: new Date().toISOString(),
       private: isPrivate,
@@ -153,6 +229,8 @@ export default function ActualitesAdmin({
     setTitle("");
     setDescription("");
     setCategorie("");
+    setLien("");
+    setLienTexte("");
     setIsPrivate(false);
     setPendingFiles([]);
     if (fileInput.current) fileInput.current.value = "";
@@ -173,7 +251,7 @@ export default function ActualitesAdmin({
     await onPersist(next);
   }
 
-  async function updateField(id: string, field: "title" | "description" | "categorie", value: string) {
+  async function updateField(id: string, field: "title" | "description" | "categorie" | "lien" | "lienTexte", value: string) {
     const next = {
       ...db,
       actualites: list.map((x) => (x.id === id ? { ...x, [field]: value } : x)),
@@ -338,6 +416,15 @@ export default function ActualitesAdmin({
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
+          <div className="grid sm:grid-cols-2 gap-2">
+            <select className="input w-full" value={lien} onChange={(e) => setLien(e.target.value)} aria-label="Bouton vers le site">
+              <option value="">Pas de bouton (facultatif)</option>
+              {LIENS_ACTU.map((l) => <option key={l.cle} value={l.cle}>{l.libelle}</option>)}
+            </select>
+            {lien && (
+              <input className="input w-full" placeholder={`Texte du bouton : « ${lienActu(lien)?.bouton} »`} value={lienTexte} onChange={(e) => setLienTexte(e.target.value)} maxLength={50} />
+            )}
+          </div>
           <label className="flex items-center gap-2 cursor-pointer select-none">
             <input
               type="checkbox"
@@ -407,7 +494,7 @@ export default function ActualitesAdmin({
         {list.map((a, i) => {
           const imgs = actualiteImages(a);
           const isOpen = expandedActu.has(a.id);
-          const refusActu = new Set(imgs.flatMap((img) => sansAccordPhoto(img.people, membres).map((m) => m.id))).size;
+          const refusActu = new Set(imgs.flatMap((img) => sansAccordPhoto(img.people, membres, img.floutes).map((m) => m.id))).size;
           return (
             <div key={a.id} className={`rounded-xl border overflow-hidden ${a.masquee ? "bg-slate-100 border-dashed border-slate-300 opacity-70" : "bg-slate-50 border-slate-200"}`}>
               {/* En-tête cliquable (toujours visible) */}
@@ -479,6 +566,15 @@ export default function ActualitesAdmin({
                       maxLength={40}
                       disabled={readOnly}
                     />
+                    <div className="grid sm:grid-cols-2 gap-2">
+                      <select className="input w-full !text-sm" value={a.lien || ""} onChange={(e) => updateField(a.id, "lien", e.target.value)} disabled={readOnly} aria-label="Bouton vers le site">
+                        <option value="">Pas de bouton</option>
+                        {LIENS_ACTU.map((l) => <option key={l.cle} value={l.cle}>{l.libelle}</option>)}
+                      </select>
+                      {a.lien && (
+                        <input className="input w-full !text-sm" placeholder={`Texte du bouton : « ${lienActu(a.lien)?.bouton} »`} value={a.lienTexte || ""} onChange={(e) => updateField(a.id, "lienTexte", e.target.value)} maxLength={50} disabled={readOnly} />
+                      )}
+                    </div>
                     <textarea
                       className="input w-full !text-xs min-h-[60px] resize-y"
                       value={a.description}
@@ -549,7 +645,8 @@ export default function ActualitesAdmin({
                     </p>
                     <div className="flex gap-2 flex-wrap">
                       {imgs.map((img, idx) => {
-                        const refus = sansAccordPhoto(img.people, membres);
+                        const refus = sansAccordPhoto(img.people, membres, img.floutes);
+                        const floutee = (img.floutes || []).length > 0 || (img.zonesFlou || []).length > 0;
                         const nb = (img.people || []).length;
                         return (
                         <div key={idx} className="flex flex-col items-center gap-1 w-20">
@@ -602,6 +699,21 @@ export default function ActualitesAdmin({
                           >
                             {refus.length > 0 ? `⚠ ${refus.length} sans accord` : nb > 0 ? `👥 ${nb}` : "👥 Qui ?"}
                           </button>
+                          {peutFlouter && (
+                            <button
+                              onClick={() => ouvrirFloutage(a.id, idx)}
+                              className={`w-full text-[10px] font-semibold rounded-md px-1 py-0.5 border transition ${
+                                refus.length > 0
+                                  ? "bg-red-600 text-white border-red-700 hover:bg-red-700"
+                                  : floutee
+                                  ? "bg-sky-50 text-sky-800 border-sky-300 hover:bg-sky-100"
+                                  : "bg-slate-50 text-slate-500 border-slate-200 hover:bg-slate-100"
+                              }`}
+                              title={floutee ? "Modifier le flou (ou remettre l'original)" : "Flouter des personnes sur cette photo"}
+                            >
+                              {floutee && refus.length === 0 ? "✓ Floutée" : "Flouter"}
+                            </button>
+                          )}
                         </div>
                         );
                       })}
@@ -613,6 +725,22 @@ export default function ActualitesAdmin({
           );
         })}
       </div>
+
+      {floutage && (() => {
+        const a = (db.actualites || []).find((x) => x.id === floutage.actuId);
+        const img = a ? actualiteImages(a)[floutage.idx] : undefined;
+        return (
+          <FloutageModal
+            key={floutage.actuId + "-" + floutage.idx + "-" + floutage.src}
+            src={floutage.src}
+            personnes={floutage.personnes}
+            zonesInitiales={img?.zonesFlou}
+            onSave={enregistrerFlou}
+            onRestaurer={img?.original?.path ? restaurerOriginal : undefined}
+            onClose={() => setFloutage(null)}
+          />
+        );
+      })()}
 
       {peopleFor && (() => {
         const a = list.find((x) => x.id === peopleFor.actuId);

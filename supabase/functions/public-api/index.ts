@@ -407,7 +407,7 @@ function liveVue(tournoi: Record<string, unknown>, clubId?: string) {
 // 📸 Les personnes identifiées sur les photos restent réservées à l'admin
 function actuSansPersonnes(a: Record<string, unknown>): Record<string, unknown> {
   if (!Array.isArray(a.images)) return a;
-  return { ...a, images: (a.images as Record<string, unknown>[]).map(({ people: _p, ...img }) => img) };
+  return { ...a, images: (a.images as Record<string, unknown>[]).map(({ people: _p, original: _o, zonesFlou: _z, floutes: _f, ...img }) => img) };
 }
 
 function sanitize(str: string): string {
@@ -6113,6 +6113,96 @@ async function traiter(req: Request): Promise<Response> {
   // 🧾 [ADMIN] Fichiers des factures (bucket privé) : lien de consultation temporaire ou suppression.
   // Les admins « espace membre » n'ont pas de session Supabase Auth → le navigateur ne peut pas
   // accéder directement au bucket, on passe par le serveur.
+  // 🫥 [ADMIN] Floutage d'une photo d'actualité (personnes sans accord photo).
+  // L'original est mis à l'abri dans le stockage PRIVÉ (factures/photos-originales/…) ; seule la version
+  // floutée (calculée dans le navigateur) est publique. Opérations :
+  //  - "envoyer"       : met l'original à l'abri (1re fois) + dépose la version floutée → { url, path, originalPath }
+  //  - "lien_original" : lien temporaire (10 min) vers l'original, pour refaire le floutage
+  //  - "restaurer"     : remet l'original en public → { url, path }
+  //  - "nettoyer"      : supprime un fichier SEULEMENT s'il n'est plus utilisé nulle part dans la base
+  // La fiche de l'actu est ensuite enregistrée par l'admin (admin_save) ; rien n'est supprimé avant.
+  if (action === "admin_photo_floue") {
+    const { data } = await loadDB();
+    if (!data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
+    if (authError) return authError;
+    const qui = String(body.adminEmail || body.email || "").toLowerCase().trim();
+    const sectionsFlou = droitsAdmin(d, qui).sections;
+    if (sectionsFlou !== undefined && !sectionsFlou.includes("actualites")) return json({ ok: false, reason: "Accès réservé aux admins des actualités." }, 403);
+
+    const PREFIXE_ORIGINAUX = "photos-originales/";
+    const cheminOk = (p: string) => !!p && !p.includes("..") && !p.startsWith("/") && p.length < 300;
+    const op = String(body.op || "");
+    const path = String(body.path || "");
+
+    if (op === "nettoyer") {
+      const bucket = String(body.bucket || "");
+      if (!cheminOk(path)) return json({ ok: false, reason: "Chemin invalide." }, 400);
+      if (bucket !== "actualities" && !(bucket === "factures" && path.startsWith(PREFIXE_ORIGINAUX))) return json({ ok: false, reason: "Fichier non autorisé." }, 400);
+      if (fichierUtilise(JSON.stringify(d), path)) return json({ ok: false, reason: "Ce fichier est encore utilisé." }, 409);
+      const { error } = await supabaseAdmin.storage.from(bucket).remove([path]);
+      if (error) return json({ ok: false, reason: "Suppression impossible." }, 500);
+      return json({ ok: true });
+    }
+
+    const actuId = String(body.actuId || "");
+    const actu = ((d.actualites ?? []) as Record<string, unknown>[]).find((a) => String(a.id) === actuId);
+    const img = actu && Array.isArray(actu.images) ? (actu.images as Record<string, unknown>[]).find((i) => i.path === path) : undefined;
+    if (!img || !cheminOk(path)) return json({ ok: false, reason: "Photo introuvable (enregistre d'abord l'actualité)." }, 404);
+    const dossier = actuId.replace(/[^a-zA-Z0-9_-]/g, "").slice(0, 50) || "actu";
+    const originalExistant = (img.original as { path?: unknown } | undefined)?.path;
+    const originalPath = typeof originalExistant === "string" && originalExistant.startsWith(PREFIXE_ORIGINAUX) ? originalExistant : "";
+
+    if (op === "lien_original") {
+      if (!originalPath) return json({ ok: false, reason: "Pas d'original pour cette photo." }, 404);
+      const { data: s, error } = await supabaseAdmin.storage.from("factures").createSignedUrl(originalPath, 60 * 10);
+      if (error || !s) return json({ ok: false, reason: "Original introuvable." }, 404);
+      return json({ ok: true, url: s.signedUrl });
+    }
+
+    if (op === "restaurer") {
+      if (!originalPath) return json({ ok: false, reason: "Pas d'original pour cette photo." }, 404);
+      const { data: blob, error } = await supabaseAdmin.storage.from("factures").download(originalPath);
+      if (error || !blob) return json({ ok: false, reason: "Original introuvable." }, 404);
+      const ext = (originalPath.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
+      const type = ext === "png" ? "image/png" : ext === "webp" ? "image/webp" : ext === "gif" ? "image/gif" : "image/jpeg";
+      const nouveau = `${dossier}/${Date.now()}-restauree.${ext}`;
+      const { error: upErr } = await supabaseAdmin.storage.from("actualities").upload(nouveau, new Uint8Array(await blob.arrayBuffer()), { upsert: false, contentType: type });
+      if (upErr) return json({ ok: false, reason: "Envoi impossible." }, 500);
+      const { data: pub } = supabaseAdmin.storage.from("actualities").getPublicUrl(nouveau);
+      return json({ ok: true, url: pub.publicUrl, path: nouveau });
+    }
+
+    if (op === "envoyer") {
+      const brut = String(body.fileData || "");
+      const b64 = brut.includes(",") ? brut.split(",")[1] : brut;
+      if (!b64 || b64.length > 20_000_000) return json({ ok: false, reason: "Photo floutée manquante ou trop lourde." }, 400);
+      let octets: Uint8Array;
+      try { octets = new Uint8Array(Buffer.from(b64, "base64")); } catch { return json({ ok: false, reason: "Photo invalide." }, 400); }
+      if (octets.length < 4 || octets[0] !== 0xff || octets[1] !== 0xd8 || octets[2] !== 0xff) return json({ ok: false, reason: "La photo floutée doit être un JPEG." }, 400);
+
+      // 1) Original à l'abri (une seule fois : si la photo a déjà été floutée, l'original est déjà rangé)
+      let orig = originalPath;
+      if (!orig) {
+        const { data: blob, error } = await supabaseAdmin.storage.from("actualities").download(path);
+        if (error || !blob) return json({ ok: false, reason: "Photo d'origine introuvable." }, 404);
+        // nom différent de la photo publique : sinon l'ancienne photo paraîtrait « encore utilisée » et ne pourrait jamais être supprimée
+        const extO = (path.split(".").pop() || "jpg").toLowerCase().replace(/[^a-z0-9]/g, "").slice(0, 5) || "jpg";
+        orig = PREFIXE_ORIGINAUX + dossier + "/" + Date.now() + "-original." + extO;
+        const { error: e2 } = await supabaseAdmin.storage.from("factures").upload(orig, new Uint8Array(await blob.arrayBuffer()), { upsert: true, contentType: blob.type || "image/jpeg" });
+        if (e2) return json({ ok: false, reason: "Impossible de mettre l'original à l'abri." }, 500);
+      }
+      // 2) Version floutée publique
+      const nouveau = `${dossier}/${Date.now()}-floutee.jpg`;
+      const { error: upErr } = await supabaseAdmin.storage.from("actualities").upload(nouveau, octets, { upsert: false, contentType: "image/jpeg" });
+      if (upErr) return json({ ok: false, reason: "Envoi impossible." }, 500);
+      const { data: pub } = supabaseAdmin.storage.from("actualities").getPublicUrl(nouveau);
+      return json({ ok: true, url: pub.publicUrl, path: nouveau, originalPath: orig });
+    }
+    return json({ ok: false, reason: "Opération inconnue." }, 400);
+  }
+
   if (action === "admin_facture_file") {
     const op = String(body.op || "");
     const path = String(body.path || "");

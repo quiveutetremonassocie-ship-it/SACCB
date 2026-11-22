@@ -740,3 +740,51 @@ test("contact : seuls les admins du courrier peuvent bloquer un expéditeur", as
   const pub = await appeler({ action: "fetch_public" });
   assert.ok(!pub.texte.includes("probox"), "liste des bloqués absente du site public");
 });
+
+// ─── 🫥 Floutage des photos d'actualités ───
+
+test("floutage : l'original part dans le stockage privé, seule la photo floutée est publique, et rien n'est supprimé tant que c'est utilisé", async () => {
+  const jpeg = (graine) => Uint8Array.from([0xff, 0xd8, 0xff, 0xe0, ...Array.from({ length: 500 }, (_, i) => (i + graine) % 256)]);
+  etat.fichiers = { actualities: { "a1/photo.jpg": jpeg(1) } };
+  etat.base.actualites[0].images = [{ url: "https://x/a1/photo.jpg", path: "a1/photo.jpg", people: ["m-marie"] }];
+  const adm = { action: "admin_photo_floue", adminEmail: ADMIN.email, adminCode: ADMIN.code, actuId: "a1" };
+
+  // Sans identifiants : refusé
+  const sans = await appeler({ action: "admin_photo_floue", op: "envoyer", actuId: "a1", path: "a1/photo.jpg", fileData: Buffer.from(jpeg(2)).toString("base64") });
+  assert.notEqual(sans.json?.ok, true);
+  // Pas un JPEG : refusé
+  const pasJpeg = await appeler({ ...adm, op: "envoyer", path: "a1/photo.jpg", fileData: Buffer.from("<script>").toString("base64") });
+  assert.notEqual(pasJpeg.json?.ok, true);
+
+  const r = await appeler({ ...adm, op: "envoyer", path: "a1/photo.jpg", fileData: Buffer.from(jpeg(2)).toString("base64") });
+  assert.equal(r.json?.ok, true, r.texte);
+  assert.match(r.json.originalPath, /^photos-originales[/]a1[/][0-9]+-original[.]jpg$/);
+  assert.deepEqual([...etat.fichiers.factures[r.json.originalPath]], [...jpeg(1)], "l'original est copié à l'octet près dans le stockage privé");
+  assert.deepEqual([...etat.fichiers.actualities[r.json.path]], [...jpeg(2)], "la version floutée est publique");
+
+  // Tant que la base pointe encore sur l'ancienne photo, on ne peut pas la supprimer
+  const tropTot = await appeler({ ...adm, op: "nettoyer", bucket: "actualities", path: "a1/photo.jpg" });
+  assert.notEqual(tropTot.json?.ok, true);
+  assert.ok(etat.fichiers.actualities["a1/photo.jpg"]);
+
+  // L'admin enregistre la fiche → l'ancienne photo n'est plus utilisée → suppression possible
+  etat.base.actualites[0].images = [{ url: r.json.url, path: r.json.path, people: ["m-marie"], floutes: ["m-marie"], original: { path: r.json.originalPath } }];
+  const ok = await appeler({ ...adm, op: "nettoyer", bucket: "actualities", path: "a1/photo.jpg" });
+  assert.equal(ok.json?.ok, true, ok.texte);
+  assert.equal(etat.fichiers.actualities["a1/photo.jpg"], undefined);
+  // On ne peut pas supprimer n'importe quoi dans le stockage privé
+  const facture = await appeler({ ...adm, op: "nettoyer", bucket: "factures", path: "f1/facture.pdf" });
+  assert.notEqual(facture.json?.ok, true);
+
+  // Le site public ne montre ni l'original, ni les personnes, ni les zones
+  const pub = await appeler({ action: "fetch_public" });
+  assert.ok(!pub.texte.includes("photos-originales"), "le chemin de l'original n'est jamais public");
+  assert.ok(!pub.texte.includes("m-marie"));
+
+  // Lien temporaire vers l'original, puis restauration
+  const lien = await appeler({ ...adm, op: "lien_original", path: r.json.path });
+  assert.equal(lien.json?.ok, true, lien.texte);
+  const rest = await appeler({ ...adm, op: "restaurer", path: r.json.path });
+  assert.equal(rest.json?.ok, true, rest.texte);
+  assert.deepEqual([...etat.fichiers.actualities[rest.json.path]], [...jpeg(1)], "l'original revient tel quel");
+});

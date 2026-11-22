@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { ChevronLeft, ChevronRight, X, Images, Lock, Download } from "lucide-react";
 import { Actualite, actualiteImages } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
+import { lienActu, type DestinationEspace } from "@/lib/liensActu";
 
 // 📰 Actualités en colonnes (style « journal ») : photo principale en haut si l'actu en a une,
 // petite catégorie, puis le titre. Un clic ouvre le détail avec toute la galerie.
@@ -20,7 +21,9 @@ export default function Actualites({
   actualites,
   memberSession,
   limite,
+  onOuvrirEspace,
 }: {
+  onOuvrirEspace?: (dest: DestinationEspace) => void;
   actualites: Actualite[];
   memberSession?: MemberSession | null;
   limite?: number;
@@ -166,6 +169,9 @@ export default function Actualites({
                     <span className="block text-[1.15rem] leading-snug font-bold text-[#0F1B26] group-hover:text-[#007DB0] group-hover:underline underline-offset-4">
                       {a.title}
                     </span>
+                    {lienActu(a.lien) && (
+                      <span className="text-[0.95rem] font-bold text-[#007DB0]">{a.lienTexte || lienActu(a.lien)!.bouton} →</span>
+                    )}
                   </button>
                 </li>
               );
@@ -277,6 +283,22 @@ export default function Actualites({
               <p className="text-slate-700 text-lg whitespace-pre-wrap leading-relaxed">
                 {ouverte.description}
               </p>
+              {(() => {
+                const l = lienActu(ouverte.lien);
+                if (!l) return null;
+                return (
+                  <a
+                    href={l.href}
+                    onClick={(e) => {
+                      if (l.espace && onOuvrirEspace) { e.preventDefault(); closeModal(); onOuvrirEspace(l.espace); }
+                      else closeModal();
+                    }}
+                    className="mt-6 inline-flex items-center gap-2 min-h-[52px] px-6 rounded-xl bg-[#00B0F0] hover:bg-[#0099D1] text-[#04202E] font-bold text-lg"
+                  >
+                    {ouverte.lienTexte || l.bouton} <ChevronRight className="w-5 h-5" aria-hidden="true" />
+                  </a>
+                );
+              })()}
 
               {n > 1 && (
                 <div className="flex items-center justify-between gap-3 mt-8 pt-6 border-t border-[#D3DEE6]">

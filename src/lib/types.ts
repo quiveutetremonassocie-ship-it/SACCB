@@ -91,7 +91,13 @@ export type ActualiteImage = {
   path?: string; // chemin Supabase Storage (pour suppression)
   // 📸 Ids des adhérents présents sur la photo (admin uniquement, jamais public)
   people?: string[];
+  // 🫥 Floutage (admin uniquement, jamais public) : personnes floutées, zones (0..1) et original rangé dans le stockage privé
+  floutes?: string[];
+  zonesFlou?: ZoneFlou[];
+  original?: { path: string };
 };
+
+export type ZoneFlou = { x: number; y: number; w: number; h: number; membreId?: string };
 
 export type Actualite = {
   id: string;
@@ -105,6 +111,9 @@ export type Actualite = {
   categorie?: string;
   createdAt: string;
   private?: boolean;
+  // 🔗 Bouton vers un endroit du site (clé de LIENS_ACTU) et son texte personnalisé (facultatif)
+  lien?: string;
+  lienTexte?: string;
   // 🙈 Masquée : gardée dans l'admin mais invisible sur le site (ni visiteurs, ni adhérents)
   masquee?: boolean;
 };

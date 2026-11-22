@@ -6,9 +6,10 @@ import { Membre } from "@/lib/types";
 
 // 📸 Personnes présentes sur une photo : on coche les adhérents, ceux qui n'ont
 // pas accepté d'apparaître sur le site (droit à l'image) ressortent en rouge.
-export function sansAccordPhoto(ids: string[] | undefined, membres: Membre[]): Membre[] {
+// floutes : personnes déjà floutées sur la photo (elles ne comptent plus comme un problème)
+export function sansAccordPhoto(ids: string[] | undefined, membres: Membre[], floutes?: string[]): Membre[] {
   if (!ids || ids.length === 0) return [];
-  return membres.filter((m) => ids.includes(m.id) && m.photoConsent !== true);
+  return membres.filter((m) => ids.includes(m.id) && m.photoConsent !== true && !(floutes || []).includes(m.id));
 }
 
 export default function PhotoPeopleModal({

@@ -13,6 +13,7 @@ import Agenda from "./Agenda";
 import { evenementsAgenda } from "@/lib/agenda";
 import Presentation from "./Presentation";
 import Actualites from "./Actualites";
+import { estDestinationEspace, type DestinationEspace } from "@/lib/liensActu";
 import Horaires from "./Horaires";
 import Tournois from "./Tournois";
 import Inscription from "./Inscription";
@@ -42,6 +43,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [resetOpen, setResetOpen] = useState(false);
   const [memberLoginOpen, setMemberLoginOpen] = useState(false);
   const [memberPanelOpen, setMemberPanelOpen] = useState(false);
+  // 🔗 Endroit de l'espace adhérent à ouvrir directement (bouton d'une actu, lien ?ouvrir=…)
+  const [ouvrirMembre, setOuvrirMembre] = useState<DestinationEspace | null>(null);
   // Quand un mail "engagement AG" est cliqué via ?member=1&procuration=1, on ouvre le panneau membre
   // PUIS on auto-ouvre la modale procuration. Cet etat est consume par MemberPanel via une prop.
   const [autoOpenProcuration, setAutoOpenProcuration] = useState(false);
@@ -219,6 +222,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
         if (params.get("procuration") === "1") {
           setAutoOpenProcuration(true);
         }
+        const ouvrir = params.get("ouvrir");
+        if (estDestinationEspace(ouvrir)) setOuvrirMembre(ouvrir);
         if (sess) {
           setMemberPanelOpen(true);
         } else {
@@ -518,7 +523,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
         {(mode === "actualites" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.actualites !== false))) && (
           <FadeInSection>
-            <Actualites actualites={[...(db.actualites || []), ...privateActualites].filter((a) => !a.masquee)} memberSession={displaySession} limite={mode === "full" ? 3 : undefined} />
+            <Actualites actualites={[...(db.actualites || []), ...privateActualites].filter((a) => !a.masquee)} onOuvrirEspace={(dest) => { setOuvrirMembre(dest); if (memberSession) setMemberPanelOpen(true); else setMemberLoginOpen(true); }} memberSession={displaySession} limite={mode === "full" ? 3 : undefined} />
           </FadeInSection>
         )}
 
@@ -692,6 +697,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           officialDocsOpen={db.officialDocsOpen === true}
           smashUrl={db.smashUrl}
           onSessionChange={setMemberSession}
+          ouvrirSur={ouvrirMembre}
+          onOuvert={() => setOuvrirMembre(null)}
         />
       )}
       {/* Panneau démo en mode présentation */}

@@ -80,6 +80,29 @@ async function fauxFetch(entree, init = {}) {
     }
     return reponseJson([...vus.values()]);
   }
+  // Lien temporaire (createSignedUrl)
+  const signe = url.pathname.match(/^\/storage\/v1\/object\/sign\/([^/]+)\/(.+)$/);
+  if (signe && methode === "POST") {
+    const chemin = decodeURIComponent(signe[2]);
+    return etat.fichiers[signe[1]]?.[chemin] ? reponseJson({ signedURL: "/object/sign/" + signe[1] + "/" + chemin + "?token=t" }) : reponseJson({ error: "introuvable" }, 400);
+  }
+  // Suppression (remove) : DELETE /object/<bucket> { prefixes: [...] }
+  const supp = url.pathname.match(/^\/storage\/v1\/object\/([^/]+)$/);
+  if (supp && methode === "DELETE") {
+    const { prefixes = [] } = JSON.parse(String(corps || "{}"));
+    for (const p of prefixes) if (etat.fichiers[supp[1]]) delete etat.fichiers[supp[1]][p];
+    return reponseJson(prefixes.map((name) => ({ name })));
+  }
+  // Envoi (upload) : POST /object/<bucket>/<chemin>
+  const envoi = url.pathname.match(/^\/storage\/v1\/object\/([^/]+)\/(.+)$/);
+  if (envoi && (methode === "POST" || methode === "PUT")) {
+    const chemin = decodeURIComponent(envoi[2]);
+    etat.fichiers[envoi[1]] = etat.fichiers[envoi[1]] || {};
+    if (etat.fichiers[envoi[1]][chemin] && methode === "POST" && new Headers(init.headers || {}).get("x-upsert") !== "true") return reponseJson({ error: "Duplicate", message: "The resource already exists" }, 400);
+    const octets = corps instanceof Uint8Array ? corps : corps instanceof ArrayBuffer ? new Uint8Array(corps) : corps && typeof corps.arrayBuffer === "function" ? new Uint8Array(await corps.arrayBuffer()) : new TextEncoder().encode(String(corps ?? ""));
+    etat.fichiers[envoi[1]][chemin] = octets;
+    return reponseJson({ Key: envoi[1] + "/" + chemin });
+  }
   const lecture = url.pathname.match(/^\/storage\/v1\/object\/(?:authenticated\/)?([^/]+)\/(.+)$/);
   if (lecture && methode === "GET") {
     const octets = etat.fichiers[lecture[1]]?.[decodeURIComponent(lecture[2])];

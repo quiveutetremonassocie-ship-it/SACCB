@@ -43,7 +43,11 @@ export default function MemberPanel({
   adherent,
   onJustificatifSent,
   onSessionChange,
+  ouvrirSur,
+  onOuvert,
 }: {
+  ouvrirSur?: import("@/lib/liensActu").DestinationEspace | null; // 🔗 endroit à ouvrir directement (bouton d'une actu)
+  onOuvert?: () => void;
   session: MemberSession;
   onSessionChange?: (s: MemberSession) => void; // ✏️ après un changement d'email
   y1: number;
@@ -287,6 +291,20 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
       onProcurationOpened?.();
     }
   }, [autoOpenProcuration, session.paid, onProcurationOpened]);
+
+  // 🔗 Ouverture directe d'un endroit (bouton « Changer mon numéro » d'une actualité…)
+  useEffect(() => {
+    if (!ouvrirSur) return;
+    const defiler = (id: string) => setTimeout(() => document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" }), 150);
+    if (ouvrirSur === "coordonnees") { setOnglet("compte"); if (!showContact) void ouvrirContact(); defiler("mp-coordonnees"); }
+    else if (ouvrirSur === "code") { setOnglet("compte"); setShowCodeForm(true); defiler("mp-code"); }
+    else if (ouvrirSur === "reinscription") { setOnglet("accueil"); defiler("mp-renouvellement"); }
+    else if (ouvrirSur === "tshirt") { setOnglet("accueil"); defiler("mp-tshirt"); }
+    else if (ouvrirSur === "tournois") { setOnglet("tournois"); }
+    else if (ouvrirSur === "procuration") { setOnglet("compte"); if (session.paid === true) setShowProcuration(true); }
+    onOuvert?.();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [ouvrirSur]);
 
   async function toggleNews() {
     const next = !newsOptIn;
@@ -577,7 +595,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
 
         {/* Renouvellement si non payé pour cette saison */}
         {session.paid === false && !renewalSkipped && (
-          <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4">
+          <div id="mp-renouvellement" className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 scroll-mt-4">
             <p className="text-amber-800 font-semibold text-sm mb-1">⏳ Adhésion à renouveler</p>
             <p className="text-amber-700 text-xs mb-3">
               Votre adhésion pour la saison {y1}–{y2} n&apos;est pas encore réglée.
@@ -849,6 +867,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
               </div>
             </div>
         {/* 👕 Commande T-shirt (visible uniquement si admin a ouvert la section) */}
+        <div id="mp-tshirt" className="scroll-mt-4">
         {(() => {
           // Code vide (ex : session admin) → le formulaire le redemande lui-même
           const code = session.memberCode || session.adminCode || sessionStorage.getItem("saccb_member_code") || "";
@@ -867,6 +886,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
             />
           );
         })()}
+        </div>
 
           </>
         )}
@@ -1097,7 +1117,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
         </div>
 
         {/* ✏️ Mes coordonnées */}
-        <div className="mb-4">
+        <div id="mp-coordonnees" className="mb-4 scroll-mt-4">
           <button
             onClick={ouvrirContact}
             className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
@@ -1125,7 +1145,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
         </div>
 
         {/* Changer le code */}
-        <div className="mb-4">
+        <div id="mp-code" className="mb-4 scroll-mt-4">
           <button
             onClick={() => { setShowCodeForm(!showCodeForm); setCodeMsg(null); }}
             className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-700 transition w-full justify-center border border-slate-200 rounded-xl py-2 hover:bg-slate-50"
