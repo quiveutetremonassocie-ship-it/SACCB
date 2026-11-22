@@ -252,6 +252,10 @@ export default function ActualitesAdmin({
     await onPersist({ ...db, actualites: copy });
   }
 
+  async function updateMasquee(id: string, masquee: boolean) {
+    await onPersist({ ...db, actualites: list.map((x) => (x.id === id ? { ...x, masquee } : x)) });
+  }
+
   async function updatePrivate(id: string, isPrivate: boolean) {
     const next = {
       ...db,
@@ -405,7 +409,7 @@ export default function ActualitesAdmin({
           const isOpen = expandedActu.has(a.id);
           const refusActu = new Set(imgs.flatMap((img) => sansAccordPhoto(img.people, membres).map((m) => m.id))).size;
           return (
-            <div key={a.id} className="bg-slate-50 rounded-xl border border-slate-200 overflow-hidden">
+            <div key={a.id} className={`rounded-xl border overflow-hidden ${a.masquee ? "bg-slate-100 border-dashed border-slate-300 opacity-70" : "bg-slate-50 border-slate-200"}`}>
               {/* En-tête cliquable (toujours visible) */}
               <button
                 onClick={() => toggleExpanded(a.id)}
@@ -424,6 +428,7 @@ export default function ActualitesAdmin({
                   <p className="text-[10px] text-slate-400 flex items-center gap-2">
                     {a.categorie && <span className="font-semibold text-slate-500">{a.categorie}</span>}
                     {imgs.length === 0 ? "sans photo" : `${imgs.length} image${imgs.length > 1 ? "s" : ""}`}
+                    {a.masquee && <span className="text-slate-600 font-bold">🙈 Masquée</span>}
                     {a.private && <span className="text-purple-500 font-semibold">🔒 Membres</span>}
                     {refusActu > 0 && (
                       <span className="text-red-600 font-bold">
@@ -494,6 +499,20 @@ export default function ActualitesAdmin({
                       >
                         {a.private ? <Lock className="w-3.5 h-3.5" /> : <Globe className="w-3.5 h-3.5" />}
                         {a.private ? "Membres" : "Public"}
+                      </button>
+                    )}
+                    {!readOnly && (
+                      <button
+                        onClick={() => updateMasquee(a.id, !a.masquee)}
+                        className={`p-1.5 rounded-lg text-xs font-semibold flex items-center gap-1 transition ${
+                          a.masquee
+                            ? "bg-slate-700 text-white hover:bg-slate-800"
+                            : "bg-slate-100 text-slate-500 hover:bg-slate-200"
+                        }`}
+                        title={a.masquee ? "Afficher à nouveau sur le site" : "Cacher du site (reste ici dans l'admin)"}
+                      >
+                        {a.masquee ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        {a.masquee ? "Masquée du site" : "Visible sur le site"}
                       </button>
                     )}
                     {!readOnly && (
@@ -618,7 +637,7 @@ export default function ActualitesAdmin({
             <Eye className="w-3.5 h-3.5" /> Aperçu du rendu côté site (temps réel)
           </p>
           <div className="rounded-3xl overflow-hidden bg-slate-50 p-4 border border-slate-200">
-            <Actualites actualites={list} />
+            <Actualites actualites={list.filter((a) => !a.masquee)} />
           </div>
         </div>
       )}

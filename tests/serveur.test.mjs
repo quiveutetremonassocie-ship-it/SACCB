@@ -34,7 +34,7 @@ test("le site public ne montre aucune donnée privée (emails, téléphones, cod
   sansSecret(r.texte, "fetch_public");
   assert.equal(r.json.membresCount, 3);
   assert.equal(r.json.whatsappEnabled, true);
-  assert.deepEqual(r.json.actualites.map((a) => a.id), ["a1"], "les actus réservées aux adhérents ne sont pas publiques");
+  assert.deepEqual(r.json.actualites.map((a) => a.id), ["a1"], "les actus réservées aux adhérents et les actus masquées ne sont pas publiques");
   assert.equal(r.json.polls[0].votes, undefined, "on ne voit pas qui a voté quoi");
   assert.equal(r.json.polls[0].totalVotes, 1);
   assert.equal(r.json.agItems[0].authorMembreId, null, "aucun identifiant d'adhérent public");
@@ -178,6 +178,8 @@ test("un adhérent change son mail et son téléphone : c'est noté sur sa fiche
   assert.equal(etat.base.membres.find((m) => m.id === "m-paul").email, "paul.attente@exemple.fr");
   assert.deepEqual(mailsIntercepte(), []);
   // Elle se connecte ensuite avec sa nouvelle adresse
+  const actusAdh = await appeler({ action: "fetch_private_actualites", email: "marie.nouvelle@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
+  assert.deepEqual(actusAdh.json.actualites.map((a) => a.id), ["a2"], "un adhérent ne voit pas les actus masquées");
   const apres = await appeler({ action: "member_contact", email: "marie.nouvelle@exemple.fr", code: "CodeMarieXy", membreId: "m-marie" });
   assert.equal(apres.json?.ok, true, apres.texte);
 });
@@ -491,7 +493,7 @@ test("un admin limité à certaines sections ne peut pas toucher aux adhérents 
   const vue = (await appeler({ action: "admin_fetch", email: "redac@exemple.fr", code: "CodeRedac7" })).json.data;
   const ok = await appeler({ action: "admin_save", email: "redac@exemple.fr", code: "CodeRedac7", data: { ...structuredClone(vue), actualites: [...vue.actualites, { id: "a3", title: "Nouvelle", description: "x" }] }, base: vue });
   assert.equal(ok.json?.ok, true, ok.texte);
-  assert.equal(etat.base.actualites.length, 3);
+  assert.equal(etat.base.actualites.length, 5);
   const vue2 = (await appeler({ action: "admin_fetch", email: "redac@exemple.fr", code: "CodeRedac7" })).json.data;
   const k = await appeler({ action: "admin_save", email: "redac@exemple.fr", code: "CodeRedac7", data: { ...structuredClone(vue2), membres: vue2.membres.slice(1), quota: 2 }, base: vue2 });
   assert.notEqual(k.json?.ok, true, "suppression d'adhérent et quota refusés");

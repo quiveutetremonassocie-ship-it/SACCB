@@ -40,6 +40,8 @@ export function baseDeTest() {
     actualites: [
       { id: "a1", title: "Actu publique", description: "Bonjour à tous", private: false },
       { id: "a2", title: "Actu réservée", description: "Réservé aux adhérents", private: true },
+      { id: "a-cachee", title: "Actu masquée", description: "Gardée seulement dans l'admin", masquee: true },
+      { id: "a-cachee2", title: "Actu masquée réservée", description: "Gardée seulement dans l'admin", private: true, masquee: true },
     ],
     config_tournois: [],
     inscrits_tournoi: [],

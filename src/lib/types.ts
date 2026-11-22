@@ -105,6 +105,8 @@ export type Actualite = {
   categorie?: string;
   createdAt: string;
   private?: boolean;
+  // 🙈 Masquée : gardée dans l'admin mais invisible sur le site (ni visiteurs, ni adhérents)
+  masquee?: boolean;
 };
 
 // Helper pour récupérer la liste normalisée des images d'une actualité
