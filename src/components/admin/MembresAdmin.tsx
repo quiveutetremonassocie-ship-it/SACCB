@@ -1171,7 +1171,7 @@ function FicheAdherent({ m, db, readOnly, onClose, onEdit, onRecu, onPaiement, o
   );
   return (
     <div className="fixed inset-0 z-[2100] bg-black/40 flex justify-end" onClick={onClose} role="dialog" aria-modal="true" aria-labelledby="titre-fiche">
-      <div className="w-full max-w-lg h-full bg-[#F2F6F9] overflow-y-auto shadow-2xl" onClick={(e) => e.stopPropagation()}>
+      <div className="w-full h-full bg-[#F2F6F9] overflow-y-auto shadow-2xl" style={{ maxWidth: "34rem" }} onClick={(e) => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-[#D3DEE6] px-5 py-4 flex items-start justify-between gap-3">
           <div className="min-w-0">
             <h2 id="titre-fiche" className="font-display text-3xl text-[#0F1B26] leading-none">{m.nom}</h2>

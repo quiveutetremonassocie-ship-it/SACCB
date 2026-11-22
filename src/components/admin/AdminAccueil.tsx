@@ -13,16 +13,15 @@ function MaintenantFR() {
     // Alignement sur la prochaine minute pleine pour que l'heure change pile à :00s
     const now = new Date();
     const msJusquaProchaineMinute = (60 - now.getSeconds()) * 1000 - now.getMilliseconds();
+    // (Avant : l'intervalle était rangé sur le numéro du minuteur, ce qui plantait au bout d'une minute)
+    let intervalle: ReturnType<typeof setInterval> | undefined;
     const t0 = setTimeout(() => {
       setMaintenant(new Date());
-      const interval = setInterval(() => setMaintenant(new Date()), 60_000);
-      // On garde la ref du setInterval pour pouvoir le couper si le composant se démonte
-      (t0 as unknown as { _interval?: ReturnType<typeof setInterval> })._interval = interval;
+      intervalle = setInterval(() => setMaintenant(new Date()), 60_000);
     }, msJusquaProchaineMinute);
     return () => {
       clearTimeout(t0);
-      const intv = (t0 as unknown as { _interval?: ReturnType<typeof setInterval> })._interval;
-      if (intv) clearInterval(intv);
+      if (intervalle) clearInterval(intervalle);
     };
   }, []);
   if (!maintenant) return null;
