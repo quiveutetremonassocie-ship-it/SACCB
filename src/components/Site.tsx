@@ -518,7 +518,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
         {(mode === "actualites" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.actualites !== false))) && (
           <FadeInSection>
-            <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={displaySession} />
+            <Actualites actualites={[...(db.actualites || []), ...privateActualites]} memberSession={displaySession} limite={mode === "full" ? 3 : undefined} />
           </FadeInSection>
         )}
 

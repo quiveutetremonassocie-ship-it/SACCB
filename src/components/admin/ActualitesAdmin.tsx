@@ -36,6 +36,7 @@ export default function ActualitesAdmin({
 }) {
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
+  const [categorie, setCategorie] = useState("");
   const [isPrivate, setIsPrivate] = useState(false);
   const [pendingFiles, setPendingFiles] = useState<File[]>([]);
   const [busy, setBusy] = useState(false);
@@ -127,14 +128,14 @@ export default function ActualitesAdmin({
   }
 
   async function addActualite() {
-    if (!title || !description || pendingFiles.length === 0) {
-      alert("Titre, description et au moins une image requis.");
+    if (!title.trim() || !description.trim()) {
+      alert("Le titre et la description sont obligatoires (les photos sont facultatives).");
       return;
     }
     setBusy(true);
     const id = Date.now().toString();
-    const images = await uploadMany(id, pendingFiles);
-    if (images.length === 0) {
+    const images = pendingFiles.length > 0 ? await uploadMany(id, pendingFiles) : [];
+    if (pendingFiles.length > 0 && images.length === 0) {
       setBusy(false);
       return;
     }
@@ -142,6 +143,7 @@ export default function ActualitesAdmin({
       id,
       title,
       description,
+      ...(categorie.trim() ? { categorie: categorie.trim() } : {}),
       images,
       createdAt: new Date().toISOString(),
       private: isPrivate,
@@ -150,6 +152,7 @@ export default function ActualitesAdmin({
     await onPersist(next);
     setTitle("");
     setDescription("");
+    setCategorie("");
     setIsPrivate(false);
     setPendingFiles([]);
     if (fileInput.current) fileInput.current.value = "";
@@ -170,7 +173,7 @@ export default function ActualitesAdmin({
     await onPersist(next);
   }
 
-  async function updateField(id: string, field: "title" | "description", value: string) {
+  async function updateField(id: string, field: "title" | "description" | "categorie", value: string) {
     const next = {
       ...db,
       actualites: list.map((x) => (x.id === id ? { ...x, [field]: value } : x)),
@@ -207,10 +210,6 @@ export default function ActualitesAdmin({
     const imgs = actualiteImages(a);
     const target = imgs[imgIndex];
     if (!target) return;
-    if (imgs.length === 1) {
-      alert("Impossible de supprimer la dernière image. Supprime plutôt l'actualité entière.");
-      return;
-    }
     if (target.path) {
       await supabaseClient.storage.from(ACTU_BUCKET).remove([target.path]).catch(() => {});
     }
@@ -303,6 +302,12 @@ export default function ActualitesAdmin({
         </div>
       </div>
 
+      <datalist id="saccb-categories-actu">
+        {Array.from(new Set(["Boutique", "Assemblée générale", "Tournoi", "Vie du club", "Espace membre", "Soirée", ...list.map((a) => a.categorie).filter(Boolean) as string[]])).map((c) => (
+          <option key={c} value={c} />
+        ))}
+      </datalist>
+
       {/* AJOUT */}
       {!readOnly && <div className="bg-slate-50 rounded-2xl p-5 mb-5 border border-slate-200">
         <h4 className="text-sm font-semibold text-slate-800 mb-3 uppercase tracking-widest">
@@ -315,9 +320,17 @@ export default function ActualitesAdmin({
             value={title}
             onChange={(e) => setTitle(e.target.value)}
           />
+          <input
+            className="input w-full"
+            placeholder="Catégorie (facultatif) — ex. Boutique, Assemblée générale, Tournoi"
+            value={categorie}
+            onChange={(e) => setCategorie(e.target.value)}
+            list="saccb-categories-actu"
+            maxLength={40}
+          />
           <textarea
             className="input w-full min-h-[100px] resize-y"
-            placeholder="Description (visible en dessous des images)"
+            placeholder="Description (visible quand on clique sur l'actualité)"
             value={description}
             onChange={(e) => setDescription(e.target.value)}
           />
@@ -341,7 +354,7 @@ export default function ActualitesAdmin({
                   {pendingFiles.length > 1 ? "s" : ""}
                 </span>
               ) : (
-                "Choisir une ou plusieurs images (la 1ère sera l'image principale)"
+                "Photos (facultatif) — choisir une ou plusieurs images, la 1ère sera l'image principale"
               )}
             </span>
             <input
@@ -399,15 +412,18 @@ export default function ActualitesAdmin({
                 className="w-full flex items-center gap-3 px-3 py-2.5 hover:bg-slate-100 transition text-left"
               >
                 <div className="relative w-10 h-10 shrink-0 rounded-lg overflow-hidden bg-slate-200">
-                  {imgs[0] && (
+                  {imgs[0] ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={imgs[0].url} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Newspaper className="w-5 h-5 text-slate-400 absolute inset-0 m-auto" />
                   )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-semibold text-slate-800 truncate">{a.title}</p>
                   <p className="text-[10px] text-slate-400 flex items-center gap-2">
-                    {imgs.length} image{imgs.length > 1 ? "s" : ""}
+                    {a.categorie && <span className="font-semibold text-slate-500">{a.categorie}</span>}
+                    {imgs.length === 0 ? "sans photo" : `${imgs.length} image${imgs.length > 1 ? "s" : ""}`}
                     {a.private && <span className="text-purple-500 font-semibold">🔒 Membres</span>}
                     {refusActu > 0 && (
                       <span className="text-red-600 font-bold">
@@ -447,6 +463,15 @@ export default function ActualitesAdmin({
                       className="input w-full !text-sm"
                       value={a.title}
                       onChange={(e) => updateField(a.id, "title", e.target.value)}
+                      disabled={readOnly}
+                    />
+                    <input
+                      className="input w-full !text-sm"
+                      placeholder="Catégorie (facultatif)"
+                      value={a.categorie || ""}
+                      onChange={(e) => updateField(a.id, "categorie", e.target.value)}
+                      list="saccb-categories-actu"
+                      maxLength={40}
                       disabled={readOnly}
                     />
                     <textarea
@@ -590,7 +615,7 @@ export default function ActualitesAdmin({
       {showPreview && list.length > 0 && (
         <div className="mt-6 pt-6 border-t border-slate-200">
           <p className="text-xs uppercase tracking-widest text-amber-600 font-semibold mb-4 flex items-center gap-2">
-            <Eye className="w-3.5 h-3.5" /> Aperçu du rendu côté site (temps réel, rotation 5s)
+            <Eye className="w-3.5 h-3.5" /> Aperçu du rendu côté site (temps réel)
           </p>
           <div className="rounded-3xl overflow-hidden bg-slate-50 p-4 border border-slate-200">
             <Actualites actualites={list} />

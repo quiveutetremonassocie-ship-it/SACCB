@@ -101,6 +101,8 @@ export type Actualite = {
   // Champs legacy (compat ascendante pour anciennes actus)
   imageUrl?: string;
   imagePath?: string;
+  // Petite étiquette au-dessus du titre (ex. « Boutique », « Assemblée générale »), facultative
+  categorie?: string;
   createdAt: string;
   private?: boolean;
 };

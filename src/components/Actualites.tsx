@@ -1,31 +1,37 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, X, Newspaper, Images, Lock, Download } from "lucide-react";
+import { ChevronLeft, ChevronRight, X, Images, Lock, Download } from "lucide-react";
 import { Actualite, actualiteImages } from "@/lib/types";
 import { MemberSession } from "@/lib/useMemberSession";
 
-export default function Actualites({ actualites, memberSession }: { actualites: Actualite[]; memberSession?: MemberSession | null }) {
-  const [index, setIndex] = useState(0);
+// 📰 Actualités en colonnes (style « journal ») : photo principale en haut si l'actu en a une,
+// petite catégorie, puis le titre. Un clic ouvre le détail avec toute la galerie.
+// Sur l'accueil on montre les 3 plus récentes (`limite`) ; la page /actualites montre tout.
+
+function dateCourte(iso?: string): string {
+  if (!iso) return "";
+  const d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+  return d.toLocaleDateString("fr-FR", { day: "numeric", month: "long", year: "numeric" });
+}
+
+export default function Actualites({
+  actualites,
+  memberSession,
+  limite,
+}: {
+  actualites: Actualite[];
+  memberSession?: MemberSession | null;
+  limite?: number;
+}) {
+  // La dernière actu ajoutée (en bas de la liste de l'admin) passe en premier.
+  const toutes = useMemo(() => [...actualites].reverse(), [actualites]);
+  const liste = limite ? toutes.slice(0, limite) : toutes;
+  const n = liste.length;
+
   const [modalIndex, setModalIndex] = useState<number | null>(null);
   const [galleryIndex, setGalleryIndex] = useState(0);
-  const [paused, setPaused] = useState(false);
-
-  const n = actualites.length;
-
-  // Auto-rotation toutes les 2,5 secondes
-  useEffect(() => {
-    if (n < 2 || paused || modalIndex !== null) return;
-    const id = setInterval(() => {
-      setIndex((i) => (i + 1) % n);
-    }, 2500);
-    return () => clearInterval(id);
-  }, [n, paused, modalIndex]);
-
-  useEffect(() => {
-    if (index >= n && n > 0) setIndex(0);
-  }, [index, n]);
 
   const openModal = useCallback((i: number) => {
     setModalIndex(i);
@@ -33,30 +39,9 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
   }, []);
   const closeModal = useCallback(() => setModalIndex(null), []);
 
-  // Télécharger la photo courante (membres uniquement)
-  const downloadCurrentPhoto = useCallback(async () => {
-    if (modalIndex === null) return;
-    const imgs = actualiteImages(actualites[modalIndex]);
-    const img = imgs[galleryIndex];
-    if (!img?.url) return;
-    try {
-      const res = await fetch(img.url);
-      const blob = await res.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      const ext = img.url.split(".").pop()?.split("?")[0] || "jpg";
-      a.download = `saccb-${actualites[modalIndex].title.replace(/[^a-zA-Z0-9]/g, "-")}-${galleryIndex + 1}.${ext}`;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch {
-      window.open(img.url, "_blank");
-    }
-  }, [modalIndex, galleryIndex, actualites]);
-
   const currentModalImages = useMemo(
-    () => (modalIndex !== null ? actualiteImages(actualites[modalIndex]) : []),
-    [modalIndex, actualites]
+    () => (modalIndex !== null && liste[modalIndex] ? actualiteImages(liste[modalIndex]) : []),
+    [modalIndex, liste]
   );
 
   const galleryNext = useCallback(() => {
@@ -68,19 +53,36 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
     setGalleryIndex((i) => (i - 1 + currentModalImages.length) % currentModalImages.length);
   }, [currentModalImages.length]);
 
-  // Navigation entre actualités dans le modal
   const modalNext = useCallback(() => {
-    if (modalIndex === null) return;
-    setModalIndex((i) => ((i as number) + 1) % n);
+    setModalIndex((i) => (i === null ? i : (i + 1) % n));
     setGalleryIndex(0);
-  }, [modalIndex, n]);
+  }, [n]);
   const modalPrev = useCallback(() => {
-    if (modalIndex === null) return;
-    setModalIndex((i) => ((i as number) - 1 + n) % n);
+    setModalIndex((i) => (i === null ? i : (i - 1 + n) % n));
     setGalleryIndex(0);
-  }, [modalIndex, n]);
+  }, [n]);
 
-  // Navigation clavier dans le modal (galerie)
+  // Télécharger la photo affichée (adhérents connectés uniquement)
+  const downloadCurrentPhoto = useCallback(async () => {
+    if (modalIndex === null) return;
+    const img = currentModalImages[galleryIndex];
+    if (!img?.url) return;
+    try {
+      const res = await fetch(img.url);
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      const ext = img.url.split(".").pop()?.split("?")[0] || "jpg";
+      a.download = `saccb-${liste[modalIndex].title.replace(/[^a-zA-Z0-9]/g, "-")}-${galleryIndex + 1}.${ext}`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch {
+      window.open(img.url, "_blank");
+    }
+  }, [modalIndex, galleryIndex, currentModalImages, liste]);
+
+  // Clavier dans le détail : Échap ferme, flèches = photos
   useEffect(() => {
     if (modalIndex === null) return;
     const onKey = (e: KeyboardEvent) => {
@@ -89,259 +91,165 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
       else if (e.key === "ArrowLeft") galleryPrev();
     };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    document.body.style.overflow = "hidden";
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      document.body.style.overflow = "";
+    };
   }, [modalIndex, closeModal, galleryNext, galleryPrev]);
 
-  // Navigation carrousel (flèches)
-  const carouselPrev = useCallback(() => {
-    setIndex((i) => (i - 1 + n) % n);
-    setPaused(true);
-    setTimeout(() => setPaused(false), 3000);
-  }, [n]);
-  const carouselNext = useCallback(() => {
-    setIndex((i) => (i + 1) % n);
-    setPaused(true);
-    setTimeout(() => setPaused(false), 3000);
-  }, [n]);
-
-  if (n === 0) return (
-    <section id="actualites" className="bg-section-wrap bg-news relative">
-      <div className="section-pad relative">
-        <motion.div
-          className="text-center"
-        >
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-amber-600">En ce moment</span>
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">Actualités</h2>
-          <p className="text-slate-500 max-w-xl mx-auto">
-            Aucune actualité pour le moment. Revenez bientôt !
-          </p>
-        </motion.div>
-      </div>
-    </section>
-  );
-
-  const current = actualites[index];
-  const currentMain = actualiteImages(current)[0];
+  const plusQueLimite = !!limite && toutes.length > limite;
+  const ouverte = modalIndex !== null ? liste[modalIndex] : null;
 
   return (
-    <section id="actualites" className="bg-section-wrap bg-news relative">
-      <div className="section-pad relative">
-        <motion.div
-          className="text-center mb-10"
-        >
-          <div className="sport-label mb-5">
-            <span className="sport-label-dot" />
-            <span className="sport-label-text text-amber-600">En ce moment</span>
-          </div>
-          <h2 className="font-display text-4xl md:text-5xl h-display mb-3">Actualités</h2>
-          <p className="text-slate-500 max-w-2xl mx-auto">
-            Retrouvez ici les dernières nouvelles de l’association, événements et moments forts.
-          </p>
-        </motion.div>
-
-        <div
-          className="relative max-w-4xl mx-auto group/carousel"
-          onMouseEnter={() => setPaused(true)}
-          onMouseLeave={() => setPaused(false)}
-        >
-          {/* Flèche gauche */}
-          {n > 1 && (
-            <button
-              onClick={carouselPrev}
-              className="absolute left-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-black/50 hover:bg-black/75 flex items-center justify-center text-white transition opacity-0 group-hover/carousel:opacity-100 shadow-lg"
-              aria-label="Actualité précédente"
+    <section id="actualites" className="bg-white scroll-mt-20" aria-labelledby="titre-actualites">
+      <div className="max-w-6xl mx-auto px-5 py-16">
+        <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-2 mb-6">
+          <h2 id="titre-actualites" className="font-display text-4xl md:text-5xl text-[#0F1B26] leading-[0.95]">
+            Actualités du club
+          </h2>
+          {plusQueLimite && (
+            <a
+              href="/actualites/"
+              className="font-bold text-[#007DB0] underline underline-offset-4 min-h-[48px] inline-flex items-center"
             >
-              <ChevronLeft className="w-5 h-5" />
-            </button>
-          )}
-
-          <button
-            onClick={() => openModal(index)}
-            className="relative block w-full aspect-[16/9] rounded-3xl overflow-hidden group shadow-2xl shadow-slate-300/40 border border-slate-200"
-          >
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={current.id}
-                initial={{ opacity: 0, scale: 1.05 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.98 }}
-                transition={{ duration: 0.9, ease: "easeInOut" }}
-                className="absolute inset-0"
-              >
-                {currentMain && (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={currentMain.url}
-                    alt={current.title}
-                    className="w-full h-full object-cover"
-                  />
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-                <div className="absolute left-0 right-0 bottom-0 p-6 md:p-10 text-left">
-                  <div className="flex items-center gap-2 mb-3">
-                    <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 backdrop-blur">
-                      <Newspaper className="w-3.5 h-3.5 text-amber-300" />
-                      <span className="text-[10px] uppercase tracking-widest text-amber-200 font-semibold">
-                        Actualité
-                      </span>
-                    </div>
-                    {current.private && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-500/20 border border-purple-400/30 backdrop-blur">
-                        <Lock className="w-3.5 h-3.5 text-purple-300" />
-                        <span className="text-[10px] uppercase tracking-widest text-purple-200 font-semibold">
-                          Membres
-                        </span>
-                      </div>
-                    )}
-                    {actualiteImages(current).length > 1 && (
-                      <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 backdrop-blur">
-                        <Images className="w-3.5 h-3.5 text-blue-300" />
-                        <span className="text-[10px] uppercase tracking-widest text-blue-200 font-semibold">
-                          {actualiteImages(current).length} photos
-                        </span>
-                      </div>
-                    )}
-                  </div>
-                  <h3 className="font-display text-2xl md:text-4xl text-white mb-2 tracking-wide">
-                    {current.title}
-                  </h3>
-                  <p className="text-white/80 text-sm md:text-base max-w-2xl line-clamp-2">
-                    {current.description}
-                  </p>
-                  <p className="text-xs text-white/50 mt-3 uppercase tracking-widest">
-                    Cliquer pour voir le détail
-                  </p>
-                </div>
-              </motion.div>
-            </AnimatePresence>
-          </button>
-
-          {/* Flèche droite */}
-          {n > 1 && (
-            <button
-              onClick={carouselNext}
-              className="absolute right-3 top-1/2 -translate-y-1/2 z-10 w-11 h-11 rounded-full bg-black/50 hover:bg-black/75 flex items-center justify-center text-white transition opacity-0 group-hover/carousel:opacity-100 shadow-lg"
-              aria-label="Actualité suivante"
-            >
-              <ChevronRight className="w-5 h-5" />
-            </button>
-          )}
-
-          {/* Indicateurs */}
-          {n > 1 && (
-            <div className="flex items-center justify-center gap-2 mt-5">
-              {actualites.map((a, i) => (
-                <button
-                  key={a.id}
-                  onClick={() => setIndex(i)}
-                  className={`h-1.5 rounded-full transition-all ${
-                    i === index ? "w-8 bg-amber-500" : "w-2 bg-slate-300 hover:bg-slate-400"
-                  }`}
-                  aria-label={`Actualité ${i + 1}`}
-                />
-              ))}
-            </div>
+              Toutes les actualités ({toutes.length})
+            </a>
           )}
         </div>
 
-        {/* MODAL DETAIL avec galerie */}
-        <AnimatePresence>
-          {modalIndex !== null && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[1800] bg-black/80 backdrop-blur-xl flex items-center justify-center p-4"
-              onClick={closeModal}
-            >
-              <button
-                onClick={closeModal}
-                className="absolute top-4 right-4 w-11 h-11 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-white transition z-20"
-                aria-label="Fermer"
-              >
-                <X className="w-5 h-5" />
-              </button>
-
-              <motion.div
-                key={actualites[modalIndex].id}
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.3 }}
-                onClick={(e) => e.stopPropagation()}
-                className="max-w-5xl w-full max-h-[92vh] overflow-y-auto bg-white border border-slate-200 rounded-3xl shadow-2xl"
-              >
-                {/* Image principale + flèches galerie */}
-                <div className="relative aspect-[16/9] w-full overflow-hidden rounded-t-3xl bg-black">
-                  <AnimatePresence mode="wait">
-                    {currentModalImages[galleryIndex] && (
-                      <motion.img
-                        key={`${actualites[modalIndex].id}-${galleryIndex}`}
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0 }}
-                        transition={{ duration: 0.3 }}
-                        src={currentModalImages[galleryIndex].url}
-                        alt={actualites[modalIndex].title}
-                        className="w-full h-full object-contain"
-                      />
+        {n === 0 ? (
+          <div className="border-t-[3px] border-[#0F1B26] py-10 text-slate-600 text-lg">
+            Aucune actualité pour le moment. Revenez bientôt !
+          </div>
+        ) : (
+          <ul className="border-t-[3px] border-[#0F1B26] grid md:grid-cols-3">
+            {liste.map((a, i) => {
+              const imgs = actualiteImages(a);
+              const photo = imgs[0];
+              const debutLigne = i % 3 === 0;
+              return (
+                <li
+                  key={a.id}
+                  className={`border-b border-[#D3DEE6] ${debutLigne ? "" : "md:border-l md:pl-5"} ${i % 3 === 2 ? "" : "md:pr-5"}`}
+                >
+                  <button
+                    onClick={() => openModal(i)}
+                    className="group w-full text-left py-5 grid gap-3 focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-[#FFD23F] rounded-sm"
+                  >
+                    {photo && (
+                      <span className="relative block aspect-[16/10] overflow-hidden rounded-lg bg-[#F2F6F9]">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={photo.url}
+                          alt=""
+                          loading="lazy"
+                          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-[1.03] motion-reduce:transition-none motion-reduce:group-hover:scale-100"
+                        />
+                        {imgs.length > 1 && (
+                          <span className="absolute bottom-2 right-2 inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-[#0F1B26]/85 text-white text-sm font-bold">
+                            <Images className="w-4 h-4" aria-hidden="true" />
+                            {imgs.length} photos
+                          </span>
+                        )}
+                      </span>
                     )}
-                  </AnimatePresence>
+                    <span className="flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.95rem] font-bold text-slate-500">
+                      {a.categorie && <span>{a.categorie}</span>}
+                      {!a.categorie && dateCourte(a.createdAt) && <span>{dateCourte(a.createdAt)}</span>}
+                      {a.private && (
+                        <span className="inline-flex items-center gap-1 text-[#7A3EB1]">
+                          <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Adhérents
+                        </span>
+                      )}
+                    </span>
+                    <span className="block text-[1.15rem] leading-snug font-bold text-[#0F1B26] group-hover:text-[#007DB0] group-hover:underline underline-offset-4">
+                      {a.title}
+                    </span>
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+      </div>
 
-                  {/* Bouton téléchargement — membres connectés uniquement */}
-                  {memberSession && currentModalImages[galleryIndex] && (
+      {/* ── Détail d'une actualité (avec toute la galerie) ── */}
+      {ouverte && modalIndex !== null && (
+        <div
+          className="fixed inset-0 z-[1800] bg-[#0F1B26]/85 flex items-center justify-center p-4"
+          onClick={closeModal}
+          role="dialog"
+          aria-modal="true"
+          aria-label={ouverte.title}
+        >
+          <button
+            onClick={closeModal}
+            className="absolute top-4 right-4 w-12 h-12 rounded-full bg-white text-[#0F1B26] flex items-center justify-center z-20"
+            aria-label="Fermer"
+          >
+            <X className="w-6 h-6" />
+          </button>
+
+          <div
+            onClick={(e) => e.stopPropagation()}
+            className="max-w-4xl w-full max-h-[92vh] overflow-y-auto bg-white rounded-2xl shadow-2xl"
+          >
+            {currentModalImages.length > 0 && (
+              <>
+                <div className="relative aspect-[16/10] w-full bg-[#0F1B26] rounded-t-2xl overflow-hidden">
+                  {currentModalImages[galleryIndex] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={`${ouverte.id}-${galleryIndex}`}
+                      src={currentModalImages[galleryIndex].url}
+                      alt={`${ouverte.title} — photo ${galleryIndex + 1}`}
+                      className="w-full h-full object-contain"
+                    />
+                  )}
+
+                  {memberSession && (
                     <button
-                      onClick={(e) => { e.stopPropagation(); downloadCurrentPhoto(); }}
-                      className="absolute top-3 left-3 w-9 h-9 rounded-full bg-black/60 hover:bg-emerald-600 flex items-center justify-center text-white transition"
+                      onClick={downloadCurrentPhoto}
+                      className="absolute top-3 left-3 h-11 px-3 rounded-full bg-white/90 hover:bg-white text-[#0F1B26] text-sm font-bold flex items-center gap-1.5"
                       title="Télécharger cette photo"
                     >
-                      <Download className="w-4 h-4" />
+                      <Download className="w-4 h-4" /> Télécharger
                     </button>
                   )}
 
                   {currentModalImages.length > 1 && (
                     <>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          galleryPrev();
-                        }}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition"
-                        aria-label="Image précédente"
+                        onClick={galleryPrev}
+                        className="absolute left-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 hover:bg-white text-[#0F1B26] flex items-center justify-center"
+                        aria-label="Photo précédente"
                       >
-                        <ChevronLeft className="w-5 h-5" />
+                        <ChevronLeft className="w-6 h-6" />
                       </button>
                       <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          galleryNext();
-                        }}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-black/60 hover:bg-black/80 flex items-center justify-center text-white transition"
-                        aria-label="Image suivante"
+                        onClick={galleryNext}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 w-12 h-12 rounded-full bg-white/90 hover:bg-white text-[#0F1B26] flex items-center justify-center"
+                        aria-label="Photo suivante"
                       >
-                        <ChevronRight className="w-5 h-5" />
+                        <ChevronRight className="w-6 h-6" />
                       </button>
-                      <div className="absolute top-3 right-3 px-3 py-1 rounded-full bg-black/60 backdrop-blur text-white text-xs font-semibold">
+                      <div className="absolute top-3 right-3 px-3 py-1.5 rounded-full bg-[#0F1B26]/85 text-white text-sm font-bold">
                         {galleryIndex + 1} / {currentModalImages.length}
                       </div>
                     </>
                   )}
                 </div>
 
-                {/* Bande de miniatures */}
                 {currentModalImages.length > 1 && (
-                  <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-slate-200 bg-slate-100">
+                  <div className="flex gap-2 overflow-x-auto px-4 py-3 border-b border-[#D3DEE6] bg-[#F2F6F9]">
                     {currentModalImages.map((img, i) => (
                       <button
                         key={i}
                         onClick={() => setGalleryIndex(i)}
-                        className={`shrink-0 w-20 h-14 rounded-lg overflow-hidden border-2 transition ${
-                          i === galleryIndex
-                            ? "border-amber-400 ring-2 ring-amber-400/30"
-                            : "border-slate-200 hover:border-slate-300"
+                        aria-label={`Voir la photo ${i + 1}`}
+                        className={`shrink-0 w-20 h-14 rounded-md overflow-hidden border-2 ${
+                          i === galleryIndex ? "border-[#00B0F0]" : "border-transparent opacity-70 hover:opacity-100"
                         }`}
                       >
                         {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -350,49 +258,43 @@ export default function Actualites({ actualites, memberSession }: { actualites: 
                     ))}
                   </div>
                 )}
+              </>
+            )}
 
-                <div className="p-6 md:p-10">
-                  <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-amber-500/20 border border-amber-400/30 mb-4">
-                    <Newspaper className="w-3.5 h-3.5 text-amber-300" />
-                    <span className="text-[10px] uppercase tracking-widest text-amber-600 font-semibold">
-                      Actualité {modalIndex + 1} / {n}
-                    </span>
-                  </div>
-                  <h3 className="font-display text-3xl md:text-4xl text-slate-800 mb-4 tracking-wide">
-                    {actualites[modalIndex].title}
-                  </h3>
-                  <p className="text-slate-600 text-base md:text-lg whitespace-pre-wrap leading-relaxed">
-                    {actualites[modalIndex].description}
-                  </p>
+            <div className="p-6 md:p-10">
+              <p className="flex flex-wrap items-center gap-x-3 text-[0.95rem] font-bold text-slate-500 mb-2">
+                {ouverte.categorie && <span>{ouverte.categorie}</span>}
+                {dateCourte(ouverte.createdAt) && <span>{dateCourte(ouverte.createdAt)}</span>}
+                {ouverte.private && (
+                  <span className="inline-flex items-center gap-1 text-[#7A3EB1]">
+                    <Lock className="w-3.5 h-3.5" aria-hidden="true" /> Réservé aux adhérents
+                  </span>
+                )}
+              </p>
+              <h3 className="font-display text-3xl md:text-4xl text-[#0F1B26] mb-4 leading-tight">
+                {ouverte.title}
+              </h3>
+              <p className="text-slate-700 text-lg whitespace-pre-wrap leading-relaxed">
+                {ouverte.description}
+              </p>
 
-                  {/* Navigation entre actualités */}
-                  {n > 1 && (
-                    <div className="flex items-center justify-between mt-8 pt-6 border-t border-slate-100">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); modalPrev(); }}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 text-sm font-medium transition"
-                      >
-                        <ChevronLeft className="w-4 h-4" />
-                        Actu précédente
-                      </button>
-                      <span className="text-xs text-slate-400 font-medium">
-                        {modalIndex + 1} / {n}
-                      </span>
-                      <button
-                        onClick={(e) => { e.stopPropagation(); modalNext(); }}
-                        className="flex items-center gap-2 px-4 py-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 hover:text-slate-800 text-sm font-medium transition"
-                      >
-                        Actu suivante
-                        <ChevronRight className="w-4 h-4" />
-                      </button>
-                    </div>
-                  )}
+              {n > 1 && (
+                <div className="flex items-center justify-between gap-3 mt-8 pt-6 border-t border-[#D3DEE6]">
+                  <button onClick={modalPrev} className="btn-ghost min-h-[48px] inline-flex items-center gap-2">
+                    <ChevronLeft className="w-4 h-4" /> Précédente
+                  </button>
+                  <span className="text-sm text-slate-500 font-bold">
+                    {modalIndex + 1} / {n}
+                  </span>
+                  <button onClick={modalNext} className="btn-ghost min-h-[48px] inline-flex items-center gap-2">
+                    Suivante <ChevronRight className="w-4 h-4" />
+                  </button>
                 </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 }
