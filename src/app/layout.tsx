@@ -209,10 +209,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   } catch(e) { return; }
   var d = document.createElement('div');
   d.id = 'splash';
-  d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#FFFFFF;overflow:hidden;';
+  d.style.cssText = 'position:fixed;inset:0;z-index:99999;display:flex;align-items:center;justify-content:center;background:#0B2E4F;overflow:hidden;';
   d.innerHTML = '<div style="text-align:center">'
-    + '<img src="/logo.png" alt="" width="160" height="160" style="display:block;margin:0 auto">'
-    + '<div style="width:160px;height:4px;border-radius:4px;background:#E3EBF1;margin:18px auto 0;overflow:hidden">'
+    + '<img src="/logo.png" alt="" width="160" height="160" style="display:block;margin:0 auto;border-radius:24px;background:#FFFFFF">'
+    + '<div style="width:160px;height:4px;border-radius:4px;background:rgba(255,255,255,0.18);margin:20px auto 0;overflow:hidden">'
     + '<div id="splash-bar" style="width:0%;height:100%;background:#00B0F0"></div>'
     + '</div></div>';
   document.body.appendChild(d);
