@@ -35,6 +35,8 @@ test("le site public ne montre aucune donnée privée (emails, téléphones, cod
   assert.equal(r.json.membresCount, 3);
   assert.equal(r.json.whatsappEnabled, true);
   assert.deepEqual(r.json.actualites.map((a) => a.id), ["a1"], "les actus réservées aux adhérents et les actus masquées ne sont pas publiques");
+  assert.equal(r.json.actualitesReservees, 1, "on annonce seulement le nombre d'actus réservées (hors masquées)");
+  assert.ok(!r.texte.includes("Réservé aux adhérents"), "le contenu des actus réservées n'est pas public");
   assert.equal(r.json.polls[0].votes, undefined, "on ne voit pas qui a voté quoi");
   assert.equal(r.json.polls[0].totalVotes, 1);
   assert.equal(r.json.agItems[0].authorMembreId, null, "aucun identifiant d'adhérent public");

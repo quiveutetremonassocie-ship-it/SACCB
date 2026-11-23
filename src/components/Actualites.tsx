@@ -22,7 +22,11 @@ export default function Actualites({
   memberSession,
   limite,
   onOuvrirEspace,
+  nbReserveesCachees = 0,
+  onConnexion,
 }: {
+  nbReserveesCachees?: number; // actus réservées aux adhérents qu'on ne peut pas montrer (pas connecté, ou code à retaper)
+  onConnexion?: () => void;
   onOuvrirEspace?: (dest: DestinationEspace) => void;
   actualites: Actualite[];
   memberSession?: MemberSession | null;
@@ -123,7 +127,7 @@ export default function Actualites({
 
         {n === 0 ? (
           <div className="border-t-[3px] border-[#0F1B26] py-10 text-slate-600 text-lg">
-            Aucune actualité pour le moment. Revenez bientôt !
+            {nbReserveesCachees > 0 ? "Les actualités du moment sont réservées aux adhérents." : "Aucune actualité pour le moment. Revenez bientôt !"}
           </div>
         ) : (
           <ul className="border-t-[3px] border-[#0F1B26] grid md:grid-cols-3">
@@ -177,6 +181,19 @@ export default function Actualites({
               );
             })}
           </ul>
+        )}
+
+        {nbReserveesCachees > 0 && onConnexion && (
+          <button
+            onClick={onConnexion}
+            className="mt-4 w-full sm:w-auto inline-flex items-center gap-2 min-h-[48px] px-4 rounded-xl border border-[#D3DEE6] bg-[#F2F6F9] hover:bg-white text-[#0F1B26] font-bold text-left"
+          >
+            <Lock className="w-4 h-4 text-[#7A3EB1] shrink-0" aria-hidden="true" />
+            <span>
+              {nbReserveesCachees} actualité{nbReserveesCachees > 1 ? "s" : ""} réservée{nbReserveesCachees > 1 ? "s" : ""} aux adhérents —{" "}
+              <span className="text-[#007DB0] underline underline-offset-4">se connecter pour {nbReserveesCachees > 1 ? "les" : "la"} voir</span>
+            </span>
+          </button>
         )}
       </div>
 

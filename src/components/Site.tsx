@@ -523,7 +523,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
 
         {(mode === "actualites" || (mode === "full" && (db.presentationMode || db.sectionsVisible?.actualites !== false))) && (
           <FadeInSection>
-            <Actualites actualites={[...(db.actualites || []), ...privateActualites].filter((a) => !a.masquee)} onOuvrirEspace={(dest) => { setOuvrirMembre(dest); if (memberSession) setMemberPanelOpen(true); else setMemberLoginOpen(true); }} memberSession={displaySession} limite={mode === "full" ? 3 : undefined} />
+            <Actualites actualites={[...(db.actualites || []), ...privateActualites].filter((a) => !a.masquee)} onOuvrirEspace={(dest) => { setOuvrirMembre(dest); if (memberSession) setMemberPanelOpen(true); else setMemberLoginOpen(true); }} nbReserveesCachees={privateActualites.length === 0 ? (db.actualitesReservees ?? 0) : 0} onConnexion={() => setMemberLoginOpen(true)} memberSession={displaySession} limite={mode === "full" ? 3 : undefined} />
           </FadeInSection>
         )}
 

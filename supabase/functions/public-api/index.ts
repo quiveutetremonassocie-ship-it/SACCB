@@ -1935,6 +1935,8 @@ async function traiter(req: Request): Promise<Response> {
       config_tournois: d.config_tournois ?? [],
       inscrits_tournoi: d.inscrits_tournoi ?? [],
       actualites: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => !a.private && a.masquee !== true).map(actuSansPersonnes),
+      // Nombre d'actus réservées aux adhérents (le contenu n'est envoyé qu'aux personnes connectées)
+      actualitesReservees: ((d.actualites as Record<string,unknown>[] | undefined) ?? []).filter((a: Record<string,unknown>) => a.private === true && a.masquee !== true).length,
       archives: d.archives ?? [],
       // 🔒 Le lien WhatsApp n'est plus public : seulement un indicateur. Le lien est
       // donné aux adhérents payés via check_session.

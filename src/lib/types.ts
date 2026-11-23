@@ -388,6 +388,7 @@ export type DB = {
   inscrits_tournoi: InscritTournoi[];
   config_tournois: Tournoi[];
   actualites: Actualite[];
+  actualitesReservees?: number; // (site public) nombre d'actus réservées aux adhérents
   y1: number;
   y2: number;
   insc_open: boolean;
