@@ -1,0 +1,22 @@
+name: Classement mondial BWF
+
+on:
+  schedule:
+    # Tous les jours à 7h15 (UTC) : le classement change le mardi, les résultats de tournois à tout moment
+    - cron: '15 7 * * *'
+  workflow_dispatch: # Permet de lancer manuellement si besoin
+
+jobs:
+  maj:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Mettre à jour le classement, les tournois et les photos
+        run: |
+          RESPONSE=$(curl -s -X POST \
+            -H "Content-Type: application/json" \
+            -H "apikey: ${{ secrets.SUPABASE_ANON_KEY }}" \
+            -d "{\"action\": \"cron_classement_bwf\", \"secret\": \"${{ secrets.CRON_SECRET }}\"}" \
+            https://jsceiujlopxgsjlxbvyu.supabase.co/functions/v1/public-api)
+          echo "Réponse : $RESPONSE"
+          # Échec visible dans GitHub si le serveur n'a pas répondu « ok » (l'ancien classement reste affiché, rien n'est perdu)
+          echo "$RESPONSE" | grep -q '"ok":true'

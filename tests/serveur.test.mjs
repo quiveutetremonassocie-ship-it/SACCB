@@ -19,7 +19,7 @@ const actionsAdmin = [...new Set([...source.matchAll(/action === "(admin_[a-z_]+
 const actionsReservees = [
   "check_reminders", "cleanup_expired", "cron_send_scheduled_drafts", "send_backup_email", "check_backup_email",
   "notify_membres", "notify_new_season", "notify_new_poll", "notify_engagement_open", "send_report_to_members",
-  "sync_sheets", "mark_paid", "toggle_presentation", "clear_email_history", "delete_email_log", "interclub_save",
+  "cron_classement_bwf", "sync_sheets", "mark_paid", "toggle_presentation", "clear_email_history", "delete_email_log", "interclub_save",
 ];
 
 function sansSecret(texte, contexte) {

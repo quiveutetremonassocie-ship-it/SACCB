@@ -30,6 +30,7 @@ import FAQ from "./FAQ";
 import BureauPublic from "./BureauPublic";
 import ScrollButton from "./ScrollButton";
 import FadeInSection from "./FadeInSection";
+import ClassementAccueil from "./ClassementAccueil";
 
 type SiteMode = "full" | "actualites" | "tournois" | "inscription" | "contact" | "faq";
 
@@ -61,7 +62,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
   const [justificatifInfo, setJustificatifInfo] = useState<{ fourni: boolean; date?: string; nom?: string } | undefined>(undefined);
   // 📄 Fiche adhérent réelle (nom, type, montant payé) pour le reçu d'adhésion
   // 👁 Rubriques activées/désactivées dans l'admin : une rubrique cachée n'a plus de lien nulle part
-  const visibleRubrique = (k: "presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription" | "agenda") =>
+  const visibleRubrique = (k: "presentation" | "actualites" | "horaires" | "tournois" | "palmares" | "inscription" | "agenda" | "classementBwf") =>
     db.presentationMode === true || db.sectionsVisible?.[k] !== false;
   const rubriques = {
     presentation: visibleRubrique("presentation"), actualites: visibleRubrique("actualites"), horaires: visibleRubrique("horaires"),
@@ -511,6 +512,8 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
           <FadeInSection><Presentation membresCount={membresCount} creneaux={getEffectiveHoraires(db).length} /></FadeInSection>
         )}
 
+        {mode === "full" && visibleRubrique("classementBwf") && <ClassementAccueil data={db.classementBwf} haut />}
+
         {/* 📅 Agenda du club : tournois (automatique) + événements ajoutés par le bureau */}
         {mode === "full" && rubriques.agenda && memberAgenda && (
           <FadeInSection>
@@ -584,6 +587,7 @@ export default function Site({ mode = "full" }: { mode?: SiteMode } = {}) {
             <Palmares db={db} memberSession={displaySession} onLoginRequest={db.presentationMode ? () => {} : () => setMemberLoginOpen(true)} />
           </FadeInSection>
         )}
+        {mode === "full" && visibleRubrique("classementBwf") && <FadeInSection><ClassementAccueil data={db.classementBwf} /></FadeInSection>}
         {/* Bureau — visible pour membres connectés OU mode présentation */}
         {mode === "full" && (memberSession || db.presentationMode) && (db.bureauMembers ?? []).length > 0 && (
           <FadeInSection>

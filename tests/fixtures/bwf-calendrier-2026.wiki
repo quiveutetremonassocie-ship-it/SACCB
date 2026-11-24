@@ -1,0 +1,489 @@
+== Schedule ==
+=== October ===
+{| class="wikitable" style="font-size:80%"
+|-
+! width="110" | Date
+! width="330" | Tournament
+! width="250" | Champions
+! width="250" | Runners-up
+|- valign="top"
+| rowspan="10" | 6–11 October
+| bgcolor="#E9E9E9" rowspan="10" |
+'''[[Arctic Open]]''' ([[2026 Arctic Open|Draw]])
+*'''Host:''' [[Vantaa]], Finland
+*'''Venue:''' [[Energia Areena]]
+*'''Level:''' Super 500
+*'''Prize:''' $500,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|DEN}} [[Anders Antonsen]]'''
+|{{flagicon|JPN}} [[Yushi Tanaka]] 
+|-
+| colspan="2" | '''Score:''' 16–21, 21–16, 27–25
+|- valign="top"
+|'''{{flagicon|DEN}} [[Mia Blichfeldt]]'''
+|{{flagicon|THA}} [[Ratchanok Intanon]]
+|-
+| colspan="2" | '''Score:''' 21–17, 21–13
+|- valign="top"
+|'''{{flagicon|MAS}} [[Aaron Tai]]<br />{{flagicon|MAS}} [[Yap Roy King]]'''
+|{{flagicon|TPE}} [[Lai Po-yu]]<br />{{flagicon|TPE}} [[Tsai Fu-cheng]]
+|-
+| colspan="2" | '''Score:''' 21–19, 21–19
+|- valign="top"
+|'''{{flagicon|CHN}} [[Chen Fanshutian]]<br />{{flagicon|CHN}} [[Luo Xumin]]'''
+|{{flagicon|TPE}} [[Hsu Yin-hui]]<br />{{flagicon|TPE}} [[Lin Jhih-yun]]
+|-
+| colspan="2" | '''Score:''' 21–18, 21–19
+|- valign="top"
+|'''{{flagicon|CHN}} [[Jiang Zhenbang]]<br />{{flagicon|CHN}} [[Wei Yaxin]]'''
+|{{flagicon|CHN}} [[Gao Jiaxuan]]<br />{{flagicon|CHN}} [[Wu Mengying]]
+|-
+| colspan="2" | '''Score:''' 21–18, 21–16
+|- valign="top"
+| rowspan="20" | 13–18 October
+| bgcolor="#DEDEDC" rowspan="10" |
+'''[[Denmark Open]]''' ([[2026 Denmark Open|Draw]])
+*'''Host:''' [[Odense]], Denmark
+*'''Venue:''' [[Arena Fyn|SJF Bank Arena]]
+*'''Level:''' Super 750
+*'''Prize:''' $950,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|FRA}} [[Alex Lanier]]'''
+|{{flagicon|DEN}} [[Anders Antonsen]]
+|-
+| colspan="2" | '''Score:''' 21–15, 13–21, 21–13
+|- valign="top"
+|'''{{flagicon|KOR}} [[An Se-young]]'''
+|{{flagicon|JPN}} [[Akane Yamaguchi]]
+|-
+| colspan="2" | '''Score:''' 21–23, 21–14, 21–18
+|- valign="top"
+|'''{{flagicon|INA}} [[Fajar Alfian]]<br />{{flagicon|INA}} [[Muhammad Shohibul Fikri]]'''
+|{{flagicon|MAS}} [[Aaron Chia]]<br />{{flagicon|MAS}} [[Soh Wooi Yik]]
+|-
+| colspan="2" | '''Score:''' 21–8, 21–11
+|- valign="top"
+|'''{{flagicon|MAS}} [[Pearly Tan]]<br />{{flagicon|MAS}} [[Thinaah Muralitharan]]'''
+|{{flagicon|JPN}} [[Hinata Suzuki]]<br />{{flagicon|JPN}} [[Nao Yamakita]]
+|-
+| colspan="2" | '''Score:''' 21–18, 21–11
+|- valign="top"
+|'''{{flagicon|CHN}} [[Jiang Zhenbang]]<br />{{flagicon|CHN}} [[Wei Yaxin]]'''
+|{{flagicon|CHN}} [[Feng Yanzhe]]<br />{{flagicon|CHN}} [[Huang Dongping]]
+|-
+| colspan="2" | '''Score:''' 21–18, 8–21, 21–16
+|- valign="top"
+| bgcolor="#D4F1C5" rowspan="10" |
+'''[[Malaysia Super 100]]''' ([[2026 Malaysia Super 100|Draw]])
+*'''Host:''' [[Iskandar Puteri]], Malaysia
+*'''Venue:''' [[EduCity Sports Complex]]
+*'''Level:''' Super 100
+*'''Prize:''' $120,000
+*'''Format:''' 64MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|CHN}} [[Wang Zijun]]'''
+|{{flagicon|CHN}} [[Zhu Xuanchen]]
+|-
+| colspan="2" | '''Score:''' 21–11, 21–15
+|- valign="top"
+|'''{{flagicon|CHN}} [[Yuan Anqi]]'''
+|{{flagicon|CHN}} [[Xu Wenjing]] 
+|-
+| colspan="2" | '''Score:''' 21–12, 21–16
+|- valign="top"
+|'''{{flagicon|KOR}} [[Jin Yong (badminton)|Jin Yong]]<br />{{flagicon|KOR}} [[Jo Song-hyun]]'''
+|{{flagicon|KOR}} [[Na Sung-seung]]<br />{{flagicon|KOR}} [[Wang Chan]]
+|-
+| colspan="2" | '''Score:''' 21–17, 21–18
+|- valign="top"
+|'''{{flagicon|KOR}} [[Lee Seo-jin (badminton)|Lee Seo-jin]]<br />{{flagicon|KOR}} [[Lee Yeon-woo]]'''
+|{{flagicon|KOR}} [[Lee Seung-hee (badminton)|Lee Seung-hee]]<br />{{flagicon|KOR}} [[Park Min-ji (badminton)|Park Min-ji]]
+|-
+| colspan="2" | '''Score:''' 18–21, 21–17, 21–19
+|- valign="top"
+|'''{{flagicon|CHN}} [[Shen Xuanyao]]<br />{{flagicon|CHN}} [[Zhang Jiahan]]'''
+|{{flagicon|CHN}} [[Ma Xixiang]]<br />{{flagicon|CHN}} [[Qin Huizhi]]
+|-
+| colspan="2" | '''Score:''' 30–29, 15–21, 21–18
+|- valign="top"
+| rowspan="20" | 20–25 October
+| bgcolor="#DEDEDC" rowspan="10" |
+'''[[French Open (badminton)|French Open]]''' ([[2026 French Open (badminton)|Draw]])
+*'''Host:''' [[Tremblay-en-France]], France
+*'''Venue:''' Arena Grand Paris
+*'''Level:''' Super 750
+*'''Prize:''' $950,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+| '''{{flagicon|FRA}} [[Christo Popov]]'''
+| {{flagicon|INA}} [[Zaki Ubaidillah]]
+|-
+| colspan="2" | '''Score:''' 21–11, 14–21, 21–13
+|- valign="top"
+| '''{{flagicon|KOR}} [[An Se-young]]'''
+| {{flagicon|IND}} [[P. V. Sindhu]]
+|-
+| colspan="2" | '''Score:''' 16–21, 21–11, 21–12
+|- valign="top"
+| '''{{flagicon|MAS}} [[Man Wei Chong]]<br />{{flagicon|MAS}} [[Tee Kai Wun]]'''
+| {{flagicon|MAS}} [[Goh Sze Fei]]<br />{{flagicon|MAS}} [[Nur Izzuddin]]
+|-
+| colspan="2" | '''Score:''' 13–21, 21–15, 21–7
+|- valign="top"
+| '''{{flagicon|JPN}} [[Yuki Fukushima]]<br />{{flagicon|JPN}} [[Mayu Matsumoto]]'''
+| {{flagicon|MAS}} [[Pearly Tan]]<br />{{flagicon|MAS}} [[Thinaah Muralitharan]]
+|-
+| colspan="2" | '''Score:''' 10–21, 21–17, 21–16
+|- valign="top"
+| '''{{flagicon|CHN}} [[Feng Yanzhe]]<br />{{flagicon|CHN}} [[Huang Dongping]]'''
+| {{flagicon|MAS}} [[Hoo Pang Ron]]<br />{{flagicon|MAS}} [[Lai Pei Jing]]
+|-
+| colspan="2" | '''Score:''' 21–10, 21–13
+|- valign="top"
+| bgcolor="#D4F1C5" rowspan="10" |
+'''[[Indonesia Masters Super 100|Indonesia Masters Super 100 II]]''' ([[2026 Indonesia Masters Super 100 II|Draw]])
+*'''Host:''' [[Kudus, Indonesia|Kudus]], Indonesia
+*'''Venue:''' GOR Djarum Arena
+*'''Level:''' Super 100
+*'''Prize:''' $120,000
+*'''Format:''' 48MS/32WS/32MD/32WD/32XD
+| '''{{flagicon|INA}} [[Richie Duta Richardo]]'''
+| {{flagicon|CHN}} [[Dong Tianyao]]
+|-
+| colspan="2" | '''Score:''' 17–21, 21–12, 21–16
+|- valign="top"
+| '''{{flagicon|CHN}} [[Xu Wenjing]]'''
+| {{flagicon|HKG}} [[Lo Sin Yan]]
+|-
+| colspan="2" | '''Score:''' 21–12, 21–16
+|- valign="top"
+| '''{{flagicon|INA}} [[Muhammad Rian Ardianto]]<br />{{flagicon|INA}} [[Daniel Edgar Marvino]]'''
+| {{flagicon|KOR}} [[Jin Yong (badminton)|Jin Yong]]<br />{{flagicon|KOR}} [[Jo Song-hyun]]
+|-
+| colspan="2" | '''Score:''' 21–19, 21–12
+|- valign="top"
+| '''{{flagicon|INA}} [[Isyana Syahira Meida]]<br />{{flagicon|INA}} [[Rinjani Kwinnara Nastine]]'''
+| {{flagicon|THA}} [[Hathaithip Mijad]]<br />{{flagicon|THA}} [[Napapakorn Tungkasatan]]
+|-
+| colspan="2" | '''Score:''' 21–15, 21–17
+|- valign="top"
+| '''{{flagicon|CHN}} [[Li Hongyi (badminton)|Li Hongyi]]<br />{{flagicon|CHN}} [[Huang Kexin]]'''
+| {{flagicon|SGP}} [[Terry Hee]]<br />{{flagicon|INA}} [[Gloria Emanuelle Widjaja]]
+|-
+| colspan="2" | '''Score:''' 15–21, 21–5, 21–10
+|- valign="top"
+| rowspan="10" | 27 October – 1 November
+| bgcolor="#E9E9E9" rowspan="10" |
+'''[[Hylo Open]]''' ([[2026 Hylo Open|Draw]])
+*'''Host:''' [[Saarbrücken]], Germany
+*'''Venue:''' [[Saarlandhalle]]
+*'''Level:''' Super 500
+*'''Prize:''' $500,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+| '''{{flagicon|IND}} [[Lakshya Sen]]'''
+| {{flagicon|INA}} [[Jonatan Christie]]
+|-
+| colspan="2" | '''Score:''' 21–17, 21–10
+|- valign="top"
+|'''{{flagicon|IND}} [[P. V. Sindhu]]'''
+|{{flagicon|DEN}} [[Line Kjærsfeldt]]
+|-
+| colspan="2" | '''Score:''' 21–12, 21–14
+|- valign="top"
+| '''{{flagicon|DEN}} [[Christian Faust Kjær]]<br />{{flagicon|DEN}} [[Rasmus Kjær]]'''
+| {{flagicon|ENG}} [[Ben Lane]]<br />{{flagicon|ENG}} [[Sean Vendy]]
+|-
+| colspan="2" | '''Score:''' 21–14, 21–18
+|- valign="top"
+| '''{{flagicon|INA}} [[Amallia Cahaya Pratiwi]]<br />{{flagicon|INA}} [[Siti Fadia Silva Ramadhanti]]'''
+| {{flagicon|TPE}} [[Hsu Yin-hui]]<br />{{flagicon|TPE}} [[Lin Jhih-yun]]
+|-
+| colspan="2" | '''Score:''' 21–18, 21–19
+|- valign="top"
+|'''{{flagicon|FRA}} [[Thom Gicquel]]<br />{{flagicon|FRA}} [[Delphine Delrue]]'''
+|{{flagicon|DEN}} [[Jesper Toft]]<br />{{flagicon|DEN}} [[Amalie Cecilie Kudsk]] 
+|-
+| colspan="2" | '''Score:''' 19–21, 22–20, 21–18
+|}
+
+
+=== November ===
+{| class="wikitable" style="font-size:80%"
+|-
+! width="110" | Date
+! width="330" | Tournament
+! width="250" | Champions
+! width="250" | Runners-up
+|- valign="top"
+| rowspan="10" | 3–8 November
+| bgcolor="#E9E9E9" rowspan="10" |
+'''[[Korea Open (badminton)|Korea Open]]''' ([[2026 Korea Open (badminton)|Draw]])
+*'''Host:''' [[Yeosu]], South Korea
+*'''Venue:''' Jinnam Stadium
+*'''Level:''' Super 500
+*'''Prize:''' $500,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|CAN}} [[Victor Lai]]'''
+|{{flagicon|HKG}} [[Jason Gunawan]]
+|-
+| colspan="2" | '''Score:''' 21–11, 21–14
+|- valign="top"
+|'''{{flagicon|KOR}} [[An Se-young]]'''
+|{{flagicon|JPN}} [[Akane Yamaguchi]]
+|-
+| colspan="2" | '''Score:''' 21–12, 15–21, 21–16
+|- valign="top"
+|'''{{flagicon|KOR}} [[Kim Won-ho]]<br />{{flagicon|KOR}} [[Seo Seung-jae]]'''
+|{{flagicon|JPN}} [[Takuro Hoki]]<br />{{flagicon|JPN}} [[Yugo Kobayashi]]
+|-
+| colspan="2" | '''Score:''' 21–12, 20–22, 21–19
+|- valign="top"
+|'''{{flagicon|JPN}} [[Rui Hirokami]]<br>{{flagicon|JPN}} [[Sayaka Hobara]]'''
+|{{flagicon|KOR}} [[Kim Yu-jung]]<br>{{flagicon|KOR}} [[Lee Yu-lim]]
+|-
+| colspan="2" | '''Score:''' 21–18, 21–18
+|- valign="top"
+|'''{{flagicon|CHN}} [[Jiang Zhenbang]]<br>{{flagicon|CHN}} [[Wei Yaxin]]'''
+|{{flagicon|CHN}} [[Gao Jiaxuan]]<br>{{flagicon|CHN}} [[Wu Mengying]]
+|-
+| colspan="2" | '''Score:''' 21–16, 21–13
+|- valign="top"
+| rowspan="20" | 10–15 November
+| bgcolor="#E9E9E9" rowspan="10" |
+'''[[Japan Masters (badminton)|Japan Masters]]''' ([[2026 Japan Masters|Draw]])
+*'''Host:''' [[Kumamoto]], Japan
+*'''Venue:''' [[Kumamoto Prefectural Gymnasium]]
+*'''Level:''' Super 500
+*'''Prize:''' $500,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|IND}} [[Lakshya Sen]]'''
+|{{flagicon|JPN}} [[Koki Watanabe]]
+|-
+| colspan="2" | '''Score:''' 13–21, 21–18, 21–14
+|- valign="top"
+|'''{{flagicon|JPN}} [[Akane Yamaguchi]]'''
+|{{flagicon|CHN}} [[Wang Zhiyi]]
+|-
+| colspan="2" | '''Score:''' 21–14, 22–20
+|- valign="top"
+|'''{{flagicon|MAS}} [[Aaron Tai]]<br />{{flagicon|MAS}} [[Yap Roy King]]'''
+|{{flagicon|JPN}} [[Takuro Hoki]]<br />{{flagicon|JPN}} [[Yugo Kobayashi]]
+|-
+| colspan="2" | '''Score:''' 16–21, 21–13, 21–15
+|- valign="top"
+|'''{{flagicon|JPN}} [[Rin Iwanaga]]<br>{{flagicon|JPN}} [[Kie Nakanishi]]'''
+|{{flagicon|JPN}} [[Ririna Hiramoto]]<br>{{flagicon|JPN}} [[Chiharu Shida]]
+|-
+| colspan="2" | '''Score:''' 21–19, 21–15
+|- valign="top"
+|'''{{flagicon|CHN}} [[Jiang Zhenbang]]<br>{{flagicon|CHN}} [[Wei Yaxin]]'''
+|{{flagicon|CHN}} [[Gao Jiaxuan]]<br>{{flagicon|CHN}} [[Wu Mengying]]
+|-
+| colspan="2" | '''Score:''' 15–21, 21–15, 21–14
+|- valign="top"
+| bgcolor="#D4F1C5" rowspan="10" |
+'''[[Kaohsiung Masters]]''' ([[2026 Kaohsiung Masters|Draw]])
+*'''Host:''' [[Kaohsiung]], Taiwan
+*'''Venue:''' [[Kaohsiung Arena|K-Arena]]
+*'''Level:''' Super 100
+*'''Prize:''' $120,000
+*'''Format:''' 48MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|TPE}} [[Kuo Kuan-lin]]'''
+|{{flagicon|KOR}} [[Kim Hae-deun]]
+|-
+| colspan="2" | '''Score:''' 21–13, 21–19
+|- valign="top"
+|'''{{flagicon|TPE}} [[Liao Yuan-chi]]'''
+|{{flagicon|INA}} [[Mutiara Ayu Puspitasari]]
+|-
+| colspan="2" | '''Score:''' 21–15, 21–13
+|- valign="top"
+|'''{{flagicon|TPE}} [[Chang Ko-chi]]<br />{{flagicon|TPE}} [[Lu Chen (badminton)|Lu Chen]]'''
+|{{flagicon|TPE}} [[Cheng Kai-wen (badminton)|Cheng Kai-wen]]<br />{{flagicon|TPE}} [[Liao Chao-pang]]
+|-
+| colspan="2" | '''Score:''' 21–18, 18–21, 21–16
+|- valign="top"
+|'''{{flagicon|INA}} [[Isyana Syahira Meida]]<br />{{flagicon|INA}} [[Rinjani Kwinnara Nastine]]'''
+|{{flagicon|MAS}} [[Ong Xin Yee]]<br />{{flagicon|MAS}} [[Carmen Ting]]
+|-
+| colspan="2" | '''Score:''' 21–15, 21–15
+|- valign="top"
+|'''{{flagicon|MAS}} [[Wee Yee Hern]]<br />{{flagicon|MAS}} [[Vannee Gobi]]'''
+|{{flagicon|KOR}} [[Ki Dong-ju]]<br />{{flagicon|KOR}} [[Jeong Na-eun]]
+|-
+| colspan="2" | '''Score:''' 24–22, 21–17
+|- valign="top"
+| rowspan="10" | 17–22 November
+| bgcolor="#E9E9E9" rowspan="10" |
+'''[[Hong Kong Open (badminton)|Hong Kong Open]]''' ([[2026 Hong Kong Open (badminton)|Draw]])
+*'''Host:''' [[Hong Kong]]
+*'''Venue:''' [[Kai Tak Sports Park|Kai Tak Arena]]
+*'''Level:''' Super 500
+*'''Prize:''' $500,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|DEN}} [[Anders Antonsen]]'''
+|{{flagicon|THA}} [[Kunlavut Vitidsarn]]
+|-
+| colspan="2" | '''Score:''' Walkover
+|- valign="top"
+|'''{{flagicon|CHN}} [[Wang Zhiyi]]'''
+|{{flagicon|THA}} [[Pornpawee Chochuwong]]
+|-
+| colspan="2" | '''Score:''' 21–16, 21–11
+|- valign="top"
+|'''{{flagicon|MAS}} [[Man Wei Chong]]<br>{{flagicon|MAS}} [[Tee Kai Wun]]'''
+|{{flagicon|INA}} [[Leo Rolly Carnando]]<br />{{flagicon|INA}} [[Daniel Marthin]]
+|-
+| colspan="2" | '''Score:''' 21–19, 21–18
+|- valign="top"
+|'''{{flagicon|MAS}} [[Pearly Tan]]<br />{{flagicon|MAS}} [[Thinaah Muralitharan]]'''
+|{{flagicon|JPN}} [[Sumire Nakade]]<br />{{flagicon|JPN}} [[Miyu Takahashi]]
+|-
+| colspan="2" | '''Score:''' 22–20, 21–16
+|- valign="top"
+|'''{{flagicon|CHN}} [[Feng Yanzhe]]<br />{{flagicon|CHN}} [[Huang Dongping]]'''
+|{{flagicon|CHN}} [[Jiang Zhenbang]]<br />{{flagicon|CHN}} [[Wei Yaxin]]
+|-
+| colspan="2" | '''Score:''' 17–21, 21–9, 21–15
+|- valign="top"
+| rowspan="10" | 24–29 November
+| bgcolor="#C7F2D5" rowspan="10" |
+'''[[Syed Modi International Badminton Championships|Syed Modi International]]''' ([[2026 Syed Modi International|Draw]])
+*'''Host:''' [[Lucknow]], India
+*'''Venue:''' [[Babu Banarasi Das Indoor Stadium]]
+*'''Level:''' Super 300
+*'''Prize:''' $250,000
+*'''Format:''' 32MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:''' 
+|- valign="top"
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|}
+
+
+=== December ===
+{| class="wikitable" style="font-size:80%"
+|-
+! width="110" | Date
+! width="330" | Tournament
+! width="250" | Champions
+! width="250" | Runners-up
+|- valign="top"
+| rowspan="10" | 1–6 December
+| bgcolor="#D4F1C5" rowspan="10" |
+'''[[Guwahati Masters]]''' ([[2026 Guwahati Masters|Draw]])
+*'''Host:''' [[Guwahati]], India
+*'''Venue:''' Karmabir Nabin Chandra Bordoloi Indoor Stadium
+*'''Level:''' Super 100
+*'''Prize:''' $120,000
+*'''Format:''' 48MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:''' 
+|- valign="top"
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+| rowspan="10" | 8–13 December
+| bgcolor="#D4F1C5" rowspan="10" |
+'''[[Odisha Masters]]''' ([[2026 Odisha Masters|Draw]])
+*'''Host:''' [[Cuttack]], India
+*'''Venue:''' Jawaharlal Nehru Indoor Stadium
+*'''Level:''' Super 100
+*'''Prize:''' $120,000
+*'''Format:''' 48MS/32WS/32MD/32WD/32XD
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:''' 
+|- valign="top"
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+| rowspan="10" | 9–13 December
+| bgcolor="#B6CDE5" rowspan="10" |
+'''[[BWF World Tour Finals]]''' ([[2026 BWF World Tour Finals|Draw]])
+*'''Host:''' [[Hangzhou]], China
+*'''Venue:''' [[Hangzhou Olympic Expo Center|Hangzhou Olympic Sports Centre Gymnasium]]
+*'''Level:''' World Tour Finals
+*'''Prize:''' $3,500,000
+*'''Format:''' 8MS/8WS/8MD/8WD/8XD
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:''' 
+|- valign="top"
+|'''{{flagicon|}}'''
+|{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|- valign="top"
+|'''{{flagicon|}}<br />{{flagicon|}}'''
+|{{flagicon|}}<br />{{flagicon|}}
+|-
+| colspan="2" | '''Score:'''
+|}
+

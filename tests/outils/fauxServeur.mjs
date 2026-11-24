@@ -23,6 +23,7 @@ export const etat = {
   appelsExterieurs: [], // { url, corps } : tout ce qui aurait quitté le serveur
   mailsReussis: false, // true : le faux Brevo répond « envoyé » (le mail reste intercepté, rien ne sort)
   fichiers: {}, // faux stockage : { bucket: { chemin: Uint8Array } }
+  externe: null, // (url, init) => Response | null : réponse imposée à un appel extérieur précis (ex. fausse Wikipédia) ; rien ne sort
 };
 
 /** Mails que le serveur a essayé d'envoyer (interceptés) */
@@ -41,6 +42,8 @@ async function fauxFetch(entree, init = {}) {
     let lu = corps;
     try { lu = JSON.parse(String(corps)); } catch { /* texte brut */ }
     etat.appelsExterieurs.push({ url: url.href, corps: lu });
+    const imposee = etat.externe ? await etat.externe(url.href, init) : null;
+    if (imposee) return imposee;
     if (etat.mailsReussis && url.hostname === "api.brevo.com") return reponseJson({ messageId: "test" }, 201);
     return reponseJson({ message: "intercepté par les tests" }, 503);
   }
@@ -125,7 +128,7 @@ export async function demarrer() {
   };
   const url = compiler("supabase/functions/public-api/index.ts", "serveur.mjs", (s) =>
     s.replace(`import { createClient } from "https://esm.sh/@supabase/supabase-js@2";`, `import { createClient } from "@supabase/supabase-js";`)
-      + "\nexport { merge3, erreurScoreLive };\n");
+      + "\nexport { merge3, erreurScoreLive, lireClassementBwf, lireCalendrierBwf, actualiserClassementBwf };\n");
   const mod = await import(url);
   if (!gestionnaire) throw new Error("Le serveur n'a pas démarré");
   return mod;

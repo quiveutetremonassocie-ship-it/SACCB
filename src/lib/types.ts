@@ -485,7 +485,10 @@ export type DB = {
     presentation?: boolean;
     inscription?: boolean;
     agenda?: boolean;
+    classementBwf?: boolean; // 🏸 classement mondial BWF + tournois (accueil)
   };
+  // 🏸 Classement mondial BWF et calendrier : relevés chaque jour par le serveur (cron_classement_bwf), jamais saisis à la main
+  classementBwf?: import("./classementBwf").ClassementStocke | null;
   // 📊 Analytics : compteurs journaliers (limite 90 jours, plus anciens auto-supprimés)
   analyticsDaily?: AnalyticsDay[];
   // 🔐 Log des connexions admin réussies (50 dernières max)

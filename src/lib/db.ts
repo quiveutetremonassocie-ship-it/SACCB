@@ -46,6 +46,7 @@ export async function fetchPublicDB(): Promise<Partial<DB> & { membresCount: num
     presentationMode: d.presentationMode === true,
     maintenanceMode: d.maintenanceMode === true,
     sectionsVisible: d.sectionsVisible ?? {},
+    classementBwf: d.classementBwf ?? null,
     clubConfig: d.clubConfig ?? undefined,
     tshirtOpen: d.tshirtOpen === true,
     faqOpen: d.faqOpen === true,

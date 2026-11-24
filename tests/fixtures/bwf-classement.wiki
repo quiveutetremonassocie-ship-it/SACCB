@@ -1,0 +1,549 @@
+== Player rankings ==
+{{legend|#FFFFCC|Players in their highest peak}}
+* ''Italic'' indicates retired players
+
+|}
+
+=== Men's singles ===
+<!-- DO NOT UPDATE UNLESS THE SOURCE BELOW HAS BEEN UPDATED -->
+{| class="sortable wikitable"
+|-
+! colspan="7" | BWF World Rankings (Men's singles)<br />{{as of|2026|11|17|lc=y}}<ref>{{cite web |title=Men's Singles - Rankings |url=https://bwfbadminton.com/rankings/?id=2 |website=BWF Badminton |access-date=18 November 2026}}</ref>
+|-
+! rowspan="2" | #
+! rowspan="2" |
+! rowspan="2" | Country
+! rowspan="2" | Players
+! rowspan="2" | Points
+! colspan="2" | Highest peak
+|-
+! Rank !! Date
+|-
+! 1
+| align="center" | {{steady}}
+| bgcolor="#FFFFCC" | {{FRA}}
+| bgcolor="#FFFFCC" | [[Christo Popov]]
+| align="right" | 89,932
+| align="center" | 1
+| align="right" | {{start date|2026|10|27}}
+|-
+! 2
+| align="center" | {{steady}}
+| {{THA}}
+| [[Kunlavut Vitidsarn]]
+| align="right" | 89,465
+| align="center" | 1
+| align="right" | {{start date|2025|06|03}}
+|-
+! 3
+| align="center" | {{steady}}
+| {{DEN}}
+| [[Anders Antonsen]]
+| align="right" | 85,525
+| align="center" | 2
+| align="right" | {{start date|2022|09|27}}
+|-
+! 4
+| align="center" | {{steady}}
+| bgcolor="#FFFFCC" | {{CAN}}
+| bgcolor="#FFFFCC" | [[Victor Lai]]
+| align="right" | 84,245
+| align="center" | 4
+| align="right" | {{start date|2026|11|10}}
+|-
+! 5
+| align="center" | {{steady}}
+| {{TPE}}
+| [[Chou Tien-chen]]
+| align="right" | 82,230
+| align="center" | 2
+| align="right" | {{start date|2019|08|06}}
+|-
+! 6
+| align="center" | {{steady}}
+| {{FRA}}
+| [[Alex Lanier]]
+| align="right" | 81,565
+| align="center" | 4
+| align="right" | {{start date|2026|10|27}}
+|-
+! 7
+| align="center" | {{steady}}
+| {{CHN}}
+| [[Shi Yuqi]]
+| align="right" | 79,525
+| align="center" | 1
+| align="right" | {{start date|2024|06|11}}
+|-
+! 8
+| align="center" | {{increase}} 1
+| {{INA}}
+| [[Jonatan Christie]]
+| align="right" | 78,631
+| align="center" | 1
+| align="right" | {{start date|2026|08|25}}
+|-
+! 9
+| align="center" | {{decrease}} 1
+| {{JPN}}
+| [[Kodai Naraoka]]
+| align="right" | 75,590
+| align="center" | 2
+| align="right" | {{start date|2023|12|12}}
+|-
+! 10
+| align="center" | {{steady}}
+| bgcolor="#FFFFCC" | {{INA}}
+| bgcolor="#FFFFCC" | [[Alwi Farhan]]
+| align="right" | 73,699
+| align="center" | 10
+| align="right" | {{start date|2026|06|16}}
+|-
+! 11
+| align="center" | {{increase}} 2
+| {{IND}}
+| [[Lakshya Sen]]
+| align="right" | 68,503
+| align="center" | 6
+| align="right" | {{start date|2022|11|08}}
+|}
+
+=== Women's singles ===
+{| class="sortable wikitable"
+|-
+! colspan="7" | BWF World Rankings (Women's singles)<br />{{as of|2026|11|17|lc=y}}<ref>{{cite web |title=BWF World Rankings – Women's singles |url=https://bwfbadminton.com/rankings/?id=2 |website=BWF Badminton |access-date=18 November 2026}}</ref>
+|-
+! rowspan="2" | #
+! rowspan="2" |
+! rowspan="2" | Country
+! rowspan="2" | Players
+! rowspan="2" | Points
+! colspan="2" | Highest peak
+|-
+! Rank !! Date
+|-
+! 1
+| align="center" | {{steady}}
+| bgcolor="#FFFFCC" | {{KOR}}
+| bgcolor="#FFFFCC" | [[An Se-young]]
+| align="right" | 122,287
+| align="center" | 1
+| align="right" | {{start date|2023|08|01}}
+|-
+! 2
+| align="center" | {{steady}}
+| {{JPN}}
+| [[Akane Yamaguchi]]
+| align="right" | 103,726
+| align="center" | 1
+| align="right" | {{start date|2018|04|19}}
+|-
+! 3
+| align="center" | {{steady}}
+| {{CHN}}
+| [[Wang Zhiyi]]
+| align="right" | 101,389
+| align="center" | 2
+| align="right" | {{start date|2024|11|19}}
+|-
+! 4
+| align="center" | {{steady}}
+| {{CHN}}
+| [[Chen Yufei]]
+| align="right" | 87,351
+| align="center" | 1
+| align="right" | {{start date|2019|12|17}}
+|-
+! 5
+| align="center" | {{increase}} 1
+| {{IND}}
+| [[P. V. Sindhu]]
+| align="right" | 74,421
+| align="center" | 2
+| align="right" | {{start date|2017|04|07}}
+|-
+! 6
+| align="center" | {{decrease}} 1
+| {{THA}}
+| [[Ratchanok Intanon]]
+| align="right" | 73,386
+| align="center" | 1
+| align="right" | {{start date|2016|04|21}}
+|-
+! 7
+| align="center" | {{steady}}
+| {{JPN}}
+| [[Tomoka Miyazaki]]
+| align="right" | 71,406
+| align="center" | 6
+| align="right" | {{start date|2025|06|10}}
+|-
+! 8
+| align="center" | {{steady}}
+| {{THA}}
+| [[Pornpawee Chochuwong]]
+| align="right" | 70,277
+| align="center" | 6
+| align="right" | {{start date|2025|02|04}}
+|-
+! 9
+| align="center" | {{steady}}
+| {{INA}}
+| [[Putri Kusuma Wardani]]
+| align="right" | 69,903
+| align="center" | 6
+| align="right" | {{start date|2025|12|23}}
+|-
+! 10
+| align="center" | {{steady}}
+| {{JPN}}
+| [[Nozomi Okuhara]]
+| align="right" | 68,930
+| align="center" | 1
+| align="right" | {{start date|2019|10|29}}
+|-
+! 11
+| align="center" | {{steady}}
+| {{CHN}}
+| [[Han Yue]]
+| align="right" | 64,698
+| align="center" | 3
+| align="right" | {{start date|2025|03|18}}
+|}
+
+=== Men's doubles ===
+{| class="sortable wikitable" style="font-size:85%"
+|-
+! colspan="10" | BWF World Rankings (Men's doubles)<br/>{{as of|2026|11|17|lc=y}}<ref>{{cite web |title=BWF World Rankings – Men's doubles |url=https://bwfbadminton.com/rankings/?id=2 |website=BWF Badminton |access-date=19 November 2026}}</ref>
+|-
+! rowspan="2" | #
+! rowspan="2" | 
+! rowspan="2" | Country
+! rowspan="2" | Players
+! rowspan="2" | Points
+! colspan="2" | Highest peak<br />(pair)
+! colspan="3" | Highest peak<br />(individual)
+|-
+! Rank !! Date !! Rank !! Partner !! Date
+|-
+! rowspan="2" | 1
+| align="center" rowspan="2" | {{steady}}
+| bgcolor="#FFFFCC" | {{KOR}}
+| bgcolor="#FFFFCC" | [[Kim Won-ho]]
+| align="right" rowspan="2" | 111,499
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2025|07|22}}
+| align="center" | 1
+| {{flagicon|KOR}} [[Seo Seung-jae]]
+| align="right" | {{start date|2025|07|22}}
+|-
+| bgcolor="#FFFFCC" | {{KOR}}
+| bgcolor="#FFFFCC" | [[Seo Seung-jae]]
+| align="center" | 1
+| {{flagicon|KOR}} [[Kim Won-ho]]
+| align="right" | {{start date|2025|07|22}}
+|-
+! rowspan="2" | 2
+| align="center" rowspan="2" | {{steady}}
+| {{INA}}
+| [[Fajar Alfian]]
+| align="right" rowspan="2" | 95,153
+| align="center" rowspan="2" | 2
+| align="right" rowspan="2" | {{start date|2026|06|02}}
+| align="center" | 1
+| {{flagicon|INA}} [[Muhammad Rian Ardianto]]
+| align="right" | {{start date|2022|12|27}}
+|-
+| bgcolor="#FFFFCC" | {{INA}}
+| bgcolor="#FFFFCC" | [[Muhammad Shohibul Fikri]]
+| align="center" | 2
+| {{flagicon|INA}} [[Fajar Alfian]]
+| align="right" | {{start date|2026|06|02}}
+|-
+! rowspan="2" | 3
+| align="center" rowspan="2" | {{steady}}
+| {{CHN}}
+| [[Liang Weikeng]]
+| align="right" rowspan="2" | 95,089
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2023|10|31}}
+| align="center" | 1
+| {{flagicon|CHN}} [[Wang Chang (badminton)|Wang Chang]]
+| align="right" | {{start date|2023|10|31}}
+|-
+| {{CHN}}
+| [[Wang Chang (badminton)|Wang Chang]]
+| align="center" | 1
+| {{flagicon|CHN}} [[Liang Weikeng]]
+| align="right" | {{start date|2023|10|31}}
+|-
+! rowspan="2" | 4
+| align="center" rowspan="2" | {{steady}}
+| {{MAS}}
+| [[Aaron Chia]]
+| align="right" rowspan="2" | 87,504
+| align="center" rowspan="2" | 2
+| align="right" rowspan="2" | {{start date|2023|01|24}}
+| align="center" | 2
+| {{flagicon|MAS}} [[Soh Wooi Yik]]
+| align="right" | {{start date|2023|01|24}}
+|-
+|  {{MAS}}
+|  [[Soh Wooi Yik]]
+| align="center" | 2
+| {{flagicon|MAS}} [[Aaron Chia]]
+| align="right" | {{start date|2023|01|24}}
+|-
+! rowspan="2" | 5
+| align="center" rowspan="2" | {{steady}}
+| {{MAS}}
+| [[Goh Sze Fei]]
+| align="right" rowspan="2" | 80,547
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2025|05|27}}
+| align="center" | 1
+| {{flagicon|MAS}} [[Nur Izzuddin]]
+| align="right" | {{start date|2025|05|27}}
+|-
+| {{MAS}}
+| [[Nur Izzuddin]]
+| align="center" | 1
+| {{flagicon|MAS}} [[Goh Sze Fei]]
+| align="right" | {{start date|2025|05|27}}
+|-
+! rowspan="2" | 6
+| align="center" rowspan="2" | {{steady}}
+| {{IND}}
+| [[Satwiksairaj Rankireddy]]
+| align="right" rowspan="2" | 74,831
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2023|10|10}}
+| align="center" | 1
+| {{flagicon|IND}} [[Chirag Shetty]]
+| align="right" | {{start date|2023|10|10}}
+|}
+
+=== Women's doubles ===
+{| class="sortable wikitable" style="font-size:85%"
+|-
+! colspan="10" | BWF World Rankings (Women's doubles)<br/>{{as of|2026|11|17|lc=y}}<ref>{{cite web |url=https://bwfbadminton.com/rankings/?id=2 |title=BWF World Rankings – Women's doubles |website=bwf.tournamentsoftware.com |publisher=[[Badminton World Federation]] |access-date=2026-11-19}}</ref>
+|-
+! rowspan="2" | #
+! rowspan="2" | 
+! rowspan="2" | Country
+! rowspan="2" | Players
+! rowspan="2" | Points
+! colspan="2" | Highest peak<br />(pair)
+! colspan="3" | Highest peak<br />(individual)
+|-
+! Rank !! Date !! Rank !! Partner !! Date
+|-
+! rowspan="2" | 1
+| align="center" rowspan="2" | {{steady}}
+| bgcolor="#FFFFCC" | {{CHN}}
+| bgcolor="#FFFFCC" | [[Liu Shengshu]]
+| align="right" rowspan="2" | 114,167
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2024|10|22}}
+| align="center" | 1
+| {{flagicon|CHN}} [[Tan Ning (badminton)|Tan Ning]]
+| align="right" | {{start date|2024|10|22}}
+|-
+| bgcolor="#FFFFCC" | {{CHN}}
+| bgcolor="#FFFFCC" | [[Tan Ning (badminton)|Tan Ning]]
+| align="center" | 1
+| {{flagicon|CHN}} [[Liu Shengshu]]
+| align="right" | {{start date|2024|10|22}}
+|-
+! rowspan="2" | 2
+| align="center" rowspan="2" | {{steady}}
+| {{nowrap|{{KOR}}}}
+| [[Baek Ha-na]]
+| align="right" rowspan="2" | 100,434
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2024|10|29}}
+| align="center" | 1
+| {{flagicon|KOR}} [[Lee So-hee]]
+| align="right" | {{start date|2024|10|29}}
+|-
+| {{KOR}}
+| [[Lee So-hee]]
+| align="center" | 1
+| {{flagicon|KOR}} [[Baek Ha-na]]
+| align="right" | {{start date|2024|10|29}}
+|-
+! rowspan="2" | 3
+| align="center" rowspan="2" | {{steady}}
+| {{JPN}}
+| [[Yuki Fukushima]]
+| align="right" rowspan="2" | 95,906
+| align="center" rowspan="2" | 2
+| align="right" rowspan="2" | {{start date|2026|07|28}}
+| align="center" | 1
+| {{flagicon|JPN}} [[Sayaka Hirota]]
+| align="right" | {{start date|2018|06|21}}
+|-
+| {{JPN}}
+| [[Mayu Matsumoto]]
+| align="center" | 1
+| ''{{flagicon|JPN}} [[Wakana Nagahara]]''
+| align="right" | {{start date|2019|04|30}}
+|-
+! rowspan="2" | 4
+| align="center" rowspan="2" | {{steady}}
+| {{MAS}}
+| [[Pearly Tan]]
+| align="right" rowspan="2" | 87,250
+| align="center" rowspan="2" | 2
+| align="right" rowspan="2" | {{start date|2025|07|29}}
+| align="center" | 2
+| {{flagicon|MAS}} [[Thinaah Muralitharan]]
+| align="right" | {{start date|2025|07|29}}
+|-
+| {{MAS}}
+| [[Thinaah Muralitharan]]
+| align="center" | 2
+| {{flagicon|MAS}} [[Pearly Tan]]
+| align="right" | {{start date|2025|07|29}}
+|-
+! rowspan="2" | 5
+| align="center" rowspan="2" | {{steady}}
+| {{JPN}}
+| [[Rin Uesaka]]
+| align="right" rowspan="2" | 74,414
+| align="center" rowspan="2" | 4
+| align="right" rowspan="2" | {{start date|2025|03|11}}
+| align="center" | 4
+| {{flagicon|JPN}} [[Kie Nakanishi]]
+| align="right" | {{start date|2025|03|11}}
+|-
+| {{JPN}}
+| [[Kie Nakanishi]]
+| align="center" | 4
+| {{flagicon|JPN}} [[Rin Iwanaga]]
+| align="right" | {{start date|2025|03|11}}
+|-
+! rowspan="2" | 6
+| align="center" rowspan="2" | {{increase}} 1
+| bgcolor="#FFFFCC" | {{TPE}}
+| bgcolor="#FFFFCC" | [[Hsu Yin-hui]]
+| align="right" rowspan="2" | 67,324
+| align="center" rowspan="2" | 6
+| align="right" rowspan="2" | {{start date|2026|10|20}}
+| align="center" | 6
+| {{flagicon|TPE}} [[Lin Jhih-yun]]
+| align="right" | {{start date|2026|10|20}}
+|}
+
+=== Mixed doubles ===
+{| class="sortable wikitable" style="font-size:85%"
+|-
+! colspan="10" | BWF World Rankings (Mixed doubles)<br/>{{as of|2026|11|10|lc=y}}<ref>{{cite web |url=https://bwfbadminton.com/rankings/?id=2 |title=BWF World Rankings – Mixed doubles |publisher=[[Badminton World Federation]] |access-date=2026-11-15}}</ref>
+|-
+! rowspan="2" | #
+! rowspan="2" | 
+! rowspan="2" | Country
+! rowspan="2" | Players
+! rowspan="2" | Points
+! colspan="2" | Highest peak<br />(pair)
+! colspan="3" | Highest peak<br />(individual)
+|-
+! Rank !! Date !! Rank !! Partner !! Date
+|-
+! rowspan="2" | 1
+| align="center" rowspan="2" | {{steady}}
+| bgcolor="#FFFFCC" | {{CHN}}
+| bgcolor="#FFFFCC" | [[Feng Yanzhe]] 
+| align="right" rowspan="2" | 109,950
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2024|11|26}}
+| align="center" | 1
+| {{flagicon|CHN}} [[Huang Dongping]]
+| align="right" | {{start date|2024|11|26}}
+|-
+| bgcolor="#FFFFCC" | {{CHN}}
+| bgcolor="#FFFFCC" | [[Huang Dongping]]
+| align="center" | 1
+| ''{{flagicon|CHN}} [[Wang Yilyu]]''<br />{{flagicon|CHN}} [[Feng Yanzhe]]
+| align="right" | {{start date|2018|04|12}}<br />{{start date|2024|11|26}}
+|-
+! rowspan="2" | 2
+| align="center" rowspan="2" | {{steady}}
+| {{CHN}}
+| [[Jiang Zhenbang]]
+| align="right" rowspan="2" | 93,600
+| align="center" rowspan="2" | 1
+| align="right" rowspan="2" | {{start date|2025|03|18}}
+| align="center" | 1
+| {{flagicon|CHN}} [[Wei Yaxin]]
+| align="right" | {{start date|2025|03|18}}
+|-
+| {{CHN}}
+| [[Wei Yaxin]]
+| align="center" | 1
+| {{flagicon|CHN}} [[Jiang Zhenbang]]
+| align="right" | {{start date|2025|03|18}}
+|-
+! rowspan="2" | 3
+| align="center" rowspan="2" | {{steady}}
+| bgcolor="#FFFFCC" | {{FRA}}
+| bgcolor="#FFFFCC" | [[Thom Gicquel]]
+| align="right" rowspan="2" | 89,250
+| align="center" rowspan="2" | 3
+| align="right" rowspan="2" | {{start date|2026|10|27}}
+| align="center" | 3
+| {{flagicon|FRA}} [[Delphine Delrue]]
+| align="right" | {{start date|2026|10|27}}
+|-
+| bgcolor="#FFFFCC" | {{FRA}}
+| bgcolor="#FFFFCC" | [[Delphine Delrue]]
+| align="center" | 3
+| {{flagicon|FRA}} [[Thom Gicquel]]
+| align="right" | {{start date|2026|10|27}}
+|-
+! rowspan="2" | 4
+| align="center" rowspan="2" | {{steady}}
+| {{DEN}}
+| [[Mathias Christiansen]]
+| align="right" rowspan="2" | 84,470
+| align="center" rowspan="2" | 2
+| align="right" rowspan="2" | {{start date|2026|09|08}}
+| align="center" | 2
+| {{flagicon|DEN}} [[Alexandra Bøje]]
+| align="right" | {{start date|2026|09|08}}
+|-
+| {{DEN}}
+| [[Alexandra Bøje]]
+| align="center" | 2
+| {{flagicon|DEN}} [[Mathias Christiansen]]
+| align="right" | {{start date|2026|09|08}}
+|-
+! rowspan="2" | 5
+| align="center" rowspan="2" | {{increase}} 1
+| bgcolor="#FFFFCC" | {{CHN}}
+| bgcolor="#FFFFCC" | [[Guo Xinwa]]
+| align="right" rowspan="2" | 79,670
+| align="center" rowspan="2" | 5
+| align="right" rowspan="2" | {{start date|2025|03|18}}
+| align="center" | 5
+| {{flagicon|CHN}} [[Chen Fanghui]]
+| align="right" | {{start date|2025|03|18}}
+|-
+| bgcolor="#FFFFCC" | {{CHN}}
+| bgcolor="#FFFFCC" | [[Chen Fanghui]]
+| align="center" | 5
+| {{flagicon|CHN}} [[Guo Xinwa]]
+| align="right" | {{start date|2025|03|18}}
+|-
+! rowspan="2" | 6
+| align="center" rowspan="2" | {{decrease}} 1
+| {{THA}}
+| [[Dechapol Puavaranukroh]]
+| align="right" rowspan="2" | 76,690
+| align="center" rowspan="2" | 2
+| align="right" rowspan="2" | {{start date|2025|08|25}}
+| align="center" | 1
+| {{flagicon|THA}} [[Sapsiree Taerattanachai]]
+| align="right" | {{start date|2021|12|07}}
+|}
+

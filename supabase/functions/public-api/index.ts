@@ -1432,6 +1432,379 @@ async function ecrireBlocages() {
 // ─── ⚡ Réponse publique mémorisée : servie telle quelle tant que la base n'a pas changé ───
 let cachePublic: { at: number; rev: string; corps: string } | null = null;
 
+// ═══════════════════════════════════════════════════════════════════════════════════════
+// 🏸 CLASSEMENT MONDIAL BWF + CALENDRIER DES TOURNOIS (affichés sur l'accueil, voir ClassementBwf.tsx)
+// Le navigateur n'a pas le droit de contacter Wikipédia (règle de sécurité du site) : c'est CE serveur qui lit
+// Wikipédia (tâche quotidienne cron_classement_bwf), garde les photos libres dans notre stockage et range tout
+// dans la base. En cas de doute sur une lecture, l'ancien classement valide est conservé : jamais de donnée à moitié.
+// ═══════════════════════════════════════════════════════════════════════════════════════
+type Discipline = "SH" | "SD" | "DH" | "DD" | "DM";
+const DISCIPLINES: { id: Discipline; section: string; paire: boolean }[] = [
+  { id: "SH", section: "Men's singles", paire: false },
+  { id: "SD", section: "Women's singles", paire: false },
+  { id: "DH", section: "Men's doubles", paire: true },
+  { id: "DD", section: "Women's doubles", paire: true },
+  { id: "DM", section: "Mixed doubles", paire: true },
+];
+type LigneClassement = { rang: number; joueurs: string[]; pages: string[]; pays: string[]; points: number };
+type ClassementDiscipline = { date: string; lignes: LigneClassement[] };
+type LectureClassement = { disciplines: Partial<Record<Discipline, ClassementDiscipline>>; erreurs: Partial<Record<Discipline, string>> };
+type FinaleBwf = { champions: string[]; finalistes: string[]; score: string };
+const ORDRE_FINALES = ["SH", "SD", "DH", "DD", "DM"] as const;
+type TournoiBwf = { nom: string; debut: string; fin: string; ville: string; pays: string; niveau: string; dotation?: string; tableaux?: Record<string, number>; finales?: Record<string, FinaleBwf> };
+type PhotoStockee = { url: string; auteur: string; licence: string; licenceUrl?: string; fichierUrl: string; source: string };
+type ClassementStocke = { maj: string; disciplines: Partial<Record<Discipline, ClassementDiscipline>>; erreurs: Partial<Record<Discipline, string>>; calendrier: TournoiBwf[]; photos: Record<string, PhotoStockee> };
+
+const API_CLASSEMENT_WIKIPEDIA = "https://en.wikipedia.org/w/api.php?action=parse&page=BWF_World_Ranking&prop=wikitext&format=json&formatversion=2";
+const apiCalendrier = (annee: number) =>
+  `https://en.wikipedia.org/w/api.php?action=parse&page=${annee}_BWF_World_Tour&prop=wikitext&format=json&formatversion=2&redirects=1`;
+const API_WIKIPEDIA_PHOTOS = "https://en.wikipedia.org/w/api.php";
+const UA_WIKIPEDIA = "SACCB-site/1.0 (https://saccb.fr; contact@saccb.fr)";
+
+// deno-lint-ignore no-explicit-any
+async function lireWikipedia(url: string): Promise<any> {
+  const r = await fetch(url, { headers: { "User-Agent": UA_WIKIPEDIA, "Api-User-Agent": UA_WIKIPEDIA }, signal: AbortSignal.timeout(20_000) });
+  if (!r.ok) throw new Error(`Wikipédia a répondu ${r.status}`);
+  return r.json();
+}
+
+const LIEN = /\[\[([^\]|]+)(?:\|([^\]]+))?\]\]/;
+
+/** Nom propre d'un joueur à partir d'un lien Wikipédia [[Nom]] ou [[Page|Nom affiché]] */
+function nomDe(texte: string): string | null {
+  const m = texte.match(LIEN);
+  if (!m) return null;
+  const nom = (m[2] || m[1]).replace(/''+/g, "").replace(/\s*\(.*?\)\s*$/, "").replace(/\s+/g, " ").trim();
+  return nom || null;
+}
+
+/** Titre de la page Wikipédia visée par le premier lien [[…]] */
+function pageDe(texte: string): string | null {
+  const m = texte.match(LIEN);
+  if (!m) return null;
+  return m[1].replace(/_/g, " ").replace(/#.*$/, "").trim() || null;
+}
+
+/** Texte d'une section (titre de niveau 3 exact) jusqu'au titre suivant */
+function sectionDe(texte: string, titre: string): string | null {
+  const debut = texte.search(new RegExp(`^===\\s*${titre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\s*===\\s*$`, "m"));
+  if (debut < 0) return null;
+  const reste = texte.slice(debut).replace(/^.*\n/, "");
+  const fin = reste.search(/^={2,3}[^=]/m);
+  return fin < 0 ? reste : reste.slice(0, fin);
+}
+
+function lireDiscipline(section: string, paire: boolean, combien: number): ClassementDiscipline {
+  const d = section.match(/\{\{\s*as of\s*\|\s*(\d{4})\s*\|\s*(\d{1,2})\s*\|\s*(\d{1,2})/i);
+  if (!d) throw new Error("date du classement introuvable");
+  const date = `${d[1]}-${d[2].padStart(2, "0")}-${d[3].padStart(2, "0")}`;
+
+  const lignes: LigneClassement[] = [];
+  const rangees = section.split(/\n\|-[^\n]*\n/);
+  for (let i = 0; i < rangees.length && lignes.length < combien; i++) {
+    const r = rangees[i].trim();
+    const rang = r.match(/^!\s*(?:rowspan="\d+"\s*\|\s*)?(\d+)\s*(?:\n|$)/);
+    if (!rang) continue;
+    const pays = r.match(/\{\{([A-Z]{3})\}\}/);
+    const nom = nomDe(r);
+    const points = r.match(/align="right"[^|\n]*\|\s*(\d{1,3}(?:,\d{3})+|\d+)\s*(?:\n|$)/);
+    if (!pays || !nom || !points) throw new Error(`ligne du rang ${rang[1]} illisible`);
+    const joueurs = [nom];
+    const pages = [pageDe(r) || nom];
+    const codes = [pays[1]];
+    if (paire) {
+      // Un double occupe deux lignes : le partenaire est sur la ligne suivante (qui ne commence pas par « ! »)
+      const suite = (rangees[i + 1] || "").trim();
+      const nomP = suite.startsWith("!") ? null : nomDe(suite);
+      const paysP = suite.match(/\{\{([A-Z]{3})\}\}/);
+      if (!nomP || !paysP) throw new Error(`partenaire du rang ${rang[1]} introuvable`);
+      joueurs.push(nomP);
+      pages.push(pageDe(suite) || nomP);
+      codes.push(paysP[1]);
+    }
+    lignes.push({ rang: Number(rang[1]), joueurs, pages, pays: codes, points: Number(points[1].replace(/,/g, "")) });
+  }
+
+  // Garde-fous : on veut exactement les rangs 1, 2, 3 dans l'ordre, avec des points qui ne remontent pas
+  if (lignes.length < combien) throw new Error(`seulement ${lignes.length} ligne(s) lue(s) sur ${combien}`);
+  lignes.forEach((l, k) => { if (l.rang !== k + 1) throw new Error(`rangs inattendus (${lignes.map((x) => x.rang).join(", ")})`); });
+  for (let k = 1; k < lignes.length; k++) if (lignes[k].points > lignes[k - 1].points) throw new Error("points qui ne descendent pas");
+  if (lignes.some((l) => l.points <= 0 || l.joueurs.some((j) => j.length < 2))) throw new Error("valeur invraisemblable");
+  return { date, lignes };
+}
+
+/** Lit le top (3 par défaut) de chaque discipline dans le texte brut de la page Wikipédia */
+function lireClassementBwf(wikitexte: string, combien = 3): LectureClassement {
+  const resultat: LectureClassement = { disciplines: {}, erreurs: {} };
+  const debut = wikitexte.search(/^==\s*Player rankings\s*==\s*$/m);
+  if (debut < 0) {
+    for (const d of DISCIPLINES) resultat.erreurs[d.id] = "section « Player rankings » introuvable";
+    return resultat;
+  }
+  const apres = wikitexte.slice(debut).replace(/^.*\n/, "");
+  const fin = apres.search(/^==[^=]/m);
+  const bloc = fin < 0 ? apres : apres.slice(0, fin);
+  for (const d of DISCIPLINES) {
+    const section = sectionDe(bloc, d.section);
+    if (!section) { resultat.erreurs[d.id] = "tableau introuvable"; continue; }
+    try { resultat.disciplines[d.id] = lireDiscipline(section, d.paire, combien); }
+    catch (e) { resultat.erreurs[d.id] = e instanceof Error ? e.message : "lecture impossible"; }
+  }
+  return resultat;
+}
+
+
+const MOIS_NOMS = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+const numeroMois = (nom: string) => MOIS_NOMS.findIndex((m) => m.toLowerCase() === nom.toLowerCase()) + 1;
+
+const PAYS_FR: Record<string, string> = {
+  "South Korea": "Corée du Sud", India: "Inde", Malaysia: "Malaisie", China: "Chine", Japan: "Japon", Indonesia: "Indonésie",
+  Thailand: "Thaïlande", France: "France", Germany: "Allemagne", Denmark: "Danemark", England: "Angleterre", Switzerland: "Suisse",
+  Netherlands: "Pays-Bas", Spain: "Espagne", Singapore: "Singapour", "Hong Kong": "Hong Kong", Taiwan: "Taïwan", "Chinese Taipei": "Taïwan",
+  Australia: "Australie", Canada: "Canada", "United States": "États-Unis", Vietnam: "Vietnam", Macau: "Macao", Philippines: "Philippines",
+  Scotland: "Écosse", Poland: "Pologne", Finland: "Finlande", Sweden: "Suède", Austria: "Autriche", Belgium: "Belgique", Turkey: "Turquie",
+  Brazil: "Brésil", Mexico: "Mexique", Peru: "Pérou", Egypt: "Égypte", Italy: "Italie", Bulgaria: "Bulgarie", Ireland: "Irlande",
+};
+
+/** Texte brut d'un extrait Wikipédia : liens, modèles, balises et gras retirés */
+function nettoyer(t: string): string {
+  return t
+    .replace(/\[\[(?:[^\]|]+\|)?([^\]]+)\]\]/g, "$1")
+    .replace(/\{\{[^}]*\}\}/g, "")
+    .replace(/<[^>]*>/g, "")
+    .replace(/''+/g, "")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+const champ = (morceau: string, nom: string) => {
+  const m = morceau.match(new RegExp(`\\*'''${nom}:'''\\s*([^\\n]+)`));
+  return m ? nettoyer(m[1]) : "";
+};
+
+/** Noms d'une cellule de finale : un nom en simple, deux en double (séparés par <br />) */
+const nomsCellule = (t: string): string[] =>
+  t.split(/<br\s*\/?>/i).map((x) => nettoyer(x.replace(/^\|/, "")).replace(/\s*\(badminton\)\s*$/i, "")).filter(Boolean);
+
+/** Les 5 finales d'un tournoi, ou rien si la lecture est douteuse (jamais de résultat à moitié rempli) */
+function lireFinales(morceau: string): Record<string, FinaleBwf> | undefined {
+  const cellules = morceau.split("\n").filter((l) => /^\|(?!-|\s*colspan)/.test(l) && /flagicon/.test(l));
+  const scores = [...morceau.matchAll(/'''Score:'''\s*([^\n]+)/g)].map((m) => nettoyer(m[1]));
+  if (cellules.length !== 10 || scores.length !== 5) return undefined;
+  const out: Record<string, FinaleBwf> = {};
+  for (let i = 0; i < 5; i++) {
+    const champions = nomsCellule(cellules[2 * i]);
+    const finalistes = nomsCellule(cellules[2 * i + 1]);
+    const attendu = i < 2 ? 1 : 2;
+    if (champions.length !== attendu || finalistes.length !== attendu) return undefined;
+    out[ORDRE_FINALES[i]] = { champions, finalistes, score: scores[i] };
+  }
+  return out;
+}
+
+const CODES_TABLEAU: Record<string, string> = { MS: "SH", WS: "SD", MD: "DH", WD: "DD", XD: "DM" };
+/** « 48MS/32WS/32MD/32WD/32XD » → { SH: 48, SD: 32, … } ; rien si le format est incomplet */
+function lireTableaux(format: string): Record<string, number> | undefined {
+  const out: Record<string, number> = {};
+  for (const m of format.matchAll(/(\d+)(MS|WS|MD|WD|XD)/g)) out[CODES_TABLEAU[m[2]]] = Number(m[1]);
+  return Object.keys(out).length === 5 ? out : undefined;
+}
+
+const jj = (n: number) => String(n).padStart(2, "0");
+
+/** Tournois d'une page « 20XX BWF World Tour » (tous les mois), dans l'ordre du calendrier */
+function lireCalendrierBwf(wikitexte: string, annee: number): TournoiBwf[] {
+  const resultat: TournoiBwf[] = [];
+  for (const mois of MOIS_NOMS) {
+    const a = wikitexte.indexOf(`=== ${mois} ===`);
+    if (a < 0) continue;
+    const reste = wikitexte.slice(a).replace(/^.*\n/, "");
+    const f = reste.search(/\n={2,3}[^=]/);
+    const bloc = f < 0 ? reste : reste.slice(0, f);
+
+    // Les dates (« 3–8 November » ou « 28 November – 3 December ») précèdent le ou les tournois de la semaine
+    const dates = [...bloc.matchAll(/^\|\s*(?:rowspan="\d+"\s*\|\s*)?(\d{1,2})(?:\s+([A-Za-z]+))?\s*[–—-]\s*(\d{1,2})\s+([A-Za-z]+)\s*$/gm)]
+      .map((m) => ({ pos: m.index ?? 0, j1: Number(m[1]), m1: m[2] || m[4], j2: Number(m[3]), m2: m[4] }));
+    const entetes = [...bloc.matchAll(/^'''\[\[([^\]|]+)(?:\|([^\]]+))?\]\]'''/gm)];
+
+    entetes.forEach((e, k) => {
+      const pos = e.index ?? 0;
+      const morceau = bloc.slice(pos, k + 1 < entetes.length ? (entetes[k + 1].index ?? bloc.length) : bloc.length);
+      const d = dates.filter((x) => x.pos < pos).pop();
+      if (!d) return;
+      const n1 = numeroMois(d.m1);
+      const n2 = numeroMois(d.m2);
+      if (!n1 || !n2 || d.j1 < 1 || d.j2 < 1 || d.j1 > 31 || d.j2 > 31) return;
+      const debut = `${annee}-${jj(n1)}-${jj(d.j1)}`;
+      const fin = `${annee}-${jj(n2)}-${jj(d.j2)}`;
+      if (fin < debut) return; // incohérent : on ignore plutôt que d'afficher faux
+      const nom = nettoyer(e[2] || e[1]).replace(/\s*\(badminton\)\s*$/i, "");
+      const hote = champ(morceau, "Host");
+      const virgule = hote.lastIndexOf(",");
+      const ville = virgule < 0 ? hote : hote.slice(0, virgule).trim();
+      const paysEn = virgule < 0 ? "" : hote.slice(virgule + 1).trim();
+      const niveau = champ(morceau, "Level");
+      const prix = champ(morceau, "Prize").replace(/^\$\s*/, "").replace(/,/g, " ");
+      if (!nom || !niveau) return;
+      resultat.push({ nom, debut, fin, ville, pays: PAYS_FR[paysEn] || paysEn, niveau, dotation: prix ? `${prix} $` : undefined, tableaux: lireTableaux(champ(morceau, "Format")), finales: lireFinales(morceau) });
+    });
+  }
+  return resultat.sort((x, y) => (x.debut < y.debut ? -1 : x.debut > y.debut ? 1 : 0));
+}
+
+
+// 📸 Photo libre de chaque joueur : image principale de sa page Wikipédia, avec auteur et licence (à créditer)
+async function appelerPhotos(params: Record<string, string>) {
+  const q = new URLSearchParams({ format: "json", formatversion: "2", origin: "*", ...params });
+  return lireWikipedia(`${API_WIKIPEDIA_PHOTOS}?${q}`);
+}
+function texteSeul(html: string): string {
+  return String(html || "")
+    .replace(/<[^>]*>/g, " ")
+    .replace(/&amp;/g, "&").replace(/&lt;/g, "<").replace(/&gt;/g, ">").replace(/&quot;/g, '"').replace(/&#0?39;/g, "'").replace(/&nbsp;/g, " ")
+    .replace(/\s+/g, " ").trim();
+}
+const par50 = <T,>(liste: T[]): T[][] => {
+  const lots: T[][] = [];
+  for (let i = 0; i < liste.length; i += 50) lots.push(liste.slice(i, i + 50));
+  return lots;
+};
+type PhotoTrouvee = { url: string; auteur: string; licence: string; licenceUrl?: string; fichierUrl: string };
+async function chargerPhotos(pages: string[]): Promise<Record<string, PhotoTrouvee>> {
+  const demandes = [...new Set(pages.filter(Boolean))];
+  const resultat: Record<string, PhotoTrouvee> = {};
+  if (demandes.length === 0) return resultat;
+  const parFinal = new Map<string, { source: string; fichier: string }>();
+  const versFinal = new Map<string, string>();
+  for (const lot of par50(demandes)) {
+    const j = await appelerPhotos({ action: "query", prop: "pageimages", piprop: "thumbnail|name", pithumbsize: "480", redirects: "1", titles: lot.join("|") });
+    const normalise = new Map<string, string>(((j.query?.normalized || []) as { from: string; to: string }[]).map((x) => [x.from, x.to]));
+    const redirige = new Map<string, string>(((j.query?.redirects || []) as { from: string; to: string }[]).map((x) => [x.from, x.to]));
+    for (const t of lot) {
+      const n = normalise.get(t) || t;
+      versFinal.set(t, redirige.get(n) || n);
+    }
+    for (const p of (j.query?.pages || []) as { title: string; thumbnail?: { source: string }; pageimage?: string }[]) {
+      if (p.thumbnail?.source && p.pageimage) parFinal.set(p.title, { source: p.thumbnail.source, fichier: p.pageimage.replace(/_/g, " ") });
+    }
+  }
+  const fichiers = [...new Set([...parFinal.values()].map((v) => v.fichier))];
+  const infos = new Map<string, { auteur: string; licence: string; licenceUrl?: string; fichierUrl: string }>();
+  for (const lot of par50(fichiers)) {
+    const j = await appelerPhotos({ action: "query", prop: "imageinfo", iiprop: "extmetadata|url", titles: lot.map((f) => "File:" + f).join("|") });
+    for (const p of (j.query?.pages || []) as { title: string; imageinfo?: { descriptionurl?: string; extmetadata?: Record<string, { value: string }> }[] }[]) {
+      const ii = p.imageinfo?.[0];
+      if (!ii) continue;
+      const m = ii.extmetadata || {};
+      infos.set(p.title.replace(/^File:/, "").replace(/_/g, " "), {
+        auteur: texteSeul(m.Artist?.value) || texteSeul(m.Credit?.value) || "Auteur non précisé",
+        licence: texteSeul(m.LicenseShortName?.value) || "Licence libre",
+        licenceUrl: m.LicenseUrl?.value ? texteSeul(m.LicenseUrl.value) : undefined,
+        fichierUrl: ii.descriptionurl || `https://commons.wikimedia.org/wiki/File:${encodeURIComponent(p.title.replace(/^File:/, ""))}`,
+      });
+    }
+  }
+  for (const t of demandes) {
+    const img = parFinal.get(versFinal.get(t) || t);
+    if (!img) continue;
+    const info = infos.get(img.fichier);
+    if (!info) continue; // sans auteur ni licence connus : pas de photo plutôt qu'une photo non créditée
+    if (/fair use|non-?free|copyrighted/i.test(info.licence)) continue; // jamais une image non libre
+    resultat[t] = { url: img.source, ...info };
+  }
+  return resultat;
+}
+
+/** Photos du classement : on garde celles déjà copiées chez nous, on copie les nouvelles (joueur arrivé dans le top 3) */
+// deno-lint-ignore no-explicit-any
+async function copierPhotosClassement(supabaseAdmin: any, pages: string[], anciennes: Record<string, PhotoStockee>): Promise<Record<string, PhotoStockee>> {
+  const resultat: Record<string, PhotoStockee> = {};
+  const manquantes: string[] = [];
+  for (const p of new Set(pages)) { if (anciennes[p]) resultat[p] = anciennes[p]; else manquantes.push(p); }
+  if (manquantes.length === 0) return resultat;
+  let trouvees: Record<string, PhotoTrouvee> = {};
+  try { trouvees = await chargerPhotos(manquantes); } catch { return resultat; }
+  for (const [page, ph] of Object.entries(trouvees)) {
+    try {
+      const r = await fetch(ph.url, { headers: { "User-Agent": UA_WIKIPEDIA }, signal: AbortSignal.timeout(20_000) });
+      const type = (r.headers.get("content-type") || "").split(";")[0].trim();
+      if (!r.ok || !/^image\/(jpeg|png|webp)$/.test(type)) continue;
+      const octets = new Uint8Array(await r.arrayBuffer());
+      if (octets.length === 0 || octets.length > 2_000_000) continue;
+      const ext = type === "image/jpeg" ? "jpg" : type.slice(6);
+      const nom = page.normalize("NFD").replace(/[̀-ͯ]/g, "").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-|-$/g, "").toLowerCase().slice(0, 40) || "joueur";
+      const chemin = `classement/${nom}-${Date.now().toString(36)}.${ext}`;
+      const { error } = await supabaseAdmin.storage.from("actualities").upload(chemin, octets, { contentType: type, upsert: true });
+      if (error) continue;
+      const { data } = supabaseAdmin.storage.from("actualities").getPublicUrl(chemin);
+      const url = String(data?.publicUrl || "");
+      if (url) resultat[page] = { ...ph, url, source: ph.url };
+    } catch { /* cette photo sera retentée au prochain passage */ }
+  }
+  return resultat;
+}
+
+/** Relit Wikipédia et prépare le nouveau contenu. Tout ce qui n'est pas lisible proprement reste comme avant. */
+// deno-lint-ignore no-explicit-any
+async function actualiserClassementBwf(supabaseAdmin: any, ancien: ClassementStocke | undefined, maintenant = new Date()): Promise<{ nouveau: ClassementStocke; change: boolean; rapport: string[] }> {
+  const rapport: string[] = [];
+  const nouveau: ClassementStocke = {
+    maj: maintenant.toISOString(),
+    disciplines: { ...(ancien?.disciplines ?? {}) },
+    erreurs: {},
+    calendrier: ancien?.calendrier ?? [],
+    photos: ancien?.photos ?? {},
+  };
+
+  // 1) Classement des 5 disciplines
+  try {
+    const j = await lireWikipedia(API_CLASSEMENT_WIKIPEDIA);
+    const lecture = lireClassementBwf(String(j?.parse?.wikitext ?? ""));
+    for (const { id } of DISCIPLINES) {
+      const nv = lecture.disciplines[id];
+      const vieux = ancien?.disciplines?.[id];
+      if (!nv) { nouveau.erreurs[id] = lecture.erreurs[id] || "lecture impossible"; rapport.push(`${id} : ${nouveau.erreurs[id]}`); continue; }
+      if (vieux && nv.date < vieux.date) continue; // la source est en retard sur ce qu'on a déjà : on garde le plus récent
+      // Les points varient lentement d'une semaine à l'autre : un grand saut vient d'une erreur ou d'une modification douteuse
+      if (vieux && Math.abs(nv.lignes[0].points - vieux.lignes[0].points) / vieux.lignes[0].points > 0.25) {
+        nouveau.erreurs[id] = "variation suspecte des points, ancien classement conservé";
+        rapport.push(`${id} : ${nouveau.erreurs[id]}`);
+        continue;
+      }
+      nouveau.disciplines[id] = nv;
+    }
+  } catch (e) {
+    rapport.push("classement : " + (e instanceof Error ? e.message : "erreur"));
+  }
+
+  // 2) Calendrier et résultats : de 4 mois en arrière à 10 mois en avant
+  const annee = maintenant.getUTCFullYear();
+  const annees = maintenant.getUTCMonth() < 2 ? [annee - 1, annee, annee + 1] : [annee, annee + 1];
+  const tous: TournoiBwf[] = [];
+  for (const a of annees) {
+    try {
+      const j = await lireWikipedia(apiCalendrier(a));
+      if (j?.parse?.wikitext) tous.push(...lireCalendrierBwf(String(j.parse.wikitext), a));
+    } catch (e) { rapport.push(`calendrier ${a} : ${e instanceof Error ? e.message : "erreur"}`); }
+  }
+  const auj = maintenant.toISOString().slice(0, 10);
+  const jours = (n: number) => new Date(maintenant.getTime() + n * 86_400_000).toISOString().slice(0, 10);
+  const fenetre = tous.filter((t) => t.fin >= jours(-120) && t.debut <= jours(300));
+  if (fenetre.filter((t) => t.fin >= auj).length >= 3) {
+    nouveau.calendrier = fenetre.map((t) => (t.fin < auj ? t : { ...t, finales: undefined }));
+  } else {
+    rapport.push("calendrier : trop peu de tournois lus, ancien calendrier conservé");
+  }
+
+  // 3) Photos des joueurs du top 3 actuel (les autres photos sont retirées de la liste, pas du stockage)
+  const pages = Object.values(nouveau.disciplines).flatMap((dd) => dd!.lignes.flatMap((l) => l.pages));
+  nouveau.photos = await copierPhotosClassement(supabaseAdmin, pages, ancien?.photos ?? {});
+
+  const fige = (x?: ClassementStocke) => JSON.stringify(x ? { ...x, maj: undefined } : null);
+  return { nouveau, change: fige(nouveau) !== fige(ancien), rapport };
+}
+
+
 Deno.serve(async (req) => {
   const ip = ipClient(req);
   let action = "";
@@ -1958,6 +2331,7 @@ async function traiter(req: Request): Promise<Response> {
       presentationMode: d.presentationMode === true,
       maintenanceMode: d.maintenanceMode === true,
       sectionsVisible: d.sectionsVisible ?? {},
+      classementBwf: d.classementBwf ?? null, // 🏸 classement mondial + calendrier (relevés par cron_classement_bwf)
       clubConfig: d.clubConfig ?? {},
       tshirtOpen: d.tshirtOpen === true,
       tshirtPrice: typeof d.tshirtPrice === "number" ? d.tshirtPrice : null,
@@ -4993,6 +5367,24 @@ async function traiter(req: Request): Promise<Response> {
       sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
     });
     return json({ ok: true });
+  }
+
+  // ─── ACTION: Mise à jour du classement mondial BWF + calendrier (tâche quotidienne, voir classement-bwf.yml) ───
+  if (action === "cron_classement_bwf") {
+    const secret = String(body.secret || "");
+    const expectedSecret = Deno.env.get("CRON_SECRET");
+    if (!expectedSecret || !constantTimeEqual(secret, expectedSecret)) {
+      return json({ ok: false, reason: "Non autorisé." }, 401);
+    }
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const { nouveau, change, rapport } = await actualiserClassementBwf(supabaseAdmin, d.classementBwf as ClassementStocke | undefined);
+    if (!change) return json({ ok: true, change: false, rapport });
+    d.classementBwf = nouveau;
+    const { error: saveError } = await saveDB(d);
+    if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    return json({ ok: true, change: true, disciplines: Object.keys(nouveau.disciplines), tournois: nouveau.calendrier.length, photos: Object.keys(nouveau.photos).length, rapport });
   }
 
   // ─── ACTION: Nettoyage automatique des membres non payés après date limite ───

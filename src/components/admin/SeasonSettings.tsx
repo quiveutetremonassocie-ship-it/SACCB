@@ -1017,6 +1017,7 @@ function SectionVisibilityToggles({
     { key: "palmares", label: "Palmarès", emoji: "🥇", description: "Résultats tournois extérieurs" },
     { key: "rules", label: "Règlement", emoji: "📜", description: "Texte + PDF" },
     { key: "inscription", label: "Inscription", emoji: "📝", description: "Formulaire public d'inscription" },
+    { key: "classementBwf", label: "Classement mondial", emoji: "🌍", description: "Podiums BWF + tournois (mis à jour tout seuls)" },
   ];
   const visibility = db.sectionsVisible ?? {};
 
