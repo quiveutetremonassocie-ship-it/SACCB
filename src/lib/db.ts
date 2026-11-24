@@ -1255,6 +1255,20 @@ export async function adminEspace(adminEmail: string, adminCode: string): Promis
 }
 
 // 🚨 [PROPRIÉTAIRE] Active / retire le verrou d'urgence de l'administration
+// 🌍 [ADMIN] Relit tout de suite le classement mondial et les tournois (même travail que la tâche quotidienne)
+export async function adminClassementBwfMaj(email: string, code: string): Promise<{ ok: boolean; change?: boolean; disciplines?: number; tournois?: number; photos?: number; rapport?: string[]; reason?: string }> {
+  try {
+    const res = await fetch(EDGE_FUNCTION_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", apikey: SUPA_KEY, Authorization: `Bearer ${SUPA_KEY}` },
+      body: JSON.stringify({ action: "admin_classement_bwf_maj", email, code }),
+    });
+    return await res.json();
+  } catch {
+    return { ok: false, reason: "Connexion impossible." };
+  }
+}
+
 export async function adminVerrouAdmin(email: string, code: string, actif: boolean): Promise<{ ok: boolean; actif?: boolean; reason?: string }> {
   try {
     const res = await fetch(EDGE_FUNCTION_URL, {

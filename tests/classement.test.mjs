@@ -6,7 +6,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { demarrer, appeler, etat } from "./outils/fauxServeur.mjs";
 import { RACINE } from "./outils/compiler.mjs";
-import { baseDeTest } from "./outils/donnees.mjs";
+import { ADMIN, baseDeTest } from "./outils/donnees.mjs";
 
 let serveur;
 before(async () => { serveur = await demarrer(); });
@@ -235,4 +235,32 @@ test("mise à jour : la photo non libre ou introuvable ne casse rien (initiales 
   const { nouveau } = await actualiser(undefined);
   assert.equal(nouveau.photos["Kunlavut Vitidsarn"], undefined);
   assert.equal(Object.keys(nouveau.photos).length, 2);
+});
+
+// ─── Bouton « Mettre à jour maintenant » (admin) ───
+
+test("bouton admin : un admin met à jour tout de suite, l'action est tracée dans le journal, pas deux fois de suite", async () => {
+  fausseWikipedia();
+  const r = await appeler({ action: "admin_classement_bwf_maj", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(r.status, 200);
+  assert.equal(r.json.ok, true);
+  assert.equal(r.json.change, true);
+  assert.equal(r.json.disciplines, 5);
+  assert.equal(Object.keys(etat.base.classementBwf.disciplines).length, 5);
+  assert.ok(etat.base.adminJournal.some((j) => j.actions.some((a) => /Classement mondial/.test(a))), "tracé dans le journal");
+  // un deuxième clic immédiat est refusé (on ne harcèle pas Wikipédia)
+  const encore = await appeler({ action: "admin_classement_bwf_maj", email: ADMIN.email, code: ADMIN.code });
+  assert.equal(encore.status, 429);
+});
+
+test("bouton admin : refusé sans identifiants valides et pour un accès en lecture seule, sans rien lire sur Wikipédia", async () => {
+  fausseWikipedia();
+  const intrus = await appeler({ action: "admin_classement_bwf_maj", email: "intrus@exemple.fr", code: "mauvais" });
+  assert.notEqual(intrus.status, 200);
+  etat.base.adminEmails = [ADMIN.email, { email: "lecteur@exemple.fr", readOnly: true }];
+  etat.base.adminCredentials.push({ email: "lecteur@exemple.fr", code: "CodeLecteur7", readOnly: true });
+  const lecteur = await appeler({ action: "admin_classement_bwf_maj", email: "lecteur@exemple.fr", code: "CodeLecteur7" });
+  assert.equal(lecteur.status, 403);
+  assert.equal(etat.base.classementBwf, undefined);
+  assert.equal(etat.appelsExterieurs.length, 0);
 });

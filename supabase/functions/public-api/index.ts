@@ -1744,6 +1744,8 @@ async function copierPhotosClassement(supabaseAdmin: any, pages: string[], ancie
   return resultat;
 }
 
+let derniereMajClassementBwf = 0; // heure de la dernière mise à jour demandée depuis l'admin
+
 /** Relit Wikipédia et prépare le nouveau contenu. Tout ce qui n'est pas lisible proprement reste comme avant. */
 // deno-lint-ignore no-explicit-any
 async function actualiserClassementBwf(supabaseAdmin: any, ancien: ClassementStocke | undefined, maintenant = new Date()): Promise<{ nouveau: ClassementStocke; change: boolean; rapport: string[] }> {
@@ -5367,6 +5369,28 @@ async function traiter(req: Request): Promise<Response> {
       sentBy: String(body.adminEmail || "").toLowerCase().trim() || "admin",
     });
     return json({ ok: true });
+  }
+
+  // ─── ACTION: 🌍 [ADMIN] « Mettre à jour maintenant » le classement mondial (même travail que la tâche quotidienne) ───
+  if (action === "admin_classement_bwf_maj") {
+    const { data, error } = await loadDB();
+    if (error || !data) return json({ ok: false, reason: "Erreur serveur." }, 500);
+    const d = data.data as Record<string, unknown>;
+    const authError = await checkAdminAuth({ ...body, __ip: ip }, d);
+    if (authError) return authError;
+    const qui = sanitize(String(body.adminEmail || body.email || "")).toLowerCase();
+    if (droitsAdmin(d, qui).lectureSeule) return json({ ok: false, reason: "Votre accès est en lecture seule." }, 403);
+    // Pas plus d'une lecture toutes les 30 secondes (on ne harcèle pas Wikipédia)
+    if (Date.now() - derniereMajClassementBwf < 30_000) return json({ ok: false, reason: "Une mise à jour vient d'être faite, réessayez dans quelques secondes." }, 429);
+    derniereMajClassementBwf = Date.now();
+    const { nouveau, change, rapport } = await actualiserClassementBwf(supabaseAdmin, d.classementBwf as ClassementStocke | undefined);
+    if (change) {
+      d.classementBwf = nouveau;
+      d.adminJournal = noterJournal(d.adminJournal, qui, ip, ["🌍 Classement mondial mis à jour à la main"]);
+      const { error: saveError } = await saveDB(d);
+      if (saveError) return json({ ok: false, reason: "Erreur sauvegarde." }, 500);
+    }
+    return json({ ok: true, change, disciplines: Object.keys(nouveau.disciplines).length, tournois: nouveau.calendrier.length, photos: Object.keys(nouveau.photos).length, rapport });
   }
 
   // ─── ACTION: Mise à jour du classement mondial BWF + calendrier (tâche quotidienne, voir classement-bwf.yml) ───

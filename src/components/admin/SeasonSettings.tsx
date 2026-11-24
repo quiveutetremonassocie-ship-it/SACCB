@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { CalendarCog, RefreshCw, Lock, Unlock, UserPlus, MessageCircle, Archive, Sparkles, Trash2, Pencil, Check, X, RotateCcw, ShieldCheck, Plus, Mail, KeyRound, Settings, Clock, ListChecks, Building2, ChevronDown, Upload, FileText } from "lucide-react";
 import { DB, QUOTA_DEFAULT, SeasonArchive, ADMIN_SECTIONS, ClubConfig, ScheduleSlot, DEFAULT_HORAIRES } from "@/lib/types";
-import { adminNotifyNewSeason } from "@/lib/db";
+import { adminNotifyNewSeason, adminClassementBwfMaj } from "@/lib/db";
 import { supabaseClient, REPORTS_BUCKET, EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import ArchiveEditModal from "./ArchiveEditModal";
 
@@ -426,7 +426,7 @@ export default function SeasonSettings({
       <ClubConfigSection db={db} onPersist={onPersist} readOnly={readOnly} />
 
       {/* 👁️ Toggles de visibilité des sections du site public */}
-      <SectionVisibilityToggles db={db} onPersist={onPersist} readOnly={readOnly} />
+      <SectionVisibilityToggles db={db} onPersist={onPersist} onRefresh={onRefresh} adminEmail={adminEmail} adminCode={adminCode} readOnly={readOnly} />
 
       </>)}
       {onglet === "saison" && (<>
@@ -1002,12 +1002,35 @@ export default function SeasonSettings({
 function SectionVisibilityToggles({
   db,
   onPersist,
+  onRefresh,
+  adminEmail,
+  adminCode,
   readOnly,
 }: {
   db: DB;
   onPersist: (db: DB) => Promise<void>;
+  onRefresh?: () => Promise<void>;
+  adminEmail?: string;
+  adminCode?: string;
   readOnly?: boolean;
 }) {
+  const [majEnCours, setMajEnCours] = useState(false);
+  const [majMessage, setMajMessage] = useState("");
+  async function majClassement() {
+    if (readOnly || !adminEmail || !adminCode || majEnCours) return;
+    setMajEnCours(true);
+    setMajMessage("");
+    const r = await adminClassementBwfMaj(adminEmail, adminCode);
+    setMajEnCours(false);
+    if (!r.ok) { setMajMessage("❌ " + (r.reason || "Mise à jour impossible.")); return; }
+    const alertes = (r.rapport ?? []).length ? " ⚠️ À noter : " + (r.rapport ?? []).join(" ; ") + "." : "";
+    setMajMessage(
+      (r.change ? "✅ Mis à jour : " + r.disciplines + " discipline(s), " + r.tournois + " tournoi(s), " + r.photos + " photo(s)." : "✅ Déjà à jour : Wikipédia n'a rien de plus récent.") + alertes,
+    );
+    await onRefresh?.();
+  }
+  const cb = db.classementBwf;
+  const datesCb = Object.values(cb?.disciplines ?? {}).map((x) => x?.date).filter((x): x is string => !!x).sort();
   const sections: { key: keyof NonNullable<DB["sectionsVisible"]>; label: string; emoji: string; description?: string }[] = [
     { key: "presentation", label: "Présentation", emoji: "🏸", description: "« Qui sommes-nous »" },
     { key: "actualites", label: "Actualités", emoji: "📰", description: "Carrousel d'actus" },
@@ -1072,6 +1095,25 @@ function SectionVisibilityToggles({
             </button>
           );
         })}
+      </div>
+      {/* 🌍 Classement mondial : mise à jour automatique chaque jour, bouton pour forcer tout de suite */}
+      <div className="mt-3 rounded-lg border border-slate-200 bg-white p-3">
+        <p className="text-sm font-semibold text-slate-700">🌍 Classement mondial</p>
+        <p className="text-xs text-slate-500 mt-0.5">
+          Se met à jour tout seul chaque jour (source : Wikipédia). {cb
+            ? "Classements du " + datesCb[0] + (datesCb.length > 1 && datesCb[datesCb.length - 1] !== datesCb[0] ? " au " + datesCb[datesCb.length - 1] : "") + " · " + (cb.calendrier ?? []).length + " tournois."
+            : "Rien n'a encore été chargé : clique sur le bouton pour la première mise à jour."}
+        </p>
+        <button
+          onClick={majClassement}
+          disabled={readOnly || majEnCours}
+          className="mt-2 inline-flex items-center gap-2 rounded-lg bg-[#1e3a5f] text-white text-sm font-semibold px-3 py-2 hover:bg-[#2d5a8e] disabled:opacity-50 transition"
+        >
+          <RefreshCw className={"w-4 h-4 " + (majEnCours ? "animate-spin" : "")} />
+          {majEnCours ? "Mise à jour en cours…" : "Mettre à jour maintenant"}
+        </button>
+        {majMessage && <p className="text-xs text-slate-600 mt-2" role="status">{majMessage}</p>}
+        <p className="text-[11px] text-slate-400 mt-2">Pour cacher cette partie du site : désactive « Classement mondial » dans la grille ci-dessus. Rien n'est supprimé, tu peux la réactiver quand tu veux.</p>
       </div>
     </div>
   );
