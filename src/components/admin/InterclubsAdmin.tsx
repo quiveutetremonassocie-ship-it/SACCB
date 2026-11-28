@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { Plus, Trash2, Copy, Check, RefreshCw, ExternalLink, Upload, ChevronDown, ChevronUp, Lock, Unlock, ClipboardList } from "lucide-react";
-import { DB, InterClub, InterClubClub, INTERCLUB_NIVEAUX, getEffectiveConfig } from "@/lib/types";
+import { DB, InterClub, InterClubClub, INTERCLUB_NIVEAUX, getEffectiveConfig, joueursCourts } from "@/lib/types";
 import { EDGE_FUNCTION_URL, SUPA_KEY } from "@/lib/supabase";
 import { adminInterneNotifier } from "@/lib/db";
 import InterclubLiveAdmin from "./InterclubLiveAdmin";
@@ -686,7 +686,7 @@ export default function InterclubsAdmin({
                                   {binomes.map((b, i) => (
                                     <li key={b.id} className="flex items-center gap-2 px-3 py-1.5 text-sm">
                                       <span className="w-5 text-[11px] text-slate-400 font-semibold">{i + 1}.</span>
-                                      <span className="flex-1 min-w-0 truncate text-slate-700">{b.joueur1} / {b.joueur2}</span>
+                                      <span className="flex-1 min-w-0 truncate text-slate-700">{joueursCourts(`${b.joueur1} / ${b.joueur2}`)}</span>
                                       {b.niveau && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 shrink-0">{b.niveau}</span>}
                                     </li>
                                   ))}

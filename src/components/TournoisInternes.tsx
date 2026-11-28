@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Trophy, Loader2, Radio, Check, Users, CalendarDays, Lock, KeyRound } from "lucide-react";
 import { membreInterne, MembreInterneReponse, TournoiInterneVue } from "@/lib/db";
-import { LiveMatch } from "@/lib/types";
+import { LiveMatch, joueursCourts, nomsCourtsUniques } from "@/lib/types";
 import { LiveBoard } from "./live/LiveBoard";
 import ReglementTournoi from "./live/ReglementTournoi";
 import { MesMatchs } from "./InterclubPage";
@@ -102,7 +102,7 @@ export default function TournoisInternes({
             <div key={t.id} className="rounded-2xl p-4 bg-emerald-50 border border-emerald-200 flex items-center gap-3">
               <Check className="w-5 h-5 text-emerald-600 shrink-0" />
               <span className="flex-1 min-w-0 text-sm text-emerald-800">
-                Inscrit(e) à <strong>{t.name}</strong>{t.date ? ` le ${dateFr(t.date)}` : ""} : <strong>{t.monBinome.joueur1} / {t.monBinome.joueur2}</strong>
+                Inscrit(e) à <strong>{t.name}</strong>{t.date ? ` le ${dateFr(t.date)}` : ""} : <strong>{joueursCourts(`${t.monBinome.joueur1} / ${t.monBinome.joueur2}`)}</strong>
               </span>
               <button onClick={onVoirTout} className="text-xs font-semibold text-emerald-700 hover:underline shrink-0">Voir</button>
             </div>
@@ -219,7 +219,7 @@ function CarteTournoi({
                   return (
                     <li key={i} className={`flex items-center gap-2 text-sm px-2 py-1 rounded-lg ${moi ? "bg-emerald-400/25" : ""}`}>
                       <span className="w-5 text-[11px] text-white/50">{i + 1}.</span>
-                      <span className="flex-1 min-w-0 truncate">{b.joueur1} / {b.joueur2}{moi ? " (toi)" : ""}</span>
+                      <span className="flex-1 min-w-0 truncate">{joueursCourts(`${b.joueur1} / ${b.joueur2}`)}{moi ? " (toi)" : ""}</span>
                       {b.niveau && <span className="text-[10px] px-1.5 py-0.5 rounded bg-white/15">{b.niveau}</span>}
                     </li>
                   );
@@ -235,7 +235,7 @@ function CarteTournoi({
         {t.monBinome ? (
           <div className="rounded-xl bg-emerald-50 border border-emerald-200 px-3 py-2.5 flex items-center justify-between gap-2 flex-wrap">
             <p className="text-sm text-emerald-800">
-              <Check className="w-4 h-4 inline mr-1" /> Inscrit(e) : <strong>{t.monBinome.joueur1} / {t.monBinome.joueur2}</strong>
+              <Check className="w-4 h-4 inline mr-1" /> Inscrit(e) : <strong>{joueursCourts(`${t.monBinome.joueur1} / ${t.monBinome.joueur2}`)}</strong>
               {t.monBinome.niveau && <span className="text-xs text-emerald-700"> · {t.monBinome.niveau}</span>}
             </p>
             {t.ouvert && <button onClick={retirer} disabled={busy} className="text-xs text-red-600 font-semibold hover:underline">Me désinscrire</button>}
@@ -248,7 +248,7 @@ function CarteTournoi({
               <p className="text-sm font-semibold text-slate-700">S&apos;inscrire avec un partenaire</p>
               <select className="input w-full !text-sm" value={partenaire} onChange={(e) => setPartenaire(e.target.value)}>
                 <option value="">— Choisis ton partenaire —</option>
-                {adherents.map((a) => <option key={a.id} value={a.id}>{a.nom}</option>)}
+                {adherents.map((a) => <option key={a.id} value={a.id}>{nomsCourtsUniques(adherents.map((x) => x.nom)).get(a.nom.trim()) ?? a.nom}</option>)}
               </select>
               {t.niveaux.length > 1 && (
                 <div className="flex flex-wrap gap-1.5">

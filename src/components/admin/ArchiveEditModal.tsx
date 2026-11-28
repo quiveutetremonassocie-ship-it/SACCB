@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { X, Trash2, Pencil, Check, ChevronDown, ChevronUp, Trophy, Users, FileText, Calendar, FileDown, ArrowUpFromLine, Receipt } from "lucide-react";
-import { DB, SeasonArchive, Tournoi, InscritTournoi, ReunionReport, Facture } from "@/lib/types";
+import { DB, SeasonArchive, Tournoi, InscritTournoi, ReunionReport, Facture, binomeCourt, nomsCourtsUniques } from "@/lib/types";
+import { ChampsBinome, binomePropre } from "../ChampAdherent";
 
 export default function ArchiveEditModal({
   db,
@@ -131,14 +132,14 @@ export default function ArchiveEditModal({
   }
 
   async function saveInscritEdit(insc: InscritTournoi) {
-    if (!inscritForm.joueurs.trim()) {
+    if (!binomePropre(inscritForm.joueurs)) {
       alert("Le nom des joueurs est requis.");
       return;
     }
     await updateArchive({
       inscrits_tournoi: inscrits.map((i) =>
         i.id === insc.id
-          ? { ...i, joueurs: inscritForm.joueurs.trim(), resultat: inscritForm.resultat.trim() || null }
+          ? { ...i, joueurs: binomePropre(inscritForm.joueurs), resultat: inscritForm.resultat.trim() || null }
           : i
       ),
     });
@@ -293,12 +294,7 @@ export default function ArchiveEditModal({
                                     <div key={insc.id} className="p-3">
                                       {isEditingI ? (
                                         <div className="space-y-2">
-                                          <input
-                                            className="input !text-sm"
-                                            value={inscritForm.joueurs}
-                                            onChange={(e) => setInscritForm({ ...inscritForm, joueurs: e.target.value })}
-                                            placeholder="Joueur 1 / Joueur 2"
-                                          />
+                                          <ChampsBinome noms={(db.membres ?? []).map((m) => m.nom)} value={inscritForm.joueurs} onChange={(v) => setInscritForm({ ...inscritForm, joueurs: v })} />
                                           <input
                                             className="input !text-sm"
                                             value={inscritForm.resultat}
@@ -317,7 +313,7 @@ export default function ArchiveEditModal({
                                       ) : (
                                         <div className="flex items-center justify-between gap-2">
                                           <div className="min-w-0">
-                                            <p className="text-sm text-slate-700 truncate">🎾 {insc.joueurs}</p>
+                                            <p className="text-sm text-slate-700 truncate">🎾 {binomeCourt(insc.joueurs, nomsCourtsUniques((db.membres ?? []).map((m) => m.nom)))}</p>
                                             {insc.resultat && (
                                               <p className="text-xs text-amber-600 font-semibold">📊 {insc.resultat}</p>
                                             )}

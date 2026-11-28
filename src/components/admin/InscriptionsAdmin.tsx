@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Pencil, Trash2, Users, Plus } from "lucide-react";
-import { DB } from "@/lib/types";
+import { DB, binomeCourt, nomsCourtsUniques } from "@/lib/types";
+import ChampAdherent from "../ChampAdherent";
 
 export default function InscriptionsAdmin({
   db,
@@ -18,6 +19,8 @@ export default function InscriptionsAdmin({
   const [addingFor, setAddingFor] = useState<string | null>(null);
   const [p1, setP1] = useState("");
   const [p2, setP2] = useState("");
+  const nomsMembres = (db.membres ?? []).map((m) => m.nom);
+  const courts = nomsCourtsUniques(nomsMembres);
 
   async function del(id: string) {
     const next = { ...db, inscrits_tournoi: db.inscrits_tournoi.filter((i) => i.id !== id) };
@@ -90,20 +93,11 @@ export default function InscriptionsAdmin({
             {addingFor === t.id && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-2 space-y-2">
                 <p className="text-xs text-blue-600 font-semibold uppercase tracking-widest">Ajouter un binôme manuellement</p>
-                <div className="grid grid-cols-2 gap-2">
-                  <input
-                    className="input !text-sm"
-                    placeholder="Joueur 1"
-                    value={p1}
-                    onChange={(e) => setP1(e.target.value)}
-                  />
-                  <input
-                    className="input !text-sm"
-                    placeholder="Joueur 2"
-                    value={p2}
-                    onChange={(e) => setP2(e.target.value)}
-                  />
+                <div className="grid grid-cols-2 gap-2 items-start">
+                  <ChampAdherent noms={nomsMembres} placeholder="Joueur 1" value={p1} onChange={setP1} />
+                  <ChampAdherent noms={nomsMembres} placeholder="Joueur 2" value={p2} onChange={setP2} />
                 </div>
+                <p className="text-[11px] text-slate-500">Tape le prénom ou le nom, puis choisis dans la liste.</p>
                 <div className="flex gap-2">
                   <button onClick={() => addBinome(t.id)} className="btn-primary !px-3 !py-1.5 !text-xs flex-1">
                     <Plus className="w-3 h-3" /> Enregistrer
@@ -125,7 +119,7 @@ export default function InscriptionsAdmin({
                     className="bg-slate-50 rounded-xl px-3 py-2"
                   >
                     <div className="flex items-center justify-between">
-                      <span className="text-slate-700 text-sm font-medium">{i.joueurs}</span>
+                      <span className="text-slate-700 text-sm font-medium">{binomeCourt(i.joueurs, courts)}</span>
                       {!readOnly && (
                         <div className="flex gap-1">
                           <button

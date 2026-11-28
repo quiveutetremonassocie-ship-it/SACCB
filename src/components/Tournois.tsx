@@ -1,10 +1,11 @@
 "use client";
 
 import { ChevronDown, ChevronUp, CalendarPlus, Car, MapPin, Phone, BellOff, Bell, Lock } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { DB, Tournoi, InscritTournoi, joueursCourts } from "@/lib/types";
 import { publicRegisterTournoiWithCovoiturage, memberToggleTournoiIgnored } from "@/lib/db";
 import { MemberSession } from "@/lib/useMemberSession";
+import ChampAdherent from "./ChampAdherent";
 
 const today = new Date().toISOString().slice(0, 10);
 
@@ -344,6 +345,10 @@ function TournoiLigne({ t, inscrits, memberSession, onLoginRequest, membreNoms =
   const [covoSeats, setCovoSeats] = useState("");
   const [covoDepart, setCovoDepart] = useState("");
   const [covoContact, setCovoContact] = useState("");
+  // Noms COMPLETS envoyés au serveur ; affichés « Prénom N. » dans les champs
+  const [joueur1, setJoueur1] = useState(memberSession?.nom || "");
+  const [joueur2, setJoueur2] = useState("");
+  useEffect(() => { setJoueur1(memberSession?.nom || ""); }, [memberSession?.nom]);
   const daysLeft = getDaysLeft(t.dateLimit);
   const inscriptionsClosed = t.closed === true || (daysLeft !== null && daysLeft < 0);
   const { jour, mois } = jourEtMois(t);
@@ -373,10 +378,9 @@ function TournoiLigne({ t, inscrits, memberSession, onLoginRequest, membreNoms =
     e.preventDefault();
     if (!memberSession) return;
     setSubmitting(true);
-    const fd = new FormData(e.currentTarget);
-    const p1 = String(fd.get("p1") || "").trim();
-    const p2 = String(fd.get("p2") || "").trim();
-    if (!p1 || !p2) { setSubmitting(false); return; }
+    const p1 = joueur1.trim();
+    const p2 = joueur2.trim();
+    if (!p1 || !p2) { alert("Choisis les deux joueurs."); setSubmitting(false); return; }
     const code = memberSession.memberCode || memberSession.adminCode || sessionStorage.getItem("saccb_member_code") || "";
     if (!code) {
       alert("Vous devez être connecté à votre espace membre pour vous inscrire à un tournoi.");
@@ -476,20 +480,17 @@ function TournoiLigne({ t, inscrits, memberSession, onLoginRequest, membreNoms =
             </p>
           ) : memberSession ? (
             <form onSubmit={readOnly ? (e: React.FormEvent) => { e.preventDefault(); alert("Mode présentation : les inscriptions sont désactivées."); } : regT} className="space-y-4">
-              <div className="grid sm:grid-cols-2 gap-3">
-                <label className="block">
+              {/* La liste des adhérents s'ouvre sous le champ : évite les fautes de frappe */}
+              <div className="grid sm:grid-cols-2 gap-3 items-start">
+                <div>
                   <span className="label">Joueur 1</span>
-                  <input className="input" name="p1" list={`members-list-${t.id}`} defaultValue={memberSession.nom || ""} required autoComplete="off" />
-                </label>
-                <label className="block">
+                  <ChampAdherent className="input w-full" noms={membreNoms} placeholder="Joueur 1" value={joueur1} onChange={setJoueur1} />
+                </div>
+                <div>
                   <span className="label">Joueur 2 (partenaire)</span>
-                  <input className="input" name="p2" list={`members-list-${t.id}`} required autoComplete="off" placeholder="Tapez le prénom" />
-                </label>
+                  <ChampAdherent className="input w-full" noms={membreNoms} placeholder="Tape le prénom de ton partenaire" value={joueur2} onChange={setJoueur2} />
+                </div>
               </div>
-              {/* Liste des adhérents : évite les fautes de frappe */}
-              <datalist id={`members-list-${t.id}`}>
-                {membreNoms.map((nom) => <option key={nom} value={nom} />)}
-              </datalist>
 
               {/* Covoiturage */}
               <div>

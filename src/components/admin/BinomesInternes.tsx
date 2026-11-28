@@ -2,7 +2,7 @@
 
 import { useMemo, useState } from "react";
 import { Plus, Trash2 } from "lucide-react";
-import { InterClub, InterClubBinome, Membre } from "@/lib/types";
+import { InterClub, InterClubBinome, Membre, binomeCourt, nomsCourtsUniques } from "@/lib/types";
 
 const uid = () => (typeof crypto.randomUUID === "function" ? crypto.randomUUID() : String(Date.now()) + Math.random().toString(36).slice(2));
 
@@ -29,6 +29,8 @@ export default function BinomesInternes({
     [membres, pris]
   );
   const nom = (id: string) => membres.find((m) => m.id === id)?.nom || "";
+  const courts = nomsCourtsUniques(membres.map((m) => m.nom));
+  const court = (n: string) => binomeCourt(n, courts);
 
   async function ajouter() {
     if (!j1 || !j2 || j1 === j2) { alert("Choisis deux adhérents différents."); return; }
@@ -42,7 +44,7 @@ export default function BinomesInternes({
   }
 
   async function retirer(b: InterClubBinome) {
-    if (!confirm(`Retirer le binôme ${b.joueur1} / ${b.joueur2} ?`)) return;
+    if (!confirm(`Retirer le binôme ${court(b.joueur1)} / ${court(b.joueur2)} ?`)) return;
     setBusy(true);
     try { await onSave(binomes.filter((x) => x.id !== b.id)); } finally { setBusy(false); }
   }
@@ -66,11 +68,11 @@ export default function BinomesInternes({
           <div className="grid sm:grid-cols-2 gap-2">
             <select className="input !text-sm" value={j1} onChange={(e) => setJ1(e.target.value)}>
               <option value="">— Joueur 1 —</option>
-              {dispo.filter((m) => m.id !== j2).map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
+              {dispo.filter((m) => m.id !== j2).map((m) => <option key={m.id} value={m.id}>{court(m.nom)}</option>)}
             </select>
             <select className="input !text-sm" value={j2} onChange={(e) => setJ2(e.target.value)}>
               <option value="">— Joueur 2 —</option>
-              {dispo.filter((m) => m.id !== j1).map((m) => <option key={m.id} value={m.id}>{m.nom}</option>)}
+              {dispo.filter((m) => m.id !== j1).map((m) => <option key={m.id} value={m.id}>{court(m.nom)}</option>)}
             </select>
           </div>
           {t.niveaux.length > 1 && (
@@ -96,7 +98,7 @@ export default function BinomesInternes({
           {binomes.map((b, i) => (
             <li key={b.id} className="flex items-center gap-2 px-3 py-2 text-sm">
               <span className="w-6 text-[11px] text-slate-400 font-semibold">{i + 1}.</span>
-              <span className="flex-1 min-w-0 truncate">{b.joueur1} / {b.joueur2}</span>
+              <span className="flex-1 min-w-0 truncate">{court(b.joueur1)} / {court(b.joueur2)}</span>
               {b.niveau && <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-100 text-slate-600">{b.niveau}</span>}
               {!readOnly && !t.live && (
                 <button onClick={() => retirer(b)} disabled={busy} className="p-1 text-slate-400 hover:text-red-500" title="Retirer"><Trash2 className="w-4 h-4" /></button>

@@ -690,6 +690,7 @@ export default function AdminPanel({
       {editBin && (
         <EditBinomeModal
           bin={editBin}
+          membres={db.membres ?? []}
           onClose={() => setEditBin(null)}
           onSave={async (b) => {
             const next = {

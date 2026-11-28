@@ -2,7 +2,8 @@
 
 import { useState } from "react";
 import { Plus, Trophy, Trash2, Bell, Pencil, Check, X, ChevronDown, ChevronUp, Archive, PackageCheck, Lock, Unlock, ArrowUpFromLine } from "lucide-react";
-import { DB, Tournoi, InscritTournoi } from "@/lib/types";
+import { DB, Tournoi, InscritTournoi, binomeCourt, nomsCourtsUniques } from "@/lib/types";
+import ChampAdherent from "../ChampAdherent";
 import { notifyMembres } from "@/lib/db";
 
 const today = new Date().toISOString().slice(0, 10);
@@ -370,8 +371,9 @@ export default function TournoisAdmin({
   const [newInscritJoueur2, setNewInscritJoueur2] = useState("");
   const [newInscritResultat, setNewInscritResultat] = useState("");
 
-  // Liste des noms d'adhérents pour l'autocomplétion
-  const membreNoms = (db.membres ?? []).map((m) => m.nom).filter(Boolean).sort();
+  // Affichage « Prénom N. » (le nom complet reste enregistré)
+  const nomsMembres = (db.membres ?? []).map((m) => m.nom);
+  const courts = nomsCourtsUniques(nomsMembres);
 
   async function addInscritManuel(tournoiId: string) {
     if (readOnly) return;
@@ -561,7 +563,7 @@ export default function TournoisAdmin({
                             return (
                               <div key={inscrit.id} className="bg-slate-50 rounded-lg px-2.5 py-1.5 text-xs">
                                 <div className="flex items-center gap-2">
-                                  <span className="text-slate-600 truncate flex-1">🎾 {inscrit.joueurs}</span>
+                                  <span className="text-slate-600 truncate flex-1">🎾 {binomeCourt(inscrit.joueurs, courts)}</span>
                                   {!isEditing && inscrit.resultat && (
                                     <span className="font-semibold text-slate-700 shrink-0">{inscrit.resultat}</span>
                                   )}
@@ -616,31 +618,11 @@ export default function TournoisAdmin({
                           )}
                           {!readOnly && addingInscritTo === t.id && (
                             <div className="bg-blue-50 border border-blue-200 rounded-lg p-2 space-y-1.5 mt-1">
-                              <div className="grid grid-cols-2 gap-1.5">
-                                <input
-                                  className="input !text-xs w-full"
-                                  placeholder="Joueur 1"
-                                  list="admin-membres-list"
-                                  value={newInscritJoueur1}
-                                  onChange={(e) => setNewInscritJoueur1(e.target.value)}
-                                  autoFocus
-                                  autoComplete="off"
-                                />
-                                <input
-                                  className="input !text-xs w-full"
-                                  placeholder="Joueur 2"
-                                  list="admin-membres-list"
-                                  value={newInscritJoueur2}
-                                  onChange={(e) => setNewInscritJoueur2(e.target.value)}
-                                  autoComplete="off"
-                                />
+                              <div className="grid grid-cols-2 gap-1.5 items-start">
+                                <ChampAdherent noms={nomsMembres} placeholder="Joueur 1" value={newInscritJoueur1} onChange={setNewInscritJoueur1} autoFocus />
+                                <ChampAdherent noms={nomsMembres} placeholder="Joueur 2" value={newInscritJoueur2} onChange={setNewInscritJoueur2} />
                               </div>
-                              <datalist id="admin-membres-list">
-                                {membreNoms.map((nom) => (
-                                  <option key={nom} value={nom} />
-                                ))}
-                              </datalist>
-                              <p className="text-[10px] text-slate-400">Tapez le début du nom pour voir les adhérents.</p>
+                              <p className="text-[11px] text-slate-500">Tape le prénom ou le nom, puis choisis dans la liste.</p>
                               <input
                                 className="input !text-xs w-full"
                                 placeholder="Résultat (optionnel, ex: 3/16)"
@@ -795,7 +777,7 @@ export default function TournoisAdmin({
                                             const isEditingRes = editingResultat?.archiveKey === key && editingResultat?.inscritId === inscrit.id;
                                             return (
                                               <div key={inscrit.id} className="flex items-center justify-between gap-2 px-3 py-1.5 text-xs bg-white">
-                                                <span className="text-slate-600 truncate">🎾 {inscrit.joueurs}</span>
+                                                <span className="text-slate-600 truncate">🎾 {binomeCourt(inscrit.joueurs, courts)}</span>
                                                 <div className="flex items-center gap-1.5 shrink-0">
                                                   {isEditingRes ? (
                                                     <>

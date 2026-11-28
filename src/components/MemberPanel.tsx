@@ -12,7 +12,7 @@ import type { ClubConfig, Membre, ReunionReport, OfficialDoc } from "@/lib/types
 import { useState, useMemo, useEffect } from "react";
 import { MemberSession, clearMemberSession, setMemberSession } from "@/lib/useMemberSession";
 import { memberChangeCode, memberContact, memberSetType, memberUpdateNewsOptIn, memberToggleRenewalSkip, publicUploadJustificatif } from "@/lib/db";
-import { Tournoi, InscritTournoi, SeasonArchive } from "@/lib/types";
+import { Tournoi, InscritTournoi, SeasonArchive, joueursCourts } from "@/lib/types";
 import ProcurationModal from "./modals/ProcurationModal";
 import TournoisInternes from "./TournoisInternes";
 import MonParcours from "./MonParcours";
@@ -958,7 +958,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
                           <div className="flex items-center gap-2">
                             <span className="text-base">{i === 0 ? "🥇" : i === 1 ? "🥈" : "🥉"}</span>
                             <div>
-                              <p className="text-sm font-semibold text-slate-800">{duo.joueurs}</p>
+                              <p className="text-sm font-semibold text-slate-800">{joueursCourts(duo.joueurs)}</p>
                               <p className="text-xs text-slate-400">
                                 {duo.participations} tournoi{duo.participations > 1 ? "s" : ""}
                                 {duo.podiums > 0 && ` · ${duo.podiums} podium${duo.podiums > 1 ? "s" : ""}`}
@@ -994,7 +994,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
                             <div key={insc.joueurs} className="flex items-center justify-between px-3 py-2">
                               <span className="text-sm text-slate-700 flex items-center gap-2">
                                 <span className="text-slate-400 font-mono text-xs w-5 text-right">{insc.rank}.</span>
-                                {insc.joueurs}
+                                {joueursCourts(insc.joueurs)}
                               </span>
                               <span className={`text-xs font-bold px-2 py-0.5 rounded-full ${
                                 insc.rank === 1 ? "bg-yellow-100 text-yellow-700" :
@@ -1043,7 +1043,7 @@ C'est elle que tu utiliseras pour te connecter et qui recevra les mails du club.
                               <p className="text-xs text-slate-400">{tournoi.date}</p>
                               {myEntry && (
                                 <p className="text-xs text-slate-500 mt-0.5 truncate">
-                                  🎾 {myEntry.joueurs}
+                                  🎾 {joueursCourts(myEntry.joueurs)}
                                 </p>
                               )}
                             </div>

@@ -636,6 +636,33 @@ export function joueursCourts(joueurs: string): string {
   return (joueurs || "").split(/(\s*[\/&,+]\s*)/).map((part, i) => (i % 2 === 1 ? part : nomCourt(part))).join("");
 }
 
+/**
+ * « Prénom N. » pour chaque adhérent, sans confusion possible : si deux personnes donnent le même résultat
+ * (Julie Martin / Julie Moreau), on ajoute des lettres du nom jusqu'à les distinguer (Julie Ma. / Julie Mo.).
+ * Clé = nom complet (sans espaces autour).
+ */
+export function nomsCourtsUniques(noms: string[]): Map<string, string> {
+  const uniques = [...new Set(noms.map((n) => (n || "").trim()).filter(Boolean))];
+  const resultat = new Map(uniques.map((n) => [n, nomCourt(n)]));
+  const abrege = (n: string, lettres: number) => {
+    const [prenom, ...reste] = n.split(/\s+/);
+    const famille = reste.join(" ");
+    return famille.length <= lettres ? n : prenom + " " + famille.charAt(0).toUpperCase() + famille.slice(1, lettres).toLowerCase() + ".";
+  };
+  for (let lettres = 2; lettres <= 30; lettres++) {
+    const groupes = new Map<string, string[]>();
+    for (const [complet, court] of resultat) groupes.set(court.toLowerCase(), [...(groupes.get(court.toLowerCase()) ?? []), complet]);
+    const doublons = [...groupes.values()].filter((g) => g.length > 1);
+    if (doublons.length === 0) break;
+    for (const g of doublons) for (const n of g) resultat.set(n, abrege(n, lettres));
+  }
+  return resultat;
+}
+/** Un binôme « Julie Martin / Paul Petit » affiché « Julie M. / Paul P. », en tenant compte des homonymes du club */
+export function binomeCourt(joueurs: string, courts: Map<string, string>): string {
+  return (joueurs || "").split(/(\s*[\/&,+]\s*)/).map((part, i) => (i % 2 === 1 ? part : courts.get(part.trim()) ?? nomCourt(part))).join("");
+}
+
 // 👕 Tailles de t-shirt : catalogue complet (ordre d'affichage) et tailles proposées par défaut
 export const TSHIRT_SIZES_ALL = ["XS", "S", "M", "L", "XL", "XXL", "3XL"] as const;
 export const TSHIRT_SIZES_DEFAULT = ["XS", "S", "M", "L", "XL"];
